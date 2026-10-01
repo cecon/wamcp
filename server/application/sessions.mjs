@@ -22,9 +22,9 @@ export function sessionService(repository, whatsapp) {
       exists(id);
       return repository.chats(id, q);
     },
-    messages: (id, jid, before, limit) => {
+    messages: (id, jid, before, limit, beforeId) => {
       exists(id);
-      return repository.messages(id, jid, before, limit);
+      return repository.messages(id, jid, before, limit, beforeId);
     },
     search: (id, q, limit) => {
       exists(id);

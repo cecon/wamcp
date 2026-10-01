@@ -4,7 +4,7 @@ export function mcpService(repository, whatsapp) {
     authenticate: (id, credential) => repository.authenticate(id, credential),
     session: (id) => repository.session(id),
     chats: (id, q) => repository.chats(id, q),
-    messages: (id, jid, before, limit) => repository.messages(id, jid, before, limit),
+    messages: (id, jid, before, limit, beforeId) => repository.messages(id, jid, before, limit, beforeId),
     search: (id, q, limit) => repository.search(id, q, limit),
     read(id, token, action, operation) {
       if (token.session_id !== id) throw new Error('Sessão não autorizada');

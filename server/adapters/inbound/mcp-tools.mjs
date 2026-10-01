@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { jidSchema } from './schemas.mjs';
+import metadata from '../../../package.json' with { type: 'json' };
 export function mcpTools(service, id, token, credential) {
-  const server = new McpServer({ name: 'wamcp', version: '0.1.0' });
+  const server = new McpServer({ name: 'wamcp', version: metadata.version });
   const output = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
   const read = (name, description, schema, handler) =>
     server.registerTool(
@@ -21,13 +22,14 @@ export function mcpTools(service, id, token, credential) {
   );
   read(
     'get_messages',
-    'Histórico local de uma conversa. before é timestamp Unix em segundos.',
+    'Histórico local. Para paginar, use ts e id da mensagem mais antiga como before e beforeId.',
     {
       jid: jidSchema,
       before: z.number().positive().optional(),
+      beforeId: z.string().max(200).optional(),
       limit: z.number().int().min(1).max(200).default(100),
     },
-    (args) => service.messages(id, args.jid, args.before, args.limit),
+    (args) => service.messages(id, args.jid, args.before, args.limit, args.beforeId),
   );
   read(
     'search_messages',

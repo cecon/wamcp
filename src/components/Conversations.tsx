@@ -52,7 +52,7 @@ export function Conversations({ id }: { id: string }) {
     setLoading(true);
     try {
       const data = await api<Message[]>(
-        `${sessionPath(id)}/messages?jid=${encodeURIComponent(jid)}&before=${messages[0]?.ts || Number.MAX_SAFE_INTEGER}`,
+        `${sessionPath(id)}/messages?jid=${encodeURIComponent(jid)}&before=${messages[0]?.ts || Number.MAX_SAFE_INTEGER}&beforeId=${encodeURIComponent(messages[0]?.id || '')}`,
       );
       setMessages((current) => [...data, ...current.filter((m) => !data.some((d) => d.id === m.id))]);
     } catch (e) {

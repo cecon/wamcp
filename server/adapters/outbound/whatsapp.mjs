@@ -34,7 +34,11 @@ export function whatsappManager(store, dir) {
       });
       entry.socket = socket;
       entry.starting = false;
-      socket.ev.on('creds.update', saveCreds);
+      socket.ev.on('creds.update', () => {
+        void saveCreds().catch(() => {
+          entry.error = 'Falha ao salvar credenciais locais.';
+        });
+      });
       socket.ev.on('messaging-history.set', ({ chats, contacts, messages }) => {
         for (const c of chats) store.chat(id, c);
         for (const c of contacts) store.chat(id, c);
@@ -47,7 +51,9 @@ export function whatsappManager(store, dir) {
       socket.ev.on('connection.update', async (update) => {
         if (current(id) !== entry || entry.stopped) return;
         if (update.qr) {
-          entry.qr = await QRCode.toDataURL(update.qr, { margin: 2, width: 280 });
+          const qr = await QRCode.toDataURL(update.qr, { margin: 2, width: 280 });
+          if (current(id) !== entry || entry.stopped) return;
+          entry.qr = qr;
           store.status(id, 'qr');
         }
         if (update.connection === 'open') {

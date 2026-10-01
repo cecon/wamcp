@@ -68,12 +68,12 @@ export function openStore(dir) {
         )
         .all(s, `%${q}%`, `%${q}%`);
     },
-    messages(s, jid, before = Number.MAX_SAFE_INTEGER, limit = 100) {
+    messages(s, jid, before = Number.MAX_SAFE_INTEGER, limit = 100, beforeId = '') {
       return db
         .prepare(
-          'SELECT * FROM messages WHERE session_id=? AND jid=? AND ts<? ORDER BY ts DESC,id DESC LIMIT ?',
+          'SELECT * FROM messages WHERE session_id=? AND jid=? AND (ts<? OR (ts=? AND id<?)) ORDER BY ts DESC,id DESC LIMIT ?',
         )
-        .all(s, jid, before, limit)
+        .all(s, jid, before, before, beforeId, limit)
         .reverse();
     },
     search(s, q, limit = 100) {

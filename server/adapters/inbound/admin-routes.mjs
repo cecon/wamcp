@@ -36,14 +36,15 @@ export function adminRoutes(admin, sessions, publicUrl) {
     res.json(sessions.chats(req.params.id, String(req.query.q || ''))),
   );
   admin.get('/api/sessions/:id/messages', (req, res) => {
-    const { jid, before, limit } = z
+    const { jid, before, limit, beforeId } = z
       .object({
         jid: jidSchema,
         before: z.coerce.number().positive().optional(),
+        beforeId: z.string().max(200).optional(),
         limit: z.coerce.number().int().min(1).max(200).default(100),
       })
       .parse(req.query);
-    res.json(sessions.messages(req.params.id, jid, before, limit));
+    res.json(sessions.messages(req.params.id, jid, before, limit, beforeId));
   });
   admin.get('/api/sessions/:id/search', (req, res) =>
     res.json(sessions.search(req.params.id, z.string().min(1).max(200).parse(req.query.q))),
