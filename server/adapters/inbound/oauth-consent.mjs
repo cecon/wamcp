@@ -6,10 +6,9 @@ const escape = (value) =>
 export function consentPage(res, pending, error = '') {
   res.set({
     'Cache-Control': 'no-store',
-    'Referrer-Policy': 'no-referrer',
+    'Referrer-Policy': 'same-origin',
     'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy':
-      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${pending.redirectUri}; base-uri 'none'; frame-ancestors 'none'`,
   });
   return res
     .type('html')

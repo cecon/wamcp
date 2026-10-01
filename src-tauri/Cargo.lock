@@ -4653,7 +4653,7 @@ dependencies = [
 
 [[package]]
 name = "wamcp"
-version = "26.10.5"
+version = "26.10.6"
 dependencies = [
  "reqwest",
  "serde",
