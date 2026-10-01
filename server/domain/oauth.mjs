@@ -19,7 +19,7 @@ export function validOAuthRedirect(value) {
     const u = new URL(value);
     if (u.username || u.password || u.hash || u.search) return false;
     if (u.protocol === 'http:' && u.hostname === '127.0.0.1')
-      return Boolean(u.port) && u.pathname === '/callback';
+      return Boolean(u.port) && /^\/callback(?:\/[A-Za-z0-9_-]{1,128})?$/.test(u.pathname);
     return (
       u.protocol === 'https:' &&
       u.hostname === 'chatgpt.com' &&

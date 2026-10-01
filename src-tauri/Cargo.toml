@@ -1,6 +1,6 @@
 [package]
 name = "wamcp"
-version = "26.10.4"
+version = "26.10.5"
 description = "WhatsApp sessions as authenticated MCP servers"
 authors = ["Cappyfy"]
 edition = "2021"

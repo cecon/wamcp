@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # typescript-eslint 8 currently requires TypeScript <6.1; revisit when it supports 7.
+    ignore:
+      - dependency-name: typescript
+        versions: ['>=7']
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:

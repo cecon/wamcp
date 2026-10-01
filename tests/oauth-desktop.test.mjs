@@ -4,7 +4,7 @@ import { oauthFixture, origin } from './oauth-fixture.mjs';
 
 test('desktop OAuth completes with PKCE and exact loopback callback binding', async (t) => {
   const f = await oauthFixture(t);
-  const redirectUri = 'http://127.0.0.1:49152/callback';
+  const redirectUri = 'http://127.0.0.1:49152/callback/bnDWLth3djIC';
   const client = await f.register({ redirect_uris: [redirectUri], client_name: 'Codex desktop' });
   assert.equal(client.status, 201);
   const flow = await f.begin(client, { redirect_uri: redirectUri });
@@ -44,6 +44,8 @@ test('desktop callbacks reject remote hosts, credentials, queries and unrelated 
   for (const redirect of [
     'http://127.0.0.1/callback',
     'http://127.0.0.1:49152/other',
+    'http://127.0.0.1:49152/callback/nonce/extra',
+    'http://127.0.0.1:49152/callback/%2F',
     'http://127.0.0.1.evil.example:49152/callback',
     'http://192.168.1.1:49152/callback',
     'http://user@127.0.0.1:49152/callback',
