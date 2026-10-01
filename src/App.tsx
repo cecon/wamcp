@@ -17,6 +17,7 @@ import { Help } from './components/Help';
 import { Dashboard } from './components/Dashboard';
 import { SessionView } from './SessionView';
 import { Settings } from './Settings';
+import { UpdateNotice } from './components/UpdateNotice';
 
 export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]),
@@ -128,6 +129,7 @@ export default function App() {
           </span>
         </header>
         <div className="content">
+          <UpdateNotice />
           {error && (
             <div className="notice error" role="alert">
               {error}

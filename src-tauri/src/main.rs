@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod runtime;
+mod updates;
 use runtime::Runtime;
 use tauri::{
     menu::{Menu, MenuItem},
@@ -66,11 +67,15 @@ fn show(app: &tauri::AppHandle) {
 }
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(updates::Updates::default())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show(app)))
         .invoke_handler(tauri::generate_handler![
             api_request,
             runtime_status,
-            configure_tunnel
+            configure_tunnel,
+            updates::check_update,
+            updates::install_update
         ])
         .setup(|app| {
             let runtime = Runtime::start(app.handle())?;

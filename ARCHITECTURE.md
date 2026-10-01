@@ -44,6 +44,8 @@ Tauri inicia Node e cloudflared como filhos ocultos. Fechar a janela apenas ocul
 
 O contador “serviço local ativo” confirma a API administrativa. “Conector em execução” confirma o processo local; não é prova de saúde da conexão externa. `/healthz` permite validar o caminho completo pela Cloudflare.
 
+O módulo nativo `updates` usa o atualizador oficial Tauri. Ele baixa a release por HTTPS e valida a assinatura antes de armazenar o pacote em memória; apenas esse pacote verificado pode ser instalado pelo comando da interface. A chave privada fica no GitHub Actions Secrets e a pública no aplicativo. A instalação encerra os processos próprios, preserva a pasta de dados e reabre o aplicativo. A interface consulta ao iniciar e a cada seis horas; o reinício é escolhido pelo usuário.
+
 ## Verificações
 
 `npm run check` roda lint, arquitetura, formato, tipos, build e testes de integração. `npm run test:e2e` valida o fluxo de interface com respostas controladas; o pareamento real exige o QR Code no celular.

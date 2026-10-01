@@ -48,23 +48,17 @@ jobs:
       - run: npm run build
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
       - run: npx tauri build
-      - name: Checksums
-        shell: pwsh
-        run: |
-          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | ForEach-Object {
-            $normalizedName = $_.Name.Replace(' ', '.')
-            $installerPath = Join-Path $_.DirectoryName $normalizedName
-            if ($_.Name -ne $normalizedName) {
-              Rename-Item -LiteralPath $_.FullName -NewName $normalizedName
-            }
-            $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $normalizedName" | Out-File -FilePath "$($_.DirectoryName)/SHA256SUMS.txt" -Append -Encoding utf8
-          }
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      - name: Prepare signed update feed and checksums
+        run: node scripts/release-artifacts.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: wamcp-windows-installer
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.sig
+            src-tauri/target/release/bundle/nsis/latest.json
             src-tauri/target/release/bundle/nsis/SHA256SUMS.txt
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
@@ -72,5 +66,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $assets = @(Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe,src-tauri/target/release/bundle/nsis/SHA256SUMS.txt | ForEach-Object FullName)
+          $assets = @(Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe,src-tauri/target/release/bundle/nsis/*.sig,src-tauri/target/release/bundle/nsis/latest.json,src-tauri/target/release/bundle/nsis/SHA256SUMS.txt | ForEach-Object FullName)
           gh release create $env:GITHUB_REF_NAME @assets --title "WA MCP $env:GITHUB_REF_NAME" --generate-notes --verify-tag

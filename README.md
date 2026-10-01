@@ -16,6 +16,12 @@ O instalador inclui Node.js e cloudflared. Não é necessário instalar ferramen
 
 Fechar a janela mantém o aplicativo na bandeja. Clique no ícone verde para abrir novamente; use **Sair** para encerrar o serviço e o túnel. O computador deve permanecer ligado e conectado à internet.
 
+### Atualizações automáticas
+
+A partir da versão 26.10.3, o aplicativo verifica novas releases ao abrir e a cada seis horas. O download ocorre em segundo plano e a assinatura é validada com a chave pública embutida. Quando estiver pronto, clique **Reiniciar e atualizar** no aviso; o aplicativo encerra seus serviços, instala silenciosamente e reabre. As sessões e o histórico permanecem no perfil do Windows. Também é possível usar **Configurações → Verificar atualizações**. Sem internet, a versão atual continua funcionando.
+
+Versões anteriores precisam de uma instalação manual para receber o atualizador. A assinatura do atualizador é independente de Authenticode: ela protege o pacote de atualização, mas não remove avisos do Windows sobre editor desconhecido.
+
 ## MCP
 
 Endpoint: `https://wamcp.cappyfy.com/mcp/<session-id>`
@@ -122,12 +128,14 @@ git push origin main --tags
 
 Uma tag dispara validações, testes, compilação Windows, instalador NSIS e publicação de release com checksum SHA-256. `workflow_dispatch` compila um artefato sem publicar release. Não há credenciais Cloudflare ou WhatsApp no CI.
 
+O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e publica `.exe.sig` e `latest.json`. A chave privada deve ser preservada fora do repositório; sua perda impede atualizar instalações que confiam na chave pública atual. O feed aponta para os artefatos da release, publicados juntos após todos os checks.
+
 ## Limites desta versão
 
 - A integração usa Baileys, um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço.
 - O histórico depende do conteúdo disponibilizado pelo WhatsApp na sincronização; não há garantia de recuperar todo o histórico antigo.
 - Mensagens de mídia são identificadas por tipo/caption; anexos não são baixados.
-- Envio MCP de texto; sem envio de mídia, inicialização automática com Windows ou atualização automática do aplicativo.
+- Envio MCP de texto; sem envio de mídia ou inicialização automática com Windows.
 - O ícone é próprio, inspirado em um balão verde de conversa.
 
 ## Referências

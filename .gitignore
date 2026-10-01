@@ -5,6 +5,7 @@ src-tauri/runtime/
 src-tauri/gen/
 .env
 *.token
+*.key
 *.sqlite*
 playwright-report/
 test-results/

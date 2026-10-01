@@ -39,6 +39,22 @@ export function Settings() {
         </div>
       </div>
       <div className="panel prose">
+        <h2>Atualizações automáticas</h2>
+        <p>
+          Versão instalada: {__APP_VERSION__}. O aplicativo verifica novas versões ao abrir e a cada seis
+          horas, baixa e valida a assinatura automaticamente.
+        </p>
+        <p>
+          Quando estiver pronta, use “Reiniciar e atualizar” no aviso. Suas sessões e conversas são
+          preservadas.
+        </p>
+        <button
+          className="primary"
+          disabled={!isTauri()}
+          onClick={() => window.dispatchEvent(new Event('wamcp:check-updates'))}
+        >
+          Verificar atualizações
+        </button>
         <h2>Cloudflare Tunnel</h2>
         <p>
           Endereço: <code>https://wamcp.cappyfy.com</code>

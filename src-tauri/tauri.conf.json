@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "WA MCP",
-  "version": "26.10.2",
+  "version": "26.10.3",
   "identifier": "com.cappyfy.wamcp",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -25,6 +25,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.ico", "icons/32x32.png", "icons/128x128.png"],
     "resources": {
@@ -35,6 +36,15 @@
         "displayLanguageSelector": false,
         "languages": ["PortugueseBR"],
         "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://github.com/cecon/wamcp/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRDMzU2QzU2Q0E3NDQ3MzYKUldRMlIzVEtWbXcxVFBqUi9KNXpuaXplcmFQTjd6d3l5MTZCUUlOemtqK0VySkF4ckVPQTh1bzIK",
+      "windows": {
+        "installMode": "quiet"
       }
     }
   }
