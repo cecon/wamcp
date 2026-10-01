@@ -19,7 +19,11 @@ test('session creation, MCP token display and revocation', async ({ page }) => {
         created = true;
         data = session;
       } else data = created ? [session] : [];
-    } else if (url.pathname.endsWith('/tokens')) {
+    } else if (url.pathname.endsWith('/chatgpt/link')) {
+      expect(route.request().postDataJSON().scope).toBe('read');
+      data = { code: 'one-time-link-code', expires: '2026-10-01T23:59:00Z' };
+    } else if (url.pathname.endsWith('/chatgpt')) data = [];
+    else if (url.pathname.endsWith('/tokens')) {
       if (method === 'POST') {
         issued = true;
         data = {
@@ -46,6 +50,11 @@ test('session creation, MCP token display and revocation', async ({ page }) => {
   await page.getByRole('button', { name: 'Criar sessão' }).click();
   await expect(page.getByRole('heading', { name: 'Atendimento', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Acesso MCP' }).click();
+  await expect(page.getByRole('heading', { name: 'Conectar ao ChatGPT' })).toBeVisible();
+  await page.getByRole('button', { name: 'Gerar código para ChatGPT' }).click();
+  await expect(page.getByText('one-time-link-code', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Ocultar código' }).click();
+  await expect(page.getByText('one-time-link-code', { exact: true })).not.toBeVisible();
   await page.getByPlaceholder('Nome da integração').fill('My AI');
   await page.getByRole('button', { name: 'Gerar token' }).click();
   await expect(page.getByText('Copie agora. Este token só aparece uma vez.')).toBeVisible();

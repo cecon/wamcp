@@ -3,6 +3,7 @@ import { KeyRound, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { api, sessionPath } from '../api';
 import type { AccessToken, Audit } from '../types';
 import { CopyButton } from '../ui';
+import { ChatGptConnection } from './ChatGptConnection';
 export function Credentials({ id, url }: { id: string; url: string }) {
   const [tokens, setTokens] = useState<AccessToken[]>([]),
     [audit, setAudit] = useState<Audit[]>([]),
@@ -57,12 +58,13 @@ export function Credentials({ id, url }: { id: string; url: string }) {
   );
   return (
     <div className="mcp-layout">
+      <ChatGptConnection key={id} id={id} url={url} />
       {error && <div className="notice error">{error}</div>}
       <div className="panel">
         <div className="panel-title">
           <div>
-            <h2>Uma porta para sua IA</h2>
-            <p>Transporte MCP Streamable HTTP, com autenticação por token.</p>
+            <h2>Outros clientes MCP</h2>
+            <p>Credenciais Bearer para clientes com cabeçalhos personalizados.</p>
           </div>
           <ShieldCheck size={25} />
         </div>
@@ -135,7 +137,7 @@ export function Credentials({ id, url }: { id: string; url: string }) {
           ))}
           {tokens.length === 0 && (
             <p className="muted">
-              Nenhum token criado. O acesso remoto está bloqueado até você gerar uma credencial.
+              Nenhuma credencial Bearer criada. As conexões do ChatGPT são gerenciadas acima.
             </p>
           )}
         </div>

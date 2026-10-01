@@ -120,6 +120,7 @@ test('MCP SDK client can initialize, list tools and only read its own session', 
     c = await client(a, token.token);
   assert.deepEqual((await c.listTools()).tools.map((t) => t.name).sort(), [
     'get_messages',
+    'get_profile',
     'list_chats',
     'search_messages',
     'session_status',

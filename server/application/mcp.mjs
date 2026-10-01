@@ -1,7 +1,8 @@
 import { requireSendPermission } from '../domain/access.mjs';
-export function mcpService(repository, whatsapp) {
+export function mcpService(repository, whatsapp, oauth) {
   return {
-    authenticate: (id, credential) => repository.authenticate(id, credential),
+    authenticate: (id, credential) =>
+      repository.authenticate(id, credential) || oauth?.authenticate(id, credential),
     session: (id) => repository.session(id),
     chats: (id, q) => repository.chats(id, q),
     messages: (id, jid, before, limit, beforeId) => repository.messages(id, jid, before, limit, beforeId),

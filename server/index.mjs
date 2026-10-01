@@ -1,5 +1,7 @@
 import { sessionService } from './application/sessions.mjs';
 import { mcpService } from './application/mcp.mjs';
+import { oauthService } from './application/oauth.mjs';
+import { oauthStore } from './adapters/outbound/sqlite/oauth-store.mjs';
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
@@ -15,9 +17,13 @@ if (!existsSync(tokenFile)) writeFileSync(tokenFile, randomBytes(32).toString('b
 const adminToken = process.env.WAMCP_ADMIN_TOKEN || readFileSync(tokenFile, 'utf8').trim();
 const store = openStore(dir),
   wa = whatsappManager(store, dir);
+const publicUrl = 'https://wamcp.cappyfy.com';
+const oauth = oauthService(oauthStore(store.db), store, publicUrl);
 const { admin, publicApp } = createApps({
   sessions: sessionService(store, wa),
-  mcp: mcpService(store, wa),
+  mcp: mcpService(store, wa, oauth),
+  oauth,
+  publicUrl,
   adminToken,
 });
 const adminServer = admin.listen(Number(process.env.WAMCP_ADMIN_PORT || 17381), '127.0.0.1');

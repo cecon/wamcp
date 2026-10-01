@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { adminSecurity } from './security.mjs';
 import { adminRoutes } from './admin-routes.mjs';
 import { mcpRoutes } from './mcp-routes.mjs';
-export function createApps({ sessions, mcp, adminToken, publicUrl = 'https://wamcp.cappyfy.com' }) {
+import { oauthRoutes } from './oauth-routes.mjs';
+export function createApps({ sessions, mcp, oauth, adminToken, publicUrl = 'https://wamcp.cappyfy.com' }) {
   if (!adminToken || adminToken.length < 32) throw new Error('Admin token must have at least 32 characters');
   const admin = express(),
     publicApp = express();
@@ -13,7 +14,8 @@ export function createApps({ sessions, mcp, adminToken, publicUrl = 'https://wam
   }
   adminSecurity(admin, adminToken);
   adminRoutes(admin, sessions, publicUrl);
-  mcpRoutes(publicApp, mcp);
+  if (oauth) oauthRoutes(admin, publicApp, oauth, publicUrl);
+  mcpRoutes(publicApp, mcp, publicUrl);
   for (const app of [admin, publicApp])
     app.use((error, _req, res, _next) => {
       if (res.headersSent) return;

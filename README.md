@@ -9,8 +9,8 @@ Baixe o instalador `.exe` em [Releases](https://github.com/cecon/wamcp/releases)
 1. Instale e abra WA MCP.
 2. Em Configurações, configure o token do seu Cloudflare Tunnel.
 3. Crie uma sessão e escaneie o QR Code em WhatsApp → Aparelhos conectados.
-4. Em Acesso MCP, gere um token para cada integração.
-5. Configure o cliente com a URL da sessão e `Authorization: Bearer SEU_TOKEN`.
+4. Em Acesso MCP, siga a seção **Conectar ao ChatGPT**, ou gere um token para outro cliente MCP.
+5. Autorize somente a sessão e as permissões que deseja compartilhar.
 
 O instalador inclui Node.js e cloudflared. Não é necessário instalar ferramentas de desenvolvimento para usar o aplicativo. O instalador inicial não tem assinatura Authenticode.
 
@@ -20,7 +20,22 @@ Fechar a janela mantém o aplicativo na bandeja. Clique no ícone verde para abr
 
 Endpoint: `https://wamcp.cappyfy.com/mcp/<session-id>`
 
-Transporte: Streamable HTTP sem estado. O cliente precisa aceitar cabeçalho Bearer personalizado; login OAuth não está implementado nesta versão.
+Transporte: Streamable HTTP sem estado. O ChatGPT usa OAuth 2.1 com PKCE S256 e registro dinâmico de cliente (DCR). Outros clientes podem usar o cabeçalho Bearer personalizado.
+
+### ChatGPT
+
+1. Ative o modo de desenvolvedor nas configurações do ChatGPT, se disponível para sua conta/workspace.
+2. Abra [Plugins](https://chatgpt.com/plugins), use **+** e informe a URL MCP da sessão. Escolha OAuth, deixando Client ID e Client Secret vazios para registro automático.
+3. No WA MCP → sessão → Acesso MCP, escolha **Somente leitura** ou **Leitura e envio** e gere um código temporário.
+4. Na página de autorização em `wamcp.cappyfy.com`, cole esse código e confirme.
+
+O código é de uso único e expira em dez minutos. O access token dura uma hora; o refresh token é rotacionado, com autorização limitada a 90 dias. A lista **Conexões autorizadas** permite revogar a conexão imediatamente. O aplicativo e o túnel devem continuar funcionando no PC.
+
+Isso disponibiliza um servidor compatível com plugins MCP do ChatGPT. A instalação na conta deve ser concluída pelo usuário; não representa publicação no diretório público da OpenAI. A disponibilidade da criação de plugins depende da conta e das políticas do workspace.
+
+Metadados por sessão: `/.well-known/oauth-protected-resource/mcp/<session-id>`. Metadados do emissor: `/.well-known/oauth-authorization-server`. As ferramentas declaram os escopos OAuth, e `get_profile` identifica somente a sessão autorizada. O registro de clientes aceita apenas callbacks HTTPS conhecidos do ChatGPT, com correspondência exata no fluxo. Não é anunciado suporte a CIMD, `private_key_jwt` ou RFC 9207.
+
+### Outros clientes
 
 ```json
 {
@@ -38,12 +53,13 @@ O formato acima é um exemplo; ajuste-o ao seu cliente MCP.
 | Ferramenta        | Permissão       |
 | ----------------- | --------------- |
 | `session_status`  | Leitura         |
+| `get_profile`     | Leitura         |
 | `list_chats`      | Leitura         |
 | `get_messages`    | Leitura         |
 | `search_messages` | Leitura         |
 | `send_message`    | Leitura e envio |
 
-Tokens são aleatórios, armazenados apenas como SHA-256, limitados a uma sessão, exibidos uma única vez e revogáveis. A interface cria tokens válidos por 90 dias. Ferramentas de envio só são anunciadas para tokens com essa permissão.
+Tokens Bearer e tokens OAuth de acesso/renovação são aleatórios, armazenados por hash SHA-256, limitados a uma sessão e revogáveis. A interface cria tokens Bearer válidos por 90 dias. Ferramentas de envio só são anunciadas para tokens com essa permissão. Os registros DCR e seus segredos de cliente persistem no SQLite local para permitir reconexão após reiniciar o aplicativo.
 
 ## Dados locais
 
@@ -111,7 +127,7 @@ Uma tag dispara validações, testes, compilação Windows, instalador NSIS e pu
 - A integração usa Baileys, um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço.
 - O histórico depende do conteúdo disponibilizado pelo WhatsApp na sincronização; não há garantia de recuperar todo o histórico antigo.
 - Mensagens de mídia são identificadas por tipo/caption; anexos não são baixados.
-- Envio MCP de texto; sem envio de mídia, OAuth, inicialização automática com Windows ou atualização automática do aplicativo.
+- Envio MCP de texto; sem envio de mídia, inicialização automática com Windows ou atualização automática do aplicativo.
 - O ícone é próprio, inspirado em um balão verde de conversa.
 
 ## Referências
@@ -119,5 +135,6 @@ Uma tag dispara validações, testes, compilação Windows, instalador NSIS e pu
 - [Tauri: bandeja do sistema](https://v2.tauri.app/learn/system-tray/)
 - [Cloudflare: túnel pela API](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel-api/)
 - [Baileys](https://github.com/WhiskeySockets/Baileys)
+- [Autenticação de plugins no ChatGPT](https://developers.openai.com/plugins/build/auth)
 
 Licença MIT.

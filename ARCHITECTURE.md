@@ -32,6 +32,10 @@ Dois listeners loopback distintos: administração na porta 17381 e MCP na 17382
 
 Cada requisição MCP resolve novamente a credencial. SHA-256 é adequado aqui porque os tokens são 256 bits aleatórios, não senhas humanas. Revogar ou expirar invalida a requisição seguinte; revogação não desfaz um envio já em andamento.
 
+OAuth usa os handlers oficiais do SDK MCP para validação de clientes, callbacks e PKCE S256. A aplicação implementa autorização por código de uso único emitido exclusivamente pela API administrativa local. O recurso de cada sessão é obrigatório na autorização, troca e renovação; códigos e tokens são vinculados ao cliente e à sessão. Refresh tokens são rotacionados e sua reutilização revoga a autorização associada. Clientes DCR persistem, inclusive após reiniciar, e só aceitam callbacks HTTPS do ChatGPT. Os segredos de cliente DCR são armazenados no SQLite local; não saem no repositório nem no instalador.
+
+A porta OAuth oferece armazenamento por categoria/chave com expiração, hash, aleatoriedade e transações síncronas. O adaptador SQLite a implementa em uma tabela adicional sem alterar as conversas ou credenciais existentes. A tela de consentimento impede incorporação em frames e valida a origem do formulário; códigos de pareamento e estados de autorização não usam cookies.
+
 O SQLite usa WAL e chaves estrangeiras. Inserts de mensagens são idempotentes por sessão, conversa e ID da mensagem. Credenciais e histórico persistem fora dos arquivos do aplicativo para sobreviver às atualizações.
 
 ## Operação
