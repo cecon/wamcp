@@ -1,0 +1,90 @@
+import { useEffect, useState } from 'react';
+import { invoke, isTauri } from '@tauri-apps/api/core';
+interface RuntimeStatus {
+  tunnelConfigured: boolean;
+  tunnelRunning: boolean;
+  dataDir: string;
+}
+export function Settings() {
+  const [token, setToken] = useState(''),
+    [status, setStatus] = useState<RuntimeStatus | null>(null),
+    [message, setMessage] = useState(''),
+    [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (isTauri())
+      invoke<RuntimeStatus>('runtime_status')
+        .then(setStatus)
+        .catch((e) => setMessage(String(e)));
+  }, []);
+  async function save() {
+    setBusy(true);
+    try {
+      await invoke('configure_tunnel', { token });
+      setToken('');
+      setStatus(await invoke<RuntimeStatus>('runtime_status'));
+      setMessage('Túnel configurado e iniciado.');
+    } catch (e) {
+      setMessage(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <div className="heading">
+        <div>
+          <span className="eyebrow">DO SEU JEITO</span>
+          <h1>Configurações</h1>
+          <p>Conectividade e armazenamento do seu workspace.</p>
+        </div>
+      </div>
+      <div className="panel prose">
+        <h2>Cloudflare Tunnel</h2>
+        <p>
+          Endereço: <code>https://wamcp.cappyfy.com</code>
+        </p>
+        <p>
+          {status?.tunnelRunning
+            ? 'Conector em execução'
+            : status?.tunnelConfigured
+              ? 'Túnel configurado, conector parado'
+              : 'Configure o token do túnel neste computador.'}
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save();
+          }}
+        >
+          <label>
+            Token do túnel
+            <input
+              type="password"
+              required
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="Cole o token do Cloudflare Tunnel"
+              autoComplete="off"
+            />
+          </label>
+          <button className="primary" disabled={busy || !token.trim() || !isTauri()}>
+            Salvar e conectar
+          </button>
+        </form>
+        {message && <div className="notice">{message}</div>}
+        <h2>Armazenamento local</h2>
+        <p>O banco SQLite e as credenciais de sessão ficam no perfil do usuário do Windows.</p>
+        <code className="path">{status?.dataDir || '%LOCALAPPDATA%\\com.cappyfy.wamcp'}</code>
+        <p>
+          O instalador não contém tokens nem históricos. Ao instalar em outro PC, configure o túnel e conecte
+          suas contas novamente. Execute este túnel em apenas um computador com estas sessões.
+        </p>
+        <h2>Bandeja do Windows</h2>
+        <p>
+          Fechar a janela mantém as sessões e o túnel ativos. Use Abrir WA MCP para voltar ou Sair para
+          encerrar.
+        </p>
+      </div>
+    </>
+  );
+}

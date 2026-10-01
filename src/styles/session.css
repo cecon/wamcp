@@ -1,0 +1,85 @@
+.tabs {
+  display: flex;
+  gap: 25px;
+  border-bottom: 1px solid #dfe8e2;
+  margin-bottom: 25px;
+}
+.tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 2px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #8a9a90;
+  font-size: 12px;
+}
+.tabs button.active {
+  color: #21895f;
+  border-bottom-color: #21895f;
+}
+.connection-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+}
+.instructions {
+  padding-left: 20px;
+  line-height: 2.8;
+  font-size: 12px;
+  color: #7d9082;
+  margin: 28px 0;
+}
+.instructions li::marker {
+  color: #20986a;
+}
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.qr-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 350px;
+  gap: 15px;
+}
+.qr-panel img {
+  width: 250px;
+  height: 250px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.qr-placeholder {
+  text-align: center;
+  color: #b5cbbc;
+  padding: 20px;
+}
+.qr-placeholder h3 {
+  color: #6b8776;
+  font-size: 15px;
+  margin-top: 20px;
+}
+.qr-placeholder.connected {
+  color: #20986a;
+}
+.qr-placeholder p {
+  font-size: 11px;
+  max-width: 220px;
+}
+.danger-details {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #edf1ed;
+  font-size: 11px;
+  color: #95a199;
+}
+.danger-details summary {
+  cursor: pointer;
+}
+.danger-details p {
+  margin-top: 12px;
+}
