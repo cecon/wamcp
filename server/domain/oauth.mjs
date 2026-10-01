@@ -14,17 +14,16 @@ export function scopesFor(scope) {
 export function scopeFor(scopes) {
   return scopes.includes('whatsapp:send') ? 'read_write' : 'read';
 }
-export function validChatGptRedirect(value) {
+export function validOAuthRedirect(value) {
   try {
     const u = new URL(value);
+    if (u.username || u.password || u.hash || u.search) return false;
+    if (u.protocol === 'http:' && u.hostname === '127.0.0.1')
+      return Boolean(u.port) && u.pathname === '/callback';
     return (
       u.protocol === 'https:' &&
       u.hostname === 'chatgpt.com' &&
       !u.port &&
-      !u.username &&
-      !u.password &&
-      !u.hash &&
-      !u.search &&
       (/^\/connector\/oauth\/[A-Za-z0-9_-]+$/.test(u.pathname) ||
         u.pathname === '/connector_platform_oauth_redirect')
     );

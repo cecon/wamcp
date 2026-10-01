@@ -1,4 +1,4 @@
-import { oauthRequire, oauthScopes, scopesFor, scopeFor, validChatGptRedirect } from '../domain/oauth.mjs';
+import { oauthRequire, oauthScopes, scopesFor, scopeFor, validOAuthRedirect } from '../domain/oauth.mjs';
 import { oauthTokenService } from './oauth-tokens.mjs';
 const TEN_MINUTES = 600000;
 export function oauthService(repository, sessions, publicUrl) {
@@ -23,8 +23,8 @@ export function oauthService(repository, sessions, publicUrl) {
       oauthRequire(
         client.redirect_uris.length > 0 &&
           client.redirect_uris.length <= 5 &&
-          client.redirect_uris.every(validChatGptRedirect),
-        'Callback deve ser o endereço HTTPS do ChatGPT',
+          client.redirect_uris.every(validOAuthRedirect),
+        'Callback deve ser do ChatGPT ou o retorno local do aplicativo desktop',
         'invalid_client_metadata',
       );
       oauthRequire(
