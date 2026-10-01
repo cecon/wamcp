@@ -52,8 +52,13 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | ForEach-Object {
-            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)" | Out-File -FilePath "$($_.DirectoryName)/SHA256SUMS.txt" -Append -Encoding utf8
+            $normalizedName = $_.Name.Replace(' ', '.')
+            $installerPath = Join-Path $_.DirectoryName $normalizedName
+            if ($_.Name -ne $normalizedName) {
+              Rename-Item -LiteralPath $_.FullName -NewName $normalizedName
+            }
+            $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $normalizedName" | Out-File -FilePath "$($_.DirectoryName)/SHA256SUMS.txt" -Append -Encoding utf8
           }
       - uses: actions/upload-artifact@v4
         with:
