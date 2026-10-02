@@ -1,26 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { releaseAllowed } from '../scripts/release-gate.mjs';
+import { nextReleaseVersion } from '../scripts/release-version.mjs';
 
 function candidate() {
   return {
     repository: 'cecon/wamcp',
     mainSha: 'merged-commit',
+    sha: 'merged-commit',
     run: {
       name: 'Quality',
       path: '.github/workflows/ci.yml',
-      event: 'push',
+      event: 'pull_request',
       status: 'completed',
       conclusion: 'success',
-      head_branch: 'main',
+      head_branch: 'feature',
       head_repository: { full_name: 'cecon/wamcp' },
-      head_sha: 'merged-commit',
+      head_sha: 'tested-head',
+      pull_requests: [{ number: 10 }],
     },
     jobs: ['quality', 'windows'].map((name) => ({ name, status: 'completed', conclusion: 'success' })),
     pulls: [
       {
         merged_at: '2026-10-02',
+        number: 10,
         merge_commit_sha: 'merged-commit',
+        head: { sha: 'tested-head', repo: { full_name: 'cecon/wamcp' } },
         base: { ref: 'main', repo: { full_name: 'cecon/wamcp' } },
       },
     ],
@@ -69,11 +74,12 @@ test('release rejects failed, cancelled, skipped, pending or missing required jo
   assert.equal(releaseAllowed(pending), false);
 });
 
-test('release rejects PR CI, alternate workflows, forks, branches and unsuccessful runs', () => {
+test('release rejects unrelated CI, alternate workflows and unsuccessful runs', () => {
   for (const [key, value] of [
-    ['event', 'pull_request'],
+    ['event', 'push'],
     ['path', '.github/workflows/other.yml'],
-    ['head_branch', 'feature'],
+    ['head_sha', 'untested-head'],
+    ['pull_requests', [{ number: 99 }]],
     ['head_repository', { full_name: 'other/fork' }],
     ['conclusion', 'failure'],
     ['status', 'in_progress'],
@@ -82,4 +88,12 @@ test('release rejects PR CI, alternate workflows, forks, branches and unsuccessf
     c.run[key] = value;
     assert.equal(releaseAllowed(c), false);
   }
+});
+
+test('automatic bump uses the highest reserved or released version and resets each UTC month', () => {
+  const now = new Date('2026-10-02T03:00:00Z');
+  assert.equal(nextReleaseVersion(['26.10.7', 'v26.10.6'], now), '26.10.8');
+  assert.equal(nextReleaseVersion(['26.10.7', 'v26.10.12', 'v26.10.9'], now), '26.10.13');
+  assert.equal(nextReleaseVersion(['v26.9.99', 'invalid', 'v26.10.bad'], now), '26.10.1');
+  assert.equal(nextReleaseVersion(['26.12.99'], new Date('2027-01-01T00:00:00Z')), '27.1.1');
 });

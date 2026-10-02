@@ -1,6 +1,6 @@
 {
   "name": "wamcp",
-  "version": "26.10.8",
+  "version": "26.10.7",
   "private": true,
   "type": "module",
   "scripts": {

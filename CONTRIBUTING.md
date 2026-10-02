@@ -10,4 +10,4 @@ Use Node.js 24 e Rust estável. Siga SOLID, KISS e DRY sem introduzir abstraçõ
 - Preserve versão consistente em package.json, lockfiles, Cargo.toml e configuração Tauri.
 - Ajuste documentação quando o comportamento ou a instalação mudar.
 - Toda mudança entra em `main` por PR, com os checks `quality` e `windows` aprovados e a branch atualizada. Não use bypass administrativo.
-- Releases são automáticas após o CI do merge na `main`; aumente a versão no PR e não publique por tag ou envio direto.
+- CI roda somente no PR. Após o merge na `main`, a release faz bump automático e build/publicação, consultando os checks já aprovados sem repeti-los. O bump altera só a cópia de compilação; não publique por tag nem crie commits diretos de versão na `main`.

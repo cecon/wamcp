@@ -1,8 +1,6 @@
 name: Windows release
 on:
-  workflow_run:
-    workflows: ['Quality']
-    types: [completed]
+  push:
     branches: [main]
 permissions:
   contents: read
@@ -11,7 +9,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   gate:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,15 +17,14 @@ jobs:
     outputs:
       publish: ${{ steps.release.outputs.publish }}
       sha: ${{ steps.release.outputs.sha }}
-      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Require merged PR and successful CI on current main
+      - name: Confirm merged PR and its approved CI
         id: release
         run: node scripts/release-gate.mjs
         env:
@@ -50,16 +46,16 @@ jobs:
           node-version: '24'
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
       - run: npm ci
+      - name: Bump build version
+        id: version
+        run: node scripts/release-version.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: npm run prepare:desktop
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
-      - run: npm run build
-      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
       - run: npx tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -82,7 +78,7 @@ jobs:
         if: steps.recheck.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
           RELEASE_SHA: ${{ needs.gate.outputs.sha }}
         shell: pwsh
         run: |
