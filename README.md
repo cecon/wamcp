@@ -126,16 +126,17 @@ Arquitetura hexagonal: domínio puro, casos de uso com portas injetadas, adaptad
 Formato: **YY.MM.incremental**. Primeira versão: `26.10.1`. O incremental reinicia em 1 a cada mês. Para compatibilidade com SemVer/Tauri, meses de 1 a 9 não têm zero à esquerda nos metadados, por exemplo `27.1.1`.
 
 ```sh
-npm run version -- next
 npm run format
 cargo check --manifest-path src-tauri/Cargo.toml
 git add .
-git commit -m "chore: release YY.M.incremental"
-git tag vYY.M.incremental
-git push origin main --tags
+git commit -m "feat: descreva a alteração"
+git push origin SUA_BRANCH
+gh pr create --base main
 ```
 
-Uma tag dispara validações, testes, compilação Windows, instalador NSIS e publicação de release com checksum SHA-256. `workflow_dispatch` compila um artefato sem publicar release. Não há credenciais Cloudflare ou WhatsApp no CI.
+Trabalhe em uma branch e abra PR para `main`. A proteção da branch exige os checks `quality` e `windows` aprovados e a branch atualizada antes do merge, inclusive para administradores. Não envie diretamente para `main` nem crie tags para publicar.
+
+O CI roda somente no PR. Depois do merge, Windows release consulta os resultados já aprovados do PR e executa apenas o bump automático e o build/publicação do instalador assinado, sem repetir testes, auditoria ou Clippy. A versão usa o mês UTC e o próximo incremental acima das versões existentes. O bump sincroniza os metadados apenas na cópia usada para compilar; não cria commits diretos na `main` protegida. A tag aponta para o commit mergeado. Antes de publicar, o fluxo confirma novamente que esse ainda é o commit atual e que o CI do PR segue aprovado. Tags avulsas, pushes sem PR e execução manual não publicam. Não há credenciais Cloudflare ou WhatsApp no CI.
 
 O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e publica `.exe.sig` e `latest.json`. A chave privada deve ser preservada fora do repositório; sua perda impede atualizar instalações que confiam na chave pública atual. O feed aponta para os artefatos da release, publicados juntos após todos os checks.
 

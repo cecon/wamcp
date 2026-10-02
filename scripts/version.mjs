@@ -20,4 +20,9 @@ const cargo = readFileSync('src-tauri/Cargo.toml', 'utf8').replace(
   `version = "${version}"`,
 );
 writeFileSync('src-tauri/Cargo.toml', cargo);
+const lock = readFileSync('src-tauri/Cargo.lock', 'utf8').replace(
+  /(name = "wamcp"\r?\nversion = ")[^"]+("[\r\n])/,
+  `$1${version}$2`,
+);
+writeFileSync('src-tauri/Cargo.lock', lock);
 console.log(`Versão sincronizada: ${version}`);
