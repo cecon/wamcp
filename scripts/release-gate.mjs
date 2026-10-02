@@ -20,7 +20,8 @@ export function releaseAllowed({ repository, sha, run, mainSha, pulls, jobs }) {
     run.conclusion !== 'success' ||
     run.head_repository?.full_name !== pr.head.repo.full_name ||
     run.head_sha !== pr.head.sha ||
-    !run.pull_requests?.some((item) => item.number === pr.number)
+    run.head_branch !== pr.head.ref ||
+    (run.pull_requests?.length > 0 && !run.pull_requests.some((item) => item.number === pr.number))
   )
     return false;
   if (
@@ -47,7 +48,10 @@ export function checkRelease() {
     `actions/workflows/ci.yml/runs?event=pull_request&head_sha=${pr.head.sha}&per_page=100`,
   ).workflow_runs;
   const run = runs
-    .filter((run) => run.pull_requests?.some((item) => item.number === pr.number))
+    // GitHub can clear pull_requests after a merged branch is deleted.
+    .filter(
+      (run) => run.head_branch === pr.head.ref && run.head_repository?.full_name === pr.head.repo.full_name,
+    )
     .sort((a, b) => b.id - a.id)[0];
   if (!run) return { publish: false };
   const jobs = api(`actions/runs/${run.id}/jobs?filter=latest&per_page=100`).jobs;

@@ -25,7 +25,7 @@ function candidate() {
         merged_at: '2026-10-02',
         number: 10,
         merge_commit_sha: 'merged-commit',
-        head: { sha: 'tested-head', repo: { full_name: 'cecon/wamcp' } },
+        head: { sha: 'tested-head', ref: 'feature', repo: { full_name: 'cecon/wamcp' } },
         base: { ref: 'main', repo: { full_name: 'cecon/wamcp' } },
       },
     ],
@@ -34,6 +34,9 @@ function candidate() {
 
 test('release accepts only the merged main commit after both CI jobs succeed', () => {
   assert.equal(releaseAllowed(candidate()), true);
+  const deletedBranch = candidate();
+  deletedBranch.run.pull_requests = [];
+  assert.equal(releaseAllowed(deletedBranch), true);
 });
 
 test('release rejects direct pushes, unmerged PRs, another base and stale commits', () => {
@@ -79,6 +82,7 @@ test('release rejects unrelated CI, alternate workflows and unsuccessful runs', 
     ['event', 'push'],
     ['path', '.github/workflows/other.yml'],
     ['head_sha', 'untested-head'],
+    ['head_branch', 'unrelated'],
     ['pull_requests', [{ number: 99 }]],
     ['head_repository', { full_name: 'other/fork' }],
     ['conclusion', 'failure'],
