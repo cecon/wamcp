@@ -1,0 +1,22 @@
+// Synthetic public certificate, used only to exercise hostname/IP matching without a network.
+// Its private key is intentionally not included; tests never bypass TLS trust or expiry checks.
+export const certificate = `-----BEGIN CERTIFICATE-----
+MIIDWjCCAkKgAwIBAgIUBbQqZI1DKF9vh1AdyJTdwel0PvcwDQYJKoZIhvcNAQEL
+BQAwHzEdMBsGA1UEAwwUcmVjZWl2ZXIuZXhhbXBsZS5jb20wHhcNMjYxMDAyMTQw
+MzU4WhcNMjYxMDAzMTQwMzU4WjAfMR0wGwYDVQQDDBRyZWNlaXZlci5leGFtcGxl
+LmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMeIfS9X6X2waxbr
+v47y5km51StWt29Awmvl2QFagREagLFDFtm0LReHecbvJTi/8C9TtDVUV/rYI7q9
+WvIkgbt9Vzrwd3p6wc92ENjT5VOr4VhhmrTlEaDuqJ25YQvnmNBbJoWQeETfQSDm
+1VFxLkyCFUfLk2GuQZXVS/6SMuXQ314IMcIWuSneFTiySscFe5J5sgmrZOHSlU3W
+1uX3YqvvsPbH0xHDLt02sIlCwlb+X5Vp6DKFQ/HcV8c8BNNh/5QqrLC+spWO/9gR
+kHfyoT+VJ3Re+Mem/UjMej+bm0L2HOshEPVD6IIhCBUgSaOFliHY7/GtJbCEYJw4
+3txJ0dcCAwEAAaOBjTCBijAdBgNVHQ4EFgQULS6nJ6nWW3BhQ/0qFIDhFwq70rYw
+HwYDVR0jBBgwFoAULS6nJ6nWW3BhQ/0qFIDhFwq70rYwDwYDVR0TAQH/BAUwAwEB
+/zA3BgNVHREEMDAughRyZWNlaXZlci5leGFtcGxlLmNvbYcECAgICIcQJgZHAEcA
+AAAAAAAAAAARETANBgkqhkiG9w0BAQsFAAOCAQEAtpBgtAs3xvxXuX2Ckzr5A+wV
+YF8c5G5lh3cK22trILmVu0OBz2sGXwjxfbeIB4Tv/qplmYYidpoUKEXNq6COzaGB
+GroV/0VJKX735K23YLrTy5huoha0Lq9JYdlM8zGWV6alpQVkL0M8pKCvyTvlmzo8
+Sj02WZNoSz8fXXQEkpLOMy25nlHeiTf6khg6brWqmNyLp9+bC6KGLXKxqyNiDr8R
+IdhULyUDrJ++BpMBr11DP7E82xF7hsPZ6GAVqq1e2AbnckaE98EDhzPbglXHycyt
+47kIlZvIVfCi6QDKLMa+v3iKFKTUXyoClSxZOrtNfh6Qi2N+bQE9z4vyiKqp5w==
+-----END CERTIFICATE-----`;

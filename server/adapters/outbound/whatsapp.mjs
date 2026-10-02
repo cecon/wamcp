@@ -10,8 +10,9 @@ import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { downloadMedia } from './media-download.mjs';
 import { MediaError } from '../../domain/media.mjs';
+import { persistLiveMessages } from './whatsapp-events.mjs';
 
-export function whatsappManager(store, dir) {
+export function whatsappManager(store, dir, { onMessage, onLogout } = {}) {
   const connections = new Map();
   const logger = pino({ level: 'silent' });
   const current = (id) => connections.get(id);
@@ -49,7 +50,10 @@ export function whatsappManager(store, dir) {
       socket.ev.on('chats.upsert', (chats) => chats.forEach((c) => store.chat(id, c)));
       socket.ev.on('chats.update', (chats) => chats.forEach((c) => store.chat(id, c)));
       socket.ev.on('contacts.upsert', (contacts) => contacts.forEach((c) => store.chat(id, c)));
-      socket.ev.on('messages.upsert', ({ messages }) => messages.forEach((m) => store.message(id, m)));
+      socket.ev.on('messages.upsert', (update) => {
+        if (current(id) !== entry || entry.stopped) return;
+        persistLiveMessages(store, id, update, onMessage);
+      });
       socket.ev.on('connection.update', async (update) => {
         if (current(id) !== entry || entry.stopped) return;
         if (update.qr) {
@@ -67,6 +71,7 @@ export function whatsappManager(store, dir) {
           entry.qr = null;
           const code = update.lastDisconnect?.error?.output?.statusCode;
           if (code === DisconnectReason.loggedOut) {
+            onLogout?.(id);
             store.status(id, 'logged_out');
             await rm(path.join(dir, 'auth', id), { recursive: true, force: true });
           } else if (!entry.stopped) {

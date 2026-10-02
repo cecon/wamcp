@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeMessageContent } from '@whiskeysockets/baileys';
+import { getContentType, normalizeMessageContent } from '@whiskeysockets/baileys';
 import { mediaStore } from './media-store.mjs';
 
 export const hashToken = (value) => createHash('sha256').update(value).digest('hex');
@@ -52,7 +52,7 @@ export function openStore(dir) {
       const jid = m.key.remoteJid;
       if (jid === 'status@broadcast') return;
       const content = normalizeMessageContent(m.message) || {};
-      const kind = Object.keys(content).find((k) => k !== 'messageContextInfo') || 'unknown';
+      const kind = getContentType(content) || 'unknown';
       const body =
         content.conversation ||
         content.extendedTextMessage?.text ||
@@ -62,11 +62,24 @@ export function openStore(dir) {
         content.documentMessage?.fileName ||
         `[${kind.replace('Message', '')}]`;
       const ts = Number(m.messageTimestamp || Date.now() / 1000);
+      const existing = db
+        .prepare('SELECT 1 FROM messages WHERE session_id=? AND jid=? AND id=?')
+        .get(s, jid, m.key.id);
       this.chat(s, { id: jid, conversationTimestamp: ts });
       db.prepare(
         'INSERT INTO messages(session_id,jid,id,sender,body,kind,from_me,ts) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(session_id,jid,id) DO UPDATE SET body=excluded.body,kind=excluded.kind',
       ).run(s, jid, m.key.id, m.pushName || m.key.participant || jid, body, kind, m.key.fromMe ? 1 : 0, ts);
       media.save(s, m);
+      if (!existing)
+        return {
+          jid,
+          id: m.key.id,
+          sender: m.pushName || m.key.participant || jid,
+          body,
+          kind,
+          from_me: Boolean(m.key.fromMe),
+          ts,
+        };
     },
     chats(s, q = '') {
       return db
@@ -116,6 +129,13 @@ export function openStore(dir) {
     },
     revoke(s, id) {
       return db.prepare('DELETE FROM tokens WHERE session_id=? AND id=?').run(s, id);
+    },
+    eventPrincipal(s, id) {
+      return (
+        db
+          .prepare('SELECT id,session_id,scope FROM tokens WHERE session_id=? AND id=? AND expires>?')
+          .get(s, id, new Date().toISOString()) || null
+      );
     },
     audit(s, t, action) {
       db.prepare('INSERT INTO audit(session_id,token_id,action,at) VALUES(?,?,?,?)').run(

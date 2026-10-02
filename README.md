@@ -93,6 +93,10 @@ Configure o hostname público para `http://127.0.0.1:17382`. A API administrativ
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
 
+## Eventos no ChatGPT
+
+O servidor oferece `message.created` para novas mensagens recebidas, com filtro opcional por conversa e entrega HTTPS assinada. A assinatura é criada pelo ChatGPT somente quando o usuário pede monitoramento; a atualização não ativa automações por conta própria. Consulte [MCP_EVENTS.md](MCP_EVENTS.md) para limites, segurança e o teste completo após atualizar e reescanear o plugin.
+
 ## Desenvolvimento
 
 Requisitos: Windows x64, Node.js 24, Rust estável, Visual Studio Build Tools com C++ e WebView2.
