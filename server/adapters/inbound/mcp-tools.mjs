@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { jidSchema } from './schemas.mjs';
 import metadata from '../../../package.json' with { type: 'json' };
 import { authChallenge, authResult, toolSecurity } from './mcp-auth.mjs';
+import { registerMediaTool } from './mcp-media.mjs';
 export function mcpTools(service, id, token, credential, publicUrl) {
   const server = new McpServer({ name: 'wamcp', version: metadata.version });
   const output = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
+  registerMediaTool(server, service, id, credential, publicUrl);
   const read = (name, description, schema, handler) =>
     server.registerTool(
       name,
@@ -86,7 +88,12 @@ export function mcpTools(service, id, token, credential, publicUrl) {
         } catch {
           return {
             isError: true,
-            content: [{ type: 'text', text: 'Falha no envio. Verifique a conexão da sessão.' }],
+            content: [
+              {
+                type: 'text',
+                text: 'Não foi possível confirmar o envio. Verifique o histórico antes de tentar novamente para evitar duplicatas.',
+              },
+            ],
           };
         }
       },

@@ -62,10 +62,19 @@ O formato acima é um exemplo; ajuste-o ao seu cliente MCP.
 | `get_profile`     | Leitura         |
 | `list_chats`      | Leitura         |
 | `get_messages`    | Leitura         |
+| `get_media`       | Leitura         |
 | `search_messages` | Leitura         |
 | `send_message`    | Leitura e envio |
 
 Tokens Bearer e tokens OAuth de acesso/renovação são aleatórios, armazenados por hash SHA-256, limitados a uma sessão e revogáveis. A interface cria tokens Bearer válidos por 90 dias. Ferramentas de envio só são anunciadas para tokens com essa permissão. Os registros DCR e seus segredos de cliente persistem no SQLite local para permitir reconexão após reiniciar o aplicativo.
+
+### Mensagens, áudios e arquivos
+
+Para enviar texto, autorize a conexão com **Leitura e envio** e use `send_message` com o `jid` real de `list_chats` e o texto autorizado. Uma conexão existente de somente leitura precisa ser autorizada novamente com envio; atualizar o aplicativo não amplia suas permissões. Se o envio não for confirmado, consulte o histórico antes de repetir.
+
+`get_messages` e `search_messages` incluem `media` com tipo, MIME, nome do arquivo, tamanho, duração e indicação de mensagem de voz quando disponíveis. Use `get_media` com `jid` e `messageId` (o campo `id` da mensagem) para baixar o anexo. Áudios são retornados como conteúdo de áudio MCP; documentos, imagens e vídeos como recursos binários incorporados, sem links públicos. O cliente MCP precisa suportar esses formatos para reproduzir ou salvar o conteúdo. Não há transcrição automática.
+
+O download exige a sessão conectada, tem limite de 10 MiB e espera de até 30 segundos. Mídias antigas podem ter expirado no WhatsApp. Mensagens já armazenadas antes desta atualização não contêm os dados necessários ao download, salvo se forem sincronizadas novamente. Os dados de download persistem no SQLite; o conteúdo binário é baixado sob demanda e não é salvo em disco pelo servidor. Reinicie o aplicativo atualizado e atualize a lista de ferramentas no cliente para descobrir `get_media`.
 
 ## Dados locais
 
@@ -134,7 +143,7 @@ O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e public
 
 - A integração usa Baileys, um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço.
 - O histórico depende do conteúdo disponibilizado pelo WhatsApp na sincronização; não há garantia de recuperar todo o histórico antigo.
-- Mensagens de mídia são identificadas por tipo/caption; anexos não são baixados.
+- Anexos são baixados sob demanda pelo MCP, até 10 MiB; disponibilidade depende do WhatsApp e da sincronização.
 - Envio MCP de texto; sem envio de mídia ou inicialização automática com Windows.
 - O ícone é próprio, inspirado em um balão verde de conversa.
 

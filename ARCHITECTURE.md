@@ -22,7 +22,9 @@ A aplicação recebe objetos que implementam portas. `server/index.mjs` é a rai
 
 A porta de repositório é um objeto com operações `session`, `sessions`, `createSession`, `status`, `chat`, `message`, `chats`, `messages`, `search`, `issueToken`, `tokens`, `authenticate`, `revoke`, `audit`, `events` e `close`.
 
-A porta de WhatsApp oferece `connect`, `stop`, `detail`, `send`, `restore` e `close`. Os testes substituem essa porta por uma implementação em memória para nunca enviar mensagens reais.
+A porta de WhatsApp oferece `connect`, `stop`, `detail`, `send`, `media`, `restore` e `close`. Os testes substituem essa porta por uma implementação em memória para nunca enviar mensagens reais.
+
+A porta de repositório também oferece `media`, limitada por sessão, conversa e mensagem. A tabela aditiva `message_media` preserva o payload protobuf necessário ao download e metadados separados. As consultas de histórico expõem somente metadados, nunca chaves ou URLs de mídia. `get_media` exige leitura, baixa sob demanda com limite de bytes e tempo, verifica novamente a credencial antes da resposta e entrega áudio MCP ou recurso binário incorporado. Não cria links públicos nem arquivos locais.
 
 Interfaces pequenas e injeção explícita evitam contêiner de dependências ou hierarquias desnecessárias. Regras de autorização ficam no domínio; use cases fazem orquestração; transporte e SQL ficam nos adaptadores.
 

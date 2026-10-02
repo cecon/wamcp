@@ -2,6 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { normalizeMessageContent } from '@whiskeysockets/baileys';
+import { mediaStore } from './media-store.mjs';
 
 export const hashToken = (value) => createHash('sha256').update(value).digest('hex');
 export function openStore(dir) {
@@ -16,8 +18,10 @@ export function openStore(dir) {
     CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,session_id TEXT,token_id TEXT,action TEXT NOT NULL,at TEXT NOT NULL);
   `);
   db.prepare("UPDATE sessions SET status='disconnected'").run();
+  const media = mediaStore(db);
   return {
     db,
+    media: (s, jid, id) => media.get(s, jid, id),
     sessions: () =>
       db
         .prepare(
@@ -47,19 +51,22 @@ export function openStore(dir) {
       if (!m.key?.id || !m.key.remoteJid || !m.message) return;
       const jid = m.key.remoteJid;
       if (jid === 'status@broadcast') return;
-      const content = m.message.ephemeralMessage?.message || m.message.viewOnceMessage?.message || m.message;
+      const content = normalizeMessageContent(m.message) || {};
       const kind = Object.keys(content).find((k) => k !== 'messageContextInfo') || 'unknown';
       const body =
         content.conversation ||
         content.extendedTextMessage?.text ||
         content.imageMessage?.caption ||
         content.videoMessage?.caption ||
+        content.documentMessage?.caption ||
+        content.documentMessage?.fileName ||
         `[${kind.replace('Message', '')}]`;
       const ts = Number(m.messageTimestamp || Date.now() / 1000);
       this.chat(s, { id: jid, conversationTimestamp: ts });
       db.prepare(
         'INSERT INTO messages(session_id,jid,id,sender,body,kind,from_me,ts) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(session_id,jid,id) DO UPDATE SET body=excluded.body,kind=excluded.kind',
       ).run(s, jid, m.key.id, m.pushName || m.key.participant || jid, body, kind, m.key.fromMe ? 1 : 0, ts);
+      media.save(s, m);
     },
     chats(s, q = '') {
       return db
@@ -74,12 +81,14 @@ export function openStore(dir) {
           'SELECT * FROM messages WHERE session_id=? AND jid=? AND (ts<? OR (ts=? AND id<?)) ORDER BY ts DESC,id DESC LIMIT ?',
         )
         .all(s, jid, before, before, beforeId, limit)
-        .reverse();
+        .reverse()
+        .map(media.describe);
     },
     search(s, q, limit = 100) {
       return db
         .prepare('SELECT * FROM messages WHERE session_id=? AND body LIKE ? ORDER BY ts DESC LIMIT ?')
-        .all(s, `%${q}%`, limit);
+        .all(s, `%${q}%`, limit)
+        .map(media.describe);
     },
     issueToken(s, name, scope, days = 90) {
       const token = 'wamcp_' + randomBytes(32).toString('base64url');

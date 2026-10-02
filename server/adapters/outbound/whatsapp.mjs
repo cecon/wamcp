@@ -8,6 +8,8 @@ import QRCode from 'qrcode';
 import pino from 'pino';
 import path from 'node:path';
 import { rm } from 'node:fs/promises';
+import { downloadMedia } from './media-download.mjs';
+import { MediaError } from '../../domain/media.mjs';
 
 export function whatsappManager(store, dir) {
   const connections = new Map();
@@ -99,10 +101,17 @@ export function whatsappManager(store, dir) {
     connect,
     stop,
     detail: (id) => ({ qr: current(id)?.qr || null, error: current(id)?.error || null }),
+    async media(id, message) {
+      const socket = current(id)?.socket;
+      if (store.session(id)?.status !== 'connected' || !socket)
+        throw new MediaError('Conecte a sessão ao WhatsApp para baixar o anexo.');
+      return downloadMedia(message, { logger, reuploadRequest: socket.updateMediaMessage });
+    },
     async send(id, jid, text) {
       const socket = current(id)?.socket;
       if (store.session(id)?.status !== 'connected' || !socket) throw new Error('Sessão desconectada');
       const result = await socket.sendMessage(jid, { text });
+      if (!result?.key?.id) throw new Error('Envio sem confirmação');
       if (result) store.message(id, result);
       return { id: result?.key?.id };
     },
