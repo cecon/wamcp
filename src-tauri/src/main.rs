@@ -69,7 +69,11 @@ fn autostart_status(app: tauri::AppHandle) -> bool {
 #[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     let manager = app.autolaunch();
-    let result = if enabled { manager.enable() } else { manager.disable() };
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
     result.map_err(|_| "Não foi possível atualizar o início automático.".to_string())
 }
 fn show(app: &tauri::AppHandle) {
@@ -99,7 +103,10 @@ fn main() {
         .setup(|app| {
             let runtime = Runtime::start(app.handle())?;
             app.manage(runtime);
-            let marker = app.path().app_local_data_dir()?.join("autostart-initialized");
+            let marker = app
+                .path()
+                .app_local_data_dir()?
+                .join("autostart-initialized");
             if !marker.exists() {
                 let _ = app.autolaunch().enable();
                 let _ = std::fs::write(&marker, "");
