@@ -6,6 +6,10 @@ import { authChallenge, authResult, toolSecurity } from './mcp-auth.mjs';
 import { registerMediaTool } from './mcp-media.mjs';
 export function mcpTools(service, id, token, credential, publicUrl) {
   const server = new McpServer({ name: 'wamcp', version: metadata.version });
+  return registerMcpTools(server, service, id, token, credential, publicUrl);
+}
+
+export function registerMcpTools(server, service, id, token, credential, publicUrl) {
   const output = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
   registerMediaTool(server, service, id, credential, publicUrl);
   const read = (name, description, schema, handler) =>
@@ -13,7 +17,7 @@ export function mcpTools(service, id, token, credential, publicUrl) {
       name,
       {
         description,
-        inputSchema: schema,
+        inputSchema: z.object(schema),
         ...toolSecurity('whatsapp:read'),
         annotations: { readOnlyHint: true, destructiveHint: false },
       },
@@ -28,8 +32,8 @@ export function mcpTools(service, id, token, credential, publicUrl) {
     'get_profile',
     {
       description: 'Identifica a sessão vinculada a esta credencial.',
-      inputSchema: {},
-      outputSchema: { id: z.string(), name: z.string() },
+      inputSchema: z.object({}),
+      outputSchema: z.object({ id: z.string(), name: z.string() }),
       ...profileSecurity,
       _meta: { ...profileSecurity._meta, 'openai/profile': true },
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
@@ -74,7 +78,7 @@ export function mcpTools(service, id, token, credential, publicUrl) {
       {
         description:
           'Envia uma mensagem de texto. Use apenas quando o usuário autorizar o envio ao destinatário.',
-        inputSchema: { jid: jidSchema, text: z.string().min(1).max(10000) },
+        inputSchema: z.object({ jid: jidSchema, text: z.string().min(1).max(10000) }),
         ...toolSecurity('whatsapp:send'),
         annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
       },

@@ -1,9 +1,12 @@
 import { rateLimit } from 'express-rate-limit';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isLegacyRequest } from '@modelcontextprotocol/server';
+import { toWebRequest } from '@modelcontextprotocol/node';
 import { mcpTools } from './mcp-tools.mjs';
+import { modernMcp } from './mcp-modern.mjs';
 import { bearer } from './security.mjs';
 import { authChallenge, withToolSecurity } from './mcp-auth.mjs';
-export function mcpRoutes(publicApp, service, publicUrl) {
+export function mcpRoutes(publicApp, service, publicUrl, events) {
   publicApp.get('/healthz', (_req, res) => res.json({ service: 'wamcp', ok: true }));
   publicApp.use(
     '/mcp',
@@ -11,7 +14,8 @@ export function mcpRoutes(publicApp, service, publicUrl) {
   );
   publicApp.all('/mcp/:id', async (req, res) => {
     if (req.headers.origin) return res.status(403).json({ error: 'Browser access is not allowed' });
-    const token = service.authenticate(req.params.id, bearer(req));
+    const credential = bearer(req);
+    const token = service.authenticate(req.params.id, credential);
     if (!token) {
       res.setHeader('WWW-Authenticate', authChallenge(publicUrl, req.params.id));
       return res.status(401).json({ error: 'Token inválido, expirado ou de outra sessão' });
@@ -20,8 +24,10 @@ export function mcpRoutes(publicApp, service, publicUrl) {
       res.setHeader('Allow', 'POST');
       return res.status(405).json({ error: 'Use MCP Streamable HTTP POST' });
     }
+    if (!(await isLegacyRequest(await toWebRequest(req, req.body), req.body)))
+      return modernMcp(req, res, service, token, credential, publicUrl, events);
     const id = req.params.id;
-    const server = mcpTools(service, id, token, bearer(req), publicUrl);
+    const server = mcpTools(service, id, token, credential, publicUrl);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
