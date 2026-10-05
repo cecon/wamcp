@@ -10,9 +10,14 @@ async function nativeMock(page: Page, fail = false) {
           updateListener = callback;
           return 1;
         },
-        async invoke(command: string) {
+        async invoke(command: string, args?: { enabled?: boolean }) {
           if (command === 'api_request') return [];
           if (command === 'runtime_status') return { tunnelConfigured: true, tunnelRunning: true };
+          if (command === 'autostart_status') return localStorage.getItem('autostart') === 'yes';
+          if (command === 'set_autostart') {
+            localStorage.setItem('autostart', args?.enabled ? 'yes' : 'no');
+            return null;
+          }
           if (command === 'check_update') {
             updateListener?.({ payload: '26.10.99' });
             if (failure) throw new Error('Falha ao validar assinatura. A versão atual foi mantida.');
@@ -36,6 +41,18 @@ test('automatically prepares the update and waits for restart before installatio
   await page.getByRole('button', { name: 'Reiniciar e atualizar' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-update-installed', 'yes');
   await expect(page.getByRole('button', { name: 'Instalando…' })).toBeDisabled();
+});
+test('toggling Windows autostart calls the native command and reflects its state', async ({ page }) => {
+  await nativeMock(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
+  const toggle = page.getByRole('checkbox', { name: 'Iniciar automaticamente com o Windows' });
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await expect(toggle).toBeChecked();
+  await page.reload();
+  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: 'Iniciar automaticamente com o Windows' })).toBeChecked();
 });
 test('failed signature never offers installation and preserves the application', async ({ page }) => {
   await nativeMock(page, true);
