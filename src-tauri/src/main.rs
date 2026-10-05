@@ -7,6 +7,9 @@ use tauri::{
     tray::{TrayIconBuilder, TrayIconEvent},
     Manager,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+
+const AUTOSTART_ARG: &str = "--autostart";
 
 #[tauri::command]
 async fn api_request(
@@ -59,6 +62,20 @@ fn runtime_status(state: tauri::State<'_, Runtime>) -> serde_json::Value {
 fn configure_tunnel(state: tauri::State<'_, Runtime>, token: String) -> Result<(), String> {
     state.configure_tunnel(&token)
 }
+#[tauri::command]
+fn autostart_status(app: tauri::AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let manager = app.autolaunch();
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
+    result.map_err(|_| "Não foi possível atualizar o início automático.".to_string())
+}
 fn show(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
@@ -70,16 +87,33 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(updates::Updates::default())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show(app)))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![AUTOSTART_ARG]),
+        ))
         .invoke_handler(tauri::generate_handler![
             api_request,
             runtime_status,
             configure_tunnel,
+            autostart_status,
+            set_autostart,
             updates::check_update,
             updates::install_update
         ])
         .setup(|app| {
             let runtime = Runtime::start(app.handle())?;
             app.manage(runtime);
+            let marker = app
+                .path()
+                .app_local_data_dir()?
+                .join("autostart-initialized");
+            if !marker.exists() {
+                let _ = app.autolaunch().enable();
+                let _ = std::fs::write(&marker, "");
+            }
+            if !std::env::args().any(|arg| arg == AUTOSTART_ARG) {
+                show(app.handle());
+            }
             let open = MenuItem::with_id(app, "open", "Abrir WA MCP", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &quit])?;

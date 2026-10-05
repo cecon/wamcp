@@ -9,13 +9,30 @@ export function Settings() {
   const [token, setToken] = useState(''),
     [status, setStatus] = useState<RuntimeStatus | null>(null),
     [message, setMessage] = useState(''),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [autostart, setAutostartState] = useState(false),
+    [autostartMessage, setAutostartMessage] = useState('');
   useEffect(() => {
     if (isTauri())
       invoke<RuntimeStatus>('runtime_status')
         .then(setStatus)
         .catch((e) => setMessage(String(e)));
   }, []);
+  useEffect(() => {
+    if (isTauri())
+      invoke<boolean>('autostart_status')
+        .then(setAutostartState)
+        .catch((e) => setAutostartMessage(String(e)));
+  }, []);
+  async function toggleAutostart(enabled: boolean) {
+    try {
+      await invoke('set_autostart', { enabled });
+      setAutostartState(enabled);
+      setAutostartMessage('');
+    } catch (e) {
+      setAutostartMessage(String(e));
+    }
+  }
   async function save() {
     setBusy(true);
     try {
@@ -55,6 +72,18 @@ export function Settings() {
         >
           Verificar atualizações
         </button>
+        <h2>Iniciar com o Windows</h2>
+        <p>O WA MCP abre automaticamente ao ligar o computador, minimizado na bandeja.</p>
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={autostart}
+            disabled={!isTauri()}
+            onChange={(e) => void toggleAutostart(e.target.checked)}
+          />
+          Iniciar automaticamente com o Windows
+        </label>
+        {autostartMessage && <div className="notice error">{autostartMessage}</div>}
         <h2>Cloudflare Tunnel</h2>
         <p>
           Endereço: <code>https://wamcp.cappyfy.com</code>
