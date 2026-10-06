@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HelpdeskSetup } from '../../src/components/HelpdeskSetup';
+import { HelpdeskSetup, STATUS_RETRY_MS } from '../../src/components/HelpdeskSetup';
 import { ApiError, formatTime, initials, query } from '../../src/agent/api';
 import { fakeApi, status } from './fake-api';
 
@@ -38,14 +38,40 @@ describe('desktop helpdesk setup', () => {
     });
   });
 
-  it('reports when the local service is unreachable', async () => {
+  it('keeps retrying while the local service starts, without a second error banner', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let calls = 0;
     fakeApi({
       'GET /api/helpdesk/status': () => {
-        throw status(401, 'x');
+        if (++calls < 3) throw status(503, 'Serviço iniciando');
+        return { needsBootstrap: false, webUrl: 'https://wamcp.cappyfy.com/app/' };
       },
     });
     render(<HelpdeskSetup />);
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/token administrativo/));
+    expect(await screen.findByText('Aguardando o serviço local…')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(STATUS_RETRY_MS * 2);
+    expect(await screen.findByText('https://wamcp.cappyfy.com/app/')).toBeInTheDocument();
+    expect(calls).toBe(3);
+    expect(screen.queryByText('Aguardando o serviço local…')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('stops retrying when the page is closed', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let calls = 0;
+    fakeApi({
+      'GET /api/helpdesk/status': () => {
+        calls++;
+        throw status(503, 'Serviço iniciando');
+      },
+    });
+    const { unmount } = render(<HelpdeskSetup />);
+    await waitFor(() => expect(calls).toBe(1));
+    unmount();
+    await vi.advanceTimersByTimeAsync(STATUS_RETRY_MS * 3);
+    expect(calls).toBe(1);
+    vi.useRealTimers();
   });
 });
 
