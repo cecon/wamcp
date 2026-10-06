@@ -1,6 +1,6 @@
 # Plano: helpdesk estilo Chatwoot sobre o WhatsAppMcp
 
-Status: fase 1 implementada no branch `feat/helpdesk-fase1` (2026-10-06); fases 2 e 3 pendentes.
+Status: fases 1 e 2 implementadas no branch `feat/helpdesk-fase1` (2026-10-06); fase 3 pendente.
 
 ## Fase 1: o que foi entregue
 
@@ -18,6 +18,32 @@ Status: fase 1 implementada no branch `feat/helpdesk-fase1` (2026-10-06); fases 
 - **Regras de domínio**: roteamento de mensagens, round robin entre agentes online, atividades, snooze com timer de 60 s, proteção do último admin.
 - **Testes**: `tests/helpdesk-domain.test.mjs` e `tests/helpdesk-api.test.mjs`.
 - **Ainda não entregue**: UI web dos agentes, SSE, etiquetas, respostas prontas, notificações, webhooks e tools MCP de conversa. Tudo isso fica para a fase 2.
+
+## Fase 2: o que foi entregue
+
+- **Migrações v6–v7**: etiquetas (conversa/contato), respostas prontas, notificações e `inboxes.agent_bot_enabled`.
+- **Store SQLite dividido por agregado**: `inbox`, `contact`, `conversation`, `message` e `catalog`, compostos em `helpdesk-store.mjs`.
+- **Aplicação**:
+  - `conversation-core`: acesso, atividades, atribuição automática e commit com eventos.
+  - `ingestion`: WhatsApp → helpdesk.
+  - `helpdesk`: ações de agentes e do bot.
+  - `catalog`, `notifications` (listener) e `realtime` (filtro por inbox).
+- **API**:
+  - `/labels`, `/canned_responses` e `/notifications`.
+  - `POST /conversations/:id/labels` e filtro `label`.
+  - `GET /events` (SSE).
+  - `/app` serve a UI com CSP estrita.
+- **MCP**:
+  - Tools `list_conversations`, `get_conversation`, `reply_conversation`, `set_conversation_status`, `assign_conversation` e `set_conversation_labels`.
+  - O cliente MCP atua como bot da inbox. Com o atendimento por IA ligado, a conversa nasce `pending` e `open` faz a passagem para humano.
+- **UI web dos agentes** (`agent.html` → `src/agent/`):
+  - Login.
+  - Caixa de entrada com abas e filtros, conversa em tempo real, compositor com `/atalhos` e notas, painel de responsável, time e etiquetas.
+  - Contatos, notificações e configurações (agentes, caixas, times, etiquetas e respostas prontas).
+- **Desktop**: página "Atendimento" para criar o primeiro admin e copiar o link do painel.
+- **Testes**:
+  - Backend: `tests/helpdesk-phase2.test.mjs`.
+  - UI: `tests/ui/*.test.tsx` (Vitest + Testing Library). O `npm run check` exige 80% de cobertura.
 
 ## Decisões fechadas
 

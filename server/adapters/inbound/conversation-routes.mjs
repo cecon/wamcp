@@ -8,6 +8,7 @@ const listFilters = z.object({
   assignee_type: z.enum(['me', 'unassigned', 'assigned', 'all']).default('all'),
   inbox_id: id.optional(),
   team_id: id.optional(),
+  label: z.string().trim().max(40).optional(),
   q: z.string().trim().max(100).optional(),
   page,
 });
@@ -18,6 +19,7 @@ const filters = (query) => {
     assigneeType: f.assignee_type,
     inboxId: f.inbox_id,
     teamId: f.team_id,
+    label: f.label,
     q: f.q,
     page: f.page,
   };
@@ -64,6 +66,10 @@ export function conversationRoutes(api, helpdesk) {
       .refine((b) => b.assignee_id !== undefined || b.team_id !== undefined)
       .parse(req.body);
     res.json(helpdesk.assign(req.user, id.parse(req.params.displayId), body));
+  });
+  api.post('/conversations/:displayId/labels', (req, res) => {
+    const { labels } = z.object({ labels: z.array(z.string().max(40)).max(50) }).parse(req.body);
+    res.json(helpdesk.setLabels(req.user, id.parse(req.params.displayId), labels));
   });
   api.post('/conversations/:displayId/update_last_seen', (req, res) =>
     res.json(helpdesk.markSeen(req.user, id.parse(req.params.displayId))),

@@ -188,3 +188,27 @@ label input {
   width: 100%;
   margin-top: 18px;
 }
+.helpdesk-form {
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+}
+.helpdesk-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.helpdesk-form input {
+  border: 1px solid #dce5df;
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+.helpdesk-form .primary {
+  justify-self: start;
+}
+.helpdesk-url {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

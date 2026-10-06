@@ -75,6 +75,23 @@ export const migrations = [
    CREATE UNIQUE INDEX cmsg_source ON conversation_messages(inbox_id,source_id) WHERE source_id IS NOT NULL;
    CREATE TABLE conversation_participants(conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,PRIMARY KEY(conversation_id,user_id));`,
+
+  // v6: etiquetas e respostas prontas
+  `CREATE TABLE labels(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL DEFAULT 1,title TEXT NOT NULL COLLATE NOCASE,
+     description TEXT,color TEXT NOT NULL DEFAULT '#1f93ff',show_on_sidebar INTEGER NOT NULL DEFAULT 1,UNIQUE(account_id,title));
+   CREATE TABLE conversation_labels(conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+     label_id INTEGER NOT NULL REFERENCES labels(id) ON DELETE CASCADE,PRIMARY KEY(conversation_id,label_id));
+   CREATE TABLE contact_labels(contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+     label_id INTEGER NOT NULL REFERENCES labels(id) ON DELETE CASCADE,PRIMARY KEY(contact_id,label_id));
+   CREATE TABLE canned_responses(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL DEFAULT 1,
+     short_code TEXT NOT NULL COLLATE NOCASE,content TEXT NOT NULL,UNIQUE(account_id,short_code));`,
+
+  // v7: notificações e atendimento por IA (bot MCP) por inbox
+  `CREATE TABLE notifications(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     notification_type TEXT NOT NULL,conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
+     actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,read_at INTEGER,created_at INTEGER NOT NULL);
+   CREATE INDEX notif_user ON notifications(user_id,read_at,id DESC);
+   ALTER TABLE inboxes ADD COLUMN agent_bot_enabled INTEGER NOT NULL DEFAULT 0;`,
 ];
 
 export function migrate(db) {

@@ -1,21 +1,14 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { hashToken } from './store.mjs';
+import { iso, updateFields } from './sql.mjs';
 
 const USER_COLUMNS = 'id,account_id,email,name,display_name,role,availability,active,created,last_login';
-const iso = (ms = Date.now()) => new Date(ms).toISOString();
 
 /** Users, web sessions, API tokens, teams and inbox membership. */
 export function usersStore(db) {
   const user = (id) => db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id=?`).get(id) || null;
   const editable = ['name', 'display_name', 'role', 'availability', 'active', 'password_hash'];
-  const update = (table, id, fields, allowed) => {
-    const keys = Object.keys(fields).filter((k) => allowed.includes(k) && fields[k] !== undefined);
-    if (keys.length)
-      db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k}=?`).join(',')} WHERE id=?`).run(
-        ...keys.map((k) => (typeof fields[k] === 'boolean' ? Number(fields[k]) : fields[k])),
-        id,
-      );
-  };
+  const update = (table, id, fields, allowed) => updateFields(db, table, id, fields, allowed);
   return {
     countUsers: () => db.prepare('SELECT COUNT(*) AS n FROM users').get().n,
     user,

@@ -1,6 +1,7 @@
 import { rateLimit } from 'express-rate-limit';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { mcpTools } from './mcp-tools.mjs';
+import { registerConversationTools } from './mcp-conversations.mjs';
 import { bearer } from './security.mjs';
 import { authChallenge, withToolSecurity } from './mcp-auth.mjs';
 export function mcpRoutes(publicApp, service, publicUrl) {
@@ -22,6 +23,7 @@ export function mcpRoutes(publicApp, service, publicUrl) {
     }
     const id = req.params.id;
     const server = mcpTools(service, id, token, bearer(req), publicUrl);
+    registerConversationTools(server, service, id, bearer(req), publicUrl);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

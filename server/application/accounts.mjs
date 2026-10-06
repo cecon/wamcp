@@ -58,6 +58,7 @@ export function accountService({ users, helpdesk, hasher, bus }) {
       const user = owner?.owner_type === 'user' ? users.user(owner.owner_id) : null;
       return user?.active ? { user } : null;
     },
+    isActive: (userId) => Boolean(users.user(userId)?.active),
     me: (user) => ({ ...user, inbox_ids: users.memberInboxIds(user.id) }),
     issueApiToken: (user) => ({ token: users.issueApiToken('user', user.id) }),
     async updateProfile(user, { name, display_name, availability, current_password, password }) {
@@ -74,7 +75,7 @@ export function accountService({ users, helpdesk, hasher, bus }) {
       return updated;
     },
 
-    agents: () => users.users(),
+    agents: () => users.users().map((u) => ({ ...u, inbox_ids: users.memberInboxIds(u.id) })),
     async createAgent(actor, { name, email, role, password, inbox_ids = [] }) {
       requireAdmin(actor);
       validatePassword(password);

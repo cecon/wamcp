@@ -19,7 +19,7 @@ async function withAgent(f, admin, { inbox = true, email = 'maria@example.com', 
 
 test('bootstrap creates the first administrator only once and login issues a secure cookie', async (t) => {
   const f = await helpdeskFixture(t);
-  assert.deepEqual(await (await f.admin('/api/helpdesk/status')).json(), { needsBootstrap: true });
+  assert.equal((await (await f.admin('/api/helpdesk/status')).json()).needsBootstrap, true);
   const admin = await f.bootstrap();
   assert.equal(admin.user.role, 'administrator');
   const again = await f.admin('/api/helpdesk/bootstrap', {
@@ -132,13 +132,13 @@ test('replies go to WhatsApp, private notes do not, and failures are recorded', 
   f.incoming(s.id, { id: 'OUT1', body: 'Oi, como posso ajudar?', fromMe: true });
 
   const note = await maria.post('/conversations/1/messages', { content: 'cliente VIP', private: true });
-  assert.equal(note.body.private, 1);
+  assert.equal(note.body.private, true);
   assert.equal(f.sent.length, 1);
 
   f.wa.fail = true;
   const failed = await maria.post('/conversations/1/messages', { content: 'teste' });
   assert.equal(failed.body.status, 'failed');
-  assert.match(failed.body.content_attributes, /Sessão desconectada/);
+  assert.equal(failed.body.content_attributes.external_error, 'Sessão desconectada');
 
   const conversation = (await maria.get('/conversations/1')).body;
   assert.equal(conversation.assignee_id, maria.user.id, 'replying agent takes the unassigned conversation');
@@ -231,5 +231,5 @@ test('migration turns sessions created by older versions into inboxes', async (t
     .prepare('SELECT i.name FROM inboxes i JOIN channel_whatsapp w ON w.id=i.channel_id WHERE w.session_id=?')
     .get('legacy');
   assert.equal(row.name, 'Antiga');
-  assert.equal(f.store.db.prepare('PRAGMA user_version').get().user_version, 5);
+  assert.equal(f.store.db.prepare('PRAGMA user_version').get().user_version, 7);
 });

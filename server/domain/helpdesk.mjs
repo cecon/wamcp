@@ -91,3 +91,27 @@ export function validatePassword(password) {
   if (typeof password !== 'string' || password.length < 10 || password.length > 200)
     throw new HelpdeskError('A senha precisa ter entre 10 e 200 caracteres');
 }
+
+/** Labels are lowercase slugs, like Chatwoot (`suporte-n1`, `vip`). */
+export function normalizeLabelTitle(title) {
+  const slug = String(title || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  if (!/^[\p{L}\p{N}_-]{1,40}$/u.test(slug)) throw new HelpdeskError('Etiqueta inválida');
+  return slug;
+}
+
+export function labelsActivity(actor, added, removed) {
+  const who = actor || 'Sistema';
+  const parts = [];
+  if (added.length) parts.push(`${who} adicionou ${added.join(', ')}`);
+  if (removed.length) parts.push(`${who} removeu ${removed.join(', ')}`);
+  return parts.join('; ');
+}
+
+export function validateCannedCode(code) {
+  const value = String(code || '').trim();
+  if (!/^[\p{L}\p{N}_-]{1,40}$/u.test(value)) throw new HelpdeskError('Atalho inválido');
+  return value.toLowerCase();
+}

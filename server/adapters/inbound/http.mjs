@@ -8,12 +8,13 @@ import { HelpdeskError } from '../../domain/helpdesk.mjs';
 import { sameOrigin } from './web-auth.mjs';
 import { accountRoutes, bootstrapRoutes } from './account-routes.mjs';
 import { conversationRoutes } from './conversation-routes.mjs';
+import { catalogRoutes } from './catalog-routes.mjs';
+import { webAppRoutes } from './web-app.mjs';
 export function createApps({
   sessions,
   mcp,
   oauth,
-  accounts,
-  helpdesk,
+  support,
   adminToken,
   publicUrl = 'https://wamcp.cappyfy.com',
 }) {
@@ -28,13 +29,15 @@ export function createApps({
   adminRoutes(admin, sessions, publicUrl);
   if (oauth) oauthRoutes(admin, publicApp, oauth, publicUrl);
   mcpRoutes(publicApp, mcp, publicUrl);
-  if (accounts && helpdesk) {
-    bootstrapRoutes(admin, accounts);
+  if (support) {
+    bootstrapRoutes(admin, support.accounts, publicUrl);
     const api = express.Router();
     api.use(sameOrigin(publicUrl));
-    accountRoutes(api, accounts);
-    conversationRoutes(api, helpdesk);
+    accountRoutes(api, support.accounts);
+    conversationRoutes(api, support.helpdesk);
+    catalogRoutes(api, support);
     publicApp.use('/api/v1', api);
+    webAppRoutes(publicApp, support.webDir);
   }
   for (const app of [admin, publicApp])
     app.use((error, _req, res, _next) => {

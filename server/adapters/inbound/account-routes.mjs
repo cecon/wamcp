@@ -116,6 +116,7 @@ export function accountRoutes(api, accounts) {
         greeting_message: z.string().max(1000).nullable().optional(),
         lock_to_single_conversation: z.boolean().optional(),
         ignore_groups: z.boolean().optional(),
+        agent_bot_enabled: z.boolean().optional(),
         timezone: z.string().max(64).optional(),
       })
       .parse(req.body);
@@ -137,8 +138,10 @@ export function accountRoutes(api, accounts) {
 }
 
 /** Desktop-only (admin token) endpoints to create the first administrator. */
-export function bootstrapRoutes(admin, accounts) {
-  admin.get('/api/helpdesk/status', (_req, res) => res.json({ needsBootstrap: accounts.needsBootstrap() }));
+export function bootstrapRoutes(admin, accounts, publicUrl) {
+  admin.get('/api/helpdesk/status', (_req, res) =>
+    res.json({ needsBootstrap: accounts.needsBootstrap(), webUrl: `${publicUrl}/app/` }),
+  );
   admin.post('/api/helpdesk/bootstrap', async (req, res) => {
     const body = z.object({ name, email, password }).parse(req.body);
     res.status(201).json(await accounts.bootstrap(body));

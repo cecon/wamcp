@@ -8,6 +8,9 @@ import { passwordHasher } from '../server/adapters/outbound/password.mjs';
 import { eventBus } from '../server/application/events.mjs';
 import { accountService } from '../server/application/accounts.mjs';
 import { helpdeskService } from '../server/application/helpdesk.mjs';
+import { catalogService } from '../server/application/catalog.mjs';
+import { notificationService } from '../server/application/notifications.mjs';
+import { realtimeService } from '../server/application/realtime.mjs';
 import { sessionService } from '../server/application/sessions.mjs';
 import { mcpService } from '../server/application/mcp.mjs';
 import { createApps } from '../server/adapters/inbound/http.mjs';
@@ -16,7 +19,7 @@ export const ADMIN_TOKEN = 'a'.repeat(64);
 export const PASSWORD = 'senha-segura-123';
 
 /** Full helpdesk stack over a temporary SQLite file and an in-memory WhatsApp port. */
-export async function helpdeskFixture(t, { beforeStart } = {}) {
+export async function helpdeskFixture(t, { beforeStart, webDir } = {}) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'wamcp-helpdesk-'));
   if (beforeStart) beforeStart(dir);
   const store = openStore(dir);
@@ -47,11 +50,19 @@ export async function helpdeskFixture(t, { beforeStart } = {}) {
     bus,
     now: () => clock,
   });
+  const notifications = notificationService({ helpdesk: conversations, users, bus, now: () => clock });
+  notifications.listen();
   const apps = createApps({
     sessions: sessionService(store, wa),
-    mcp: mcpService(store, wa),
-    accounts,
-    helpdesk,
+    mcp: mcpService(store, wa, undefined, helpdesk),
+    support: {
+      accounts,
+      helpdesk,
+      catalog: catalogService({ helpdesk: conversations, bus }),
+      notifications,
+      realtime: realtimeService({ bus, users }),
+      webDir: webDir ?? undefined,
+    },
     adminToken: ADMIN_TOKEN,
   });
   const servers = await Promise.all(

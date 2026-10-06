@@ -15,6 +15,10 @@ import { passwordHasher } from './adapters/outbound/password.mjs';
 import { eventBus } from './application/events.mjs';
 import { accountService } from './application/accounts.mjs';
 import { helpdeskService } from './application/helpdesk.mjs';
+import { catalogService } from './application/catalog.mjs';
+import { notificationService } from './application/notifications.mjs';
+import { realtimeService } from './application/realtime.mjs';
+import { findWebDir } from './adapters/inbound/web-app.mjs';
 const dir =
   process.env.WAMCP_DATA_DIR || path.join(process.env.LOCALAPPDATA || os.homedir(), 'com.cappyfy.wamcp');
 mkdirSync(dir, { recursive: true });
@@ -34,12 +38,20 @@ wa.subscribe({
   message: (sessionId, message) => helpdesk.ingest(sessionId, message),
   receipt: (sessionId, id, status) => helpdesk.receipt(sessionId, id, status),
 });
+const notifications = notificationService({ helpdesk: conversations, users, bus });
+notifications.listen();
 const snoozeTimer = setInterval(() => helpdesk.wakeSnoozed(), 60000);
 const { admin, publicApp } = createApps({
-  accounts,
-  helpdesk,
+  support: {
+    accounts,
+    helpdesk,
+    catalog: catalogService({ helpdesk: conversations, bus }),
+    notifications,
+    realtime: realtimeService({ bus, users }),
+    webDir: findWebDir(),
+  },
   sessions: sessionService(store, wa),
-  mcp: mcpService(store, wa, oauth),
+  mcp: mcpService(store, wa, oauth, helpdesk),
   oauth,
   publicUrl,
   adminToken,
