@@ -2,8 +2,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeMessageContent } from '@whiskeysockets/baileys';
 import { mediaStore } from './media-store.mjs';
+import { migrate } from './migrations.mjs';
+import { describeWaMessage } from '../wa-message.mjs';
 
 export const hashToken = (value) => createHash('sha256').update(value).digest('hex');
 export function openStore(dir) {
@@ -17,6 +18,7 @@ export function openStore(dir) {
     CREATE TABLE IF NOT EXISTS tokens(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,name TEXT NOT NULL,hash TEXT UNIQUE NOT NULL,scope TEXT NOT NULL,created TEXT NOT NULL,expires TEXT NOT NULL,last_used TEXT);
     CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,session_id TEXT,token_id TEXT,action TEXT NOT NULL,at TEXT NOT NULL);
   `);
+  migrate(db);
   db.prepare("UPDATE sessions SET status='disconnected'").run();
   const media = mediaStore(db);
   return {
@@ -48,25 +50,14 @@ export function openStore(dir) {
       ).run(s, c.id, c.name || c.subject || c.notify || null, Number(c.conversationTimestamp || 0));
     },
     message(s, m) {
-      if (!m.key?.id || !m.key.remoteJid || !m.message) return;
-      const jid = m.key.remoteJid;
-      if (jid === 'status@broadcast') return;
-      const content = normalizeMessageContent(m.message) || {};
-      const kind = Object.keys(content).find((k) => k !== 'messageContextInfo') || 'unknown';
-      const body =
-        content.conversation ||
-        content.extendedTextMessage?.text ||
-        content.imageMessage?.caption ||
-        content.videoMessage?.caption ||
-        content.documentMessage?.caption ||
-        content.documentMessage?.fileName ||
-        `[${kind.replace('Message', '')}]`;
-      const ts = Number(m.messageTimestamp || Date.now() / 1000);
-      this.chat(s, { id: jid, conversationTimestamp: ts });
+      const d = describeWaMessage(m);
+      if (!d) return null;
+      this.chat(s, { id: d.jid, conversationTimestamp: d.ts });
       db.prepare(
         'INSERT INTO messages(session_id,jid,id,sender,body,kind,from_me,ts) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(session_id,jid,id) DO UPDATE SET body=excluded.body,kind=excluded.kind',
-      ).run(s, jid, m.key.id, m.pushName || m.key.participant || jid, body, kind, m.key.fromMe ? 1 : 0, ts);
+      ).run(s, d.jid, d.id, d.sender, d.body, d.kind, d.fromMe ? 1 : 0, d.ts);
       media.save(s, m);
+      return d;
     },
     chats(s, q = '') {
       return db
