@@ -12,11 +12,12 @@ import { rm } from 'node:fs/promises';
 import { downloadMedia } from './media-download.mjs';
 import { MediaError } from '../../domain/media.mjs';
 import { receiptStatus } from './wa-message.mjs';
+import { persistLiveMessages } from './whatsapp-events.mjs';
 
 // Live messages older than this (e.g. replayed after a long outage) stay in the mirror only.
 const LIVE_WINDOW_SECONDS = 2 * 86400;
 
-export function whatsappManager(store, dir) {
+export function whatsappManager(store, dir, { onMessage, onLogout } = {}) {
   const connections = new Map();
   const listeners = new Set();
   const notify = (method, ...args) => {
@@ -64,12 +65,11 @@ export function whatsappManager(store, dir) {
       socket.ev.on('chats.upsert', (chats) => chats.forEach((c) => store.chat(id, c)));
       socket.ev.on('chats.update', (chats) => chats.forEach((c) => store.chat(id, c)));
       socket.ev.on('contacts.upsert', (contacts) => contacts.forEach((c) => store.chat(id, c)));
-      socket.ev.on('messages.upsert', ({ messages, type }) => {
-        for (const m of messages) {
-          const described = store.message(id, m);
-          const live = type === 'notify' || (type === 'append' && described?.fromMe);
-          if (described && live && described.ts > Date.now() / 1000 - LIVE_WINDOW_SECONDS)
-            notify('message', id, described);
+      socket.ev.on('messages.upsert', (update) => {
+        if (current(id) !== entry || entry.stopped) return;
+        for (const saved of persistLiveMessages(store, id, update, onMessage)) {
+          const live = update.type === 'notify' || (update.type === 'append' && saved.fromMe);
+          if (live && saved.ts > Date.now() / 1000 - LIVE_WINDOW_SECONDS) notify('message', id, saved);
         }
       });
       socket.ev.on('messages.update', (updates) => {
@@ -95,6 +95,7 @@ export function whatsappManager(store, dir) {
           entry.qr = null;
           const code = update.lastDisconnect?.error?.output?.statusCode;
           if (code === DisconnectReason.loggedOut) {
+            onLogout?.(id);
             store.status(id, 'logged_out');
             await rm(path.join(dir, 'auth', id), { recursive: true, force: true });
           } else if (!entry.stopped) {

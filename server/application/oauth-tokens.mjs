@@ -18,6 +18,17 @@ export function oauthTokenService(r, resourceFor) {
   }
   return {
     issue,
+    eventPrincipal(id, grantId) {
+      const grant = r.get('grants', grantId);
+      if (
+        !grant ||
+        grant.sessionId !== id ||
+        grant.resource !== resourceFor(id) ||
+        !grant.scopes.includes('whatsapp:read')
+      )
+        return null;
+      return { id: grant.id, session_id: id, scope: scopeFor(grant.scopes) };
+    },
     refresh(client, token, scopes, resource) {
       const reused = r.get('used_refresh', r.hash(token));
       if (reused?.clientId === client.client_id && reused.resource === resource?.toString()) {

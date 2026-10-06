@@ -1,4 +1,4 @@
-import { normalizeMessageContent } from '@whiskeysockets/baileys';
+import { getContentType, normalizeMessageContent } from '@whiskeysockets/baileys';
 
 /** Turns a Baileys WebMessageInfo into the flat shape stored locally; returns null for unusable events. */
 export function describeWaMessage(m) {
@@ -6,7 +6,7 @@ export function describeWaMessage(m) {
   const jid = m.key.remoteJid;
   if (jid === 'status@broadcast') return null;
   const content = normalizeMessageContent(m.message) || {};
-  const kind = Object.keys(content).find((k) => k !== 'messageContextInfo') || 'unknown';
+  const kind = getContentType(content) || 'unknown';
   const body =
     content.conversation ||
     content.extendedTextMessage?.text ||

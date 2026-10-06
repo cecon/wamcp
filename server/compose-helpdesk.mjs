@@ -2,7 +2,7 @@ import { usersStore } from './adapters/outbound/sqlite/users-store.mjs';
 import { helpdeskStore } from './adapters/outbound/sqlite/helpdesk-store.mjs';
 import { passwordHasher } from './adapters/outbound/password.mjs';
 import { webhookSender } from './adapters/outbound/webhook-sender.mjs';
-import { eventBus } from './application/events.mjs';
+import { eventBus } from './application/event-bus.mjs';
 import { accountService } from './application/accounts.mjs';
 import { helpdeskService } from './application/helpdesk.mjs';
 import { catalogService } from './application/catalog.mjs';

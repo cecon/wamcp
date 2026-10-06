@@ -28,6 +28,12 @@ A porta de repositório também oferece `media`, limitada por sessão, conversa 
 
 Interfaces pequenas e injeção explícita evitam contêiner de dependências ou hierarquias desnecessárias. Regras de autorização ficam no domínio; use cases fazem orquestração; transporte e SQL ficam nos adaptadores.
 
+## Eventos MCP
+
+`application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.
+
+A autorização de entrega consulta o ID estável do token ou grant OAuth, sem armazenar o bearer token na assinatura. A validade é reavaliada antes de cada tentativa; renovação do access token mantém a identidade, enquanto revogação do grant a invalida. Uma desconexão explícita remove as assinaturas; encerramento normal do processo conserva a fila. Consulte [MCP_EVENTS.md](MCP_EVENTS.md) para contrato, limites e teste real.
+
 ## Segurança
 
 Dois listeners loopback distintos: administração na porta 17381 e MCP na 17382. O túnel só encaminha ao segundo. A administração exige um segredo local, e valida origens de navegador. O MCP rejeita origens de navegador, valida o token antes de criar um servidor efêmero e nunca usa IDs de sessão fornecidos por argumentos das ferramentas.

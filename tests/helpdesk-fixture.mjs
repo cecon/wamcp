@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { openStore } from '../server/adapters/outbound/sqlite/store.mjs';
 import { composeHelpdesk } from '../server/compose-helpdesk.mjs';
+import { describeWaMessage } from '../server/adapters/outbound/wa-message.mjs';
 import { sessionService } from '../server/application/sessions.mjs';
 import { mcpService } from '../server/application/mcp.mjs';
 import { createApps } from '../server/adapters/inbound/http.mjs';
@@ -141,7 +142,8 @@ export async function helpdeskFixture(t, { beforeStart, webDir } = {}) {
       messageTimestamp: ts ?? clock,
       pushName: fromMe ? undefined : name,
     };
-    const described = store.message(sessionId, message);
+    // Redeliveries are not returned by the mirror; describe them anyway to exercise helpdesk dedupe.
+    const described = store.message(sessionId, message) ?? describeWaMessage(message);
     return helpdesk.ingest(sessionId, described);
   }
   return {

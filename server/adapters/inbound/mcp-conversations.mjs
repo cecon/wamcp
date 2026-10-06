@@ -24,7 +24,7 @@ export function registerConversationTools(server, service, id, credential, publi
       name,
       {
         description,
-        inputSchema: schema,
+        inputSchema: z.object(schema),
         ...toolSecurity('whatsapp:read'),
         annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       },
@@ -43,7 +43,7 @@ export function registerConversationTools(server, service, id, credential, publi
       name,
       {
         description,
-        inputSchema: schema,
+        inputSchema: z.object(schema),
         ...toolSecurity('whatsapp:send'),
         annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: openWorld },
       },

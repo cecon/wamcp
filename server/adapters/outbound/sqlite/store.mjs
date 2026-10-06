@@ -51,13 +51,17 @@ export function openStore(dir) {
     },
     message(s, m) {
       const d = describeWaMessage(m);
-      if (!d) return null;
+      if (!d) return undefined;
+      const existing = db
+        .prepare('SELECT 1 FROM messages WHERE session_id=? AND jid=? AND id=?')
+        .get(s, d.jid, d.id);
       this.chat(s, { id: d.jid, conversationTimestamp: d.ts });
       db.prepare(
         'INSERT INTO messages(session_id,jid,id,sender,body,kind,from_me,ts) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(session_id,jid,id) DO UPDATE SET body=excluded.body,kind=excluded.kind',
       ).run(s, d.jid, d.id, d.sender, d.body, d.kind, d.fromMe ? 1 : 0, d.ts);
       media.save(s, m);
-      return d;
+      // Only newly stored messages are returned, so live listeners never see duplicates.
+      return existing ? undefined : { ...d, from_me: d.fromMe };
     },
     chats(s, q = '') {
       return db
@@ -107,6 +111,13 @@ export function openStore(dir) {
     },
     revoke(s, id) {
       return db.prepare('DELETE FROM tokens WHERE session_id=? AND id=?').run(s, id);
+    },
+    eventPrincipal(s, id) {
+      return (
+        db
+          .prepare('SELECT id,session_id,scope FROM tokens WHERE session_id=? AND id=? AND expires>?')
+          .get(s, id, new Date().toISOString()) || null
+      );
     },
     audit(s, t, action) {
       db.prepare('INSERT INTO audit(session_id,token_id,action,at) VALUES(?,?,?,?)').run(

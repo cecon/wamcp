@@ -16,6 +16,8 @@ O instalador inclui Node.js e cloudflared. Não é necessário instalar ferramen
 
 Fechar a janela mantém o aplicativo na bandeja. Clique no ícone verde para abrir novamente; use **Sair** para encerrar o serviço e o túnel. O computador deve permanecer ligado e conectado à internet.
 
+Por padrão, o WA MCP inicia automaticamente com o Windows (minimizado na bandeja, sem abrir a janela). Desative em **Configurações → Iniciar com o Windows** se preferir abrir manualmente.
+
 ### Atualizações automáticas
 
 A partir da versão 26.10.3, o aplicativo verifica novas releases ao abrir e a cada seis horas. O download ocorre em segundo plano e a assinatura é validada com a chave pública embutida. Quando estiver pronto, clique **Reiniciar e atualizar** no aviso; o aplicativo encerra seus serviços, instala silenciosamente e reabre. As sessões e o histórico permanecem no perfil do Windows. Também é possível usar **Configurações → Verificar atualizações**. Sem internet, a versão atual continua funcionando.
@@ -93,6 +95,10 @@ Configure o hostname público para `http://127.0.0.1:17382`. A API administrativ
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
 
+## Eventos no ChatGPT
+
+O servidor oferece `message.created` para novas mensagens recebidas, com filtro opcional por conversa e entrega HTTPS assinada. A assinatura é criada pelo ChatGPT somente quando o usuário pede monitoramento; a atualização não ativa automações por conta própria. Consulte [MCP_EVENTS.md](MCP_EVENTS.md) para limites, segurança e o teste completo após atualizar e reescanear o plugin.
+
 ## Desenvolvimento
 
 Requisitos: Windows x64, Node.js 24, Rust estável, Visual Studio Build Tools com C++ e WebView2.
@@ -145,7 +151,7 @@ O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e public
 - A integração usa Baileys, um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço.
 - O histórico depende do conteúdo disponibilizado pelo WhatsApp na sincronização; não há garantia de recuperar todo o histórico antigo.
 - Anexos são baixados sob demanda pelo MCP, até 10 MiB; disponibilidade depende do WhatsApp e da sincronização.
-- Envio MCP de texto; sem envio de mídia ou inicialização automática com Windows.
+- Envio MCP de texto; sem envio de mídia.
 - O ícone é próprio, inspirado em um balão verde de conversa.
 
 ## Referências

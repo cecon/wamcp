@@ -1,6 +1,6 @@
 import { requireSession } from '../domain/access.mjs';
 /** Use cases depend on repository and WhatsApp ports, never on their implementations. */
-export function sessionService(repository, whatsapp) {
+export function sessionService(repository, whatsapp, events) {
   const exists = (id) => requireSession(repository.session(id));
   return {
     sessions: () => repository.sessions(),
@@ -16,6 +16,7 @@ export function sessionService(repository, whatsapp) {
     },
     stop: (id, logout) => {
       exists(id);
+      events?.disconnect(id);
       return whatsapp.stop(id, logout);
     },
     chats: (id, q) => {
