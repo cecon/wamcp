@@ -8,6 +8,9 @@ interface Status {
   webUrl: string;
 }
 
+/** While the local service boots (or restarts), keep asking instead of failing once. */
+export const STATUS_RETRY_MS = 2000;
+
 /** Desktop-only step: create the first helpdesk administrator and share the agent web address. */
 export function HelpdeskSetup() {
   const [status, setStatus] = useState<Status | null>(null),
@@ -15,9 +18,20 @@ export function HelpdeskSetup() {
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    api<Status>('/api/helpdesk/status')
-      .then(setStatus)
-      .catch((e) => setError(String(e)));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let active = true;
+    const load = () =>
+      api<Status>('/api/helpdesk/status')
+        .then((loaded) => active && setStatus(loaded))
+        .catch(() => {
+          // The app header already reports the service state; just try again shortly.
+          if (active) timer = setTimeout(load, STATUS_RETRY_MS);
+        });
+    void load();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, []);
   async function bootstrap() {
     setBusy(true);
@@ -51,6 +65,7 @@ export function HelpdeskSetup() {
           {error}
         </div>
       )}
+      {!status && <p className="helpdesk-waiting">Aguardando o serviço local…</p>}
       {status?.needsBootstrap ? (
         <form
           className="panel prose helpdesk-form"

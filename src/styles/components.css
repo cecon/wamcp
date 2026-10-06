@@ -221,3 +221,6 @@ label input {
   align-items: center;
   gap: 8px;
 }
+.helpdesk-waiting {
+  color: #7d8c83;
+}
