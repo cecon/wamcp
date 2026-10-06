@@ -101,3 +101,13 @@ export function duration(seconds: number | null | undefined) {
   const minutes = Math.round((s % 3600) / 60);
   return `${Math.floor(s / 3600)}h${minutes ? ` ${minutes}min` : ''}`;
 }
+
+/** Chatwoot-style short relative time: "agora", "5m", "3h", "2d", then the date. */
+export function timeAgo(ts: number, now = Date.now() / 1000) {
+  const diff = Math.max(0, now - ts);
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 7 * 86400) return `${Math.floor(diff / 86400)}d`;
+  return new Date(ts * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
