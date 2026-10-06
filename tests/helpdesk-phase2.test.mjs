@@ -184,6 +184,8 @@ test('the agent web app is served with a strict CSP', async (t) => {
   assert.match(page.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal((await fetch(f.publicUrl + '/app/assets/app.js')).status, 200);
   assert.equal((await fetch(f.publicUrl + '/', { redirect: 'manual' })).headers.get('location'), '/app/');
+  const legacy = await fetch(f.publicUrl + '/agent.html', { redirect: 'manual' });
+  assert.equal(legacy.headers.get('location'), '/app/');
 });
 
 test('the agent web app appears once built, without restarting the service', async (t) => {

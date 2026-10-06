@@ -25,6 +25,8 @@ const CSP = [
 /** Serves the agent web app at /app on the public listener; `webDir` is a path or a resolver. */
 export function webAppRoutes(publicApp, webDir) {
   publicApp.get('/', (_req, res) => res.redirect('/app/'));
+  // The source page is agent.html (what Vite serves in dev); on the backend it lives at /app/.
+  publicApp.get('/agent.html', (_req, res) => res.redirect('/app/'));
   // Non-strict routing matches "/app/" here too; only the bare path needs the trailing-slash redirect.
   publicApp.get('/app', (req, res, next) =>
     req.originalUrl.split('?')[0] === '/app' ? res.redirect('/app/') : next(),
