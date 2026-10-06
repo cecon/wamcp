@@ -3,6 +3,7 @@ import { toNodeHandler } from '@modelcontextprotocol/node';
 import metadata from '../../../package.json' with { type: 'json' };
 import { registerMcpTools } from './mcp-tools.mjs';
 import { registerMcpEvents } from './mcp-events.mjs';
+import { registerConversationTools } from './mcp-conversations.mjs';
 import { withToolSecurity } from './mcp-auth.mjs';
 
 export async function modernMcp(req, res, service, token, credential, publicUrl, events) {
@@ -13,6 +14,7 @@ export async function modernMcp(req, res, service, token, credential, publicUrl,
         { capabilities: { tools: { listChanged: false } } },
       );
       registerMcpTools(server, service, req.params.id, token, credential, publicUrl);
+      registerConversationTools(server, service, req.params.id, credential, publicUrl);
       if (events) registerMcpEvents(server, events, service, req.params.id, credential);
       return server;
     },

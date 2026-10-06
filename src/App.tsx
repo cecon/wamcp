@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   ChevronRight,
   CircleHelp,
+  Headset,
   LayoutDashboard,
   MessageSquare,
   Settings2,
@@ -18,6 +19,7 @@ import { Dashboard } from './components/Dashboard';
 import { SessionView } from './SessionView';
 import { Settings } from './Settings';
 import { UpdateNotice } from './components/UpdateNotice';
+import { HelpdeskSetup } from './components/HelpdeskSetup';
 
 export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]),
@@ -83,6 +85,10 @@ export default function App() {
             <LayoutDashboard size={19} />
             Minhas sessões<span>{sessions.length}</span>
           </button>
+          <button className={page === 'helpdesk' ? 'active' : ''} onClick={() => setPage('helpdesk')}>
+            <Headset size={19} />
+            Atendimento
+          </button>
           <button className={page === 'settings' ? 'active' : ''} onClick={() => setPage('settings')}>
             <Settings2 size={19} />
             Configurações
@@ -118,9 +124,11 @@ export default function App() {
                 ? 'Detalhes da sessão'
                 : page === 'settings'
                   ? 'Configurações'
-                  : page === 'help'
-                    ? 'Como funciona'
-                    : 'Minhas sessões'}
+                  : page === 'helpdesk'
+                    ? 'Atendimento'
+                    : page === 'help'
+                      ? 'Como funciona'
+                      : 'Minhas sessões'}
             </strong>
           </div>
           <span>
@@ -158,6 +166,8 @@ export default function App() {
           )}
           {page === 'settings' ? (
             <Settings />
+          ) : page === 'helpdesk' ? (
+            <HelpdeskSetup />
           ) : page === 'help' ? (
             <Help />
           ) : selected ? (
