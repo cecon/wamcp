@@ -4,6 +4,8 @@ import { contactStore } from './contact-store.mjs';
 import { conversationStore } from './conversation-store.mjs';
 import { messageStore } from './message-store.mjs';
 import { catalogStore } from './catalog-store.mjs';
+import { automationStore } from './automation-store.mjs';
+import { insightsStore } from './insights-store.mjs';
 
 /** Helpdesk repository: one port object composed from the per-aggregate SQLite stores. */
 export function helpdeskStore(db) {
@@ -14,5 +16,7 @@ export function helpdeskStore(db) {
     ...conversationStore(db),
     ...messageStore(db),
     ...catalogStore(db),
+    ...automationStore(db),
+    ...insightsStore(db),
   };
 }

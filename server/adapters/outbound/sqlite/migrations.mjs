@@ -92,6 +92,36 @@ export const migrations = [
      actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,read_at INTEGER,created_at INTEGER NOT NULL);
    CREATE INDEX notif_user ON notifications(user_id,read_at,id DESC);
    ALTER TABLE inboxes ADD COLUMN agent_bot_enabled INTEGER NOT NULL DEFAULT 0;`,
+
+  // v8: webhooks com fila de entrega, automações, horário de atendimento, CSAT e relatórios
+  `CREATE TABLE webhooks(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL DEFAULT 1,
+     inbox_id INTEGER REFERENCES inboxes(id) ON DELETE CASCADE,url TEXT NOT NULL,
+     subscriptions TEXT NOT NULL CHECK(json_valid(subscriptions)),secret TEXT NOT NULL,
+     active INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);
+   CREATE TABLE webhook_deliveries(id INTEGER PRIMARY KEY,webhook_id INTEGER NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+     event TEXT NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','sent','failed')),
+     attempts INTEGER NOT NULL DEFAULT 0,next_attempt_at INTEGER NOT NULL,response_status INTEGER,last_error TEXT,
+     created_at INTEGER NOT NULL);
+   CREATE INDEX webhook_due ON webhook_deliveries(status,next_attempt_at);
+   CREATE TABLE automation_rules(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL DEFAULT 1,name TEXT NOT NULL,
+     description TEXT,event_name TEXT NOT NULL,conditions TEXT NOT NULL CHECK(json_valid(conditions)),
+     actions TEXT NOT NULL CHECK(json_valid(actions)),active INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);
+   CREATE TABLE working_hours(inbox_id INTEGER NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+     day_of_week INTEGER NOT NULL CHECK(day_of_week BETWEEN 0 AND 6),closed_all_day INTEGER NOT NULL DEFAULT 0,
+     open_minutes INTEGER NOT NULL DEFAULT 540,close_minutes INTEGER NOT NULL DEFAULT 1080,PRIMARY KEY(inbox_id,day_of_week));
+   ALTER TABLE inboxes ADD COLUMN working_hours_enabled INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE inboxes ADD COLUMN out_of_office_message TEXT;
+   ALTER TABLE inboxes ADD COLUMN csat_survey_enabled INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE conversations ADD COLUMN csat_requested_at INTEGER;
+   CREATE TABLE csat_responses(id INTEGER PRIMARY KEY,conversation_id INTEGER NOT NULL UNIQUE REFERENCES conversations(id) ON DELETE CASCADE,
+     contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+     inbox_id INTEGER NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+     feedback TEXT,created_at INTEGER NOT NULL);
+   CREATE TABLE reporting_events(id INTEGER PRIMARY KEY,name TEXT NOT NULL,value INTEGER NOT NULL,
+     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,inbox_id INTEGER NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+     conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,created_at INTEGER NOT NULL);
+   CREATE INDEX reporting_name_time ON reporting_events(name,created_at);
+   CREATE UNIQUE INDEX reporting_first_response ON reporting_events(conversation_id) WHERE name='first_response';`,
 ];
 
 export function migrate(db) {

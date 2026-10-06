@@ -67,6 +67,12 @@ export function conversationRoutes(api, helpdesk) {
       .parse(req.body);
     res.json(helpdesk.assign(req.user, id.parse(req.params.displayId), body));
   });
+  api.post('/conversations/:displayId/toggle_priority', (req, res) => {
+    const { priority } = z
+      .object({ priority: z.enum(['low', 'medium', 'high', 'urgent']).nullable() })
+      .parse(req.body);
+    res.json(helpdesk.setPriority(req.user, id.parse(req.params.displayId), priority));
+  });
   api.post('/conversations/:displayId/labels', (req, res) => {
     const { labels } = z.object({ labels: z.array(z.string().max(40)).max(50) }).parse(req.body);
     res.json(helpdesk.setLabels(req.user, id.parse(req.params.displayId), labels));

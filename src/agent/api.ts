@@ -91,3 +91,13 @@ export const initials = (name: string | null | undefined) =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || '')
     .join('') || '?';
+
+/** Seconds → "45s", "12min", "3h 20min". */
+export function duration(seconds: number | null | undefined) {
+  if (seconds == null) return '—';
+  const s = Math.round(seconds);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.round(s / 60)}min`;
+  const minutes = Math.round((s % 3600) / 60);
+  return `${Math.floor(s / 3600)}h${minutes ? ` ${minutes}min` : ''}`;
+}

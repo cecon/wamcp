@@ -22,6 +22,53 @@ export interface Inbox {
   lock_to_single_conversation: number;
   ignore_groups: number;
   agent_bot_enabled: number;
+  greeting_enabled: number;
+  greeting_message: string | null;
+  working_hours_enabled: number;
+  out_of_office_message: string | null;
+  csat_survey_enabled: number;
+  timezone: string;
+}
+export interface WorkingDay {
+  day_of_week: number;
+  closed_all_day: number | boolean;
+  open_minutes: number;
+  close_minutes: number;
+}
+export interface Webhook {
+  id: number;
+  url: string;
+  subscriptions: string[];
+  inbox_id: number | null;
+  secret: string;
+  active: number;
+}
+export interface Delivery {
+  id: number;
+  event: string;
+  status: 'pending' | 'sent' | 'failed';
+  attempts: number;
+  response_status: number | null;
+  last_error: string | null;
+  created_at: number;
+}
+export interface Condition {
+  attribute_key: string;
+  filter_operator: string;
+  values: (string | number)[];
+  query_operator: 'and' | 'or';
+}
+export interface Action {
+  action_name: string;
+  action_params: (string | number)[];
+}
+export interface AutomationRule {
+  id: number;
+  name: string;
+  event_name: string;
+  conditions: Condition[];
+  actions: Action[];
+  active: number;
 }
 export interface Team {
   id: number;
@@ -61,6 +108,7 @@ export interface Conversation {
   unread_count: number;
   snoozed_until: number | null;
   agent_bot_enabled: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent' | null;
 }
 export interface Message {
   id: number;
@@ -72,7 +120,7 @@ export interface Message {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sender_type: 'user' | 'contact' | 'agent_bot' | 'system' | null;
   sender_name: string | null;
-  content_attributes: { external_error?: string };
+  content_attributes: { external_error?: string; automated?: string };
   created_at: number;
 }
 export interface HistoryMessage {

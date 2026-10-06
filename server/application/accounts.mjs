@@ -1,4 +1,5 @@
 import { HelpdeskError, requireAdmin, validatePassword, isAdmin } from '../domain/helpdesk.mjs';
+import { validateSchedule, validateTimezone } from '../domain/schedule.mjs';
 
 const SESSION_TTL = 7 * 86400000;
 const normalizeEmail = (email) => String(email).trim().toLowerCase();
@@ -158,7 +159,20 @@ export function accountService({ users, helpdesk, hasher, bus }) {
     updateInbox(actor, id, fields) {
       requireAdmin(actor);
       findInbox(id);
+      if (fields.timezone) validateTimezone(fields.timezone);
       return helpdesk.updateInbox(id, fields);
+    },
+    workingHours(actor, id) {
+      requireAdmin(actor);
+      findInbox(id);
+      return helpdesk.workingHours(id);
+    },
+    setWorkingHours(actor, id, days) {
+      requireAdmin(actor);
+      findInbox(id);
+      validateSchedule(days);
+      helpdesk.setWorkingHours(id, days);
+      return helpdesk.workingHours(id);
     },
     inboxMembers: (actor, id) => {
       requireAdmin(actor);

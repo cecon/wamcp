@@ -20,6 +20,7 @@ const FIELDS = [
   'first_reply_at',
   'agent_last_seen_at',
   'last_activity_at',
+  'csat_requested_at',
 ];
 const ASSIGNEE = {
   me: 'c.assignee_id=?',

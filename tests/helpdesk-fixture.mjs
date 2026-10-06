@@ -2,15 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { openStore } from '../server/adapters/outbound/sqlite/store.mjs';
-import { usersStore } from '../server/adapters/outbound/sqlite/users-store.mjs';
-import { helpdeskStore } from '../server/adapters/outbound/sqlite/helpdesk-store.mjs';
-import { passwordHasher } from '../server/adapters/outbound/password.mjs';
-import { eventBus } from '../server/application/events.mjs';
-import { accountService } from '../server/application/accounts.mjs';
-import { helpdeskService } from '../server/application/helpdesk.mjs';
-import { catalogService } from '../server/application/catalog.mjs';
-import { notificationService } from '../server/application/notifications.mjs';
-import { realtimeService } from '../server/application/realtime.mjs';
+import { composeHelpdesk } from '../server/compose-helpdesk.mjs';
 import { sessionService } from '../server/application/sessions.mjs';
 import { mcpService } from '../server/application/mcp.mjs';
 import { createApps } from '../server/adapters/inbound/http.mjs';
@@ -36,33 +28,35 @@ export async function helpdeskFixture(t, { beforeStart, webDir } = {}) {
       return { id: options?.messageId };
     },
   };
-  const bus = eventBus();
-  bus.subscribe((e) => events.push(e));
-  const users = usersStore(store.db),
-    conversations = helpdeskStore(store.db);
-  const accounts = accountService({ users, helpdesk: conversations, hasher: passwordHasher, bus });
   let clock = 1_800_000_000;
-  const helpdesk = helpdeskService({
-    helpdesk: conversations,
-    users,
-    whatsapp: wa,
-    mirror: store,
+  const posts = [];
+  const sender = {
+    secret: () => 'test-secret',
+    respond: () => ({ ok: true, status: 200 }),
+    async post(url, body, secret) {
+      posts.push({ url, body, secret });
+      return sender.respond(url, body);
+    },
+  };
+  const {
     bus,
+    users,
+    repository: conversations,
+    helpdesk,
+    support,
+  } = composeHelpdesk({
+    store,
+    whatsapp: wa,
+    sender,
     now: () => clock,
+    webDir: webDir ?? undefined,
   });
-  const notifications = notificationService({ helpdesk: conversations, users, bus, now: () => clock });
-  notifications.listen();
+  bus.subscribe((e) => events.push(e));
+  const { accounts } = support;
   const apps = createApps({
     sessions: sessionService(store, wa),
     mcp: mcpService(store, wa, undefined, helpdesk),
-    support: {
-      accounts,
-      helpdesk,
-      catalog: catalogService({ helpdesk: conversations, bus }),
-      notifications,
-      realtime: realtimeService({ bus, users }),
-      webDir: webDir ?? undefined,
-    },
+    support,
     adminToken: ADMIN_TOKEN,
   });
   const servers = await Promise.all(
@@ -124,6 +118,7 @@ export async function helpdeskFixture(t, { beforeStart, webDir } = {}) {
       get: (route) => call('GET', route),
       post: (route, body = {}, extra) => call('POST', route, body, extra),
       patch: (route, body) => call('PATCH', route, body),
+      put: (route, body) => call('PUT', route, body),
       del: (route, body) => call('DELETE', route, body),
     };
   }
@@ -165,6 +160,11 @@ export async function helpdeskFixture(t, { beforeStart, webDir } = {}) {
     login,
     bootstrap,
     incoming,
+    support,
+    sender,
+    posts,
+    /** Lets asynchronous listeners (automations, auto-replies) finish their queued work. */
+    settle: () => new Promise((resolve) => setTimeout(resolve, 30)),
     tick: (seconds) => (clock += seconds),
     now: () => clock,
   };

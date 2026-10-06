@@ -1,6 +1,6 @@
 # Plano: helpdesk estilo Chatwoot sobre o WhatsAppMcp
 
-Status: fases 1 e 2 implementadas no branch `feat/helpdesk-fase1` (2026-10-06); fase 3 pendente.
+Status: fases 1, 2 e 3 implementadas no branch `feat/helpdesk-fase1` (2026-10-06). Ficaram de fora macros e atributos customizados.
 
 ## Fase 1: o que foi entregue
 
@@ -18,6 +18,29 @@ Status: fases 1 e 2 implementadas no branch `feat/helpdesk-fase1` (2026-10-06); 
 - **Regras de domínio**: roteamento de mensagens, round robin entre agentes online, atividades, snooze com timer de 60 s, proteção do último admin.
 - **Testes**: `tests/helpdesk-domain.test.mjs` e `tests/helpdesk-api.test.mjs`.
 - **Ainda não entregue**: UI web dos agentes, SSE, etiquetas, respostas prontas, notificações, webhooks e tools MCP de conversa. Tudo isso fica para a fase 2.
+
+## Fase 3: o que foi entregue
+
+- **Migração v8**:
+  - Tabelas `webhooks`, `webhook_deliveries` (fila durável), `automation_rules`, `working_hours`, `csat_responses` e `reporting_events`.
+  - Novas colunas: `working_hours_enabled`, `out_of_office_message` e `csat_survey_enabled` em `inboxes`; `csat_requested_at` em `conversations`.
+- **Domínio puro**: `schedule` (horário por fuso), `automation` (condições E/OU, validação, mapeamento de eventos), `csat` (nota 1–5 em 24 h) e `webhooks` (eventos, backoff, validação de URL).
+- **Webhooks**:
+  - Fila no SQLite com entrega a cada 10 s.
+  - Assinatura `X-Wamcp-Signature` = HMAC-SHA256 de "timestamp.corpo".
+  - Até 5 tentativas (30 s, 2 min, 10 min, 1 h). Redirecionamentos não são seguidos.
+- **Automações**: eventos `conversation_created`, `conversation_opened`, `conversation_resolved` e `message_created`. As ações passam pelos mesmos casos de uso dos agentes, e um evento causado por automação não dispara outra regra.
+- **Mensagens automáticas**:
+  - Saudação em conversa nova.
+  - Ausência fora do horário, em conversa nova ou reaberta pelo contato.
+  - Pesquisa CSAT ao resolver. A resposta registra a nota sem reabrir a conversa, e o contato recebe um agradecimento.
+- **Relatórios**: primeira resposta, tempo de resolução, volume e CSAT, por período, caixa e agente.
+- **Composição**: `server/compose-helpdesk.mjs` é usado pelo servidor e pelos testes, para que ambos montem o mesmo grafo.
+- **UI**:
+  - Abas Automações e Webhooks.
+  - Painel de mensagens automáticas e horário em cada caixa.
+  - Página Relatórios.
+  - Prioridade no painel da conversa e rótulo de mensagem automática.
 
 ## Fase 2: o que foi entregue
 

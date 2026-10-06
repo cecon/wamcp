@@ -2,6 +2,7 @@
 export const ROLES = ['administrator', 'agent'];
 export const STATUSES = ['open', 'pending', 'resolved', 'snoozed'];
 export const AVAILABILITY = ['online', 'busy', 'offline'];
+export const PRIORITIES = [null, 'low', 'medium', 'high', 'urgent'];
 
 export class HelpdeskError extends Error {
   constructor(message, status = 400) {

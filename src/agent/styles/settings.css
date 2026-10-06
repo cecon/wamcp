@@ -234,3 +234,8 @@ label.toggle small {
     display: none;
   }
 }
+.stack {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}

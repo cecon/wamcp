@@ -70,7 +70,9 @@ function TeamEditor({ team, agents, onChange, onDeleted }: EditorProps) {
   const [members, setMembers] = useState<number[]>([]);
   const { error, run } = useAction();
   useEffect(() => {
-    void http<User[]>(`/teams/${team.id}/members`).then((list) => setMembers(list.map((u) => u.id)));
+    void http<User[]>(`/teams/${team.id}/members`)
+      .then((list) => setMembers(list.map((u) => u.id)))
+      .catch(() => setMembers([]));
   }, [team.id]);
   const toggle = (id: number) =>
     run(async () => {

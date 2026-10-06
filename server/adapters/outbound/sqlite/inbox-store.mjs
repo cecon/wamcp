@@ -8,6 +8,9 @@ const INBOX_FIELDS = [
   'lock_to_single_conversation',
   'timezone',
   'agent_bot_enabled',
+  'working_hours_enabled',
+  'out_of_office_message',
+  'csat_survey_enabled',
 ];
 
 /** Inboxes backed by WhatsApp sessions (one Baileys session = one channel). */

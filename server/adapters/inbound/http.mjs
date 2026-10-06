@@ -9,6 +9,7 @@ import { sameOrigin } from './web-auth.mjs';
 import { accountRoutes, bootstrapRoutes } from './account-routes.mjs';
 import { conversationRoutes } from './conversation-routes.mjs';
 import { catalogRoutes } from './catalog-routes.mjs';
+import { automationRoutes } from './automation-routes.mjs';
 import { webAppRoutes } from './web-app.mjs';
 export function createApps({
   sessions,
@@ -36,6 +37,7 @@ export function createApps({
     accountRoutes(api, support.accounts);
     conversationRoutes(api, support.helpdesk);
     catalogRoutes(api, support);
+    if (support.webhooks) automationRoutes(api, support);
     publicApp.use('/api/v1', api);
     webAppRoutes(publicApp, support.webDir);
   }

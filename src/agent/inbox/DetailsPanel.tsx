@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
-import { Phone, Tag, UserRound, Users } from 'lucide-react';
+import { Flag, Phone, Tag, UserRound, Users } from 'lucide-react';
 import { http, initials } from '../api';
 import type { Catalog, Conversation, User } from '../types';
+import { PRIORITY_LABEL } from '../labels';
 
 interface Props {
   conversation: Conversation;
@@ -70,6 +71,24 @@ export function DetailsPanel({ conversation, user, catalog, onChange, onError }:
           Assumir conversa
         </button>
       )}
+      <label>
+        <span>
+          <Flag size={14} /> Prioridade
+        </span>
+        <select
+          value={conversation.priority ?? ''}
+          onChange={(e) =>
+            void run(http(`${path}/toggle_priority`, 'POST', { priority: e.target.value || null }))
+          }
+        >
+          <option value="">Nenhuma</option>
+          {Object.entries(PRIORITY_LABEL).map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label>
         <span>
           <Users size={14} /> Time

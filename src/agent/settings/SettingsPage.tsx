@@ -4,6 +4,8 @@ import { AgentsSettings } from './AgentsSettings';
 import { InboxesSettings } from './InboxesSettings';
 import { TeamsSettings } from './TeamsSettings';
 import { LabelsSettings, CannedSettings } from './CatalogSettings';
+import { WebhooksSettings } from './WebhooksSettings';
+import { AutomationsSettings } from './AutomationsSettings';
 
 const TABS = [
   ['agents', 'Agentes'],
@@ -11,6 +13,8 @@ const TABS = [
   ['teams', 'Times'],
   ['labels', 'Etiquetas'],
   ['canned', 'Respostas prontas'],
+  ['automations', 'Automações'],
+  ['webhooks', 'Webhooks'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -46,6 +50,8 @@ export function SettingsPage(props: SettingsProps) {
         {tab === 'teams' && <TeamsSettings {...props} />}
         {tab === 'labels' && <LabelsSettings {...props} />}
         {tab === 'canned' && <CannedSettings />}
+        {tab === 'automations' && <AutomationsSettings {...props} />}
+        {tab === 'webhooks' && <WebhooksSettings {...props} />}
       </div>
     </div>
   );

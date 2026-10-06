@@ -16,9 +16,17 @@ export const botActor = (inbox) => ({
   name: BOT_NAME,
   role: 'agent_bot',
 });
+/** Server-side automations (rules, greetings, CSAT) act with full access and no user identity. */
+export const systemActor = (kind, name) => ({ system: true, kind, id: null, name, role: 'administrator' });
 export const actorName = (actor) => actor?.display_name || actor?.name || null;
-export const performerOf = (actor) =>
-  actor?.bot ? { type: 'agent_bot', id: actor.inboxId } : actor ? { type: 'user', id: actor.id } : undefined;
+export function performerOf(actor) {
+  if (!actor) return undefined;
+  if (actor.bot) return { type: 'agent_bot', id: actor.inboxId };
+  if (actor.system) return { type: actor.kind, id: null };
+  return { type: 'user', id: actor.id };
+}
+/** Only real agents become participants or take conversations by replying. */
+export const isAgent = (actor) => Boolean(actor && !actor.bot && !actor.system);
 
 /** Shared building blocks for conversation use cases: access, activities, auto-assignment, commits. */
 export function conversationCore({ helpdesk, users, bus, now }) {

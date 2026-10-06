@@ -3,6 +3,7 @@
 @import './pages.css';
 @import './settings.css';
 @import './login.css';
+@import './automation.css';
 
 :root {
   --green: #198e66;

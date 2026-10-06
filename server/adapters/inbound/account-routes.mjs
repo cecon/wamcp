@@ -117,11 +117,35 @@ export function accountRoutes(api, accounts) {
         lock_to_single_conversation: z.boolean().optional(),
         ignore_groups: z.boolean().optional(),
         agent_bot_enabled: z.boolean().optional(),
+        working_hours_enabled: z.boolean().optional(),
+        out_of_office_message: z.string().trim().max(1000).nullable().optional(),
+        csat_survey_enabled: z.boolean().optional(),
         timezone: z.string().max(64).optional(),
       })
       .parse(req.body);
     res.json(accounts.updateInbox(req.user, id.parse(req.params.id), body));
   });
+  const minutes = z.number().int().min(0).max(1440);
+  const schedule = z.object({
+    working_hours: z
+      .array(
+        z.object({
+          day_of_week: z.number().int().min(0).max(6),
+          closed_all_day: z.boolean().default(false),
+          open_minutes: minutes,
+          close_minutes: minutes,
+        }),
+      )
+      .max(7),
+  });
+  api.get('/inboxes/:id/working_hours', (req, res) =>
+    res.json(accounts.workingHours(req.user, id.parse(req.params.id))),
+  );
+  api.put('/inboxes/:id/working_hours', (req, res) =>
+    res.json(
+      accounts.setWorkingHours(req.user, id.parse(req.params.id), schedule.parse(req.body).working_hours),
+    ),
+  );
   api.get('/inboxes/:id/members', (req, res) =>
     res.json(accounts.inboxMembers(req.user, id.parse(req.params.id))),
   );

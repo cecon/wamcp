@@ -7,8 +7,9 @@ import {
   teamActivity,
   labelsActivity,
   normalizeLabelTitle,
+  PRIORITIES,
 } from '../domain/helpdesk.mjs';
-import { conversationCore, actorName, performerOf, botActor } from './conversation-core.mjs';
+import { conversationCore, actorName, performerOf, botActor, isAgent } from './conversation-core.mjs';
 import { ingestion } from './ingestion.mjs';
 
 /**
@@ -78,6 +79,7 @@ export function helpdeskService({
       return helpdesk.updateConversation(conversation.id, { agent_last_seen_at: now() });
     },
 
+    /** Agent, bot or automation reply; automated messages carry their origin in content_attributes. */
     async reply(actor, displayId, { content, private: isPrivate = false }) {
       const conversation = load(actor, displayId);
       const inbox = helpdesk.inbox(conversation.inbox_id);
@@ -89,22 +91,28 @@ export function helpdeskService({
           content,
           private: isPrivate,
           status: isPrivate ? 'sent' : 'pending',
-          senderType: actor.bot ? 'agent_bot' : 'user',
-          senderId: actor.bot ? null : actor.id,
+          senderType: actor.bot ? 'agent_bot' : actor.system ? 'system' : 'user',
+          senderId: isAgent(actor) ? actor.id : null,
           sourceId: isPrivate ? null : whatsapp.newMessageId(),
           waJid: isPrivate ? null : conversation.contact_jid,
+          contentAttributes: actor.system ? { automated: actor.name } : {},
           createdAt: now(),
         });
-        if (!actor.bot) helpdesk.addParticipant(conversation.id, actor.id);
+        if (isAgent(actor)) helpdesk.addParticipant(conversation.id, actor.id);
         events.push(['message.created', stored]);
         if (isPrivate) return stored;
+        // Greetings, out-of-office and surveys must not count as the team's first reply.
+        if (actor.system) {
+          helpdesk.updateConversation(conversation.id, { last_activity_at: now() });
+          return stored;
+        }
         let updated = helpdesk.updateConversation(conversation.id, {
           last_activity_at: now(),
           waiting_since: null,
           first_reply_at: conversation.first_reply_at ?? now(),
         });
         // Like Chatwoot, an agent replying to an unassigned conversation takes it.
-        if (!updated.assignee_id && !actor.bot && !isAdmin(actor)) {
+        if (!updated.assignee_id && isAgent(actor) && !isAdmin(actor)) {
           updated = helpdesk.updateConversation(conversation.id, { assignee_id: actor.id });
           activity(updated, assignmentActivity(actorName(actor), actorName(actor)), events);
           events.push(['assignee.changed', updated]);
@@ -177,6 +185,17 @@ export function helpdeskService({
           labels.map((l) => l.id),
         );
         activity(updated, labelsActivity(actorName(actor), added, removed), events);
+        events.push(['conversation.updated', updated]);
+        return updated;
+      }, actor);
+    },
+
+    setPriority(actor, displayId, priority) {
+      const conversation = load(actor, displayId);
+      if (!PRIORITIES.includes(priority)) throw new HelpdeskError('Prioridade inválida');
+      if (conversation.priority === priority) return conversation;
+      return commit((events) => {
+        const updated = helpdesk.updateConversation(conversation.id, { priority });
         events.push(['conversation.updated', updated]);
         return updated;
       }, actor);

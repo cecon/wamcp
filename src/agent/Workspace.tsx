@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, BookUser, LogOut, MessagesSquare, Settings2 } from 'lucide-react';
+import { BarChart3, Bell, BookUser, LogOut, MessagesSquare, Settings2 } from 'lucide-react';
 import { connectRealtime, http, initials, type Realtime } from './api';
 import type { Availability, Catalog, User } from './types';
 import { Inbox } from './inbox/Inbox';
 import { Contacts } from './Contacts';
 import { SettingsPage } from './settings/SettingsPage';
 import { Notifications } from './Notifications';
+import { Reports } from './Reports';
 
 const AVAILABILITY: Record<Availability, string> = { online: 'Online', busy: 'Ocupado', offline: 'Offline' };
-type Page = 'inbox' | 'contacts' | 'settings';
+type Page = 'inbox' | 'contacts' | 'reports' | 'settings';
 
 interface Props {
   user: User;
@@ -59,7 +60,12 @@ export function Workspace({ user, onUser, onLogout }: Props) {
       [
         { id: 'inbox', label: 'Conversas', icon: MessagesSquare },
         { id: 'contacts', label: 'Contatos', icon: BookUser },
-        ...(isAdmin ? [{ id: 'settings', label: 'Configurações', icon: Settings2 }] : []),
+        ...(isAdmin
+          ? [
+              { id: 'reports', label: 'Relatórios', icon: BarChart3 },
+              { id: 'settings', label: 'Configurações', icon: Settings2 },
+            ]
+          : []),
       ] as { id: Page; label: string; icon: typeof Bell }[],
     [isAdmin],
   );
@@ -159,6 +165,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             }}
           />
         )}
+        {page === 'reports' && isAdmin && <Reports inboxes={catalog.inboxes} />}
         {page === 'settings' && isAdmin && (
           <SettingsPage user={user} catalog={catalog} onChange={reloadCatalog} />
         )}

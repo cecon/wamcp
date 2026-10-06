@@ -32,9 +32,8 @@ export function MessageBubble({ message }: { message: Message }) {
   const outgoing = message.message_type !== 'incoming';
   const kind = message.private ? 'note' : outgoing ? 'out' : 'in';
   // Messages typed on the phone have no agent behind them.
-  const sender = outgoing
-    ? message.sender_name || (message.sender_type === 'system' ? 'Pelo celular' : '')
-    : '';
+  const phone = message.sender_type === 'system' ? 'Pelo celular' : '';
+  const sender = outgoing ? message.sender_name || message.content_attributes.automated || phone : '';
   return (
     <div className={`bubble-row ${outgoing ? 'right' : 'left'}`}>
       <div className={`bubble ${kind}`}>

@@ -3,6 +3,7 @@ import { http } from '../api';
 import type { Inbox, User } from '../types';
 import type { SettingsProps } from './SettingsPage';
 import { useAction } from './useAction';
+import { InboxAutomation } from './InboxAutomation';
 
 const FLAGS: { key: keyof Inbox; label: string; hint: string }[] = [
   {
@@ -44,7 +45,12 @@ export function InboxesSettings({ catalog, onChange }: SettingsProps) {
           ))}
         </ul>
       </section>
-      {inbox && <InboxEditor key={inbox.id} inbox={inbox} agents={catalog.agents} onChange={onChange} />}
+      {inbox && (
+        <div className="stack">
+          <InboxEditor key={inbox.id} inbox={inbox} agents={catalog.agents} onChange={onChange} />
+          <InboxAutomation key={`auto-${inbox.id}`} inbox={inbox} onChange={onChange} />
+        </div>
+      )}
     </div>
   );
 }
@@ -62,7 +68,9 @@ function InboxEditor({
     [members, setMembers] = useState<number[]>([]);
   const { error, busy, run } = useAction();
   useEffect(() => {
-    void http<User[]>(`/inboxes/${inbox.id}/members`).then((list) => setMembers(list.map((u) => u.id)));
+    void http<User[]>(`/inboxes/${inbox.id}/members`)
+      .then((list) => setMembers(list.map((u) => u.id)))
+      .catch(() => setMembers([]));
   }, [inbox.id]);
   const patch = (fields: Record<string, unknown>) =>
     run(async () => {

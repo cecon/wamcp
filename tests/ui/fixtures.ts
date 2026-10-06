@@ -29,6 +29,12 @@ export const inbox: Inbox = {
   lock_to_single_conversation: 1,
   ignore_groups: 1,
   agent_bot_enabled: 0,
+  greeting_enabled: 0,
+  greeting_message: null,
+  working_hours_enabled: 0,
+  out_of_office_message: null,
+  csat_survey_enabled: 0,
+  timezone: 'America/Sao_Paulo',
 };
 export const team: Team = {
   id: 5,
@@ -62,6 +68,7 @@ export const conversation: Conversation = {
   unread_count: 2,
   snoozed_until: null,
   agent_bot_enabled: 0,
+  priority: null,
 };
 export const message = (id: number, fields: Partial<Message> = {}): Message => ({
   id,

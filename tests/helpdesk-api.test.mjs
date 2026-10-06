@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { helpdeskFixture, PASSWORD } from './helpdesk-fixture.mjs';
+import { migrations } from '../server/adapters/outbound/sqlite/migrations.mjs';
 
 async function withAgent(f, admin, { inbox = true, email = 'maria@example.com', role = 'agent' } = {}) {
   const inboxes = (await admin.get('/inboxes')).body;
@@ -231,5 +232,5 @@ test('migration turns sessions created by older versions into inboxes', async (t
     .prepare('SELECT i.name FROM inboxes i JOIN channel_whatsapp w ON w.id=i.channel_id WHERE w.session_id=?')
     .get('legacy');
   assert.equal(row.name, 'Antiga');
-  assert.equal(f.store.db.prepare('PRAGMA user_version').get().user_version, 7);
+  assert.equal(f.store.db.prepare('PRAGMA user_version').get().user_version, migrations.length);
 });

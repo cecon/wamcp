@@ -9,16 +9,8 @@ import os from 'node:os';
 import { openStore } from './adapters/outbound/sqlite/store.mjs';
 import { whatsappManager } from './adapters/outbound/whatsapp.mjs';
 import { createApps } from './adapters/inbound/http.mjs';
-import { usersStore } from './adapters/outbound/sqlite/users-store.mjs';
-import { helpdeskStore } from './adapters/outbound/sqlite/helpdesk-store.mjs';
-import { passwordHasher } from './adapters/outbound/password.mjs';
-import { eventBus } from './application/events.mjs';
-import { accountService } from './application/accounts.mjs';
-import { helpdeskService } from './application/helpdesk.mjs';
-import { catalogService } from './application/catalog.mjs';
-import { notificationService } from './application/notifications.mjs';
-import { realtimeService } from './application/realtime.mjs';
 import { findWebDir } from './adapters/inbound/web-app.mjs';
+import { composeHelpdesk } from './compose-helpdesk.mjs';
 const dir =
   process.env.WAMCP_DATA_DIR || path.join(process.env.LOCALAPPDATA || os.homedir(), 'com.cappyfy.wamcp');
 mkdirSync(dir, { recursive: true });
@@ -29,27 +21,14 @@ const store = openStore(dir),
   wa = whatsappManager(store, dir);
 const publicUrl = 'https://wamcp.cappyfy.com';
 const oauth = oauthService(oauthStore(store.db), store, publicUrl);
-const bus = eventBus(),
-  users = usersStore(store.db),
-  conversations = helpdeskStore(store.db);
-const accounts = accountService({ users, helpdesk: conversations, hasher: passwordHasher, bus });
-const helpdesk = helpdeskService({ helpdesk: conversations, users, whatsapp: wa, mirror: store, bus });
+const { helpdesk, support, startJobs } = composeHelpdesk({ store, whatsapp: wa, webDir: findWebDir() });
 wa.subscribe({
   message: (sessionId, message) => helpdesk.ingest(sessionId, message),
   receipt: (sessionId, id, status) => helpdesk.receipt(sessionId, id, status),
 });
-const notifications = notificationService({ helpdesk: conversations, users, bus });
-notifications.listen();
-const snoozeTimer = setInterval(() => helpdesk.wakeSnoozed(), 60000);
+const stopJobs = startJobs();
 const { admin, publicApp } = createApps({
-  support: {
-    accounts,
-    helpdesk,
-    catalog: catalogService({ helpdesk: conversations, bus }),
-    notifications,
-    realtime: realtimeService({ bus, users }),
-    webDir: findWebDir(),
-  },
+  support,
   sessions: sessionService(store, wa),
   mcp: mcpService(store, wa, oauth, helpdesk),
   oauth,
@@ -69,7 +48,7 @@ let closing = false;
 async function close() {
   if (closing) return;
   closing = true;
-  clearInterval(snoozeTimer);
+  stopJobs();
   await wa.close();
   adminServer.close();
   mcpServer.close();
