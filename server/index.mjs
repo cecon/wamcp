@@ -38,7 +38,7 @@ const wa = whatsappManager(store, dir, {
   onMessage: (id, message) => events.publish(id, message),
   onLogout: (id) => events.disconnect(id),
 });
-const { helpdesk, support, startJobs } = composeHelpdesk({ store, whatsapp: wa, webDir: findWebDir() });
+const { helpdesk, support, startJobs } = composeHelpdesk({ store, whatsapp: wa, webDir: findWebDir });
 wa.subscribe({
   message: (sessionId, message) => helpdesk.ingest(sessionId, message),
   receipt: (sessionId, id, status) => helpdesk.receipt(sessionId, id, status),

@@ -22,7 +22,7 @@ const CSP = [
   "form-action 'self'",
 ].join('; ');
 
-/** Serves the agent web app at /app on the public listener. */
+/** Serves the agent web app at /app on the public listener; `webDir` is a path or a resolver. */
 export function webAppRoutes(publicApp, webDir) {
   publicApp.get('/', (_req, res) => res.redirect('/app/'));
   // Non-strict routing matches "/app/" here too; only the bare path needs the trailing-slash redirect.
@@ -35,18 +35,24 @@ export function webAppRoutes(publicApp, webDir) {
     res.setHeader('Referrer-Policy', 'no-referrer');
     next();
   });
-  if (!webDir) {
-    publicApp.get('/app/', (_req, res) =>
-      res.status(503).type('text').send('Interface web não foi gerada. Execute npm run build.'),
-    );
-    return;
-  }
+  // Resolved per request so a UI rebuilt while the service runs is picked up without a restart.
+  const resolveDir = typeof webDir === 'function' ? webDir : () => webDir;
+  const assets = new Map();
   publicApp.get('/app/', (_req, res) => {
+    const dir = resolveDir();
+    if (!dir)
+      return res.status(503).type('text').send('Interface web não foi gerada. Execute npm run build.');
     res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(webDir, 'agent.html'));
+    res.sendFile(path.join(dir, 'agent.html'));
   });
-  publicApp.use(
-    '/app/assets',
-    express.static(path.join(webDir, 'assets'), { immutable: true, maxAge: '365d', index: false }),
-  );
+  publicApp.use('/app/assets', (req, res, next) => {
+    const dir = resolveDir();
+    if (!dir) return res.sendStatus(404);
+    if (!assets.has(dir))
+      assets.set(
+        dir,
+        express.static(path.join(dir, 'assets'), { immutable: true, maxAge: '365d', index: false }),
+      );
+    return assets.get(dir)(req, res, next);
+  });
 }

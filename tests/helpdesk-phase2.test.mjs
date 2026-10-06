@@ -185,3 +185,17 @@ test('the agent web app is served with a strict CSP', async (t) => {
   assert.equal((await fetch(f.publicUrl + '/app/assets/app.js')).status, 200);
   assert.equal((await fetch(f.publicUrl + '/', { redirect: 'manual' })).headers.get('location'), '/app/');
 });
+
+test('the agent web app appears once built, without restarting the service', async (t) => {
+  let webDir;
+  const f = await helpdeskFixture(t, { webDir: () => webDir });
+  const missing = await fetch(f.publicUrl + '/app/');
+  assert.equal(missing.status, 503);
+  assert.equal((await fetch(f.publicUrl + '/app/assets/app.js')).status, 404);
+  webDir = mkdtempSync(path.join(os.tmpdir(), 'wamcp-web-'));
+  mkdirSync(path.join(webDir, 'assets'));
+  writeFileSync(path.join(webDir, 'agent.html'), '<!doctype html><title>Atendimento</title>');
+  writeFileSync(path.join(webDir, 'assets', 'app.js'), 'console.log(1)');
+  assert.equal((await fetch(f.publicUrl + '/app/')).status, 200);
+  assert.equal((await fetch(f.publicUrl + '/app/assets/app.js')).status, 200);
+});
