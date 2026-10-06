@@ -1,0 +1,62 @@
+.activity {
+  align-self: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: #e3ebe6;
+  border-radius: 12px;
+  padding: 4px 10px;
+  display: flex;
+  gap: 8px;
+}
+.bubble-row {
+  display: flex;
+}
+.bubble-row.right {
+  justify-content: flex-end;
+}
+.bubble {
+  max-width: min(560px, 78%);
+  border-radius: 12px;
+  padding: 8px 11px 6px;
+  background: #fff;
+  box-shadow: 0 1px 1px #1d3a2e12;
+  display: grid;
+  gap: 3px;
+}
+.bubble.out {
+  background: #d7f2e5;
+}
+.bubble.note {
+  background: var(--note);
+  border: 1px solid #f0dfa8;
+}
+.bubble p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.sender {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green-dark);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.bubble-meta {
+  justify-self: end;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.bubble-meta .read {
+  color: #2f86d6;
+}
+.bubble-meta .failed {
+  color: var(--danger);
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}

@@ -9,6 +9,8 @@ import os from 'node:os';
 import { openStore } from './adapters/outbound/sqlite/store.mjs';
 import { whatsappManager } from './adapters/outbound/whatsapp.mjs';
 import { createApps } from './adapters/inbound/http.mjs';
+import { findWebDir } from './adapters/inbound/web-app.mjs';
+import { composeHelpdesk } from './compose-helpdesk.mjs';
 import { eventService } from './application/events.mjs';
 import { eventStore } from './adapters/outbound/sqlite/event-store.mjs';
 import { eventWebhook } from './adapters/outbound/event-webhook.mjs';
@@ -36,9 +38,16 @@ const wa = whatsappManager(store, dir, {
   onMessage: (id, message) => events.publish(id, message),
   onLogout: (id) => events.disconnect(id),
 });
+const { helpdesk, support, startJobs } = composeHelpdesk({ store, whatsapp: wa, webDir: findWebDir() });
+wa.subscribe({
+  message: (sessionId, message) => helpdesk.ingest(sessionId, message),
+  receipt: (sessionId, id, status) => helpdesk.receipt(sessionId, id, status),
+});
+const stopJobs = startJobs();
 const { admin, publicApp } = createApps({
+  support,
   sessions: sessionService(store, wa, events),
-  mcp: mcpService(store, wa, oauth),
+  mcp: mcpService(store, wa, oauth, helpdesk),
   oauth,
   events,
   publicUrl,
@@ -58,6 +67,7 @@ let closing = false;
 async function close() {
   if (closing) return;
   closing = true;
+  stopJobs();
   await events.close();
   await wa.close();
   adminServer.close();

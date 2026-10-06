@@ -4,11 +4,19 @@ import { adminSecurity } from './security.mjs';
 import { adminRoutes } from './admin-routes.mjs';
 import { mcpRoutes } from './mcp-routes.mjs';
 import { oauthRoutes } from './oauth-routes.mjs';
+import { HelpdeskError } from '../../domain/helpdesk.mjs';
+import { sameOrigin } from './web-auth.mjs';
+import { accountRoutes, bootstrapRoutes } from './account-routes.mjs';
+import { conversationRoutes } from './conversation-routes.mjs';
+import { catalogRoutes } from './catalog-routes.mjs';
+import { automationRoutes } from './automation-routes.mjs';
+import { webAppRoutes } from './web-app.mjs';
 export function createApps({
   sessions,
   mcp,
   oauth,
   events,
+  support,
   adminToken,
   publicUrl = 'https://wamcp.cappyfy.com',
 }) {
@@ -23,9 +31,21 @@ export function createApps({
   adminRoutes(admin, sessions, publicUrl);
   if (oauth) oauthRoutes(admin, publicApp, oauth, publicUrl);
   mcpRoutes(publicApp, mcp, publicUrl, events);
+  if (support) {
+    bootstrapRoutes(admin, support.accounts, publicUrl);
+    const api = express.Router();
+    api.use(sameOrigin(publicUrl));
+    accountRoutes(api, support.accounts);
+    conversationRoutes(api, support.helpdesk);
+    catalogRoutes(api, support);
+    if (support.webhooks) automationRoutes(api, support);
+    publicApp.use('/api/v1', api);
+    webAppRoutes(publicApp, support.webDir);
+  }
   for (const app of [admin, publicApp])
     app.use((error, req, res, _next) => {
       if (res.headersSent) return;
+      if (error instanceof HelpdeskError) return res.status(error.status).json({ error: error.message });
       const parseError = error.type === 'entity.parse.failed';
       const tooLarge = error.type === 'entity.too.large';
       if (parseError || tooLarge) {

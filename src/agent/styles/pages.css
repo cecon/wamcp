@@ -1,0 +1,256 @@
+.composer {
+  position: relative;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  padding: 8px 14px 12px;
+  display: grid;
+  gap: 8px;
+}
+.composer.note {
+  background: var(--note);
+}
+.composer textarea {
+  border: 0;
+  padding: 6px 0;
+  background: transparent;
+  resize: none;
+}
+.composer textarea:focus-visible {
+  outline: none;
+}
+.composer-modes {
+  display: flex;
+  gap: 4px;
+}
+.composer-modes button {
+  border: 0;
+  background: none;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.composer-modes button.active {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+.composer.note .composer-modes button.active {
+  background: #f6e7b4;
+  color: #7a5b07;
+}
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.canned {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 100%;
+  margin: 0 0 6px;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px #1d3a2e1f;
+}
+.canned button {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 7px;
+  display: grid;
+  gap: 2px;
+}
+.canned button.active,
+.canned button:hover {
+  background: var(--green-soft);
+}
+.canned span {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details {
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  padding: 18px 16px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
+}
+.details label > span,
+.label-picker > span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.contact-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.contact-card a {
+  color: var(--green-dark);
+  font-size: 12px;
+  text-decoration: none;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.contact-card small {
+  overflow-wrap: anywhere;
+}
+.label-picker {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f6657;
+}
+.label-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.label-chip {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 3px 10px 3px 8px;
+  background: #fff;
+  font-size: 12px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.label-chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--label);
+}
+.label-chip.on {
+  border-color: var(--label);
+  background: color-mix(in srgb, var(--label) 14%, white);
+}
+
+.me {
+  position: relative;
+}
+.me > .presence {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  border: 2px solid #183229;
+  width: 12px;
+  height: 12px;
+}
+.me-menu {
+  display: none;
+  position: absolute;
+  left: 46px;
+  bottom: 0;
+  width: 220px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 12px 34px #1d3a2e26;
+  gap: 2px;
+}
+.me:hover .me-menu,
+.me:focus-within .me-menu {
+  display: grid;
+}
+.me-menu small {
+  color: var(--muted);
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.me-menu button {
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.me-menu button:hover,
+.me-menu button.active {
+  background: var(--green-soft);
+}
+.live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e2574c;
+}
+.live.on {
+  background: #2bb673;
+}
+.notifications {
+  position: fixed;
+  left: 72px;
+  top: 12px;
+  bottom: 12px;
+  width: min(360px, calc(100vw - 88px));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 50px #1d3a2e2e;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+}
+.notifications header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.notifications h2 {
+  flex: 1;
+}
+.notifications ul {
+  overflow-y: auto;
+}
+.notifications li button {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #f0f4f1;
+  background: none;
+  text-align: left;
+  padding: 12px 14px;
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+}
+.notifications li.unread button {
+  color: var(--ink);
+  background: #f4fbf7;
+  font-weight: 600;
+}
+.notifications small {
+  font-size: 11px;
+  font-weight: 400;
+}

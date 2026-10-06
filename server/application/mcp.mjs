@@ -1,7 +1,10 @@
 import { requireSendPermission } from '../domain/access.mjs';
 import { checkMediaSize, MediaError } from '../domain/media.mjs';
-export function mcpService(repository, whatsapp, oauth) {
+export function mcpService(repository, whatsapp, oauth, helpdesk) {
   return {
+    /** Helpdesk use cases executed as this session's inbox bot (absent when the helpdesk is off). */
+    helpdesk,
+    bot: (id) => helpdesk.botFor(id),
     authenticate: (id, credential) =>
       repository.authenticate(id, credential) || oauth?.authenticate(id, credential),
     session: (id) => repository.session(id),
@@ -24,6 +27,13 @@ export function mcpService(repository, whatsapp, oauth) {
       if (token.session_id !== id) throw new Error('Sessão não autorizada');
       repository.audit(id, token.id, action);
       return operation();
+    },
+    /** Write operation on the helpdesk: needs send permission on this session and is audited. */
+    async act(id, token, action, operation) {
+      requireSendPermission(token, id);
+      const result = await operation();
+      repository.audit(id, token.id, action);
+      return result;
     },
     async send(id, token, jid, text) {
       requireSendPermission(token, id);

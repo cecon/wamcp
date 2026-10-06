@@ -3,6 +3,7 @@ import makeWASocket, {
   DisconnectReason,
   Browsers,
   fetchLatestBaileysVersion,
+  generateMessageIDV2,
 } from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
 import pino from 'pino';
@@ -10,10 +11,24 @@ import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { downloadMedia } from './media-download.mjs';
 import { MediaError } from '../../domain/media.mjs';
+import { receiptStatus } from './wa-message.mjs';
 import { persistLiveMessages } from './whatsapp-events.mjs';
+
+// Live messages older than this (e.g. replayed after a long outage) stay in the mirror only.
+const LIVE_WINDOW_SECONDS = 2 * 86400;
 
 export function whatsappManager(store, dir, { onMessage, onLogout } = {}) {
   const connections = new Map();
+  const listeners = new Set();
+  const notify = (method, ...args) => {
+    for (const listener of listeners) {
+      try {
+        listener[method]?.(...args);
+      } catch {
+        // A failing helpdesk listener must never break the WhatsApp connection.
+      }
+    }
+  };
   const logger = pino({ level: 'silent' });
   const current = (id) => connections.get(id);
   async function connect(id) {
@@ -52,7 +67,16 @@ export function whatsappManager(store, dir, { onMessage, onLogout } = {}) {
       socket.ev.on('contacts.upsert', (contacts) => contacts.forEach((c) => store.chat(id, c)));
       socket.ev.on('messages.upsert', (update) => {
         if (current(id) !== entry || entry.stopped) return;
-        persistLiveMessages(store, id, update, onMessage);
+        for (const saved of persistLiveMessages(store, id, update, onMessage)) {
+          const live = update.type === 'notify' || (update.type === 'append' && saved.fromMe);
+          if (live && saved.ts > Date.now() / 1000 - LIVE_WINDOW_SECONDS) notify('message', id, saved);
+        }
+      });
+      socket.ev.on('messages.update', (updates) => {
+        for (const { key, update } of updates) {
+          const status = receiptStatus(update?.status);
+          if (key?.id && key.fromMe && status) notify('receipt', id, key.id, status);
+        }
       });
       socket.ev.on('connection.update', async (update) => {
         if (current(id) !== entry || entry.stopped) return;
@@ -112,10 +136,16 @@ export function whatsappManager(store, dir, { onMessage, onLogout } = {}) {
         throw new MediaError('Conecte a sessão ao WhatsApp para baixar o anexo.');
       return downloadMedia(message, { logger, reuploadRequest: socket.updateMediaMessage });
     },
-    async send(id, jid, text) {
+    /** Helpdesk listeners receive live messages and delivery receipts. */
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    newMessageId: () => generateMessageIDV2(),
+    async send(id, jid, text, { messageId } = {}) {
       const socket = current(id)?.socket;
       if (store.session(id)?.status !== 'connected' || !socket) throw new Error('Sessão desconectada');
-      const result = await socket.sendMessage(jid, { text });
+      const result = await socket.sendMessage(jid, { text }, messageId ? { messageId } : undefined);
       if (!result?.key?.id) throw new Error('Envio sem confirmação');
       if (result) store.message(id, result);
       return { id: result?.key?.id };

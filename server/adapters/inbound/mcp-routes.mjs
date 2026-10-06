@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isLegacyRequest } from '@modelcontextprotocol/server';
 import { toWebRequest } from '@modelcontextprotocol/node';
 import { mcpTools } from './mcp-tools.mjs';
+import { registerConversationTools } from './mcp-conversations.mjs';
 import { modernMcp } from './mcp-modern.mjs';
 import { bearer } from './security.mjs';
 import { authChallenge, withToolSecurity } from './mcp-auth.mjs';
@@ -28,6 +29,7 @@ export function mcpRoutes(publicApp, service, publicUrl, events) {
       return modernMcp(req, res, service, token, credential, publicUrl, events);
     const id = req.params.id;
     const server = mcpTools(service, id, token, credential, publicUrl);
+    registerConversationTools(server, service, id, credential, publicUrl);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
