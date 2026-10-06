@@ -99,7 +99,9 @@ Configure o hostname público para `http://127.0.0.1:17382`. A API administrativ
 
 O servidor oferece `message.created` para novas mensagens recebidas, com filtro opcional por conversa e entrega HTTPS assinada. A assinatura é criada pelo ChatGPT somente quando o usuário pede monitoramento; a atualização não ativa automações por conta própria. Consulte [MCP_EVENTS.md](MCP_EVENTS.md) para limites, segurança e o teste completo após atualizar e reescanear o plugin.
 
-## Desenvolvimento
+## Contribuindo
+
+Quer contribuir com o WA MCP? Abaixo está o necessário para rodar o projeto localmente; para padrões de código, limites de arquivo, testes exigidos e o fluxo de PR, consulte [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Requisitos: Windows x64, Node.js 24, Rust estável, Visual Studio Build Tools com C++ e WebView2.
 
