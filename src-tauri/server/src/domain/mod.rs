@@ -17,4 +17,5 @@ pub mod reports;
 pub mod schedule;
 pub mod sla;
 pub mod totp;
+pub mod voice;
 pub mod webhooks;

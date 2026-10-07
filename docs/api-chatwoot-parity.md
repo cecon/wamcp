@@ -178,3 +178,9 @@ O prazo conta a partir da aplicação (próxima resposta: enquanto o contato agu
 viram `hit` (resolvida dentro dos prazos) ou `missed`; o perdido gera o evento `sla.missed` e a notificação
 `sla_missed` para o responsável. Automações e macros ganharam a ação `add_sla` (parâmetro: id da política). Os prazos
 contam em tempo corrido (sem pausar fora do horário de atendimento).
+
+## Notas de voz
+
+Gravações enviadas com `voice=true` em WebM/Opus (o formato do Chromium e do WebView do app) são convertidas para
+Ogg/Opus sem recodificar, como o WhatsApp exige para mensagens de voz; o anexo passa a `audio/ogg; codecs=opus`,
+`.ogg` e com `duration` em segundos. Arquivos que não forem WebM/Opus são enviados como gravados.

@@ -10,6 +10,7 @@ use crate::domain::media::{extension, storage_path, validate_upload};
 use crate::domain::model::{
     Conversation, ConversationChanges as Changes, Inbox, Message, NewAttachment, NewMessage, OutgoingMedia, Upload,
 };
+use crate::domain::voice::webm_to_ogg;
 use serde_json::{json, Value};
 
 /// What an agent (or bot, or automation) sends.
@@ -27,6 +28,30 @@ fn failure_text(error: &Error) -> String {
     match error {
         Error::Helpdesk(e) => e.message.clone(),
         Error::Internal(_) => "Falha no envio".into(),
+    }
+}
+
+/// Browsers record voice notes as WebM/Opus; WhatsApp plays only Ogg/Opus, so remux them.
+fn as_ogg_voice(upload: Upload) -> (Upload, Option<i64>) {
+    if !upload.mime_type.starts_with("audio/webm") {
+        return (upload, None);
+    }
+    match webm_to_ogg(&upload.bytes) {
+        Some(ogg) => {
+            let stem = upload
+                .file_name
+                .as_deref()
+                .and_then(|n| n.rsplit_once('.'))
+                .map(|(s, _)| s.to_string());
+            let upload = Upload {
+                file_name: Some(format!("{}.ogg", stem.unwrap_or_else(|| "audio".into()))),
+                mime_type: "audio/ogg; codecs=opus".into(),
+                bytes: ogg.bytes,
+                ..upload
+            };
+            (upload, Some(ogg.seconds))
+        }
+        None => (upload, None),
     }
 }
 
@@ -107,9 +132,10 @@ impl HelpdeskService {
 
     /// Validates the file and stores it under `media/<session>/<YYYY>/<MM>/`.
     fn store_upload(&self, inbox: &Inbox, file_id: &str, upload: Upload, caption: Option<String>) -> Result<Prepared> {
-        let size = upload.bytes.len() as u64;
-        let file_type = validate_upload(&upload.mime_type, size)?;
+        let file_type = validate_upload(&upload.mime_type, upload.bytes.len() as u64)?;
         let voice = upload.voice && file_type == "audio";
+        let (upload, seconds) = if voice { as_ogg_voice(upload) } else { (upload, None) };
+        let size = upload.bytes.len() as u64;
         let path = storage_path(
             &inbox.session_id,
             self.core.now(),
@@ -123,7 +149,7 @@ impl HelpdeskService {
             mime_type: upload.mime_type.clone(),
             file_name: upload.file_name.clone(),
             file_size: Some(size as i64),
-            duration: None,
+            duration: seconds,
             voice,
             path: Some(path),
         };
@@ -133,7 +159,7 @@ impl HelpdeskService {
             file_name: upload.file_name,
             caption,
             voice,
-            seconds: None,
+            seconds,
             bytes: upload.bytes,
         };
         Ok(Prepared { attachment, media })
