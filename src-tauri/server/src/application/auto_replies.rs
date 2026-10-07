@@ -58,8 +58,14 @@ impl AutoReplyService {
                 ..Default::default()
             };
             if core.update(data.id, changes).is_ok() {
-                self.send("csat", "Pesquisa de satisfação", data.display_id, CSAT_SURVEY)
-                    .await;
+                let survey = inbox.csat_survey_message.as_deref().filter(|m| !m.trim().is_empty());
+                self.send(
+                    "csat",
+                    "Pesquisa de satisfação",
+                    data.display_id,
+                    survey.unwrap_or(CSAT_SURVEY),
+                )
+                .await;
             }
         }
     }

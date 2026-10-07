@@ -1,4 +1,5 @@
 //! Use cases. Depend only on the domain and on the ports declared in `ports`.
+pub mod account_settings;
 pub mod accounts;
 mod action_runner;
 mod attachments;
@@ -27,6 +28,7 @@ pub mod ports;
 mod presence;
 pub mod replies;
 pub mod reports;
+pub mod search;
 pub mod security;
 pub mod sessions;
 mod teams;

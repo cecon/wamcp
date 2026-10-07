@@ -33,6 +33,8 @@ pub trait Repository:
     + CustomDataRepo
     + MacroRepo
     + SecurityRepo
+    + AccountRepo
+    + SearchRepo
     + AutomationRepo
     + InsightsRepo
     + MirrorRepo
@@ -58,6 +60,8 @@ impl<T> Repository for T where
         + CustomDataRepo
         + MacroRepo
         + SecurityRepo
+        + AccountRepo
+        + SearchRepo
         + AutomationRepo
         + InsightsRepo
         + MirrorRepo

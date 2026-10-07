@@ -1,4 +1,5 @@
 //! SQLite implementation of every repository port (same schema as the Node version).
+mod account;
 mod attachments;
 mod automation;
 mod catalog;
@@ -17,6 +18,7 @@ mod migrations;
 mod mirror;
 mod notifications;
 mod schema;
+mod search;
 mod security;
 mod teams;
 mod users;

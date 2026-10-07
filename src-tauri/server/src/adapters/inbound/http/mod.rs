@@ -1,4 +1,5 @@
 //! HTTP inbound adapter: the local admin listener and the public listener (UI, API, MCP, OAuth).
+mod account;
 mod accounts;
 mod admin;
 mod audit;
@@ -45,6 +46,7 @@ async fn not_found() -> Response {
 fn helpdesk_api(state: &AppState) -> Router<AppState> {
     Router::new()
         .merge(accounts::routes())
+        .merge(account::routes())
         .merge(teams::routes())
         .merge(conversations::routes())
         .merge(contacts::routes())

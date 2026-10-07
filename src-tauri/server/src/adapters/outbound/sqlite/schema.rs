@@ -59,5 +59,9 @@ pub fn steps() -> Vec<String> {
            ip_address TEXT,created_at INTEGER NOT NULL);
          CREATE INDEX audit_logs_created ON audit_logs(created_at DESC);"
             .into(),
+        // v16: limite de atribuições por agente e texto da pesquisa CSAT por caixa de entrada
+        "ALTER TABLE inboxes ADD COLUMN max_assignment_limit INTEGER;
+         ALTER TABLE inboxes ADD COLUMN csat_survey_message TEXT;"
+            .into(),
     ]
 }

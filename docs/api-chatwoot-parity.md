@@ -136,3 +136,15 @@ TOTP segue a RFC 6238 (SHA-1, 30 s, 6 dígitos, tolerância de um passo, sem reu
 guarda login, ativação/desativação da verificação em duas etapas e toda alteração bem-sucedida de agentes, times,
 caixas, etiquetas, respostas prontas, automações, macros, webhooks, atributos e conta, além de exclusões/importações/
 mesclagens de contatos e exclusões de conversas, com usuário, IP e rota.
+
+## Conta, caixas de entrada e busca
+
+| Método | Rota                                                     | Descrição                                                                                                                     |
+| ------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/account`                                               | Nome, idioma e `settings` da conta                                                                                            |
+| PATCH  | `/account`                                               | Administrador: `{ name, locale: pt-BR\|en\|es, auto_resolve_duration (dias, 1–999 ou null), auto_resolve_message }`           |
+| PATCH  | `/inboxes/{id}`                                          | Também aceita `max_assignment_limit` (1–1000 conversas abertas por agente na distribuição automática) e `csat_survey_message` |
+| GET    | `/search?q=&type=all\|conversations\|contacts\|messages` | Até 20 de cada; respeita as caixas visíveis; `#12` busca a conversa 12                                                        |
+
+Com `auto_resolve_duration`, conversas abertas ou pendentes sem atividade pelo número de dias são resolvidas a cada
+minuto (enviando `auto_resolve_message`, se definida). Evento `account.updated`.

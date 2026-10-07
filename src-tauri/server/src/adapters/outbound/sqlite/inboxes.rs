@@ -1,4 +1,4 @@
-use super::db::{flag, int, iso, now_ms, opt_text, placeholders, text, SqliteStore, PLAIN};
+use super::db::{flag, int, iso, now_ms, opt_int, opt_text, placeholders, text, SqliteStore, PLAIN};
 use crate::application::ports::InboxRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{DaySchedule, Inbox, InboxChanges, WorkingHour};
@@ -79,6 +79,12 @@ impl InboxRepo for SqliteStore {
         }
         if let Some(away) = &changes.out_of_office_message {
             fields.push(("out_of_office_message", opt_text(away.as_deref())));
+        }
+        if let Some(limit) = changes.max_assignment_limit {
+            fields.push(("max_assignment_limit", opt_int(limit)));
+        }
+        if let Some(survey) = &changes.csat_survey_message {
+            fields.push(("csat_survey_message", opt_text(survey.as_deref())));
         }
         if let Some(zone) = &changes.timezone {
             fields.push(("timezone", text(zone.as_str())));

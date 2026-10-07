@@ -24,6 +24,10 @@ pub struct Inbox {
     pub ignore_groups: i64,
     pub session_status: String,
     pub phone: Option<String>,
+    #[serde(default)]
+    pub max_assignment_limit: Option<i64>,
+    #[serde(default)]
+    pub csat_survey_message: Option<String>,
 }
 
 /// Inbox settings an administrator may change; `Some(None)` clears a nullable text.
@@ -42,6 +46,10 @@ pub struct InboxChanges {
     pub out_of_office_message: Option<Option<String>>,
     pub csat_survey_enabled: Option<bool>,
     pub timezone: Option<String>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub max_assignment_limit: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub csat_survey_message: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -104,4 +112,14 @@ pub struct ContactInbox {
     pub contact_id: i64,
     pub inbox_id: i64,
     pub source_id: String,
+}
+
+/// The account (company) and its settings, e.g. `auto_resolve_duration` in days.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Account {
+    pub id: i64,
+    pub name: String,
+    pub locale: String,
+    pub settings: Value,
+    pub created: String,
 }

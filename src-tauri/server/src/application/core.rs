@@ -98,7 +98,9 @@ impl Core {
             None => None,
         };
         let team_scope = team.filter(|t| t.allow_auto_assign != 0).map(|t| t.id);
-        let candidates = self.repo.assignable_ids(inbox.id, team_scope)?;
+        let candidates = self
+            .repo
+            .assignable_ids(inbox.id, team_scope, inbox.max_assignment_limit)?;
         let Some(chosen) = next_assignee(&candidates, self.repo.assignment_cursor(inbox.id)?) else {
             return Ok(conversation);
         };

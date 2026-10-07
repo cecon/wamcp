@@ -1,8 +1,9 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    AuditLog, Contact, ContactChannel, ContactNote, Credentials, MfaState, NewAuditLog, SessionInfo, Team, TeamFields,
-    TokenOwner, User, UserChanges, WebSession,
+    Account, AuditLog, Contact, ContactChannel, ContactNote, Credentials, MfaState, NewAuditLog, SessionInfo, Team,
+    TeamFields, TokenOwner, User, UserChanges, WebSession,
 };
+use serde_json::Value;
 
 /// Users, web sessions, API tokens, teams and inbox membership.
 pub trait UsersRepo {
@@ -44,7 +45,8 @@ pub trait TeamsRepo {
     fn add_inbox_members(&self, inbox_id: i64, user_ids: &[i64]) -> Result<()>;
     fn remove_inbox_members(&self, inbox_id: i64, user_ids: &[i64]) -> Result<()>;
     /// Online, active members of the inbox (optionally restricted to a team) eligible for assignment.
-    fn assignable_ids(&self, inbox_id: i64, team_id: Option<i64>) -> Result<Vec<i64>>;
+    /// Online active members (of the team, when given) below the open-conversation limit.
+    fn assignable_ids(&self, inbox_id: i64, team_id: Option<i64>, limit: Option<i64>) -> Result<Vec<i64>>;
     fn assignment_cursor(&self, inbox_id: i64) -> Result<Option<i64>>;
     fn set_assignment_cursor(&self, inbox_id: i64, user_id: i64) -> Result<()>;
 }
@@ -85,4 +87,12 @@ pub trait SecurityRepo {
 
     fn add_audit_log(&self, entry: &NewAuditLog) -> Result<()>;
     fn audit_logs(&self, page: i64, per_page: i64) -> Result<Vec<AuditLog>>;
+}
+
+/// The account (company) settings and account-wide sweeps.
+pub trait AccountRepo {
+    fn account(&self) -> Result<Account>;
+    fn update_account(&self, name: Option<&str>, locale: Option<&str>, settings: Option<&Value>) -> Result<Account>;
+    /// Open or pending conversations with no activity since `before`.
+    fn inactive_conversations(&self, before: i64) -> Result<Vec<i64>>;
 }

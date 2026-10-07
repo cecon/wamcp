@@ -111,3 +111,11 @@ pub trait MacroRepo {
     ) -> Result<Macro>;
     fn delete_macro(&self, id: i64) -> Result<()>;
 }
+
+/// Global search (Chatwoot's search page) over conversations, contacts and messages.
+pub trait SearchRepo {
+    fn search_conversations(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Conversation>>;
+    fn search_contacts(&self, q: &str, limit: i64) -> Result<Vec<Contact>>;
+    /// Matching non-private messages with their conversation's display id and contact name.
+    fn search_messages(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Value>>;
+}
