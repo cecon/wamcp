@@ -15,5 +15,6 @@ pub mod notifications;
 pub mod oauth;
 pub mod reports;
 pub mod schedule;
+pub mod sla;
 pub mod totp;
 pub mod webhooks;

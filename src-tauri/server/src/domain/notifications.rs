@@ -3,12 +3,13 @@ use regex::Regex;
 use serde_json::Value;
 use std::sync::LazyLock;
 
-pub const NOTIFICATION_TYPES: [&str; 5] = [
+pub const NOTIFICATION_TYPES: [&str; 6] = [
     "conversation_creation",
     "conversation_assignment",
     "assigned_conversation_new_message",
     "conversation_mention",
     "participating_conversation_new_message",
+    "sla_missed",
 ];
 
 /// Chatwoot's editor writes mentions as `[@Nome](mention://user/<id>/Nome)`.

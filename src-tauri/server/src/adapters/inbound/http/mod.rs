@@ -20,6 +20,7 @@ mod notifications;
 pub mod rate_limit;
 mod reports;
 mod security;
+mod sla;
 pub mod state;
 mod teams;
 mod web_app;
@@ -62,6 +63,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(macros::routes())
         .merge(security::routes())
         .merge(reports::routes())
+        .merge(sla::routes())
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth::same_origin))
 }

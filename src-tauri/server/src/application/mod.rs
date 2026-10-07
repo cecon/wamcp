@@ -32,6 +32,7 @@ pub mod reports_v2;
 pub mod search;
 pub mod security;
 pub mod sessions;
+mod sla;
 mod teams;
 pub mod webhooks;
 pub mod whatsapp_sink;

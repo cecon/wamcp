@@ -164,3 +164,17 @@ Métricas: `conversations_count`, `incoming_messages_count`, `outgoing_messages_
 `avg_first_response_time` e `avg_resolution_time` (segundos). `type`: `account` (padrão), `inbox`, `agent`, `team` ou
 `label` (com `label=<título>`). Período padrão: últimos 7 dias; máximo 1 ano. Somente administradores. Semanas
 começam na segunda-feira (UTC). A data de criação da conversa agora é a da primeira mensagem.
+
+## SLA
+
+| Método           | Rota                                  | Descrição                                                                                                                                                                |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET/POST         | `/sla_policies`                       | Lista / cria (administrador) `{ name, description, first_response_time_threshold, next_response_time_threshold, resolution_time_threshold }` (segundos, 60 s a 365 dias) |
+| PUT/PATCH/DELETE | `/sla_policies/{id}`                  | Substitui ou remove (administrador)                                                                                                                                      |
+| GET/POST         | `/conversations/{id}/sla`             | SLA da conversa `{ policy, applied, state }` / aplica `{ sla_policy_id }`                                                                                                |
+| GET              | `/applied_slas/metrics?since=&until=` | `{ total, hit, missed, active, hit_rate }` (administrador)                                                                                                               |
+
+O prazo conta a partir da aplicação (próxima resposta: enquanto o contato aguarda). A cada minuto os SLAs ativos
+viram `hit` (resolvida dentro dos prazos) ou `missed`; o perdido gera o evento `sla.missed` e a notificação
+`sla_missed` para o responsável. Automações e macros ganharam a ação `add_sla` (parâmetro: id da política). Os prazos
+contam em tempo corrido (sem pausar fora do horário de atendimento).

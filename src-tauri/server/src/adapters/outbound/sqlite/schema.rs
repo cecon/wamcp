@@ -63,5 +63,14 @@ pub fn steps() -> Vec<String> {
         "ALTER TABLE inboxes ADD COLUMN max_assignment_limit INTEGER;
          ALTER TABLE inboxes ADD COLUMN csat_survey_message TEXT;"
             .into(),
+        // v17: políticas de SLA e o SLA aplicado a cada conversa
+        "CREATE TABLE sla_policies(id INTEGER PRIMARY KEY,name TEXT NOT NULL,description TEXT,
+           first_response_time_threshold INTEGER,next_response_time_threshold INTEGER,resolution_time_threshold INTEGER,
+           created TEXT NOT NULL);
+         CREATE TABLE applied_slas(conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+           sla_policy_id INTEGER NOT NULL REFERENCES sla_policies(id) ON DELETE CASCADE,created_at INTEGER NOT NULL,
+           status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','hit','missed')),missed_at INTEGER);
+         CREATE INDEX applied_slas_status ON applied_slas(status);"
+            .into(),
     ]
 }

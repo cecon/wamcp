@@ -48,6 +48,10 @@ impl HelpdeskService {
             "pending_conversation" => self.toggle_status(actor, id, "pending", None).map(drop),
             "snooze_conversation" => self.toggle_status(actor, id, "snoozed", None).map(drop),
             "mute_conversation" => self.set_muted(actor, id, true).map(drop),
+            "add_sla" => match param_id(params) {
+                Some(policy) => self.apply_sla(actor, id, policy).map(drop),
+                None => fail("Informe o SLA"),
+            },
             "set_priority" | "change_priority" => {
                 let priority = (!text.is_empty() && text != "none").then_some(text.as_str());
                 self.set_priority(actor, id, priority).map(drop)

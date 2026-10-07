@@ -21,6 +21,7 @@ mod reports;
 mod schema;
 mod search;
 mod security;
+mod sla;
 mod teams;
 mod users;
 

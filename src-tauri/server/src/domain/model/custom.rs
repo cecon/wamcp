@@ -61,3 +61,25 @@ pub struct Macro {
     pub actions: Vec<super::Action>,
     pub created: String,
 }
+
+/// Service level targets in seconds (Chatwoot SLA policy); `None` means no target.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SlaPolicy {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub first_response_time_threshold: Option<i64>,
+    pub next_response_time_threshold: Option<i64>,
+    pub resolution_time_threshold: Option<i64>,
+    pub created: String,
+}
+
+/// The SLA applied to a conversation and its outcome (`active`, `hit` or `missed`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppliedSla {
+    pub conversation_id: i64,
+    pub sla_policy_id: i64,
+    pub created_at: i64,
+    pub status: String,
+    pub missed_at: Option<i64>,
+}

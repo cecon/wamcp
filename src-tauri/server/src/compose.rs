@@ -199,7 +199,7 @@ impl App {
         }
     }
 
-    /// Periodic jobs: snooze wake-ups and auto-resolve (60 s), webhook deliveries (10 s) and MCP events (1 s).
+    /// Periodic jobs: snooze wake-ups, auto-resolve and SLA checks (60 s), webhook deliveries (10 s) and MCP events (1 s).
     pub fn start_jobs(&self) -> Vec<JoinHandle<()>> {
         let support = self.state.support().clone();
         let helpdesk = support.helpdesk.clone();
@@ -209,6 +209,7 @@ impl App {
                 ticker.tick().await;
                 let _ = helpdesk.wake_snoozed();
                 let _ = helpdesk.auto_resolve().await;
+                let _ = helpdesk.check_slas();
             }
         });
         let webhooks = support.webhooks.clone();

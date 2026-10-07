@@ -36,6 +36,7 @@ pub trait Repository:
     + AccountRepo
     + SearchRepo
     + ReportsRepo
+    + SlaRepo
     + AutomationRepo
     + InsightsRepo
     + MirrorRepo
@@ -64,6 +65,7 @@ impl<T> Repository for T where
         + AccountRepo
         + SearchRepo
         + ReportsRepo
+        + SlaRepo
         + AutomationRepo
         + InsightsRepo
         + MirrorRepo

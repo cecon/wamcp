@@ -3,7 +3,8 @@
 //! - assigned_conversation_new_message: the contact wrote in a conversation assigned to you;
 //! - conversation_creation: a new conversation arrived in one of your inboxes and nobody took it;
 //! - conversation_mention: someone @mentioned you in a private note;
-//! - participating_conversation_new_message: the contact wrote in a conversation you follow.
+//! - participating_conversation_new_message: the contact wrote in a conversation you follow;
+//! - sla_missed: a conversation assigned to you missed its SLA.
 use super::core::Core;
 use super::event_bus::Envelope;
 use crate::domain::actor::Performer;
@@ -59,6 +60,10 @@ impl NotificationService {
             }
             "message.created" if data["message_type"] == "incoming" => match conversation(&data["conversation_id"])? {
                 Some(c) if c.muted == 0 => self.new_message(&c),
+                _ => Ok(()),
+            },
+            "sla.missed" => match (conversation(&data["id"])?, data["assignee_id"].as_i64()) {
+                (Some(c), Some(assignee)) => self.notify(assignee, "sla_missed", &c, None),
                 _ => Ok(()),
             },
             "message.created" if data["private"] == true && data["sender_type"] == "user" => {

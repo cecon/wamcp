@@ -32,7 +32,7 @@ pub const OPERATORS: [&str; 7] = [
     "is_not_present",
     "starts_with",
 ];
-pub const ACTIONS: [&str; 15] = [
+pub const ACTIONS: [&str; 16] = [
     "assign_agent",
     "assign_team",
     "add_label",
@@ -48,6 +48,7 @@ pub const ACTIONS: [&str; 15] = [
     "pending_conversation",
     "remove_assigned_agent",
     "remove_assigned_team",
+    "add_sla",
 ];
 const TEXT_ACTIONS: [&str; 2] = ["send_message", "add_private_note"];
 const NO_PARAM_ACTIONS: [&str; 7] = [

@@ -1,8 +1,8 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Action, Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges, ContactInbox,
-    Conversation, ConversationChanges, ConversationCounts, ConversationFilters, CustomFilter, DaySchedule, FilterQuery,
-    Inbox, InboxChanges, Macro, Message, NewAttachment, NewMessage, WorkingHour,
+    Action, AppliedSla, Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges,
+    ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters, CustomFilter,
+    DaySchedule, FilterQuery, Inbox, InboxChanges, Macro, Message, NewAttachment, NewMessage, SlaPolicy, WorkingHour,
 };
 use serde_json::Value;
 
@@ -118,4 +118,22 @@ pub trait SearchRepo {
     fn search_contacts(&self, q: &str, limit: i64) -> Result<Vec<Contact>>;
     /// Matching non-private messages with their conversation's display id and contact name.
     fn search_messages(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Value>>;
+}
+
+/// SLA policies, the SLA applied to each conversation and SLA metrics.
+pub trait SlaRepo {
+    fn sla_policies(&self) -> Result<Vec<SlaPolicy>>;
+    fn sla_policy(&self, id: i64) -> Result<Option<SlaPolicy>>;
+    fn create_sla_policy(&self, policy: &SlaPolicy) -> Result<SlaPolicy>;
+    fn update_sla_policy(&self, policy: &SlaPolicy) -> Result<SlaPolicy>;
+    fn delete_sla_policy(&self, id: i64) -> Result<()>;
+    /// Applies (or replaces) the conversation's SLA, starting the clock at `at`.
+    fn apply_sla(&self, conversation_id: i64, policy_id: i64, at: i64) -> Result<AppliedSla>;
+    fn applied_sla(&self, conversation_id: i64) -> Result<Option<AppliedSla>>;
+    fn active_slas(&self) -> Result<Vec<AppliedSla>>;
+    fn set_sla_status(&self, conversation_id: i64, status: &str, missed_at: Option<i64>) -> Result<()>;
+    /// When the conversation was last resolved (from the reporting events).
+    fn resolved_at(&self, conversation_id: i64) -> Result<Option<i64>>;
+    /// `{ total, hit, missed, active }` for SLAs applied in `[since, until)`.
+    fn sla_counts(&self, since: i64, until: i64) -> Result<Value>;
 }
