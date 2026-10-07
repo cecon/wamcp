@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "server": "node server/index.mjs",
+    "server": "cargo run --manifest-path src-tauri/Cargo.toml -p wamcp-server",
     "test": "node --test tests/*.test.mjs",
     "tauri": "tauri",
     "prepare:desktop": "node scripts/prepare-desktop.mjs",
@@ -18,7 +18,9 @@
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run format:check && npm run build && npm test && npm run test:ui",
     "version": "node scripts/version.mjs",
-    "test:ui": "vitest run --coverage"
+    "test:ui": "vitest run --coverage",
+    "test:server": "cargo test --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features",
+    "coverage:server": "cargo llvm-cov --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features --fail-under-lines 80"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "2.1.0",

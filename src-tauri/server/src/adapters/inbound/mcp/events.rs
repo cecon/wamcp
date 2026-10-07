@@ -56,11 +56,11 @@ fn check(method: &str, params: &Value) -> Option<String> {
     if delivery.get("mode").and_then(Value::as_str) != Some("webhook") {
         return Some("delivery.mode: Invalid input: expected \"webhook\"".into());
     }
-    if !delivery.get("url").and_then(Value::as_str).is_some_and(|u| u.len() <= 2048) {
+    if delivery.get("url").and_then(Value::as_str).is_none_or(|u| u.len() > 2048) {
         return Some("delivery.url: Invalid input".into());
     }
     if subscribing {
-        if !delivery.get("secret").and_then(Value::as_str).is_some_and(|s| s.len() <= 100) {
+        if delivery.get("secret").and_then(Value::as_str).is_none_or(|s| s.len() > 100) {
             return Some("delivery.secret: Invalid input".into());
         }
         if !matches!(object.get("cursor"), None | Some(Value::Null)) {

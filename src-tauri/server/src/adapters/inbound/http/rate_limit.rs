@@ -36,12 +36,10 @@ impl RateLimiter {
         entry.1 <= self.limit
     }
 
-    pub fn check(&self, key: &str) -> Result<(), Response> {
-        if self.allow(key) {
-            Ok(())
-        } else {
-            Err((StatusCode::TOO_MANY_REQUESTS, "Too many requests, please try again later.").into_response())
-        }
+    /// The 429 response when the client exceeded the limit.
+    pub fn reject(&self, key: &str) -> Option<Response> {
+        (!self.allow(key))
+            .then(|| (StatusCode::TOO_MANY_REQUESTS, "Too many requests, please try again later.").into_response())
     }
 }
 

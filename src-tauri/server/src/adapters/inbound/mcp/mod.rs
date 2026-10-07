@@ -96,7 +96,7 @@ pub async fn endpoint(
     headers: HeaderMap,
     bytes: Bytes,
 ) -> Response {
-    if let Err(limited) = state.limits.mcp.check(&client_key(&headers, peer.0)) {
+    if let Some(limited) = state.limits.mcp.reject(&client_key(&headers, peer.0)) {
         return limited;
     }
     let body: Option<Value> = if method == Method::POST && !bytes.is_empty() {

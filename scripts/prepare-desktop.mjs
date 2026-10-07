@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -8,22 +8,9 @@ if (process.platform !== 'win32') throw new Error('O instalador atual é para Wi
 const root = process.cwd(),
   runtime = path.join(root, 'src-tauri', 'runtime');
 mkdirSync(runtime, { recursive: true });
-copyFileSync(process.execPath, path.join(runtime, 'node.exe'));
-// Replace the server copy so files deleted or renamed in the repo do not linger in the runtime.
-rmSync(path.join(runtime, 'server'), { recursive: true, force: true });
-cpSync(path.join(root, 'server'), path.join(runtime, 'server'), { recursive: true });
-const runtimeLock = path.join(runtime, 'package-lock.json');
-const previousLock = existsSync(runtimeLock) ? readFileSync(runtimeLock, 'utf8') : null;
-copyFileSync('package.json', path.join(runtime, 'package.json'));
-copyFileSync('package-lock.json', runtimeLock);
-// Reinstall whenever dependencies changed; a stale runtime makes the service exit silently on start.
-const depsChanged = previousLock !== readFileSync('package-lock.json', 'utf8');
-if (depsChanged || !existsSync(path.join(runtime, 'node_modules', '.package-lock.json')) || process.env.CI) {
-  execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npm ci --omit=dev --ignore-scripts'], {
-    cwd: runtime,
-    stdio: 'inherit',
-  });
-}
+// The backend is Rust and runs inside the app; drop leftovers of the former Node runtime.
+for (const stale of ['node.exe', 'server', 'node_modules', 'package.json', 'package-lock.json'])
+  rmSync(path.join(runtime, stale), { recursive: true, force: true });
 // The backend serves the agent UI (/app) from runtime/web, in dev as well as in the installer.
 execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npx vite build'], { stdio: 'inherit' });
 execFileSync(process.execPath, ['scripts/copy-web.mjs'], { stdio: 'inherit' });
@@ -56,4 +43,4 @@ header.writeUInt16LE(32, 12);
 header.writeUInt32LE(png.length, 14);
 header.writeUInt32LE(22, 18);
 writeFileSync('src-tauri/icons/icon.ico', Buffer.concat([header, png]));
-console.log('Runtime, ícones e conector preparados. Nenhuma credencial foi incluída.');
+console.log('Interface web, ícones e conector preparados. Nenhuma credencial foi incluída.');

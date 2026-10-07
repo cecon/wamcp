@@ -1,11 +1,18 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-const roots = ['src', 'server', 'scripts', 'tests', 'src-tauri/src'];
+const roots = ['src', 'scripts', 'tests', 'src-tauri/src', 'src-tauri/server/src', 'src-tauri/server/tests'].filter(
+  existsSync,
+);
 function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)],
   );
 }
+// Hexagonal layers of the Rust backend: the domain depends on nothing, the application only on the domain.
+const layers = {
+  'src-tauri/server/src/domain/': ['domain'],
+  'src-tauri/server/src/application/': ['domain', 'application'],
+};
 let failures = 0;
 for (const file of roots.flatMap(files)) {
   if (!/\.(mjs|tsx?|rs|css)$/.test(file)) continue;
@@ -16,26 +23,20 @@ for (const file of roots.flatMap(files)) {
     failures++;
   }
   const normalized = file.replaceAll('\\', '/');
-  for (const match of source.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g)) {
-    const dependency = match[1];
-    if (normalized.startsWith('server/domain/') && !dependency.startsWith('./')) {
-      console.error(`${file}: domínio não pode importar ${dependency}`);
-      failures++;
-    }
-    if (
-      normalized.startsWith('server/application/') &&
-      !dependency.startsWith('./') &&
-      !dependency.startsWith('../domain/')
-    ) {
-      console.error(`${file}: aplicação não pode importar ${dependency}`);
+  const allowed = Object.entries(layers).find(([prefix]) => normalized.startsWith(prefix))?.[1];
+  if (!allowed) continue;
+  for (const [, layer] of source.matchAll(/crate::(\w+)/g)) {
+    if (!allowed.includes(layer)) {
+      console.error(`${file}: camada não pode depender de crate::${layer}`);
       failures++;
     }
   }
 }
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 const tauri = JSON.parse(readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-const cargo = readFileSync('src-tauri/Cargo.toml', 'utf8').match(/^version = "([^"]+)"/m)?.[1];
-if (pkg.version !== tauri.version || pkg.version !== cargo) {
+const crate = (manifest) => readFileSync(manifest, 'utf8').match(/^version = "([^"]+)"/m)?.[1];
+const crates = ['src-tauri/Cargo.toml', 'src-tauri/server/Cargo.toml'].map(crate);
+if (pkg.version !== tauri.version || crates.some((version) => version !== pkg.version)) {
   console.error('Versões divergentes');
   failures++;
 }

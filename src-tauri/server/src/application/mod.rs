@@ -8,6 +8,7 @@ pub mod crypto;
 pub mod event_bus;
 pub mod events;
 pub mod helpdesk;
+mod conversation_actions;
 mod ingestion;
 pub mod notifications;
 pub mod oauth;

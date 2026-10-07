@@ -35,12 +35,15 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
       - run: npm ci
       - run: npm run prepare:desktop
       - run: npm run build
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
-      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --locked -- -D warnings
+      # Backend tests and coverage gate (the real WhatsApp adapter is exercised manually, see docs).
+      - run: npm run coverage:server

@@ -37,6 +37,8 @@ fn row_map(row: &Row, shape: &Shape) -> rusqlite::Result<Map<String, Value>> {
             Sql::Null => Value::Null,
             Sql::Integer(i) if shape.bools.contains(name) => Value::Bool(i != 0),
             Sql::Integer(i) => Value::from(i),
+            // Whole averages serialize like JavaScript numbers (120, not 120.0).
+            Sql::Real(f) if f.fract() == 0.0 && f.abs() < 9e15 => Value::from(f as i64),
             Sql::Real(f) => Number::from_f64(f).map_or(Value::Null, Value::Number),
             Sql::Text(t) if shape.json.contains(name) => serde_json::from_str(&t).unwrap_or(Value::Null),
             Sql::Text(t) => Value::String(t),

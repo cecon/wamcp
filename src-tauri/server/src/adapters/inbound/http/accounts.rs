@@ -26,7 +26,7 @@ async fn login(
     headers: HeaderMap,
     Body(body): Body<Login>,
 ) -> ApiResult<Response> {
-    if let Err(limited) = state.limits.login.check(&client_key(&headers, peer.0)) {
+    if let Some(limited) = state.limits.login.reject(&client_key(&headers, peer.0)) {
         return Ok(limited);
     }
     let address = email(&body.email)?;

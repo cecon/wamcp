@@ -22,17 +22,17 @@ fn missing(field: &str) -> Response {
 }
 
 /// Authenticates the client of a token or revocation request (public or `client_secret_post`).
-fn client(oauth: &OAuthService, form: &Fields) -> Result<Value, Response> {
+fn client(oauth: &OAuthService, form: &Fields) -> Result<Value, Box<Response>> {
     let Some(id) = form.get("client_id") else {
-        return Err(missing("client_id"));
+        return Err(Box::new(missing("client_id")));
     };
-    let client = oauth.get_client(id).ok_or_else(|| oauth_error("invalid_client", "Invalid client_id"))?;
+    let client = oauth.get_client(id).ok_or_else(|| Box::new(oauth_error("invalid_client", "Invalid client_id")))?;
     if let Some(secret) = client["client_secret"].as_str() {
         let Some(given) = form.get("client_secret") else {
-            return Err(oauth_error("invalid_client", "Client secret is required"));
+            return Err(Box::new(oauth_error("invalid_client", "Client secret is required")));
         };
         if !same_secret(given, secret) {
-            return Err(oauth_error("invalid_client", "Invalid client_secret"));
+            return Err(Box::new(oauth_error("invalid_client", "Invalid client_secret")));
         }
     }
     Ok(client)
@@ -53,13 +53,13 @@ pub async fn token(
     let Some(oauth) = state.oauth.as_ref() else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    if let Err(limited) = state.limits.token.check(&client_key(&headers, peer.0)) {
+    if let Some(limited) = state.limits.token.reject(&client_key(&headers, peer.0)) {
         return cors(limited);
     }
     let form = fields(&headers, &bytes);
     let client = match client(oauth, &form) {
         Ok(client) => client,
-        Err(response) => return cors(response),
+        Err(response) => return cors(*response),
     };
     let client_id = client["client_id"].as_str().unwrap_or_default();
     let get = |k: &str| form.get(k).map(String::as_str);
@@ -102,7 +102,7 @@ pub async fn revoke(State(state): State<AppState>, headers: HeaderMap, bytes: By
     let form = fields(&headers, &bytes);
     let client = match client(oauth, &form) {
         Ok(client) => client,
-        Err(response) => return cors(response),
+        Err(response) => return cors(*response),
     };
     let Some(token) = form.get("token") else {
         return cors(missing("token"));
@@ -131,7 +131,7 @@ pub async fn approve(
     let Some(oauth) = state.oauth.as_ref() else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    if let Err(limited) = state.limits.approve.check(&client_key(&headers, peer.0)) {
+    if let Some(limited) = state.limits.approve.reject(&client_key(&headers, peer.0)) {
         return limited;
     }
     let origin = url::Url::parse(&state.public_url).map(|u| u.origin().ascii_serialization()).unwrap_or_default();

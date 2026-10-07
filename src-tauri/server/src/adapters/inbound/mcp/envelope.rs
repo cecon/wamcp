@@ -16,17 +16,17 @@ pub struct Rejection {
     pub status: u16,
     pub code: i64,
     pub message: String,
-    pub data: Option<Value>,
-    pub id: Value,
+    pub data: Option<Box<Value>>,
+    pub id: Box<Value>,
 }
 
 impl Rejection {
     pub fn body(&self) -> Value {
         let mut error = json!({ "code": self.code, "message": self.message });
         if let Some(data) = &self.data {
-            error["data"] = data.clone();
+            error["data"] = (**data).clone();
         }
-        json!({ "jsonrpc": "2.0", "error": error, "id": self.id })
+        json!({ "jsonrpc": "2.0", "error": error, "id": self.id.as_ref() })
     }
 }
 
@@ -59,7 +59,7 @@ pub fn echo_id(body: &Value) -> Value {
 }
 
 fn invalid(body: &Value, message: &str) -> Rejection {
-    Rejection { status: 400, code: -32600, message: message.into(), data: None, id: echo_id(body) }
+    Rejection { status: 400, code: -32600, message: message.into(), data: None, id: Box::new(echo_id(body)) }
 }
 
 /// Validates a JSON-RPC request or notification shape.
@@ -67,7 +67,7 @@ pub fn shape(body: &Value) -> Result<(), Rejection> {
     let not_rpc = "Bad Request: the request body is not a valid JSON-RPC message";
     if body.is_array() {
         let message = format!("Bad Request: JSON-RPC batches may not contain requests for protocol revision {MODERN} or later");
-        return Err(Rejection { id: Value::Null, ..invalid(body, &message) });
+        return Err(Rejection { id: Box::default(), ..invalid(body, &message) });
     }
     let Some(object) = body.as_object() else {
         return Err(invalid(body, not_rpc));
@@ -84,7 +84,7 @@ pub fn shape(body: &Value) -> Result<(), Rejection> {
         Ok(())
     } else {
         let id = if id_ok { echo_id(body) } else { Value::Null };
-        Err(Rejection { id, ..invalid(body, not_rpc) })
+        Err(Rejection { id: Box::new(id), ..invalid(body, not_rpc) })
     }
 }
 
@@ -104,8 +104,8 @@ fn envelope_error(body: &Value, revision: &str, key: &str, problem: String) -> R
         status: 400,
         code: -32602,
         message: format!("Invalid _meta envelope for protocol revision {revision}: {key}: {problem}"),
-        data: Some(json!({ "envelope": { "key": key, "problem": problem } })),
-        id: echo_id(body),
+        data: Some(Box::new(json!({ "envelope": { "key": key, "problem": problem } }))),
+        id: Box::new(echo_id(body)),
     }
 }
 
@@ -121,8 +121,8 @@ pub fn envelope(body: &Value, headers: &HeaderMap) -> Result<String, Rejection> 
             status: 400,
             code: -32602,
             message: format!("Invalid params: the MCP-Protocol-Version header names protocol revision {revision}, but the request is missing the required per-request envelope key(s): {}", missing.join(", ")),
-            data: Some(json!({ "envelope": { "missing": missing } })),
-            id: echo_id(body),
+            data: Some(Box::new(json!({ "envelope": { "missing": missing } }))),
+            id: Box::new(echo_id(body)),
         });
     }
     let expect = |key: &str, kind: &str| -> Result<(), Rejection> {
@@ -146,8 +146,8 @@ pub fn envelope(body: &Value, headers: &HeaderMap) -> Result<String, Rejection> 
             status: 400,
             code: -32022,
             message: format!("Unsupported protocol version: {claimed}"),
-            data: Some(json!({ "supported": [MODERN], "requested": claimed })),
-            id: echo_id(body),
+            data: Some(Box::new(json!({ "supported": [MODERN], "requested": claimed }))),
+            id: Box::new(echo_id(body)),
         });
     }
     Ok(claimed)
@@ -158,8 +158,8 @@ fn mismatch(body: &Value, header: &str, detail: &str) -> Rejection {
         status: 400,
         code: -32020,
         message: format!("Bad Request: the request headers and body disagree: {detail}"),
-        data: Some(json!({ "mismatch": { "header": header, "body": detail } })),
-        id: echo_id(body),
+        data: Some(Box::new(json!({ "mismatch": { "header": header, "body": detail } }))),
+        id: Box::new(echo_id(body)),
     }
 }
 

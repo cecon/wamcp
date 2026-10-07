@@ -6029,6 +6029,7 @@ dependencies = [
 name = "wamcp-server"
 version = "26.10.10"
 dependencies = [
+ "anyhow",
  "async-trait",
  "axum",
  "base64 0.22.1",
