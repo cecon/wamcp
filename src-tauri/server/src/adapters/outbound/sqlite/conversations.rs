@@ -14,7 +14,8 @@ pub(super) const SELECT: &str =
   (SELECT content FROM conversation_messages m WHERE m.conversation_id=c.id AND m.message_type<>'activity'
      ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message,
   (SELECT COUNT(*) FROM conversation_messages m WHERE m.conversation_id=c.id AND m.message_type='incoming'
-     AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count
+     AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count,
+  (SELECT a.status FROM applied_slas a WHERE a.conversation_id=c.id) AS sla_status
   FROM conversations c JOIN contacts ct ON ct.id=c.contact_id JOIN contact_inboxes ci ON ci.id=c.contact_inbox_id
   JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id LEFT JOIN teams t ON t.id=c.team_id";
 pub(super) const SHAPE: Shape = Shape {

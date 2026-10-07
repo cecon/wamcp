@@ -81,8 +81,8 @@ impl SlaRepo for SqliteStore {
     }
 
     fn sla_counts(&self, since: i64, until: i64) -> Result<Value> {
-        let sql = "SELECT COUNT(*) AS total, SUM(status='hit') AS hit, SUM(status='missed') AS missed,
-                   SUM(status='active') AS active FROM applied_slas WHERE created_at>=? AND created_at<?";
+        let sql = "SELECT COUNT(*) AS total, COALESCE(SUM(status='hit'),0) AS hit,
+                   COALESCE(SUM(status='missed'),0) AS missed, COALESCE(SUM(status='active'),0) AS active FROM applied_slas WHERE created_at>=? AND created_at<?";
         Ok(self.row(sql, vec![int(since), int(until)], PLAIN)?.unwrap_or_default())
     }
 }

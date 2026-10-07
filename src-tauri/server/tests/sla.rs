@@ -32,6 +32,11 @@ async fn slas_are_applied_settled_and_measured() {
     }
     assert_eq!(maria.get("/sla_policies").await.body.as_array().unwrap().len(), 1);
 
+    let empty = admin.get("/applied_slas/metrics").await.body;
+    assert_eq!(
+        json!([empty["total"], empty["hit"], empty["hit_rate"]]),
+        json!([0, 0, null])
+    );
     f.incoming(&session.id, Incoming::default());
     admin
         .post("/conversations/1/assignments", json!({ "assignee_id": maria.id() }))
@@ -68,6 +73,7 @@ async fn slas_are_applied_settled_and_measured() {
     );
     assert!(kinds(&maria.get("/notifications").await.body).contains(&"sla_missed".to_string()));
     assert!(f.event_names().contains(&"sla.missed".to_string()));
+    assert_eq!(maria.get("/conversations/1").await.body["sla_status"], "missed");
 
     let other = Incoming {
         id: "IN2",

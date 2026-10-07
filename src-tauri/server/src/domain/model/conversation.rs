@@ -34,6 +34,9 @@ pub struct Conversation {
     pub labels: Vec<String>,
     pub last_message: Option<String>,
     pub unread_count: i64,
+    /// `active`, `hit` or `missed` when an SLA is applied.
+    #[serde(default)]
+    pub sla_status: Option<String>,
 }
 
 /// Lifecycle columns a use case may change; the outer `Option` means "leave untouched".
