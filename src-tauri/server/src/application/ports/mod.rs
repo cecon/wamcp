@@ -31,6 +31,7 @@ pub trait Repository:
     + CatalogRepo
     + NotificationRepo
     + CustomDataRepo
+    + MacroRepo
     + AutomationRepo
     + InsightsRepo
     + MirrorRepo
@@ -54,6 +55,7 @@ impl<T> Repository for T where
         + CatalogRepo
         + NotificationRepo
         + CustomDataRepo
+        + MacroRepo
         + AutomationRepo
         + InsightsRepo
         + MirrorRepo

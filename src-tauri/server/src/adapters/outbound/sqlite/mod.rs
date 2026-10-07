@@ -11,6 +11,7 @@ mod events;
 mod filters;
 mod inboxes;
 mod insights;
+mod macros;
 mod messages;
 mod migrations;
 mod mirror;

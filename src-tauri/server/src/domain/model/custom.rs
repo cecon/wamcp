@@ -48,3 +48,16 @@ pub struct FilterQuery {
     pub page: i64,
     pub now: i64,
 }
+
+/// A saved sequence of actions an agent runs on conversations (Chatwoot "macro").
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Macro {
+    pub id: i64,
+    pub name: String,
+    /// `personal` (only its author) or `global` (everyone; managed by administrators).
+    pub visibility: String,
+    pub created_by: Option<i64>,
+    pub created_by_name: Option<String>,
+    pub actions: Vec<super::Action>,
+    pub created: String,
+}

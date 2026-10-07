@@ -11,6 +11,7 @@ mod conversations;
 mod custom_data;
 pub mod error;
 pub mod input;
+mod macros;
 mod message_actions;
 mod messages;
 mod notifications;
@@ -53,6 +54,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(catalog::routes())
         .merge(notifications::routes())
         .merge(automation::routes())
+        .merge(macros::routes())
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth::same_origin))
 }
 

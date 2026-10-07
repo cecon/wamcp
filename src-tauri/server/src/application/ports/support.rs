@@ -1,8 +1,8 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges, ContactInbox,
+    Action, Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges, ContactInbox,
     Conversation, ConversationChanges, ConversationCounts, ConversationFilters, CustomFilter, DaySchedule, FilterQuery,
-    Inbox, InboxChanges, Message, NewAttachment, NewMessage, WorkingHour,
+    Inbox, InboxChanges, Macro, Message, NewAttachment, NewMessage, WorkingHour,
 };
 use serde_json::Value;
 
@@ -95,4 +95,19 @@ pub trait CustomDataRepo {
     fn set_contact_attributes(&self, id: i64, attributes: &Value) -> Result<()>;
     fn filter_conversations(&self, query: &FilterQuery) -> Result<Vec<Conversation>>;
     fn filter_contacts(&self, query: &FilterQuery) -> Result<Vec<Contact>>;
+}
+
+/// Macros visible to an agent: global ones plus the agent's personal ones.
+pub trait MacroRepo {
+    fn macros(&self, user_id: i64) -> Result<Vec<Macro>>;
+    fn macro_by_id(&self, id: i64) -> Result<Option<Macro>>;
+    fn create_macro(&self, name: &str, visibility: &str, created_by: i64, actions: &[Action]) -> Result<Macro>;
+    fn update_macro(
+        &self,
+        id: i64,
+        name: Option<&str>,
+        visibility: Option<&str>,
+        actions: Option<&[Action]>,
+    ) -> Result<Macro>;
+    fn delete_macro(&self, id: i64) -> Result<()>;
 }

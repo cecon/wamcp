@@ -41,5 +41,11 @@ pub fn steps() -> Vec<String> {
          CREATE TABLE notification_settings(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
            flags TEXT NOT NULL DEFAULT '{}');"
             .into(),
+        // v14: macros (sequências de ações executadas pelos agentes)
+        "CREATE TABLE macros(id INTEGER PRIMARY KEY,name TEXT NOT NULL,
+           visibility TEXT NOT NULL CHECK(visibility IN ('personal','global')),
+           created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+           actions TEXT NOT NULL CHECK(json_valid(actions)),created TEXT NOT NULL);"
+            .into(),
     ]
 }

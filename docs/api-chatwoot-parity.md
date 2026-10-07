@@ -102,3 +102,19 @@ e `participating_conversation_new_message`. Menções usam o formato do Chatwoot
 `[@Nome](mention://user/<id>/Nome)`. O agente mencionado (com acesso à caixa) passa a participar da conversa, aparece
 no filtro `conversation_type=mentions` e recebe a notificação. Participantes (exceto o responsável) são avisados de
 novas mensagens do contato.
+
+## Macros e automações
+
+| Método       | Rota                           | Descrição                                                                                                  |
+| ------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| GET/POST     | `/macros`                      | Globais + pessoais do agente; `{ name, visibility: personal\|global, actions }` (globais só administrador) |
+| PATCH/DELETE | `/macros/{id}`                 | Autor (pessoal) ou administrador (global)                                                                  |
+| POST         | `/macros/{id}/execute`         | `{ conversation_ids: [display_id] }` → `{ updated, failed[{id,error}] }`; executa como o agente            |
+| POST         | `/automation_rules/{id}/clone` | Copia a regra (nome "(cópia)", inativa)                                                                    |
+
+Ações (macros e automações): `assign_agent`, `assign_team`, `remove_assigned_agent`, `remove_assigned_team`,
+`add_label`, `remove_label`, `send_message`, `add_private_note`, `resolve_conversation`, `open_conversation`,
+`pending_conversation`, `snooze_conversation`, `mute_conversation`, `set_priority`/`change_priority`.
+
+Automações ganharam o evento `conversation_updated`, as condições `priority`, `contact_email` e
+`custom_attribute:<chave>` e o operador `starts_with`.
