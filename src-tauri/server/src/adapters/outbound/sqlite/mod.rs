@@ -17,6 +17,7 @@ mod migrations;
 mod mirror;
 mod notifications;
 mod schema;
+mod security;
 mod teams;
 mod users;
 

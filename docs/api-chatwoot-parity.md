@@ -118,3 +118,21 @@ Ações (macros e automações): `assign_agent`, `assign_team`, `remove_assigned
 
 Automações ganharam o evento `conversation_updated`, as condições `priority`, `contact_email` e
 `custom_attribute:<chave>` e o operador `starts_with`.
+
+## Segurança da conta
+
+| Método          | Rota                                          | Descrição                                                                                      |
+| --------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| POST            | `/auth/login`                                 | Com verificação em duas etapas ativa responde `{ mfa_required: true, mfa_token }` (sem cookie) |
+| POST            | `/auth/mfa`                                   | `{ mfa_token, code }` (código TOTP ou de backup) → sessão; desafio vale 5 min e 5 tentativas   |
+| GET/POST/DELETE | `/profile/mfa`                                | Estado / inicia (`{ secret, otpauth_uri }`) / desativa (`{ password, code }`)                  |
+| POST            | `/profile/mfa/verify`                         | `{ code }` ativa e devolve 10 códigos de backup (exibidos uma única vez)                       |
+| DELETE          | `/agents/{id}/mfa`                            | Administrador redefine a verificação de um agente                                              |
+| GET             | `/profile/sessions`                           | Sessões ativas (`current` marca a atual)                                                       |
+| DELETE          | `/profile/sessions`, `/profile/sessions/{id}` | Encerra as outras sessões / uma sessão                                                         |
+| GET             | `/audit_logs?page=`                           | Administrador; 50 por página                                                                   |
+
+TOTP segue a RFC 6238 (SHA-1, 30 s, 6 dígitos, tolerância de um passo, sem reutilizar código). O registro de auditoria
+guarda login, ativação/desativação da verificação em duas etapas e toda alteração bem-sucedida de agentes, times,
+caixas, etiquetas, respostas prontas, automações, macros, webhooks, atributos e conta, além de exclusões/importações/
+mesclagens de contatos e exclusões de conversas, com usuário, IP e rota.

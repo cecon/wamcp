@@ -7,6 +7,7 @@ mod custom;
 mod inbox;
 mod mirror;
 mod people;
+mod security;
 
 pub use attachment::*;
 pub use catalog::*;
@@ -16,6 +17,7 @@ pub use custom::*;
 pub use inbox::*;
 pub use mirror::*;
 pub use people::*;
+pub use security::*;
 
 use serde::{Deserialize, Deserializer};
 

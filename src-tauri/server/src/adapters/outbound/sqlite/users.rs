@@ -5,7 +5,8 @@ use crate::domain::error::{Error, Result};
 use crate::domain::model::{Credentials, TokenOwner, User, UserChanges, WebSession};
 use rusqlite::types::Value as Sql;
 
-const USER_COLUMNS: &str = "id,account_id,email,name,display_name,role,availability,active,created,last_login";
+const USER_COLUMNS: &str =
+    "id,account_id,email,name,display_name,role,availability,active,created,last_login,mfa_enabled";
 
 impl SqliteStore {
     fn require_user(&self, id: i64) -> Result<User> {

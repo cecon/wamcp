@@ -27,6 +27,7 @@ pub mod ports;
 mod presence;
 pub mod replies;
 pub mod reports;
+pub mod security;
 pub mod sessions;
 mod teams;
 pub mod webhooks;

@@ -47,5 +47,17 @@ pub fn steps() -> Vec<String> {
            created_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
            actions TEXT NOT NULL CHECK(json_valid(actions)),created TEXT NOT NULL);"
             .into(),
+        // v15: autenticação em dois fatores (TOTP) e registro de auditoria
+        "ALTER TABLE users ADD COLUMN mfa_secret TEXT;
+         ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0;
+         ALTER TABLE users ADD COLUMN mfa_last_step INTEGER;
+         ALTER TABLE users ADD COLUMN mfa_backup_codes TEXT NOT NULL DEFAULT '[]';
+         CREATE TABLE mfa_challenges(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+           expires_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0);
+         CREATE TABLE audit_logs(id INTEGER PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+           action TEXT NOT NULL,auditable_type TEXT NOT NULL,auditable_id INTEGER,details TEXT NOT NULL DEFAULT '{}',
+           ip_address TEXT,created_at INTEGER NOT NULL);
+         CREATE INDEX audit_logs_created ON audit_logs(created_at DESC);"
+            .into(),
     ]
 }

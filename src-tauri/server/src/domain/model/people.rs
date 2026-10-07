@@ -13,6 +13,8 @@ pub struct User {
     pub active: i64,
     pub created: String,
     pub last_login: Option<String>,
+    #[serde(default)]
+    pub mfa_enabled: i64,
 }
 
 impl User {

@@ -1,6 +1,7 @@
 //! HTTP inbound adapter: the local admin listener and the public listener (UI, API, MCP, OAuth).
 mod accounts;
 mod admin;
+mod audit;
 pub mod auth;
 mod automation;
 mod catalog;
@@ -16,6 +17,7 @@ mod message_actions;
 mod messages;
 mod notifications;
 pub mod rate_limit;
+mod security;
 pub mod state;
 mod teams;
 mod web_app;
@@ -55,6 +57,8 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(notifications::routes())
         .merge(automation::routes())
         .merge(macros::routes())
+        .merge(security::routes())
+        .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth::same_origin))
 }
 

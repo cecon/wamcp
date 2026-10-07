@@ -1,6 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Contact, ContactChannel, ContactNote, Credentials, Team, TeamFields, TokenOwner, User, UserChanges, WebSession,
+    AuditLog, Contact, ContactChannel, ContactNote, Credentials, MfaState, NewAuditLog, SessionInfo, Team, TeamFields,
+    TokenOwner, User, UserChanges, WebSession,
 };
 
 /// Users, web sessions, API tokens, teams and inbox membership.
@@ -63,4 +64,25 @@ pub trait ContactBookRepo {
     fn merge_contacts(&self, base: i64, mergee: i64) -> Result<()>;
     /// Contacts ordered by id, after `after_id` (for exports).
     fn contacts_after(&self, after_id: i64, limit: i64) -> Result<Vec<Contact>>;
+}
+
+/// Two-factor authentication, browser sessions and the audit log.
+pub trait SecurityRepo {
+    fn mfa_state(&self, user_id: i64) -> Result<MfaState>;
+    /// Replaces the secret, the enabled flag and the backup codes (a new secret resets the last step).
+    fn set_mfa(&self, user_id: i64, secret: Option<&str>, enabled: bool, backup_codes: &[String]) -> Result<()>;
+    fn set_mfa_step(&self, user_id: i64, step: i64) -> Result<()>;
+    fn set_backup_codes(&self, user_id: i64, backup_codes: &[String]) -> Result<()>;
+    /// Stores a login challenge under the hash of its token.
+    fn create_mfa_challenge(&self, token_hash: &str, user_id: i64, expires_at: i64) -> Result<()>;
+    /// The challenge's user while unexpired and under the attempt limit; counts the attempt.
+    fn mfa_challenge(&self, token_hash: &str, now: i64, max_attempts: i64) -> Result<Option<i64>>;
+    fn delete_mfa_challenge(&self, token_hash: &str) -> Result<()>;
+
+    fn user_sessions(&self, user_id: i64) -> Result<Vec<SessionInfo>>;
+    fn delete_session(&self, user_id: i64, session_id: &str) -> Result<usize>;
+    fn delete_other_sessions(&self, user_id: i64, keep_id: &str) -> Result<()>;
+
+    fn add_audit_log(&self, entry: &NewAuditLog) -> Result<()>;
+    fn audit_logs(&self, page: i64, per_page: i64) -> Result<Vec<AuditLog>>;
 }

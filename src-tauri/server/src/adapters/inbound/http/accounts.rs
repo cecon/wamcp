@@ -4,7 +4,8 @@ use super::error::{created, done, ok, ApiResult};
 use super::input::{check, email, id, nullable_text, one_of, raw, text, Body};
 use super::rate_limit::{client_key, Peer};
 use super::state::AppState;
-use crate::application::accounts::{AgentChanges, NewAgent, ProfileChanges, SESSION_TTL_MS};
+use crate::application::accounts::{self, AgentChanges, NewAgent, ProfileChanges, SESSION_TTL_MS};
+use crate::application::security::LoginOutcome;
 use crate::domain::helpdesk::{AVAILABILITY, ROLES};
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap};
@@ -33,8 +34,15 @@ async fn login(
     raw(&body.password, 1, 200)?;
     let accounts = &state.support().accounts;
     let agent = headers.get(header::USER_AGENT).and_then(|v| v.to_str().ok());
-    let session = accounts.login(&address, &body.password, agent).await?;
-    let me = accounts.me(&session.user)?;
+    match accounts.login(&address, &body.password, agent).await? {
+        LoginOutcome::Session(session) => signed_in(&state, *session),
+        LoginOutcome::Mfa { token } => ok(json!({ "mfa_required": true, "mfa_token": token })),
+    }
+}
+
+/// The login response: the agent, its CSRF token and the session cookie.
+pub(super) fn signed_in(state: &AppState, session: accounts::Login) -> ApiResult<Response> {
+    let me = state.support().accounts.me(&session.user)?;
     let mut response = Json(json!({ "user": me, "csrf": session.csrf })).into_response();
     response
         .headers_mut()
