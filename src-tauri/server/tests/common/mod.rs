@@ -8,6 +8,7 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Arc;
 use wamcp_server::adapters::outbound::clock::ManualClock;
+use wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage;
 use wamcp_server::adapters::outbound::sqlite::SqliteStore;
 use wamcp_server::adapters::outbound::whatsapp::memory::MemoryWhatsApp;
 use wamcp_server::application::event_bus::Envelope;
@@ -110,6 +111,7 @@ pub struct Fixture {
     pub sender: Arc<RecordingSender>,
     pub callback: Arc<RecordingCallback>,
     pub clock: Arc<ManualClock>,
+    pub storage: Arc<MemoryMediaStorage>,
     pub events: Arc<Mutex<Vec<Envelope>>>,
     pub dir: Option<tempfile::TempDir>,
 }
@@ -163,6 +165,7 @@ impl Fixture {
         let sender = Arc::new(RecordingSender::default());
         let callback = Arc::new(RecordingCallback::default());
         let clock = Arc::new(ManualClock::at(START * 1000));
+        let storage = Arc::new(MemoryMediaStorage::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa.clone(),
@@ -170,6 +173,7 @@ impl Fixture {
             sender: sender.clone(),
             callback: callback.clone(),
             clock: clock.clone(),
+            storage: storage.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -191,6 +195,7 @@ impl Fixture {
             sender,
             callback,
             clock,
+            storage,
             events,
             dir,
         }

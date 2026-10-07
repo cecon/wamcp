@@ -38,6 +38,16 @@ pub trait WhatsAppEvents: Send + Sync {
     );
     fn receipt(&self, session_id: &str, message_id: &str, status: &str);
     fn logged_out(&self, session_id: &str);
+    /// The message `message_id` answers (quotes) `quoted_id`.
+    fn quoted(&self, _session_id: &str, _message_id: &str, _quoted_id: &str) {}
+    /// The contact (or our phone) reacted to a message; an empty emoji removes the reaction.
+    fn reaction(&self, _session_id: &str, _jid: &str, _from_me: bool, _target_id: &str, _emoji: &str) {}
+    /// A message was deleted for everyone.
+    fn revoked(&self, _session_id: &str, _target_id: &str) {}
+    /// A message was edited.
+    fn edited(&self, _session_id: &str, _target_id: &str, _text: &str) {}
+    /// The contact is typing, recording audio or stopped.
+    fn typing(&self, _session_id: &str, _jid: &str, _state: super::ports::Typing) {}
 }
 
 pub struct WhatsAppSink {
@@ -93,5 +103,35 @@ impl WhatsAppEvents for WhatsAppSink {
             let _ = events.disconnect(session_id);
         }
         let _ = self.repo.set_status(session_id, "logged_out", None);
+    }
+
+    fn quoted(&self, session_id: &str, message_id: &str, quoted_id: &str) {
+        if let Some(helpdesk) = &self.helpdesk {
+            let _ = helpdesk.incoming_quote(session_id, message_id, quoted_id);
+        }
+    }
+
+    fn reaction(&self, session_id: &str, jid: &str, from_me: bool, target_id: &str, emoji: &str) {
+        if let Some(helpdesk) = &self.helpdesk {
+            let _ = helpdesk.incoming_reaction(session_id, jid, from_me, target_id, emoji);
+        }
+    }
+
+    fn revoked(&self, session_id: &str, target_id: &str) {
+        if let Some(helpdesk) = &self.helpdesk {
+            let _ = helpdesk.incoming_revoke(session_id, target_id);
+        }
+    }
+
+    fn edited(&self, session_id: &str, target_id: &str, text: &str) {
+        if let Some(helpdesk) = &self.helpdesk {
+            let _ = helpdesk.incoming_edit(session_id, target_id, text);
+        }
+    }
+
+    fn typing(&self, session_id: &str, jid: &str, state: super::ports::Typing) {
+        if let Some(helpdesk) = &self.helpdesk {
+            let _ = helpdesk.contact_typing(session_id, jid, state);
+        }
     }
 }

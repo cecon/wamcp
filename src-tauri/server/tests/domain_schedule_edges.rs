@@ -162,6 +162,8 @@ fn webhook_events_map_every_internal_event() {
         ("contact.created", "contact_created"),
         ("contact.updated", "contact_updated"),
         ("csat.created", "csat_created"),
+        ("conversation.typing_on", "conversation_typing_on"),
+        ("conversation.typing_off", "conversation_typing_off"),
     ];
     for (internal, public) in pairs {
         assert_eq!(webhook_event_for(internal), Some(public), "{internal}");
@@ -171,7 +173,7 @@ fn webhook_events_map_every_internal_event() {
         !is_webhook_event("message.created"),
         "internal names are not subscriptions"
     );
-    assert_eq!(WEBHOOK_EVENTS.len(), 8);
+    assert_eq!(WEBHOOK_EVENTS.len(), 10);
     assert_eq!((retry_delay(0), retry_delay(-1), retry_delay(6)), (None, None, None));
 }
 

@@ -84,6 +84,7 @@ impl Mcp {
         });
         let sender = Arc::new(RecordingSender::default());
         let clock = Arc::new(ManualClock::at(START * 1000));
+        let storage = Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa_hooks.clone(),
@@ -91,6 +92,7 @@ impl Mcp {
             sender: sender.clone(),
             callback: callback_hooks.clone(),
             clock: clock.clone(),
+            storage: storage.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -107,6 +109,7 @@ impl Mcp {
             sender,
             callback,
             clock,
+            storage,
             events,
             dir: None,
         };

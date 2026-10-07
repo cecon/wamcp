@@ -1,6 +1,6 @@
 //! Conversations, messages and contacts under /api/v1 (requires an authenticated agent).
 use super::auth::CurrentUser;
-use super::error::{created, ok, ApiError, ApiResult};
+use super::error::{ok, ApiError, ApiResult};
 use super::input::{check, email, id, int_param, nullable_text, one_of, optional_id, text, Body, Query};
 use super::state::AppState;
 use crate::application::ports::HistoryPage;
@@ -65,30 +65,6 @@ async fn messages(
         .support()
         .helpdesk
         .messages(&current.actor(), id(&display)?, before, limit)?)
-}
-
-#[derive(Deserialize)]
-struct Reply {
-    content: String,
-    #[serde(default)]
-    private: bool,
-}
-
-async fn reply(
-    State(state): State<AppState>,
-    current: CurrentUser,
-    Path(display): Path<String>,
-    Body(body): Body<Reply>,
-) -> ApiResult<Response> {
-    let content = text(&body.content, 1, 4096)?;
-    let display = id(&display)?;
-    created(
-        state
-            .support()
-            .helpdesk
-            .reply(&current.actor(), display, &content, body.private)
-            .await?,
-    )
 }
 
 async fn history(
@@ -206,10 +182,6 @@ async fn labels(
         .set_labels(&current.actor(), id(&display)?, &body.labels)?)
 }
 
-async fn seen(State(state): State<AppState>, current: CurrentUser, Path(display): Path<String>) -> ApiResult<Response> {
-    ok(state.support().helpdesk.mark_seen(&current.actor(), id(&display)?)?)
-}
-
 async fn contacts(
     State(state): State<AppState>,
     _user: CurrentUser,
@@ -256,13 +228,12 @@ pub fn routes() -> Router<AppState> {
         .route("/conversations", get(list))
         .route("/conversations/meta", get(meta))
         .route("/conversations/{id}", get(show))
-        .route("/conversations/{id}/messages", get(messages).post(reply))
+        .route("/conversations/{id}/messages", get(messages))
         .route("/conversations/{id}/history", get(history))
         .route("/conversations/{id}/toggle_status", post(toggle_status))
         .route("/conversations/{id}/assignments", post(assign))
         .route("/conversations/{id}/toggle_priority", post(priority))
         .route("/conversations/{id}/labels", post(labels))
-        .route("/conversations/{id}/update_last_seen", post(seen))
         .route("/contacts", get(contacts))
         .route("/contacts/{id}", get(contact).patch(update_contact))
 }

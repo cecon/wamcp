@@ -1,10 +1,12 @@
 //! Entities exchanged between layers. Field names mirror the SQLite columns and the public JSON API.
+mod attachment;
 mod catalog;
 mod conversation;
 mod inbox;
 mod mirror;
 mod people;
 
+pub use attachment::*;
 pub use catalog::*;
 pub use conversation::*;
 pub use inbox::*;

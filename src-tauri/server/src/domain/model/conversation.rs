@@ -89,6 +89,8 @@ pub struct Message {
     pub content_attributes: Value,
     pub created_at: i64,
     pub sender_name: Option<String>,
+    #[serde(default)]
+    pub attachments: Vec<super::Attachment>,
 }
 
 /// A message about to be stored.

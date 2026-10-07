@@ -12,7 +12,9 @@ use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
-use crate::application::ports::{Clock, EventCallback, PasswordHasher, Repository, WebhookSender, WhatsApp};
+use crate::application::ports::{
+    Clock, EventCallback, MediaStorage, PasswordHasher, Repository, WebhookSender, WhatsApp,
+};
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
 use crate::application::webhooks::WebhookService;
@@ -32,6 +34,7 @@ pub struct Ports {
     pub sender: Arc<dyn WebhookSender>,
     pub callback: Arc<dyn EventCallback>,
     pub clock: Arc<dyn Clock>,
+    pub storage: Arc<dyn MediaStorage>,
 }
 
 pub struct Settings {
@@ -74,6 +77,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let helpdesk = HelpdeskService {
         core: core.clone(),
         whatsapp: ports.whatsapp.clone(),
+        storage: ports.storage.clone(),
     };
     let notifications = NotificationService { core: core.clone() };
     let webhooks = WebhookService {
@@ -120,6 +124,13 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = reply_worker.clone();
     bus.subscribe(move |e| worker.push(e));
+    let downloads = helpdesk.clone();
+    let media_worker = Worker::spawn(Arc::new(move |e| {
+        let downloads = downloads.clone();
+        Box::pin(async move { downloads.prefetch(&e).await })
+    }));
+    let worker = media_worker.clone();
+    bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
         accounts: AccountService {
@@ -164,7 +175,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     App {
         state,
-        workers: vec![automation_worker, reply_worker],
+        workers: vec![automation_worker, reply_worker, media_worker],
         sink,
     }
 }

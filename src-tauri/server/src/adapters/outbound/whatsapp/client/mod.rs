@@ -1,9 +1,10 @@
 //! The WhatsApp port on whatsapp-rust: one Bot (and one device store `wa/<session>.db`) per session.
+mod outgoing;
 mod session_events;
 
-use super::describe::{decode, describe, from_context, Described, Origin};
+use super::describe::{decode, describe, Described, Origin};
 use crate::adapters::outbound::sqlite::SqliteStore;
-use crate::application::ports::{MirrorRepo, WhatsApp};
+use crate::application::ports::{MessageRef, MirrorRepo, SendRequest, Typing, WhatsApp};
 use crate::application::whatsapp_sink::{Arrival, WhatsAppEvents};
 use crate::domain::error::{fail, Error, Result};
 use crate::domain::model::ConnectionDetail;
@@ -92,6 +93,13 @@ impl WhatsAppClients {
         }
     }
 
+    fn connected(&self, id: &str) -> Result<Arc<Client>> {
+        match self.client(id) {
+            Some(client) => Ok(client),
+            None => fail("Sessão desconectada"),
+        }
+    }
+
     fn client(&self, id: &str) -> Option<Arc<Client>> {
         self.0
             .sessions
@@ -112,16 +120,7 @@ impl WhatsAppClients {
                 let inner = self.0.clone();
                 move |ctx: MessageContext| {
                     let (inner, id) = (inner.clone(), messages.clone());
-                    async move {
-                        if let Some(described) = from_context(&ctx.info, &ctx.message) {
-                            let arrival = if described.message.from_me {
-                                Arrival::Append
-                            } else {
-                                Arrival::Notify
-                            };
-                            inner.deliver(&id, described, arrival);
-                        }
-                    }
+                    async move { inner.receive(&id, &ctx) }
                 }
             })
             .build()
@@ -224,36 +223,56 @@ impl WhatsApp for WhatsAppClients {
     }
 
     async fn send(&self, id: &str, jid: &str, text: &str, message_id: Option<&str>) -> Result<String> {
-        let Some(client) = self.client(id) else {
-            return fail("Sessão desconectada");
+        let request = SendRequest {
+            jid: jid.into(),
+            text: Some(text.into()),
+            message_id: message_id.map(String::from),
+            ..SendRequest::default()
         };
-        let to: Jid = jid
-            .parse()
-            .map_err(|_| Error::from(crate::domain::error::HelpdeskError::new("Conversa inválida")))?;
-        let mut options = SendOptions::default();
-        if let Some(message_id) = message_id {
-            options = options.with_message_id(message_id.to_string());
-        }
-        let message = wa::Message {
-            conversation: Some(text.into()),
-            ..Default::default()
-        };
-        let sent = client
-            .send_message_with_options(to, message.clone(), options)
-            .await
-            .map_err(Error::internal)?;
+        self.send_message(id, &request).await
+    }
+
+    async fn send_message(&self, id: &str, request: &SendRequest) -> Result<String> {
+        let client = self.connected(id)?;
+        let (message_id, message) = outgoing::send(&client, request).await?;
+        // Our own sends are mirrored like the phone's, so history and MCP see them.
         let origin = Origin {
-            id: &sent.message_id,
-            jid,
+            id: &message_id,
+            jid: &request.jid,
             alt: None,
             from_me: true,
             push: None,
-            sender: jid,
+            sender: &request.jid,
             ts: now(),
         };
         if let Some(described) = describe(origin, &message) {
-            let _ = self.0.repo.store_message(id, &described.message, None);
+            let media = described.media.as_ref().map(|(meta, bytes)| (meta, bytes.as_slice()));
+            let _ = self.0.repo.store_message(id, &described.message, media);
         }
-        Ok(sent.message_id)
+        Ok(message_id)
+    }
+
+    async fn react(&self, id: &str, jid: &str, target: &MessageRef, emoji: &str) -> Result<()> {
+        outgoing::react(&self.connected(id)?, jid, target, emoji).await
+    }
+
+    async fn revoke(&self, id: &str, jid: &str, message_id: &str) -> Result<()> {
+        outgoing::revoke(&self.connected(id)?, jid, message_id).await
+    }
+
+    async fn typing(&self, id: &str, jid: &str, state: Typing) -> Result<()> {
+        outgoing::typing(&self.connected(id)?, jid, state).await
+    }
+
+    async fn mark_read(&self, id: &str, jid: &str, message_ids: &[String]) -> Result<()> {
+        outgoing::mark_read(&self.connected(id)?, jid, message_ids).await
+    }
+
+    async fn profile_picture(&self, id: &str, jid: &str) -> Result<Option<String>> {
+        outgoing::profile_picture(&self.connected(id)?, jid).await
+    }
+
+    async fn block(&self, id: &str, jid: &str, blocked: bool) -> Result<()> {
+        outgoing::block(&self.connected(id)?, jid, blocked).await
     }
 }

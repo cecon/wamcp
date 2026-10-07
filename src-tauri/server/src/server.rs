@@ -146,6 +146,9 @@ pub async fn run(config: Config) -> Result<Running> {
         sender: Arc::new(HttpWebhookSender::new()),
         callback: Arc::new(HttpEventCallback),
         clock: Arc::new(SystemClock),
+        storage: Arc::new(crate::adapters::outbound::media_storage::FsMediaStorage::new(
+            &config.data_dir,
+        )),
     };
     let settings = Settings {
         public_url: config.public_url,

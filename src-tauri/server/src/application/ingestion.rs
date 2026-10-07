@@ -9,7 +9,7 @@ use crate::domain::helpdesk::{
 };
 use crate::domain::model::{
     ContactChanges, ContactInbox, Conversation, ConversationChanges as Changes, CsatResponse, Inbox, Message,
-    NewMessage, WaMessage,
+    NewAttachment, NewMessage, WaMessage,
 };
 use serde_json::json;
 
@@ -57,16 +57,20 @@ impl HelpdeskService {
         events: &mut Events,
     ) -> Result<Option<Message>> {
         let repo = &self.core.repo;
-        let content_type = if TEXT_KINDS.contains(&d.kind.as_str()) {
-            "text"
-        } else {
-            d.kind.as_str()
+        let attachment = self.incoming_attachment(conversation.inbox_id, d)?;
+        let content_type = match &attachment {
+            Some(a) => a.file_type.as_str(),
+            None if TEXT_KINDS.contains(&d.kind.as_str()) => "text",
+            None => d.kind.as_str(),
         };
-        let message = repo.insert_message(&NewMessage {
+        let caption_only = attachment.is_some()
+            && (d.body.starts_with('[') && d.body.ends_with(']')
+                || attachment.as_ref().and_then(|a| a.file_name.as_deref()) == Some(d.body.as_str()));
+        let mut message = repo.insert_message(&NewMessage {
             conversation_id: conversation.id,
             inbox_id: conversation.inbox_id,
             message_type: if d.from_me { "outgoing" } else { "incoming" }.into(),
-            content: Some(d.body.clone()),
+            content: (!caption_only).then(|| d.body.clone()),
             content_type: Some(content_type.into()),
             sender_type: Some(if d.from_me { "system" } else { "contact" }.into()),
             sender_id: (!d.from_me).then_some(ci.contact_id),
@@ -90,6 +94,13 @@ impl HelpdeskService {
                     ..Default::default()
                 },
             )?;
+        }
+        if let (Some(stored), Some(attachment)) = (&message, attachment) {
+            repo.insert_attachment(&NewAttachment {
+                message_id: stored.id,
+                ..attachment
+            })?;
+            message = repo.message(stored.id)?;
         }
         if let Some(message) = &message {
             events.push("message.created", message);

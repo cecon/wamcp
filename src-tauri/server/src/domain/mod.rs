@@ -6,6 +6,7 @@ pub mod csat;
 pub mod error;
 pub mod events;
 pub mod helpdesk;
+pub mod media;
 pub mod model;
 pub mod oauth;
 pub mod schedule;

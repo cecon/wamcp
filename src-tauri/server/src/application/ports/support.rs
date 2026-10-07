@@ -1,7 +1,8 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters,
-    DaySchedule, Inbox, InboxChanges, Message, NewMessage, WorkingHour,
+    Attachment, AttachmentSource, Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges,
+    ConversationCounts, ConversationFilters, DaySchedule, Inbox, InboxChanges, Message, NewAttachment, NewMessage,
+    WorkingHour,
 };
 use serde_json::Value;
 
@@ -60,6 +61,16 @@ pub trait MessageRepo {
     fn insert_message(&self, message: &NewMessage) -> Result<Option<Message>>;
     fn message_by_source(&self, inbox_id: i64, source_id: &str) -> Result<Option<Message>>;
     fn update_message(&self, id: i64, status: Option<&str>, attributes: Option<&Value>) -> Result<Message>;
+    /// Replaces the text (`None` clears it, e.g. for deleted messages).
+    fn set_message_content(&self, id: i64, content: Option<&str>) -> Result<()>;
     /// Page of messages before a message id (cursor), oldest first.
     fn messages(&self, conversation_id: i64, before: Option<i64>, limit: i64) -> Result<Vec<Message>>;
+}
+
+/// Message attachments and where their bytes come from.
+pub trait AttachmentRepo {
+    fn insert_attachment(&self, attachment: &NewAttachment) -> Result<Attachment>;
+    /// The attachment with its stored path and the WhatsApp message it came from.
+    fn attachment_source(&self, id: i64) -> Result<Option<AttachmentSource>>;
+    fn set_attachment_file(&self, id: i64, path: &str, size: i64) -> Result<()>;
 }

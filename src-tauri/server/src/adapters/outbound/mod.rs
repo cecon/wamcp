@@ -2,6 +2,7 @@
 pub mod callback_address;
 pub mod clock;
 pub mod event_callback;
+pub mod media_storage;
 pub mod password;
 pub mod sqlite;
 pub mod webhook_sender;

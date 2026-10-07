@@ -71,6 +71,7 @@ fn hooked() -> (App, Arc<SqliteStore>, Arc<HookedWhatsApp>) {
         sender: Arc::new(RecordingSender::default()),
         callback: Arc::new(RecordingCallback::default()),
         clock: Arc::new(ManualClock::at(START * 1000)),
+        storage: Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default()),
     };
     let settings = Settings {
         public_url: ORIGIN.into(),
