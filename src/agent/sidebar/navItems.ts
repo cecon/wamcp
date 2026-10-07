@@ -1,11 +1,13 @@
 import {
   Bolt,
+  Bot,
   Braces,
   Briefcase,
   Inbox as InboxIcon,
   MessageSquareText,
   Repeat,
   ScrollText,
+  ShieldCheck,
   SquareUser,
   Tags,
   Timer,
@@ -25,10 +27,12 @@ export const SETTINGS: { section: SettingsSection; label: string; icon: typeof B
   { section: 'attributes', label: 'Atributos personalizados', icon: Braces },
   { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
   { section: 'automation', label: 'Automação', icon: Repeat },
+  { section: 'agent_bots', label: 'Robôs', icon: Bot },
   { section: 'macros', label: 'Macros', icon: Workflow },
   { section: 'sla', label: 'SLA', icon: Timer },
   { section: 'webhooks', label: 'Webhooks', icon: Webhook },
   { section: 'audit', label: 'Registro de auditoria', icon: ScrollText },
+  { section: 'custom_roles', label: 'Perfis personalizados', icon: ShieldCheck },
 ];
 
 /** Report pages of the sidebar (Chatwoot reports menu). */

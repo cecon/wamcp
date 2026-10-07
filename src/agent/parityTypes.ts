@@ -53,6 +53,7 @@ export interface BotMetrics {
   resolution_rate: number | null;
   handoff_rate: number | null;
 }
+/** Counts are 0 when nothing was applied (older servers sent `null`; the UI accepts both). */
 export interface SlaMetrics {
   total: number;
   hit: number | null;

@@ -12,6 +12,10 @@ export interface User {
   active: number;
   inbox_ids?: number[];
   mfa_enabled?: number;
+  /** Custom role; `null` keeps the default agent access. */
+  custom_role_id?: number | null;
+  /** Permissions of the custom role (empty without one). */
+  permissions?: string[];
 }
 export interface Inbox {
   id: number;
@@ -31,6 +35,8 @@ export interface Inbox {
   timezone: string;
   max_assignment_limit?: number | null;
   csat_survey_message?: string | null;
+  /** Connected agent bot (new conversations start pending while set). */
+  agent_bot_id?: number | null;
 }
 export interface WorkingDay {
   day_of_week: number;
@@ -115,7 +121,10 @@ export interface Conversation {
   muted?: number;
   waiting_since?: number | null;
   custom_attributes?: CustomAttributes;
+  /** Status of the SLA applied to the conversation, if any. */
+  sla_status?: SlaStatus | null;
 }
+export type SlaStatus = 'active' | 'hit' | 'missed';
 export interface Message {
   id: number;
   conversation_id: number;

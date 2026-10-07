@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { timeAgo } from '../api';
 import type { Conversation, Label } from '../types';
+import { SlaBadge } from '../sla/SlaBadge';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '../ui/cn';
 import { plainMentions } from './mentions';
@@ -42,6 +43,7 @@ export function ConversationCard({
   onCheck,
 }: Props) {
   const unread = c.unread_count > 0;
+  const hasSla = c.sla_status === 'missed' || c.sla_status === 'active';
   const name = c.contact_name || c.contact_phone || 'Contato';
   const color = (title: string) => labels.find((l) => l.title === title)?.color || '#8B8D98';
   return (
@@ -105,8 +107,9 @@ export function ConversationCard({
           >
             {c.last_message ? plainMentions(c.last_message) : '—'}
           </span>
-          {c.labels.length > 0 && (
+          {(c.labels.length > 0 || hasSla) && (
             <span className="mx-2 mt-0.5 flex h-6 items-center gap-2.5 overflow-hidden">
+              <SlaBadge status={c.sla_status} />
               {c.labels.map((l) => (
                 <span key={l} className="flex shrink-0 items-center gap-1.5 text-sm text-n-slate-10">
                   <span className="size-1.5 rounded-full" style={{ background: color(l) }} />

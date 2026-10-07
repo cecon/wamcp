@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectRealtime, http, type Realtime } from './api';
 import type { AppNotification, Availability, Catalog, User } from './types';
-import { AGENT_SECTIONS, HOME, type Route } from './route';
+import { HOME, type Route } from './route';
+import { canOpen } from './permissions';
+import { NoAccess } from './ui/NoAccess';
 import { Sidebar } from './sidebar/Sidebar';
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { NotificationsPage } from './NotificationsPage';
@@ -79,7 +81,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     realtime.close();
     onLogout();
   }
-  const isAdmin = user.role === 'administrator';
+  const allowed = canOpen(user, route);
   const openConversation = (displayId: number) => setRoute({ page: 'conversations', displayId });
   useHotkeys([
     { keys: '?', run: () => setShortcuts((open) => !open) },
@@ -123,7 +125,8 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         {route.page === 'notifications' && (
           <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
         )}
-        {route.page === 'contacts' && (
+        {!allowed && <NoAccess />}
+        {route.page === 'contacts' && allowed && (
           <ContactsPage
             user={user}
             catalog={catalog}
@@ -138,9 +141,9 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
           />
         )}
-        {route.page === 'reports' && isAdmin && <Reports catalog={catalog} section={route.section} />}
+        {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
         {route.page === 'profile' && <ProfilePage user={user} />}
-        {route.page === 'settings' && (isAdmin || AGENT_SECTIONS.includes(route.section)) && (
+        {route.page === 'settings' && allowed && (
           <SettingsRouter
             route={route}
             user={user}

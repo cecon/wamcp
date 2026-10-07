@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { http, query, timeAgo, type Realtime } from './api';
+import { http, isForbidden, query, timeAgo, type Realtime } from './api';
 import type { Catalog, Contact, User } from './types';
 import { Avatar } from './ui/Avatar';
+import { NoAccess } from './ui/NoAccess';
 import { Cell, SettingsHeader, SettingsPage, Table } from './ui/Settings';
 import { ContactDetail } from './contacts/ContactDetail';
 import { ContactsToolbar, type ContactScope } from './contacts/ContactsToolbar';
@@ -24,7 +25,8 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
     [scope, setScope] = useState<ContactScope>({ filters: null, viewId: null }),
     [items, setItems] = useState<Contact[]>([]),
     [selected, setSelected] = useState<Contact | null>(null),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [forbidden, setForbidden] = useState(false);
   const isAdmin = user?.role === 'administrator';
 
   const load = useCallback(
@@ -37,7 +39,7 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
           setItems(list);
           setError('');
         })
-        .catch((e: Error) => setError(e.message)),
+        .catch((e: Error) => (isForbidden(e) ? setForbidden(true) : setError(e.message))),
     [q, scope],
   );
   useEffect(() => {
@@ -68,6 +70,7 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
     [realtime],
   );
 
+  if (forbidden) return <NoAccess />;
   return (
     <SettingsPage>
       <SettingsHeader

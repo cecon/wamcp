@@ -12,6 +12,9 @@ export class ApiError extends Error {
   }
 }
 
+/** A 403: the agent's role does not allow the resource. */
+export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;
+
 /** Same-origin call to /api/v1 with the session cookie; state-changing requests carry the CSRF token. */
 export async function http<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

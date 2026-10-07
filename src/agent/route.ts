@@ -10,15 +10,17 @@ export type SettingsSection =
   | 'attributes'
   | 'canned'
   | 'automation'
+  | 'agent_bots'
   | 'macros'
   | 'sla'
   | 'webhooks'
-  | 'audit';
+  | 'audit'
+  | 'custom_roles';
 
 /** Settings pages every agent can open (the others are for administrators). */
 export const AGENT_SECTIONS: SettingsSection[] = ['macros'];
 
-/** Chatwoot report pages (administrators). */
+/** Chatwoot report pages (administrators and roles with `report_manage`). */
 export type ReportSection = 'overview' | 'agents' | 'inboxes' | 'teams' | 'labels' | 'csat' | 'bots' | 'sla';
 
 export type Route =

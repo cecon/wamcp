@@ -21,6 +21,7 @@ import type { Route } from '../route';
 import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
 import { REPORTS, SETTINGS } from './navItems';
+import { canManageContacts, canViewReports } from '../permissions';
 
 const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
   { type: 'mentions', icon: AtSign },
@@ -195,14 +196,16 @@ export function Sidebar({
               />
             ))}
           </SidebarGroup>
-          <SidebarGroup
-            icon={Contact}
-            label="Contatos"
-            active={route.page === 'contacts'}
-            parentOfActive={false}
-            onClick={() => open(null, { page: 'contacts' })}
-          />
-          {isAdmin && (
+          {canManageContacts(user) && (
+            <SidebarGroup
+              icon={Contact}
+              label="Contatos"
+              active={route.page === 'contacts'}
+              parentOfActive={false}
+              onClick={() => open(null, { page: 'contacts' })}
+            />
+          )}
+          {canViewReports(user) && (
             <SidebarGroup
               icon={ChartSpline}
               label="Relatórios"

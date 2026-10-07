@@ -12,6 +12,8 @@ import { MacrosPage } from './MacrosPage';
 import { AuditLogPage } from './AuditLogPage';
 import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
+import { AgentBotsPage } from './bots/AgentBotsPage';
+import { CustomRolesPage } from './roles/CustomRolesPage';
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -40,6 +42,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <CannedPage />;
     case 'automation':
       return <AutomationPage catalog={catalog} />;
+    case 'agent_bots':
+      return <AgentBotsPage catalog={catalog} onChange={onChange} />;
     case 'macros':
       return <MacrosPage user={user} catalog={catalog} />;
     case 'sla':
@@ -48,5 +52,7 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <WebhooksPage catalog={catalog} />;
     case 'audit':
       return <AuditLogPage />;
+    case 'custom_roles':
+      return <CustomRolesPage onChange={onChange} />;
   }
 }
