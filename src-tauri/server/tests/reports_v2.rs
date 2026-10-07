@@ -62,7 +62,7 @@ fn values(series: &Value) -> Vec<f64> {
 
 #[tokio::test]
 async fn series_and_summaries_by_dimension() {
-    let (f, admin, start) = history().await;
+    let (_f, admin, start) = history().await;
     let since = bucket_start(start, "day");
     let range = format!("since={since}&until={}", since + 3 * DAY);
     let daily = admin
