@@ -37,6 +37,8 @@ pub struct Notification {
     pub actor_user_id: Option<i64>,
     pub read_at: Option<i64>,
     pub created_at: i64,
+    #[serde(default)]
+    pub snoozed_until: Option<i64>,
     pub display_id: Option<i64>,
     pub contact_name: Option<String>,
     pub actor_name: Option<String>,

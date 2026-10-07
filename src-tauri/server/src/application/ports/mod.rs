@@ -29,6 +29,7 @@ pub trait Repository:
     + MessageRepo
     + AttachmentRepo
     + CatalogRepo
+    + NotificationRepo
     + CustomDataRepo
     + AutomationRepo
     + InsightsRepo
@@ -51,6 +52,7 @@ impl<T> Repository for T where
         + MessageRepo
         + AttachmentRepo
         + CatalogRepo
+        + NotificationRepo
         + CustomDataRepo
         + AutomationRepo
         + InsightsRepo

@@ -14,6 +14,7 @@ mod insights;
 mod messages;
 mod migrations;
 mod mirror;
+mod notifications;
 mod schema;
 mod teams;
 mod users;

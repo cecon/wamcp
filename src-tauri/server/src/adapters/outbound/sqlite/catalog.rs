@@ -1,13 +1,8 @@
-use super::db::{flag, int, opt_int, opt_text, placeholders, text, SqliteStore, PLAIN};
+use super::db::{flag, int, opt_text, placeholders, text, SqliteStore, PLAIN};
 use crate::application::ports::CatalogRepo;
 use crate::domain::error::{Error, Result};
-use crate::domain::model::{CannedResponse, Label, LabelFields, Notification};
+use crate::domain::model::{CannedResponse, Label, LabelFields};
 use rusqlite::types::Value as Sql;
-
-const NOTIFICATION: &str =
-    "SELECT n.*, c.display_id, ct.name AS contact_name, u.name AS actor_name FROM notifications n
-  LEFT JOIN conversations c ON c.id=n.conversation_id LEFT JOIN contacts ct ON ct.id=c.contact_id
-  LEFT JOIN users u ON u.id=n.actor_user_id";
 
 impl CatalogRepo for SqliteStore {
     fn labels(&self) -> Result<Vec<Label>> {
@@ -113,41 +108,5 @@ impl CatalogRepo for SqliteStore {
     fn delete_canned(&self, id: i64) -> Result<()> {
         self.exec("DELETE FROM canned_responses WHERE id=?", vec![int(id)])
             .map(drop)
-    }
-
-    fn create_notification(
-        &self,
-        user_id: i64,
-        kind: &str,
-        conversation_id: i64,
-        actor: Option<i64>,
-        at: i64,
-    ) -> Result<Notification> {
-        let id = self.insert(
-            "INSERT INTO notifications(user_id,notification_type,conversation_id,actor_user_id,created_at) VALUES(?,?,?,?,?)",
-            vec![int(user_id), text(kind), int(conversation_id), opt_int(actor), int(at)],
-        )?;
-        self.row(&format!("{NOTIFICATION} WHERE n.id=?"), vec![int(id)], PLAIN)?
-            .ok_or_else(|| Error::internal("notification vanished"))
-    }
-
-    fn notifications(&self, user_id: i64, limit: i64) -> Result<Vec<Notification>> {
-        let sql = format!("{NOTIFICATION} WHERE n.user_id=? ORDER BY n.id DESC LIMIT ?");
-        self.rows(&sql, vec![int(user_id), int(limit)], PLAIN)
-    }
-
-    fn unread_notifications(&self, user_id: i64) -> Result<i64> {
-        let sql = "SELECT COUNT(*) FROM notifications WHERE user_id=? AND read_at IS NULL";
-        Ok(self.scalar(sql, vec![int(user_id)])?.unwrap_or(0))
-    }
-
-    fn read_notification(&self, user_id: i64, id: i64, at: i64) -> Result<usize> {
-        let sql = "UPDATE notifications SET read_at=COALESCE(read_at,?) WHERE user_id=? AND id=?";
-        self.exec(sql, vec![int(at), int(user_id), int(id)])
-    }
-
-    fn read_all_notifications(&self, user_id: i64, at: i64) -> Result<()> {
-        let sql = "UPDATE notifications SET read_at=? WHERE user_id=? AND read_at IS NULL";
-        self.exec(sql, vec![int(at), int(user_id)]).map(drop)
     }
 }

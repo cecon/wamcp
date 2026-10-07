@@ -85,3 +85,20 @@ Tipos de atributo: `text`, `number`, `currency`, `percent`, `link`, `date` (`AAA
 
 Mensagens de contatos bloqueados não entram no atendimento (continuam no espelho do WhatsApp). Contatos agora expõem
 `labels` e `avatar_url`. Eventos: `contact.created`, `contact.updated` e `contact.deleted`.
+
+## Notificações e menções
+
+| Método       | Rota                                                    | Descrição                                                            |
+| ------------ | ------------------------------------------------------- | -------------------------------------------------------------------- |
+| GET          | `/notifications`                                        | Até 50, sem as adiadas; `{ items, unread }`                          |
+| PATCH/DELETE | `/notifications/{id}`                                   | Marca como lida / apaga                                              |
+| POST         | `/notifications/{id}/unread`                            | Marca como não lida                                                  |
+| POST         | `/notifications/{id}/snooze`                            | `{ snoozed_until }` (epoch s): some até a data e volta como não lida |
+| POST         | `/notifications/read_all`, `/notifications/destroy_all` | Todas lidas / apaga todas                                            |
+| GET/PATCH    | `/notification_settings`                                | `{ flags: { tipo: true\|false } }`                                   |
+
+Tipos: `conversation_creation`, `conversation_assignment`, `assigned_conversation_new_message`, `conversation_mention`
+e `participating_conversation_new_message`. Menções usam o formato do Chatwoot em notas privadas:
+`[@Nome](mention://user/<id>/Nome)`. O agente mencionado (com acesso à caixa) passa a participar da conversa, aparece
+no filtro `conversation_type=mentions` e recebe a notificação. Participantes (exceto o responsável) são avisados de
+novas mensagens do contato.

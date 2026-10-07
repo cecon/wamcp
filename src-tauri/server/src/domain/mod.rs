@@ -10,6 +10,7 @@ pub mod filters;
 pub mod helpdesk;
 pub mod media;
 pub mod model;
+pub mod notifications;
 pub mod oauth;
 pub mod schedule;
 pub mod webhooks;

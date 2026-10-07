@@ -36,5 +36,10 @@ pub fn steps() -> Vec<String> {
          CREATE INDEX contact_notes_contact ON contact_notes(contact_id,created_at);
          ALTER TABLE contacts ADD COLUMN avatar_url TEXT;"
             .into(),
+        // v13: notificações adiáveis e preferências de notificação por agente
+        "ALTER TABLE notifications ADD COLUMN snoozed_until INTEGER;
+         CREATE TABLE notification_settings(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+           flags TEXT NOT NULL DEFAULT '{}');"
+            .into(),
     ]
 }

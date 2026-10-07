@@ -5,7 +5,7 @@ use crate::domain::model::{
 };
 use serde_json::Value;
 
-/// Labels, canned responses and per-agent notifications.
+/// Labels and canned responses.
 pub trait CatalogRepo {
     fn labels(&self) -> Result<Vec<Label>>;
     fn label(&self, id: i64) -> Result<Option<Label>>;
@@ -21,20 +21,6 @@ pub trait CatalogRepo {
     fn create_canned(&self, code: &str, content: &str) -> Result<CannedResponse>;
     fn update_canned(&self, id: i64, code: Option<&str>, content: Option<&str>) -> Result<CannedResponse>;
     fn delete_canned(&self, id: i64) -> Result<()>;
-
-    fn create_notification(
-        &self,
-        user_id: i64,
-        kind: &str,
-        conversation_id: i64,
-        actor_user_id: Option<i64>,
-        created_at: i64,
-    ) -> Result<Notification>;
-    fn notifications(&self, user_id: i64, limit: i64) -> Result<Vec<Notification>>;
-    fn unread_notifications(&self, user_id: i64) -> Result<i64>;
-    /// Number of notifications marked (0 when it does not belong to the user).
-    fn read_notification(&self, user_id: i64, id: i64, at: i64) -> Result<usize>;
-    fn read_all_notifications(&self, user_id: i64, at: i64) -> Result<()>;
 }
 
 /// Outgoing webhooks (with a durable delivery queue) and automation rules.
@@ -100,4 +86,31 @@ pub trait InsightsRepo {
     fn first_incoming_at(&self, conversation_id: i64) -> Result<Option<i64>>;
     fn summary(&self, period: &Period) -> Result<Value>;
     fn agent_report(&self, period: &Period) -> Result<Vec<Value>>;
+}
+
+/// Per-agent notifications (snoozable), their preferences and @mentions.
+pub trait NotificationRepo {
+    fn create_notification(
+        &self,
+        user_id: i64,
+        kind: &str,
+        conversation_id: i64,
+        actor_user_id: Option<i64>,
+        created_at: i64,
+    ) -> Result<Notification>;
+    /// Latest notifications that are not snoozed past `now`.
+    fn notifications(&self, user_id: i64, now: i64, limit: i64) -> Result<Vec<Notification>>;
+    fn unread_notifications(&self, user_id: i64, now: i64) -> Result<i64>;
+    /// The next calls return how many rows changed (0 when it does not belong to the user).
+    fn read_notification(&self, user_id: i64, id: i64, at: i64) -> Result<usize>;
+    fn unread_notification(&self, user_id: i64, id: i64) -> Result<usize>;
+    fn snooze_notification(&self, user_id: i64, id: i64, until: i64) -> Result<usize>;
+    fn delete_notification(&self, user_id: i64, id: i64) -> Result<usize>;
+    fn read_all_notifications(&self, user_id: i64, at: i64) -> Result<()>;
+    fn delete_all_notifications(&self, user_id: i64) -> Result<()>;
+    /// `{ notification_type: enabled }`; missing types are enabled.
+    fn notification_settings(&self, user_id: i64) -> Result<Value>;
+    fn set_notification_settings(&self, user_id: i64, flags: &Value) -> Result<()>;
+    /// Records an @mention; `false` when it was already recorded.
+    fn add_mention(&self, user_id: i64, conversation_id: i64, message_id: i64, at: i64) -> Result<bool>;
 }

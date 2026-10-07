@@ -13,6 +13,7 @@ pub mod error;
 pub mod input;
 mod message_actions;
 mod messages;
+mod notifications;
 pub mod rate_limit;
 pub mod state;
 mod teams;
@@ -50,6 +51,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(messages::routes())
         .merge(message_actions::routes())
         .merge(catalog::routes())
+        .merge(notifications::routes())
         .merge(automation::routes())
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth::same_origin))
 }
