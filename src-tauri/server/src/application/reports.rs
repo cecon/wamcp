@@ -98,6 +98,6 @@ impl ReportService {
 
     pub fn csat(&self, actor: &Actor, query: PeriodQuery) -> Result<Vec<CsatEntry>> {
         require_admin(actor)?;
-        self.core.repo.csat_responses(&self.period(query))
+        self.core.repo.csat_responses(&self.period(query), 200)
     }
 }

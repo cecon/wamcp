@@ -51,7 +51,8 @@ pub fn parse_csv(input: &str) -> Vec<Vec<String>> {
     rows
 }
 
-fn escape(field: &str) -> String {
+/// One CSV field: quoted when needed, and neutralised when it would run as a spreadsheet formula.
+pub fn csv_field(field: &str) -> String {
     // A leading = + - @ would run as a formula in spreadsheets.
     let field = if field.starts_with(['=', '+', '-', '@']) && !field[1..].chars().all(|c| c.is_ascii_digit()) {
         format!("'{field}")
@@ -74,5 +75,5 @@ pub fn csv_line(contact: &Contact) -> String {
         contact.identifier.clone().unwrap_or_default(),
         contact.labels.join("|"),
     ];
-    fields.iter().map(|f| escape(f)).collect::<Vec<_>>().join(",")
+    fields.iter().map(|f| csv_field(f)).collect::<Vec<_>>().join(",")
 }

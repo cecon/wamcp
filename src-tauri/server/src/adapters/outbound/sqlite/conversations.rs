@@ -1,4 +1,4 @@
-use super::db::{int, iso, now_ms, opt_int, opt_text, placeholders, text, Shape, SqliteStore};
+use super::db::{int, iso, opt_int, opt_text, placeholders, text, Shape, SqliteStore};
 use super::inboxes::PAGE;
 use crate::application::ports::ConversationRepo;
 use crate::domain::error::{Error, Result};
@@ -151,7 +151,7 @@ impl ConversationRepo for SqliteStore {
         let id = self.insert(
             "INSERT INTO conversations(display_id,inbox_id,contact_id,contact_inbox_id,status,waiting_since,last_activity_at,created)
              VALUES(?,?,?,?,?,?,?,?)",
-            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(now_ms()))],
+            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(ts * 1000))],
         )?;
         self.conversation_by_id(id)?
             .ok_or_else(|| Error::internal("conversation vanished"))

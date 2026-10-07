@@ -148,3 +148,19 @@ mesclagens de contatos e exclusões de conversas, com usuário, IP e rota.
 
 Com `auto_resolve_duration`, conversas abertas ou pendentes sem atividade pelo número de dias são resolvidas a cada
 minuto (enviando `auto_resolve_message`, se definida). Evento `account.updated`.
+
+## Relatórios v2
+
+| Método | Rota                                                                        | Descrição                                                                                |
+| ------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/reports?metric=&type=&id=&label=&since=&until=&group_by=day\|week\|month` | Série temporal `[{ timestamp, value }]`, com zeros nos períodos vazios                   |
+| GET    | `/reports/summary_v2?type=&id=&label=&since=&until=`                        | Cada métrica `{ current, previous }` (período anterior de mesmo tamanho)                 |
+| GET    | `/reports/breakdown/inbox\|agent\|team\|label`                              | Métricas por caixa, agente, time ou etiqueta                                             |
+| GET    | `/csat_survey_responses/metrics`                                            | `{ total, sent, ratings, average, satisfaction_score, response_rate }`                   |
+| GET    | `/csat_survey_responses/download`                                           | CSV das avaliações                                                                       |
+| GET    | `/reports/bots`                                                             | Assistente IA: `{ conversations, resolutions, handoffs, resolution_rate, handoff_rate }` |
+
+Métricas: `conversations_count`, `incoming_messages_count`, `outgoing_messages_count`, `resolutions_count`,
+`avg_first_response_time` e `avg_resolution_time` (segundos). `type`: `account` (padrão), `inbox`, `agent`, `team` ou
+`label` (com `label=<título>`). Período padrão: últimos 7 dias; máximo 1 ano. Somente administradores. Semanas
+começam na segunda-feira (UTC). A data de criação da conversa agora é a da primeira mensagem.

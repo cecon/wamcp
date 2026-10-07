@@ -80,7 +80,7 @@ pub struct Period {
 /// Working hours, CSAT responses and reporting events/aggregates.
 pub trait InsightsRepo {
     fn create_csat(&self, csat: &CsatResponse) -> Result<CsatResponse>;
-    fn csat_responses(&self, period: &Period) -> Result<Vec<CsatEntry>>;
+    fn csat_responses(&self, period: &Period, limit: i64) -> Result<Vec<CsatEntry>>;
     /// first_response is recorded at most once per conversation.
     fn record_event(&self, event: &ReportingEvent) -> Result<()>;
     fn first_incoming_at(&self, conversation_id: i64) -> Result<Option<i64>>;
@@ -113,4 +113,24 @@ pub trait NotificationRepo {
     fn set_notification_settings(&self, user_id: i64, flags: &Value) -> Result<()>;
     /// Records an @mention; `false` when it was already recorded.
     fn add_mention(&self, user_id: i64, conversation_id: i64, message_id: i64, at: i64) -> Result<bool>;
+}
+
+/// What a report covers: `[since, until)` for the account or one inbox/agent/team/label.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ReportScope {
+    pub since: i64,
+    pub until: i64,
+    pub dimension: String,
+    pub id: Option<i64>,
+    pub label: Option<String>,
+}
+
+/// Reports v2 aggregates, computed in SQL.
+pub trait ReportsRepo {
+    /// `(bucket start, value)` per bucket (`group_by` day/week/month, or `all` for one total).
+    fn metric_series(&self, metric: &str, scope: &ReportScope, group_by: &str) -> Result<Vec<(i64, f64)>>;
+    /// Ratings 1–5 counts, answers and surveys sent in the period (optionally one inbox).
+    fn csat_metrics(&self, period: &Period) -> Result<Value>;
+    /// Conversations handled by the AI assistant: total, resolved without humans and handed off.
+    fn bot_metrics(&self, period: &Period) -> Result<Value>;
 }

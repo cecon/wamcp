@@ -17,6 +17,7 @@ mod messages;
 mod migrations;
 mod mirror;
 mod notifications;
+mod reports;
 mod schema;
 mod search;
 mod security;
