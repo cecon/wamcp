@@ -205,12 +205,20 @@ async fn contact(
     ok(state.support().helpdesk.contact(&current.actor(), id(&contact)?)?)
 }
 
+#[derive(Deserialize)]
+struct ContactUpdate {
+    #[serde(flatten)]
+    changes: ContactChanges,
+    custom_attributes: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
 async fn update_contact(
     State(state): State<AppState>,
     current: CurrentUser,
     Path(contact): Path<String>,
-    Body(body): Body<ContactChanges>,
+    Body(update): Body<ContactUpdate>,
 ) -> ApiResult<Response> {
+    let body = update.changes;
     let address = match body.email.clone() {
         Some(Some(value)) => Some(Some(email(&value)?)),
         other => other,
@@ -222,10 +230,12 @@ async fn update_contact(
         blocked: body.blocked,
         last_activity_at: None,
     };
-    ok(state
-        .support()
-        .helpdesk
-        .update_contact(&current.actor(), id(&contact)?, &changes)?)
+    let (helpdesk, actor, contact) = (&state.support().helpdesk, current.actor(), id(&contact)?);
+    let updated = helpdesk.update_contact(&actor, contact, &changes)?;
+    match update.custom_attributes {
+        Some(attributes) => ok(helpdesk.set_contact_attributes(&actor, contact, &attributes)?),
+        None => ok(updated),
+    }
 }
 
 pub fn routes() -> Router<AppState> {

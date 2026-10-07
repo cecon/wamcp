@@ -106,7 +106,7 @@ fn conversation(status: &str, requested_at: Option<i64>) -> Conversation {
         "id": 1, "account_id": 1, "display_id": 1, "inbox_id": 1, "contact_id": 1, "contact_inbox_id": 1,
         "status": status, "priority": null, "assignee_id": null, "team_id": null, "snoozed_until": null,
         "waiting_since": null, "first_reply_at": null, "agent_last_seen_at": null, "last_activity_at": 0,
-        "custom_attributes": "{}", "created": "", "csat_requested_at": requested_at, "contact_name": null,
+        "custom_attributes": {}, "created": "", "csat_requested_at": requested_at, "contact_name": null,
         "contact_phone": null, "contact_jid": "1@s.whatsapp.net", "inbox_name": "S",
         "agent_bot_enabled": 0, "assignee_name": null, "team_name": null, "labels": [],
         "last_message": null, "unread_count": 0

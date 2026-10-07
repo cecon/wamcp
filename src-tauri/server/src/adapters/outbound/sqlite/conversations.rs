@@ -5,7 +5,7 @@ use crate::domain::error::{Error, Result};
 use crate::domain::model::{ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters};
 use rusqlite::types::Value as Sql;
 
-const SELECT: &str =
+pub(super) const SELECT: &str =
     "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ci.source_id AS contact_jid,
   i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, t.name AS team_name,
   (SELECT json_group_array(l.title) FROM (SELECT l.title FROM conversation_labels cl JOIN labels l ON l.id=cl.label_id
@@ -16,8 +16,8 @@ const SELECT: &str =
      AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count
   FROM conversations c JOIN contacts ct ON ct.id=c.contact_id JOIN contact_inboxes ci ON ci.id=c.contact_inbox_id
   JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id LEFT JOIN teams t ON t.id=c.team_id";
-const SHAPE: Shape = Shape {
-    json: &["labels"],
+pub(super) const SHAPE: Shape = Shape {
+    json: &["labels", "custom_attributes"],
     bools: &[],
 };
 
@@ -67,7 +67,7 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
 }
 
 /// ORDER BY for a chat list sort (unknown values fall back to the latest activity).
-fn order(sort: Option<&str>) -> &'static str {
+pub(super) fn order(sort: Option<&str>) -> &'static str {
     match sort.unwrap_or_default() {
         "last_activity_at_asc" => "c.last_activity_at ASC, c.id ASC",
         "created_at_desc" => "c.id DESC",

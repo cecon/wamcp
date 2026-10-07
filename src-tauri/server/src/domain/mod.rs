@@ -5,6 +5,7 @@ pub mod automation;
 pub mod csat;
 pub mod error;
 pub mod events;
+pub mod filters;
 pub mod helpdesk;
 pub mod media;
 pub mod model;

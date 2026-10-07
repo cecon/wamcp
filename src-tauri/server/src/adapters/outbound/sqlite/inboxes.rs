@@ -1,4 +1,4 @@
-use super::db::{flag, int, iso, now_ms, opt_int, opt_text, placeholders, text, SqliteStore, PLAIN};
+use super::db::{flag, int, iso, now_ms, opt_int, opt_text, placeholders, text, Shape, SqliteStore, PLAIN};
 use crate::application::ports::{ContactRepo, InboxRepo};
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{Contact, ContactChanges, ContactInbox, DaySchedule, Inbox, InboxChanges, WorkingHour};
@@ -6,6 +6,12 @@ use rusqlite::types::Value as Sql;
 
 const INBOX: &str = "SELECT i.*, w.session_id, w.ignore_groups, s.status AS session_status, s.phone FROM inboxes i
   JOIN channel_whatsapp w ON w.id=i.channel_id JOIN sessions s ON s.id=w.session_id";
+/// Contacts expose their custom attributes as a JSON object.
+pub(super) const CONTACT: Shape = Shape {
+    json: &["custom_attributes"],
+    bools: &[],
+};
+
 pub(crate) const PAGE: i64 = 25;
 
 impl InboxRepo for SqliteStore {
@@ -115,7 +121,7 @@ impl InboxRepo for SqliteStore {
 
 impl ContactRepo for SqliteStore {
     fn contact(&self, id: i64) -> Result<Option<Contact>> {
-        self.row("SELECT * FROM contacts WHERE id=?", vec![int(id)], PLAIN)
+        self.row("SELECT * FROM contacts WHERE id=?", vec![int(id)], CONTACT)
     }
 
     fn contact_inbox(&self, inbox_id: i64, source_id: &str) -> Result<Option<ContactInbox>> {
@@ -124,7 +130,11 @@ impl ContactRepo for SqliteStore {
     }
 
     fn contact_by_phone(&self, phone: &str) -> Result<Option<Contact>> {
-        self.row("SELECT * FROM contacts WHERE phone_number=?", vec![text(phone)], PLAIN)
+        self.row(
+            "SELECT * FROM contacts WHERE phone_number=?",
+            vec![text(phone)],
+            CONTACT,
+        )
     }
 
     fn create_contact(&self, name: Option<&str>, phone: Option<&str>) -> Result<Contact> {
@@ -152,7 +162,7 @@ impl ContactRepo for SqliteStore {
         self.rows(
             sql,
             vec![like.clone(), like.clone(), like, int(PAGE), int(offset)],
-            PLAIN,
+            CONTACT,
         )
     }
 

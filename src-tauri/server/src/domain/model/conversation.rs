@@ -19,7 +19,7 @@ pub struct Conversation {
     pub first_reply_at: Option<i64>,
     pub agent_last_seen_at: Option<i64>,
     pub last_activity_at: i64,
-    pub custom_attributes: String,
+    pub custom_attributes: Value,
     pub created: String,
     pub csat_requested_at: Option<i64>,
     #[serde(default)]

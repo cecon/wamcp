@@ -19,5 +19,15 @@ pub fn steps() -> Vec<String> {
            created_at INTEGER NOT NULL,UNIQUE(user_id,message_id));
          CREATE INDEX mentions_user ON mentions(user_id,conversation_id);"
             .into(),
+        // v11: visualizações salvas (filtros avançados) e definições de atributos personalizados
+        "CREATE TABLE custom_filters(id INTEGER PRIMARY KEY,
+           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+           name TEXT NOT NULL,filter_type TEXT NOT NULL,query TEXT NOT NULL,created TEXT NOT NULL);
+         CREATE INDEX custom_filters_user ON custom_filters(user_id,filter_type);
+         CREATE TABLE custom_attribute_definitions(id INTEGER PRIMARY KEY,
+           attribute_display_name TEXT NOT NULL,attribute_key TEXT NOT NULL,attribute_model TEXT NOT NULL,
+           attribute_display_type TEXT NOT NULL,attribute_description TEXT,attribute_values TEXT NOT NULL DEFAULT '[]',
+           regex_pattern TEXT,regex_cue TEXT,created TEXT NOT NULL,UNIQUE(attribute_key,attribute_model));"
+            .into(),
     ]
 }

@@ -2,6 +2,7 @@
 mod attachment;
 mod catalog;
 mod conversation;
+mod custom;
 mod inbox;
 mod mirror;
 mod people;
@@ -9,6 +10,7 @@ mod people;
 pub use attachment::*;
 pub use catalog::*;
 pub use conversation::*;
+pub use custom::*;
 pub use inbox::*;
 pub use mirror::*;
 pub use people::*;

@@ -69,7 +69,7 @@ impl HelpdeskService {
         for id in self.core.repo.participant_ids(conversation.id)? {
             users.extend(self.core.repo.user(id)?);
         }
-        users.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        users.sort_by_key(|u| u.name.to_lowercase());
         Ok(users)
     }
 

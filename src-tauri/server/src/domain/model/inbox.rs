@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// An inbox backed by one WhatsApp session (channel), with the session's live status.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,7 +71,7 @@ pub struct Contact {
     pub phone_number: Option<String>,
     pub email: Option<String>,
     pub identifier: Option<String>,
-    pub custom_attributes: String,
+    pub custom_attributes: Value,
     pub blocked: i64,
     pub last_activity_at: Option<i64>,
     pub created: String,

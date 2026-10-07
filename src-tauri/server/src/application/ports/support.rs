@@ -1,8 +1,8 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Attachment, AttachmentSource, Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges,
-    ConversationCounts, ConversationFilters, DaySchedule, Inbox, InboxChanges, Message, NewAttachment, NewMessage,
-    WorkingHour,
+    Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges, ContactInbox,
+    Conversation, ConversationChanges, ConversationCounts, ConversationFilters, CustomFilter, DaySchedule, FilterQuery,
+    Inbox, InboxChanges, Message, NewAttachment, NewMessage, WorkingHour,
 };
 use serde_json::Value;
 
@@ -75,4 +75,24 @@ pub trait AttachmentRepo {
     /// The attachment with its stored path and the WhatsApp message it came from.
     fn attachment_source(&self, id: i64) -> Result<Option<AttachmentSource>>;
     fn set_attachment_file(&self, id: i64, path: &str, size: i64) -> Result<()>;
+}
+
+/// Saved views, custom attribute definitions/values and the advanced filter queries.
+pub trait CustomDataRepo {
+    fn custom_filters(&self, user_id: i64, filter_type: Option<&str>) -> Result<Vec<CustomFilter>>;
+    fn custom_filter(&self, id: i64) -> Result<Option<CustomFilter>>;
+    fn create_custom_filter(&self, user_id: i64, name: &str, filter_type: &str, query: &Value) -> Result<CustomFilter>;
+    fn update_custom_filter(&self, id: i64, name: Option<&str>, query: Option<&Value>) -> Result<CustomFilter>;
+    fn delete_custom_filter(&self, id: i64) -> Result<()>;
+
+    fn attribute_definitions(&self, model: Option<&str>) -> Result<Vec<AttributeDefinition>>;
+    fn attribute_definition(&self, id: i64) -> Result<Option<AttributeDefinition>>;
+    fn create_attribute_definition(&self, definition: &AttributeDefinition) -> Result<AttributeDefinition>;
+    fn update_attribute_definition(&self, id: i64, fields: &AttributeFields) -> Result<AttributeDefinition>;
+    fn delete_attribute_definition(&self, id: i64) -> Result<()>;
+
+    fn set_conversation_attributes(&self, id: i64, attributes: &Value) -> Result<()>;
+    fn set_contact_attributes(&self, id: i64, attributes: &Value) -> Result<()>;
+    fn filter_conversations(&self, query: &FilterQuery) -> Result<Vec<Conversation>>;
+    fn filter_contacts(&self, query: &FilterQuery) -> Result<Vec<Contact>>;
 }

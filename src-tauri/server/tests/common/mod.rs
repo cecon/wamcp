@@ -1,5 +1,6 @@
 //! Test harness: the full stack over SQLite with in-memory WhatsApp, webhook and callback ports.
 #![allow(dead_code)]
+pub mod filters;
 pub mod http;
 
 use async_trait::async_trait;
