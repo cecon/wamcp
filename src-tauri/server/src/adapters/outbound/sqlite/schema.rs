@@ -72,5 +72,11 @@ pub fn steps() -> Vec<String> {
            status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','hit','missed')),missed_at INTEGER);
          CREATE INDEX applied_slas_status ON applied_slas(status);"
             .into(),
+        // v18: robôs de atendimento externos (agent bots) via webhook e token de API
+        "ALTER TABLE webhooks ADD COLUMN kind TEXT NOT NULL DEFAULT 'webhook';
+         CREATE TABLE agent_bots(id INTEGER PRIMARY KEY,name TEXT NOT NULL,description TEXT,
+           webhook_id INTEGER NOT NULL UNIQUE REFERENCES webhooks(id) ON DELETE CASCADE,created TEXT NOT NULL);
+         ALTER TABLE inboxes ADD COLUMN agent_bot_id INTEGER REFERENCES agent_bots(id) ON DELETE SET NULL;"
+            .into(),
     ]
 }

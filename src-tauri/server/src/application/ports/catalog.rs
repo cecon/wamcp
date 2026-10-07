@@ -1,6 +1,6 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Action, AutomationRule, CannedResponse, Condition, CsatEntry, CsatResponse, Delivery, DueDelivery, Label,
+    Action, AgentBot, AutomationRule, CannedResponse, Condition, CsatEntry, CsatResponse, Delivery, DueDelivery, Label,
     LabelFields, Notification, ReportingEvent, RuleFields, Webhook, WebhookFields,
 };
 use serde_json::Value;
@@ -133,4 +133,20 @@ pub trait ReportsRepo {
     fn csat_metrics(&self, period: &Period) -> Result<Value>;
     /// Conversations handled by the AI assistant: total, resolved without humans and handed off.
     fn bot_metrics(&self, period: &Period) -> Result<Value>;
+}
+
+/// Agent bots: each owns a webhook (kind `agent_bot`) and serves the inboxes pointing to it.
+pub trait AgentBotRepo {
+    fn agent_bots(&self) -> Result<Vec<AgentBot>>;
+    fn agent_bot(&self, id: i64) -> Result<Option<AgentBot>>;
+    fn create_agent_bot(&self, name: &str, description: Option<&str>, url: &str, secret: &str) -> Result<AgentBot>;
+    fn update_agent_bot(
+        &self,
+        id: i64,
+        name: Option<&str>,
+        description: Option<Option<&str>>,
+        url: Option<&str>,
+    ) -> Result<AgentBot>;
+    fn delete_agent_bot(&self, id: i64) -> Result<()>;
+    fn set_inbox_agent_bot(&self, inbox_id: i64, agent_bot_id: Option<i64>) -> Result<()>;
 }

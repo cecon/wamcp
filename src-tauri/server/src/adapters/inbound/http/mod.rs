@@ -2,6 +2,7 @@
 mod account;
 mod accounts;
 mod admin;
+mod agent_bots;
 mod audit;
 pub mod auth;
 mod automation;
@@ -64,6 +65,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(security::routes())
         .merge(reports::routes())
         .merge(sla::routes())
+        .merge(agent_bots::routes())
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth::same_origin))
 }

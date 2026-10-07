@@ -184,3 +184,19 @@ contam em tempo corrido (sem pausar fora do horário de atendimento).
 Gravações enviadas com `voice=true` em WebM/Opus (o formato do Chromium e do WebView do app) são convertidas para
 Ogg/Opus sem recodificar, como o WhatsApp exige para mensagens de voz; o anexo passa a `audio/ogg; codecs=opus`,
 `.ogg` e com `duration` em segundos. Arquivos que não forem WebM/Opus são enviados como gravados.
+
+## Robôs de atendimento (agent bots)
+
+| Método       | Rota                                  | Descrição                                                                                                                 |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| GET/POST     | `/agent_bots`                         | Administrador; cria `{ name, description, outgoing_url }` e devolve `{ agent_bot, access_token }` (token exibido uma vez) |
+| PATCH/DELETE | `/agent_bots/{id}`                    | Edita / remove (o token deixa de valer)                                                                                   |
+| POST         | `/agent_bots/{id}/reset_access_token` | Novo token                                                                                                                |
+| GET          | `/agent_bots/{id}/deliveries`         | Últimas entregas                                                                                                          |
+| POST         | `/inboxes/{id}/agent_bot`             | `{ agent_bot_id }` conecta (ou `null` desconecta) a caixa                                                                 |
+
+O robô recebe na `outgoing_url` (mesma fila, assinatura e novas tentativas dos webhooks) os eventos
+`conversation_created`, `conversation_status_changed`, `conversation_updated`, `message_created` e `message_updated` das
+caixas conectadas. Novas conversas nessas caixas começam `pending`. Com o cabeçalho `api_access_token: <token do robô>`
+ele responde em `POST /conversations/{id}/messages` (como `agent_bot`) e transfere para humanos com
+`POST /conversations/{id}/toggle_status` `{ "status": "open" }`, apenas nas suas caixas.

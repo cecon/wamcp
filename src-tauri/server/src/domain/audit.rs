@@ -9,7 +9,7 @@ pub struct AuditEntry {
 }
 
 /// Resources whose changes are recorded, by API path segment.
-const AUDITED: [(&str, &str); 14] = [
+const AUDITED: [(&str, &str); 15] = [
     ("agents", "user"),
     ("teams", "team"),
     ("inboxes", "inbox"),
@@ -24,6 +24,7 @@ const AUDITED: [(&str, &str); 14] = [
     ("contacts", "contact"),
     ("conversations", "conversation"),
     ("sla_policies", "sla_policy"),
+    ("agent_bots", "agent_bot"),
 ];
 
 /// Sub-actions that are daily work rather than configuration changes.

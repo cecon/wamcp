@@ -182,7 +182,7 @@ impl HelpdeskService {
         } else {
             route_incoming(latest.as_ref(), &inbox)
         };
-        let status = initial_status(inbox.agent_bot_enabled != 0);
+        let status = initial_status(inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some());
         let conversation = match (route, latest) {
             (Route::Ignore, _) => return Ok(None),
             (Route::Create, _) | (Route::Reuse { .. }, None) => {

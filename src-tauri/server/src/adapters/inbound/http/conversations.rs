@@ -1,5 +1,5 @@
 //! Conversations, messages and contacts under /api/v1 (requires an authenticated agent).
-use super::auth::CurrentUser;
+use super::auth::{CurrentUser, Requester};
 use super::error::{ok, ApiError, ApiResult};
 use super::input::{check, id, int_param, one_of, optional_id, text, Body, Query};
 use super::state::AppState;
@@ -109,17 +109,18 @@ struct Status {
 
 async fn toggle_status(
     State(state): State<AppState>,
-    current: CurrentUser,
+    current: Requester,
     Path(display): Path<String>,
     Body(body): Body<Status>,
 ) -> ApiResult<Response> {
     let status = one_of(&body.status, &STATUSES)?;
     check(body.snoozed_until.is_none_or(|s| s > 0))?;
     let display = id(&display)?;
+    let actor = current.actor(&state, display)?;
     ok(state
         .support()
         .helpdesk
-        .toggle_status(&current.actor(), display, &status, body.snoozed_until)?)
+        .toggle_status(&actor, display, &status, body.snoozed_until)?)
 }
 
 #[derive(Deserialize)]

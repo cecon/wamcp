@@ -1,5 +1,5 @@
 //! Sending messages (JSON, or multipart with files and voice notes) and serving attachments.
-use super::auth::CurrentUser;
+use super::auth::{CurrentUser, Requester};
 use super::error::{created, ApiError, ApiResult};
 use super::input::{id, is_json, text, BODY_LIMIT};
 use super::state::AppState;
@@ -66,7 +66,7 @@ async fn form(request: Request, state: &AppState) -> ApiResult<(Draft, Vec<Uploa
 
 async fn reply(
     State(state): State<AppState>,
-    current: CurrentUser,
+    current: Requester,
     Path(display): Path<String>,
     request: Request,
 ) -> ApiResult<Response> {
@@ -107,7 +107,7 @@ async fn reply(
         return Err(ApiError::Invalid);
     }
     let helpdesk = &state.support().helpdesk;
-    let actor = current.actor();
+    let actor = current.actor(&state, display)?;
     if uploads.is_empty() {
         return created(helpdesk.send_draft(&actor, display, draft).await?);
     }

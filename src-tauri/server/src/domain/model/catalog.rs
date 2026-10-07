@@ -54,6 +54,11 @@ pub struct Webhook {
     pub secret: String,
     pub active: i64,
     pub created: String,
+    /// `webhook`, or `agent_bot` for the delivery endpoint of an agent bot.
+    #[serde(default)]
+    pub kind: String,
+    #[serde(default)]
+    pub agent_bot_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -164,4 +169,17 @@ pub struct ReportingEvent {
     pub inbox_id: i64,
     pub conversation_id: i64,
     pub created_at: i64,
+}
+
+/// An external bot (Chatwoot "agent bot"): receives the events of its inboxes on `outgoing_url`
+/// and answers through the API with its access token.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentBot {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub outgoing_url: String,
+    pub webhook_id: i64,
+    pub inbox_ids: Vec<i64>,
+    pub created: String,
 }

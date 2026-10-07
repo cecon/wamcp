@@ -95,6 +95,42 @@ impl FromRequestParts<AppState> for CurrentUser {
     }
 }
 
+/// An agent, or an agent bot authenticated by its `api_access_token` (for replies and handoffs).
+pub enum Requester {
+    Agent(Box<CurrentUser>),
+    Bot(i64),
+}
+
+impl Requester {
+    /// The actor for a conversation; bots may only act in the inboxes connected to them.
+    pub fn actor(&self, state: &AppState, display_id: i64) -> Result<Actor, ApiError> {
+        match self {
+            Self::Agent(current) => Ok(current.actor()),
+            Self::Bot(bot) => Ok(state.support().helpdesk.bot_actor(*bot, display_id)?),
+        }
+    }
+}
+
+impl FromRequestParts<AppState> for Requester {
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Response> {
+        if let Some(token) = parts.headers.get("api_access_token").and_then(|v| v.to_str().ok()) {
+            let bot = state
+                .support()
+                .helpdesk
+                .is_agent_bot_token(token)
+                .map_err(|e| ApiError::from(e).into_response())?;
+            if let Some(bot) = bot {
+                return Ok(Self::Bot(bot));
+            }
+        }
+        CurrentUser::from_request_parts(parts, state)
+            .await
+            .map(|current| Self::Agent(Box::new(current)))
+    }
+}
+
 /// Only same-origin browser requests (or the public URL) may reach the helpdesk API.
 pub async fn same_origin(State(state): State<AppState>, request: Request, next: Next) -> Response {
     if let Some(origin) = request.headers().get(header::ORIGIN).and_then(|v| v.to_str().ok()) {

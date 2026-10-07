@@ -28,6 +28,8 @@ pub struct Inbox {
     pub max_assignment_limit: Option<i64>,
     #[serde(default)]
     pub csat_survey_message: Option<String>,
+    #[serde(default)]
+    pub agent_bot_id: Option<i64>,
 }
 
 /// Inbox settings an administrator may change; `Some(None)` clears a nullable text.
