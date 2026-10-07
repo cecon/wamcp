@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   AtSign,
   Bolt,
@@ -12,6 +12,7 @@ import {
   MessageCircleDashed,
   MessageSquareText,
   Repeat,
+  ScrollText,
   Search,
   SquareUser,
   Tag,
@@ -19,6 +20,7 @@ import {
   Users,
   UsersRound,
   Webhook,
+  Workflow,
 } from 'lucide-react';
 import type { Catalog, ConversationType, CustomFilter, User } from '../types';
 import { CONVERSATION_TYPE_LABEL } from '../labels';
@@ -34,7 +36,9 @@ const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt }[]
   { section: 'attributes', label: 'Atributos personalizados', icon: Braces },
   { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
   { section: 'automation', label: 'Automação', icon: Repeat },
+  { section: 'macros', label: 'Macros', icon: Workflow },
   { section: 'webhooks', label: 'Webhooks', icon: Webhook },
+  { section: 'audit', label: 'Registro de auditoria', icon: ScrollText },
 ];
 const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
   { type: 'mentions', icon: AtSign },
@@ -53,6 +57,8 @@ interface Props {
   onNavigate: (route: Route) => void;
   onAvailability: (value: User['availability']) => void;
   onLogout: () => void;
+  /** Notification bell shown next to the account name. */
+  bell?: ReactNode;
 }
 
 /** Chatwoot components-next/sidebar: account header, search, accordion nav and profile footer. */
@@ -66,6 +72,7 @@ export function Sidebar({
   onNavigate,
   onAvailability,
   onLogout,
+  bell,
 }: Props) {
   const isAdmin = user.role === 'administrator';
   const [expanded, setExpanded] = useState<Group>(route.page === 'settings' ? 'settings' : 'conversations');
@@ -91,6 +98,7 @@ export function Sidebar({
           </span>
           <span className="h-3 w-px bg-n-strong" />
           <span className="truncate px-2 text-sm leading-5 font-medium text-n-slate-12">WA MCP</span>
+          {bell}
         </div>
         <form
           className="flex gap-2 px-2"
@@ -234,7 +242,13 @@ export function Sidebar({
       </nav>
 
       <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-t from-n-background" />
-      <ProfileMenu user={user} online={online} onAvailability={onAvailability} onLogout={onLogout} />
+      <ProfileMenu
+        user={user}
+        online={online}
+        onAvailability={onAvailability}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+      />
     </aside>
   );
 }

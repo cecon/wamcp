@@ -53,6 +53,12 @@ export function AgentsPage({ user, catalog, onChange }: Props) {
                   {ROLE[a.role]}
                   <Divider />
                   {a.active ? 'Ativo' : 'Desativado'}
+                  {a.mfa_enabled ? (
+                    <>
+                      <Divider />
+                      Verificação em duas etapas
+                    </>
+                  ) : null}
                 </p>
               </div>
             </div>
@@ -177,6 +183,26 @@ function AgentModal({ agent, catalog, onClose, onSaved }: ModalProps) {
             </fieldset>
           </>
         )}
+        {agent?.mfa_enabled ? (
+          <div className="flex flex-col gap-1">
+            <Button
+              color="slate"
+              variant="faded"
+              className="self-start"
+              label="Redefinir verificação em duas etapas"
+              onClick={() =>
+                void run(async () => {
+                  await http(`/agents/${agent.id}/mfa`, 'DELETE');
+                  await onSaved();
+                  onClose();
+                })
+              }
+            />
+            <span className="text-xs text-n-slate-11">
+              Use quando o agente perder o aplicativo autenticador; ele entrará só com a senha.
+            </span>
+          </div>
+        ) : null}
         {agent && (
           <Button
             color="ruby"

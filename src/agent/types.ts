@@ -11,6 +11,7 @@ export interface User {
   availability: Availability;
   active: number;
   inbox_ids?: number[];
+  mfa_enabled?: number;
 }
 export interface Inbox {
   id: number;
@@ -183,6 +184,7 @@ export interface AppNotification {
   actor_name: string | null;
   read_at: number | null;
   created_at: number;
+  snoozed_until?: number | null;
 }
 export interface Meta {
   mine: number;

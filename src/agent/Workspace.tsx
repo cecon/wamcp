@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { connectRealtime, http, type Realtime } from './api';
-import type { Availability, Catalog, User } from './types';
-import { HOME, type Route } from './route';
+import type { AppNotification, Availability, Catalog, User } from './types';
+import { AGENT_SECTIONS, HOME, type Route } from './route';
 import { Sidebar } from './sidebar/Sidebar';
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { NotificationsPage } from './NotificationsPage';
@@ -9,6 +9,9 @@ import { ContactsPage } from './ContactsPage';
 import { Reports } from './Reports';
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
+import { NotificationBell } from './notifications/NotificationBell';
+import { alertNotification } from './notifications/browserAlerts';
+import { ProfilePage } from './profile/ProfilePage';
 
 interface Props {
   user: User;
@@ -51,8 +54,11 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   }, [reloadCatalog, reloadUnread]);
   useEffect(
     () =>
-      realtime.subscribe(({ event }) => {
-        if (event === 'notification.created') setUnread((n) => n + 1);
+      realtime.subscribe(({ event, data }) => {
+        if (event === 'notification.created') {
+          setUnread((n) => n + 1);
+          alertNotification(data as unknown as AppNotification);
+        }
         if (event === 'presence.update') void reloadCatalog().catch(() => {});
       }),
     [realtime, reloadCatalog],
@@ -70,6 +76,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     onLogout();
   }
   const isAdmin = user.role === 'administrator';
+  const openConversation = (displayId: number) => setRoute({ page: 'conversations', displayId });
 
   return (
     <div className="flex h-full overflow-hidden text-n-slate-12">
@@ -83,6 +90,14 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         onNavigate={setRoute}
         onAvailability={setAvailability}
         onLogout={() => void logout()}
+        bell={
+          <NotificationBell
+            realtime={realtime}
+            unread={unread}
+            onUnread={setUnread}
+            onOpen={openConversation}
+          />
+        }
       />
       <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-n-surface-1">
         {route.page === 'conversations' && (
@@ -97,21 +112,19 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         )}
         {route.page === 'notifications' && (
-          <NotificationsPage
-            realtime={realtime}
-            onUnread={setUnread}
-            onOpen={(displayId) => setRoute({ page: 'conversations', displayId })}
-          />
+          <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
         )}
         {route.page === 'contacts' && (
           <ContactsPage
             user={user}
             catalog={catalog}
-            onOpenConversation={(displayId) => setRoute({ page: 'conversations', displayId })}
+            realtime={realtime}
+            onOpenConversation={openConversation}
           />
         )}
         {route.page === 'reports' && isAdmin && <Reports catalog={catalog} />}
-        {route.page === 'settings' && isAdmin && (
+        {route.page === 'profile' && <ProfilePage user={user} />}
+        {route.page === 'settings' && (isAdmin || AGENT_SECTIONS.includes(route.section)) && (
           <SettingsRouter
             route={route}
             user={user}

@@ -11,6 +11,7 @@ import { timeAgo } from '../api';
 import type { Conversation, Label } from '../types';
 import { Avatar } from '../ui/Avatar';
 import { cn } from '../ui/cn';
+import { plainMentions } from './mentions';
 
 const PRIORITY = {
   urgent: <AlertTriangle size={14} className="text-n-ruby-11" aria-label="Prioridade urgente" />,
@@ -102,7 +103,7 @@ export function ConversationCard({
               unread ? 'font-medium text-n-slate-12' : 'text-n-slate-11',
             )}
           >
-            {c.last_message || '—'}
+            {c.last_message ? plainMentions(c.last_message) : '—'}
           </span>
           {c.labels.length > 0 && (
             <span className="mx-2 mt-0.5 flex h-6 items-center gap-2.5 overflow-hidden">

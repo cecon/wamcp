@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Mic, Paperclip } from 'lucide-react';
 import { http, upload } from '../api';
-import type { Canned, Conversation, Message, User } from '../types';
+import type { Conversation, Message, User } from '../types';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { PendingFiles, RecorderBar, ReplyToBar } from './composer/ComposerParts';
-import { CannedList, EmojiPicker } from './composer/ComposerPickers';
-import { fillVariables, loadDraft, saveDraft, useCanned, useTypingStatus } from './composer/composerState';
+import { EmojiPicker } from './composer/ComposerPickers';
+import { loadDraft, saveDraft, useTypingStatus } from './composer/composerState';
+import { useSuggestions } from './composer/useSuggestions';
 import { useVoiceRecorder } from './composer/useVoiceRecorder';
 
 interface Props {
@@ -18,6 +19,8 @@ interface Props {
   user?: User;
   replyTo?: Message | null;
   onCancelReply?: () => void;
+  /** Agents offered by the "@" mention picker in private notes. */
+  agents?: User[];
 }
 
 const ICON =
@@ -27,17 +30,25 @@ const ICON =
  * Chatwoot ReplyBox: Reply / Private Note pill toggle, editor, bottom panel with emoji, attachments,
  * voice note and Send. Typing "/shortcut" opens the canned responses picker, like CannedResponse.vue.
  */
-export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, onCancelReply }: Props) {
+export function ReplyBox({
+  path,
+  disabled,
+  onSent,
+  conversation,
+  user,
+  replyTo,
+  onCancelReply,
+  agents = [],
+}: Props) {
   const [text, setText] = useState(() => loadDraft(path)),
     [note, setNote] = useState(false),
     [files, setFiles] = useState<File[]>([]),
     [dragging, setDragging] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [caret, setCaret] = useState(0);
   const area = useRef<HTMLTextAreaElement>(null),
     picker = useRef<HTMLInputElement>(null);
-  const shortcut = /^\/(\S*)$/.exec(text)?.[1];
-  const { options, highlight, setHighlight } = useCanned(shortcut);
   const typing = useTypingStatus(path, note);
   const recorder = useVoiceRecorder(setError);
   const blocked = disabled && !note;
@@ -48,16 +59,20 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
     const added = Array.from(list || []);
     if (added.length) setFiles((current) => [...current, ...added]);
   };
-  const pickCanned = (c: Canned) => setText(fillVariables(c.content, conversation, user));
+  function replaceText(next: string, position: number) {
+    setText(next);
+    setCaret(position);
+    requestAnimationFrame(() => {
+      area.current?.focus();
+      area.current?.setSelectionRange(position, position);
+    });
+  }
+  const suggestions = useSuggestions({ text, caret, note, agents, conversation, user, onText: replaceText });
   function insertAtCaret(snippet: string) {
     const el = area.current;
     const start = el?.selectionStart ?? text.length,
       end = el?.selectionEnd ?? text.length;
-    setText(text.slice(0, start) + snippet + text.slice(end));
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(start + snippet.length, start + snippet.length);
-    });
+    replaceText(text.slice(0, start) + snippet + text.slice(end), start + snippet.length);
   }
 
   async function deliver(request: () => Promise<Message | Message[]>) {
@@ -86,7 +101,7 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
   };
 
   async function send() {
-    const content = text.trim();
+    const content = suggestions.content(text.trim());
     if ((!content && !files.length) || busy || blocked) return;
     const ok = await deliver(() =>
       files.length
@@ -100,6 +115,7 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
     if (!ok) return;
     setText('');
     setFiles([]);
+    suggestions.reset();
     onCancelReply?.();
   }
   async function startRecording() {
@@ -139,15 +155,7 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
           Solte os arquivos para anexar
         </div>
       )}
-      {options.length > 0 && (
-        <CannedList
-          shortcut={shortcut || ''}
-          options={options}
-          highlight={highlight}
-          onHighlight={setHighlight}
-          onPick={pickCanned}
-        />
-      )}
+      {suggestions.popup}
       <div className="flex h-[3.25rem] items-center justify-between pr-2 pl-3">
         <div
           role="tablist"
@@ -197,11 +205,12 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
             blocked
               ? 'Conversa resolvida. Reabra para responder ou escreva uma nota privada.'
               : note
-                ? 'Esta nota é visível apenas para a equipe.'
+                ? 'Esta nota é visível apenas para a equipe. Digite @ para mencionar um agente.'
                 : "Shift + Enter para nova linha. Digite '/' para selecionar uma resposta pronta."
           }
           onChange={(e) => {
             setText(e.target.value);
+            setCaret(e.target.selectionStart);
             if (e.target.value) typing.typing();
             else typing.stop();
           }}
@@ -211,14 +220,10 @@ export function ReplyBox({ path, disabled, onSent, conversation, user, replyTo, 
             e.preventDefault();
             addFiles(images);
           }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
           onKeyDown={(e) => {
-            if (options.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-              e.preventDefault();
-              setHighlight((h) => (h + (e.key === 'ArrowDown' ? 1 : options.length - 1)) % options.length);
-            } else if (options.length && (e.key === 'Enter' || e.key === 'Tab')) {
-              e.preventDefault();
-              pickCanned(options[highlight]);
-            } else if (e.key === 'Enter' && !e.shiftKey) {
+            if (suggestions.onKeyDown(e)) return;
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               void send();
             }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { http, query, timeAgo } from './api';
+import { http, query, timeAgo, type Realtime } from './api';
 import type { Catalog, Contact, User } from './types';
 import { Avatar } from './ui/Avatar';
 import { Cell, SettingsHeader, SettingsPage, Table } from './ui/Settings';
@@ -12,10 +12,12 @@ interface Props {
   onOpenConversation: (displayId: number) => void;
   user?: User;
   catalog?: Catalog;
+  /** Live updates: deleted contacts leave the list (and close their detail), edits are merged. */
+  realtime?: Realtime;
 }
 
 /** Chatwoot Contacts: searchable/filterable list; a contact opens in a side panel with its details. */
-export function ContactsPage({ onOpenConversation, user, catalog = EMPTY }: Props) {
+export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realtime }: Props) {
   const [q, setQ] = useState(''),
     [scope, setScope] = useState<ContactScope>({ filters: null, viewId: null }),
     [items, setItems] = useState<Contact[]>([]),
@@ -45,6 +47,18 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY }: Prop
       .then(setSelected)
       .catch((e: Error) => setError(e.message));
   const replace = (c: Contact) => setItems((list) => list.map((x) => (x.id === c.id ? { ...x, ...c } : x)));
+  const remove = (id: number) => {
+    setSelected((current) => (current?.id === id ? null : current));
+    setItems((list) => list.filter((x) => x.id !== id));
+  };
+  useEffect(
+    () =>
+      realtime?.subscribe(({ event, data }) => {
+        if (event === 'contact.deleted') remove(Number(data.id));
+        if (event === 'contact.updated') replace(data as unknown as Contact);
+      }),
+    [realtime],
+  );
 
   return (
     <SettingsPage>
@@ -105,10 +119,7 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY }: Prop
             void load();
             open(base.id);
           }}
-          onDeleted={(id) => {
-            setSelected(null);
-            setItems((list) => list.filter((x) => x.id !== id));
-          }}
+          onDeleted={remove}
           onOpenConversation={onOpenConversation}
         />
       )}

@@ -1,5 +1,6 @@
-import { Search, Smile } from 'lucide-react';
-import type { Canned } from '../../types';
+import { AtSign, Search, Smile } from 'lucide-react';
+import type { Canned, User } from '../../types';
+import { Avatar } from '../../ui/Avatar';
 import { cn } from '../../ui/cn';
 import { Dropdown } from '../../ui/Overlay';
 
@@ -93,6 +94,46 @@ export function CannedList({ shortcut, options, highlight, onHighlight, onPick }
           {preview.content}
         </p>
       )}
+    </div>
+  );
+}
+
+interface MentionProps {
+  query: string;
+  options: User[];
+  highlight: number;
+  onHighlight: (index: number) => void;
+  onPick: (agent: User) => void;
+}
+
+/** Chatwoot TagAgents.vue: agents matching the "@query" typed in a private note. */
+export function MentionList({ query, options, highlight, onHighlight, onPick }: MentionProps) {
+  return (
+    <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-[320px] overflow-hidden rounded-xl border border-n-strong bg-n-alpha-3 shadow-lg backdrop-blur-[100px]">
+      <div className="flex h-9 items-center gap-2 border-b border-n-weak px-3 text-xs text-n-slate-11">
+        <AtSign size={14} /> Mencionar agente{query ? `: ${query}` : ''}
+      </div>
+      <ul role="listbox" aria-label="Mencionar agente" className="max-h-60 overflow-y-auto p-1">
+        {options.map((a, i) => (
+          <li key={a.id} role="option" aria-selected={i === highlight}>
+            <button
+              type="button"
+              onMouseEnter={() => onHighlight(i)}
+              onClick={() => onPick(a)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left',
+                i === highlight && 'bg-n-alpha-black2',
+              )}
+            >
+              <Avatar name={a.name} size={24} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-n-slate-12">{a.name}</span>
+                <span className="block truncate text-xs text-n-slate-11">{a.email}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

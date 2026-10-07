@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import { http } from '../api';
 import type { AutomationRule, Catalog } from '../types';
 import { ACTIONS, AUTOMATION_EVENTS } from '../labels';
@@ -54,16 +54,32 @@ export function AutomationPage({ catalog }: { catalog: Catalog }) {
                 }
               />
             </Cell>
-            <Cell className="w-24">
-              <RowActions
-                labelFor={r.name}
-                onDelete={() =>
-                  void run(async () => {
-                    await http(`/automation_rules/${r.id}`, 'DELETE');
-                    await load();
-                  })
-                }
-              />
+            <Cell className="w-32">
+              <div className="flex justify-end gap-1">
+                <Button
+                  color="slate"
+                  variant="faded"
+                  size="sm"
+                  icon={Copy}
+                  aria-label={`Clonar ${r.name}`}
+                  title="Clonar"
+                  onClick={() =>
+                    void run(async () => {
+                      await http(`/automation_rules/${r.id}/clone`, 'POST');
+                      await load();
+                    })
+                  }
+                />
+                <RowActions
+                  labelFor={r.name}
+                  onDelete={() =>
+                    void run(async () => {
+                      await http(`/automation_rules/${r.id}`, 'DELETE');
+                      await load();
+                    })
+                  }
+                />
+              </div>
             </Cell>
           </tr>
         ))}

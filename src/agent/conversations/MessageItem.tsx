@@ -6,7 +6,7 @@ import { Attachments } from './Attachments';
 import { MessageActions, type MessageHandlers } from './MessageActions';
 import { QuotedMessage, Reactions, RetryButton } from './MessageExtras';
 import { authorOf } from './messageText';
-import { formatWhatsApp } from './whatsappFormat';
+import { MessageBody } from './MessageBody';
 
 const time = (ts: number) =>
   new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -114,9 +114,7 @@ export function MessageItem({ message: m, quoted, handlers, currentUserId, highl
               ) : (
                 <>
                   <Attachments items={m.attachments || []} />
-                  {m.content && (
-                    <p className="break-words whitespace-pre-wrap">{formatWhatsApp(m.content)}</p>
-                  )}
+                  {m.content && <MessageBody content={m.content} />}
                 </>
               )}
               <p

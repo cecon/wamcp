@@ -76,6 +76,7 @@ const EVENTS = [
   'notification.created',
   'contact.created',
   'contact.updated',
+  'contact.deleted',
   'presence.update',
   'conversation.typing_on',
   'conversation.typing_off',

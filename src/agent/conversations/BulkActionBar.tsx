@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { CircleDot, Flag, Tag, UserRound, Users, X } from 'lucide-react';
+import { CircleDot, Flag, Tag, UserRound, Users, Workflow, X } from 'lucide-react';
 import { http } from '../api';
 import type { BulkResult, Catalog, ConversationStatus } from '../types';
 import { PRIORITY_LABEL } from '../labels';
+import { executeMacro, useMacros } from '../macros/useMacros';
+import type { Macro } from '../accountTypes';
 import { Button } from '../ui/Button';
 import { Dropdown, MenuItem } from '../ui/Overlay';
 
@@ -17,9 +19,9 @@ interface Change {
   fields?: Fields;
   labels?: { add?: string[]; remove?: string[] };
 }
-interface Option {
+interface Option<T = Change> {
   label: string;
-  change: Change;
+  change: T;
 }
 
 const STATUS_OPTIONS: Option[] = [
@@ -28,7 +30,7 @@ const STATUS_OPTIONS: Option[] = [
   { label: 'Marcar como pendente', change: { fields: { status: 'pending' } } },
 ];
 
-function Menu({
+function Menu<T>({
   icon,
   label,
   options,
@@ -36,8 +38,8 @@ function Menu({
 }: {
   icon: typeof Tag;
   label: string;
-  options: Option[];
-  onPick: (change: Change) => void;
+  options: Option<NoInfer<T>>[];
+  onPick: (change: T) => void;
 }) {
   return (
     <Dropdown
@@ -75,14 +77,19 @@ interface Props {
 /** Chatwoot BulkActionBar: select all, then status, agent, team, priority and labels for the selection. */
 export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, onDone }: Props) {
   const [result, setResult] = useState<ReactNode>(null);
-  async function apply(change: Change) {
+  const { macros } = useMacros();
+  function apply(change: Change) {
+    // "Adiar até amanhã" is timed when applied, not when the bar renders.
+    const fields =
+      change.fields?.status === 'snoozed'
+        ? { ...change.fields, snoozed_until: Math.floor(Date.now() / 1000) + 86400 }
+        : change.fields;
+    return report(http<BulkResult>('/bulk_actions', 'POST', { ids: selected, ...change, fields }));
+  }
+  /** Bulk actions and macros answer `{updated, failed}`; failures are listed per conversation. */
+  async function report(request: Promise<BulkResult>) {
     try {
-      // "Adiar até amanhã" is timed when applied, not when the bar renders.
-      const fields =
-        change.fields?.status === 'snoozed'
-          ? { ...change.fields, snoozed_until: Math.floor(Date.now() / 1000) + 86400 }
-          : change.fields;
-      const r = await http<BulkResult>('/bulk_actions', 'POST', { ids: selected, ...change, fields });
+      const r = await request;
       setResult(
         r.failed.length ? (
           <ul role="alert" className="text-xs text-n-ruby-11">
@@ -128,7 +135,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
             ...STATUS_OPTIONS,
             { label: 'Adiar até amanhã', change: { fields: { status: 'snoozed' } } },
           ]}
-          onPick={(c) => void apply(c)}
+          onPick={(c: Change) => void apply(c)}
         />
         <Menu
           icon={UserRound}
@@ -137,7 +144,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
             none('assignee_id', 'Remover agente'),
             ...catalog.agents.map((a) => ({ label: a.name, change: { fields: { assignee_id: a.id } } })),
           ]}
-          onPick={(c) => void apply(c)}
+          onPick={(c: Change) => void apply(c)}
         />
         <Menu
           icon={Users}
@@ -146,7 +153,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
             none('team_id', 'Remover time'),
             ...catalog.teams.map((t) => ({ label: t.name, change: { fields: { team_id: t.id } } })),
           ]}
-          onPick={(c) => void apply(c)}
+          onPick={(c: Change) => void apply(c)}
         />
         <Menu
           icon={Flag}
@@ -158,8 +165,16 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
               change: { fields: { priority: id } },
             })),
           ]}
-          onPick={(c) => void apply(c)}
+          onPick={(c: Change) => void apply(c)}
         />
+        {macros.length > 0 && (
+          <Menu
+            icon={Workflow}
+            label="Executar macro"
+            options={macros.map((m) => ({ label: m.name, change: m }))}
+            onPick={(m: Macro) => void report(executeMacro(m, selected))}
+          />
+        )}
         <Menu
           icon={Tag}
           label="Etiquetas"
@@ -167,7 +182,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
             { label: `Adicionar ${l.title}`, change: { labels: { add: [l.title] } } },
             { label: `Remover ${l.title}`, change: { labels: { remove: [l.title] } } },
           ])}
-          onPick={(c) => void apply(c)}
+          onPick={(c: Change) => void apply(c)}
         />
         <Button
           color="slate"

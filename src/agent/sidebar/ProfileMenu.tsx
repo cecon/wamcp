@@ -1,5 +1,6 @@
-import { Power } from 'lucide-react';
+import { Power, UserCog, Workflow } from 'lucide-react';
 import type { Availability, User } from '../types';
+import type { Route } from '../route';
 import { Avatar } from '../ui/Avatar';
 import { Dropdown, MenuItem } from '../ui/Overlay';
 import { cn } from '../ui/cn';
@@ -15,10 +16,11 @@ interface Props {
   online: boolean;
   onAvailability: (value: Availability) => void;
   onLogout: () => void;
+  onNavigate?: (route: Route) => void;
 }
 
 /** Chatwoot SidebarProfileMenu: avatar + name/email, opening availability and logout. */
-export function ProfileMenu({ user, online, onAvailability, onLogout }: Props) {
+export function ProfileMenu({ user, online, onAvailability, onLogout, onNavigate }: Props) {
   return (
     <div className="border-t border-n-weak px-1 py-1.5 shadow-[0_-2px_4px_rgba(27,28,29,0.02)]">
       <Dropdown
@@ -66,6 +68,26 @@ export function ProfileMenu({ user, online, onAvailability, onLogout }: Props) {
               />
             ))}
             <div className="my-1 h-px bg-n-weak" />
+            {onNavigate && (
+              <MenuItem
+                icon={UserCog}
+                label="Configurações do perfil"
+                onClick={() => {
+                  close();
+                  onNavigate({ page: 'profile' });
+                }}
+              />
+            )}
+            {onNavigate && user.role !== 'administrator' && (
+              <MenuItem
+                icon={Workflow}
+                label="Macros"
+                onClick={() => {
+                  close();
+                  onNavigate({ page: 'settings', section: 'macros' });
+                }}
+              />
+            )}
             <MenuItem icon={Power} label="Sair" onClick={onLogout} />
           </>
         )}

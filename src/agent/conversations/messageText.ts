@@ -1,4 +1,5 @@
 import type { AttachmentType, Message } from '../types';
+import { plainMentions } from './mentions';
 
 const MEDIA: Record<AttachmentType, string> = {
   image: '📷 Imagem',
@@ -21,7 +22,9 @@ export function authorOf(m: Message) {
 /** One-line preview (quotes, the reply-to bar): text, or the kind of media it carries. */
 export function snippet(m: Message) {
   if (m.content_attributes.deleted) return 'Esta mensagem foi apagada';
-  const text = (m.content || '').replace(/\s+/g, ' ').trim();
+  const text = plainMentions(m.content || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (text) return text;
   const first = m.attachments?.[0];
   if (!first) return '';

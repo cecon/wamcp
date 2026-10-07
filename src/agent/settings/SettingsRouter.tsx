@@ -8,6 +8,8 @@ import { AttributesPage } from './AttributesPage';
 import { CannedPage } from './CannedPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
+import { MacrosPage } from './MacrosPage';
+import { AuditLogPage } from './AuditLogPage';
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -34,7 +36,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <CannedPage />;
     case 'automation':
       return <AutomationPage catalog={catalog} />;
+    case 'macros':
+      return <MacrosPage user={user} catalog={catalog} />;
     case 'webhooks':
       return <WebhooksPage catalog={catalog} />;
+    case 'audit':
+      return <AuditLogPage />;
   }
 }

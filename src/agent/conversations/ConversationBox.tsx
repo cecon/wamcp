@@ -183,6 +183,7 @@ export function ConversationBox({
           disabled={conversation.status === 'resolved'}
           conversation={conversation}
           user={user}
+          agents={catalog.agents}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           onSent={upsertOne}
