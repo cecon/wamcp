@@ -1,27 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { http, query, timeAgo } from './api';
-import type { Contact } from './types';
-import { STATUS_LABEL } from './labels';
+import type { Catalog, Contact, User } from './types';
 import { Avatar } from './ui/Avatar';
-import { Button } from './ui/Button';
-import { SidePanel } from './ui/Overlay';
 import { Cell, SettingsHeader, SettingsPage, Table } from './ui/Settings';
+import { ContactDetail } from './contacts/ContactDetail';
+import { ContactsToolbar, type ContactScope } from './contacts/ContactsToolbar';
 
-/** Chatwoot Contacts: searchable list; a contact opens in a side panel with its conversations. */
-export function ContactsPage({ onOpenConversation }: { onOpenConversation: (displayId: number) => void }) {
+const EMPTY: Catalog = { inboxes: [], agents: [], teams: [], labels: [] };
+
+interface Props {
+  onOpenConversation: (displayId: number) => void;
+  user?: User;
+  catalog?: Catalog;
+}
+
+/** Chatwoot Contacts: searchable/filterable list; a contact opens in a side panel with its details. */
+export function ContactsPage({ onOpenConversation, user, catalog = EMPTY }: Props) {
   const [q, setQ] = useState(''),
+    [scope, setScope] = useState<ContactScope>({ filters: null, viewId: null }),
     [items, setItems] = useState<Contact[]>([]),
-    [selected, setSelected] = useState<Contact | null>(null);
+    [selected, setSelected] = useState<Contact | null>(null),
+    [error, setError] = useState('');
+  const isAdmin = user?.role === 'administrator';
+
+  const load = useCallback(
+    () =>
+      (scope.filters
+        ? http<Contact[]>('/contacts/filter', 'POST', { payload: scope.filters })
+        : http<Contact[]>(`/contacts${query({ q })}`)
+      )
+        .then((list) => {
+          setItems(list);
+          setError('');
+        })
+        .catch((e: Error) => setError(e.message)),
+    [q, scope],
+  );
   useEffect(() => {
-    const handle = setTimeout(
-      () =>
-        void http<Contact[]>(`/contacts${query({ q })}`)
-          .then(setItems)
-          .catch(() => {}),
-      q ? 250 : 0,
-    );
+    const handle = setTimeout(() => void load(), q ? 250 : 0);
     return () => clearTimeout(handle);
-  }, [q]);
+  }, [load, q]);
+  const open = (id: number) =>
+    void http<Contact>(`/contacts/${id}`)
+      .then(setSelected)
+      .catch((e: Error) => setError(e.message));
+  const replace = (c: Contact) => setItems((list) => list.map((x) => (x.id === c.id ? { ...x, ...c } : x)));
 
   return (
     <SettingsPage>
@@ -30,22 +53,38 @@ export function ContactsPage({ onOpenConversation }: { onOpenConversation: (disp
         description="Pessoas que falaram com a sua equipe pelo WhatsApp."
         search={{ value: q, onChange: setQ, placeholder: 'Pesquisar contatos…' }}
         count={`${items.length} contato${items.length === 1 ? '' : 's'}`}
+        action={
+          <ContactsToolbar
+            scope={scope}
+            catalog={catalog}
+            isAdmin={isAdmin}
+            onScope={setScope}
+            onCreated={(c) => {
+              setItems((list) => [c, ...list]);
+              open(c.id);
+            }}
+            onReload={() => void load()}
+            onError={setError}
+          />
+        }
       />
+      {error && (
+        <p role="alert" className="text-sm text-n-ruby-11">
+          {error}
+        </p>
+      )}
       <Table
         headers={['Nome', 'E-mail', 'Telefone', 'Última atividade']}
         rows={items.length}
         empty="Nenhum contato encontrado."
       >
         {items.map((c) => (
-          <tr
-            key={c.id}
-            onClick={() => void http<Contact>(`/contacts/${c.id}`).then(setSelected)}
-            className="cursor-pointer hover:bg-n-alpha-1"
-          >
+          <tr key={c.id} onClick={() => open(c.id)} className="cursor-pointer hover:bg-n-alpha-1">
             <Cell>
               <span className="flex items-center gap-3">
                 <Avatar name={c.name || c.phone_number} size={32} />
                 <span className="font-medium text-n-slate-12">{c.name || 'Sem nome'}</span>
+                {c.blocked ? <span className="text-xs text-n-ruby-11">Bloqueado</span> : null}
               </span>
             </Cell>
             <Cell>{c.email || '—'}</Cell>
@@ -56,94 +95,23 @@ export function ContactsPage({ onOpenConversation }: { onOpenConversation: (disp
       </Table>
       {selected && (
         <ContactDetail
+          key={selected.id}
           contact={selected}
+          catalog={catalog}
+          isAdmin={isAdmin}
           onClose={() => setSelected(null)}
-          onSaved={(c) => setItems((list) => list.map((x) => (x.id === c.id ? c : x)))}
+          onSaved={replace}
+          onMerged={(base) => {
+            void load();
+            open(base.id);
+          }}
+          onDeleted={(id) => {
+            setSelected(null);
+            setItems((list) => list.filter((x) => x.id !== id));
+          }}
           onOpenConversation={onOpenConversation}
         />
       )}
     </SettingsPage>
-  );
-}
-
-interface DetailProps {
-  contact: Contact;
-  onClose: () => void;
-  onSaved: (contact: Contact) => void;
-  onOpenConversation: (displayId: number) => void;
-}
-
-function ContactDetail({ contact, onClose, onSaved, onOpenConversation }: DetailProps) {
-  const [form, setForm] = useState({ name: contact.name || '', email: contact.email || '' }),
-    [message, setMessage] = useState('');
-  async function save() {
-    try {
-      const updated = await http<Contact>(`/contacts/${contact.id}`, 'PATCH', {
-        name: form.name.trim() || null,
-        email: form.email.trim() || null,
-      });
-      onSaved(updated);
-      setMessage('Contato salvo.');
-    } catch (e) {
-      setMessage((e as Error).message);
-    }
-  }
-  return (
-    <SidePanel title={contact.name || contact.phone_number || 'Contato'} onClose={onClose}>
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save();
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Avatar name={contact.name || contact.phone_number} size={48} />
-          <span className="text-sm text-n-slate-11">{contact.phone_number}</span>
-        </div>
-        <label>
-          <span className="field-label">Nome</span>
-          <input
-            className="field"
-            value={form.name}
-            maxLength={120}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">E-mail</span>
-          <input
-            className="field"
-            type="email"
-            value={form.email}
-            maxLength={200}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-        </label>
-        {message && <p className="text-sm text-n-slate-11">{message}</p>}
-        <Button type="submit" label="Salvar contato" className="self-start" />
-      </form>
-      <h3 className="text-heading-3 mt-8 mb-2">Conversas</h3>
-      {contact.conversations?.length ? (
-        <ul className="flex flex-col gap-1">
-          {contact.conversations.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                onClick={() => onOpenConversation(c.display_id)}
-                className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-n-alpha-2"
-              >
-                <span className="font-medium">#{c.display_id}</span>{' '}
-                <span className="text-n-slate-11">
-                  {c.inbox_name} · {STATUS_LABEL[c.status]} · {timeAgo(c.last_activity_at)}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-n-slate-11">Sem conversas visíveis para você.</p>
-      )}
-    </SidePanel>
   );
 }

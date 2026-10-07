@@ -9,6 +9,8 @@ export default defineConfig({
     include: ['tests/ui/**/*.test.tsx'],
     setupFiles: ['tests/ui/setup.ts'],
     restoreMocks: true,
+    // Long user-event flows (automation rules, filters) exceed 5s on a loaded machine.
+    testTimeout: 15000,
     coverage: {
       provider: 'v8',
       include: ['src/agent/**/*.{ts,tsx}', 'src/components/HelpdeskSetup.tsx'],

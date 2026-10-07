@@ -4,6 +4,7 @@ import { http, query, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
 import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
+import { ConversationMenu } from './ConversationMenu';
 import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
@@ -16,6 +17,7 @@ interface Props {
   realtime: Realtime;
   onBack: () => void;
   onOpen: (displayId: number) => void;
+  onDeleted?: () => void;
 }
 
 const upsert = (list: Message[], message: Message) =>
@@ -24,7 +26,15 @@ const upsert = (list: Message[], message: Message) =>
     : [...list, message].sort((a, b) => a.id - b.id);
 
 /** Chatwoot ConversationBox (header, messages, reply box) plus the contact panel on the right. */
-export function ConversationBox({ displayId, user, catalog, realtime, onBack, onOpen }: Props) {
+export function ConversationBox({
+  displayId,
+  user,
+  catalog,
+  realtime,
+  onBack,
+  onOpen,
+  onDeleted = onBack,
+}: Props) {
   const [conversation, setConversation] = useState<Conversation | null>(null),
     [messages, setMessages] = useState<Message[]>([]),
     [older, setOlder] = useState(false),
@@ -109,6 +119,16 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
           onBack={onBack}
           onTogglePanel={() => setPanel((v) => !v)}
           onStatus={(status, until) => void setStatus(status, until)}
+          menu={
+            <ConversationMenu
+              conversation={conversation}
+              isAdmin={user.role === 'administrator'}
+              onChange={setConversation}
+              onError={setError}
+              onLeave={onBack}
+              onDeleted={onDeleted}
+            />
+          }
         />
         {error && <p className="px-4 pt-2 text-sm text-n-ruby-11">{error}</p>}
         <div className="flex-1 overflow-y-auto pb-4">

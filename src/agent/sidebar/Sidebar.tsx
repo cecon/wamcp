@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import {
+  AtSign,
   Bolt,
+  Braces,
   ChartSpline,
   Contact,
+  Folder,
   Inbox as InboxIcon,
   Mailbox,
   MessageCircle,
+  MessageCircleDashed,
   MessageSquareText,
   Repeat,
   Search,
@@ -13,9 +17,11 @@ import {
   Tag,
   Tags,
   Users,
+  UsersRound,
   Webhook,
 } from 'lucide-react';
-import type { Catalog, User } from '../types';
+import type { Catalog, ConversationType, CustomFilter, User } from '../types';
+import { CONVERSATION_TYPE_LABEL } from '../labels';
 import type { Route, SettingsSection } from '../route';
 import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
@@ -25,15 +31,22 @@ const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt }[]
   { section: 'teams', label: 'Times', icon: Users },
   { section: 'inboxes', label: 'Caixas de entrada', icon: InboxIcon },
   { section: 'labels', label: 'Etiquetas', icon: Tags },
+  { section: 'attributes', label: 'Atributos personalizados', icon: Braces },
   { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
   { section: 'automation', label: 'Automação', icon: Repeat },
   { section: 'webhooks', label: 'Webhooks', icon: Webhook },
+];
+const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
+  { type: 'mentions', icon: AtSign },
+  { type: 'unattended', icon: MessageCircleDashed },
+  { type: 'participating', icon: UsersRound },
 ];
 type Group = 'conversations' | 'settings' | null;
 
 interface Props {
   user: User;
   catalog: Catalog;
+  views?: CustomFilter[];
   route: Route;
   unread: number;
   online: boolean;
@@ -46,6 +59,7 @@ interface Props {
 export function Sidebar({
   user,
   catalog,
+  views = [],
   route,
   unread,
   online,
@@ -57,7 +71,9 @@ export function Sidebar({
   const [expanded, setExpanded] = useState<Group>(route.page === 'settings' ? 'settings' : 'conversations');
   const [q, setQ] = useState('');
   const conv = route.page === 'conversations' ? route : null;
-  const allActive = Boolean(conv && !conv.inboxId && !conv.teamId && !conv.label);
+  const allActive = Boolean(
+    conv && !conv.inboxId && !conv.teamId && !conv.label && !conv.conversationType && !conv.filters,
+  );
   const open = (group: Group, target: Route) => {
     setExpanded(group);
     onNavigate(target);
@@ -124,6 +140,26 @@ export function Sidebar({
               active={allActive}
               onClick={() => onNavigate({ page: 'conversations' })}
             />
+            {TYPES.map(({ type, icon: Icon }) => (
+              <SidebarLeaf
+                key={type}
+                label={CONVERSATION_TYPE_LABEL[type]}
+                icon={<Icon size={16} />}
+                active={conv?.conversationType === type}
+                onClick={() => onNavigate({ page: 'conversations', conversationType: type })}
+              />
+            ))}
+            {views.length > 0 && <SidebarSeparator icon={Folder} label="Pastas" />}
+            {views.map((v) => (
+              <SidebarLeaf
+                key={`v${v.id}`}
+                label={v.name}
+                active={conv?.viewId === v.id}
+                onClick={() =>
+                  onNavigate({ page: 'conversations', viewId: v.id, filters: v.query?.payload || [] })
+                }
+              />
+            ))}
             {catalog.teams.length > 0 && <SidebarSeparator icon={Users} label="Times" />}
             {catalog.teams.map((t) => (
               <SidebarLeaf

@@ -41,6 +41,21 @@ export async function upload<T>(path: string, form: FormData): Promise<T> {
   return data as T;
 }
 
+/** Downloads a file served by the API (transcripts, CSV exports) through a temporary link. */
+export async function download(path: string, filename: string) {
+  const response = await fetch(`/api/v1${path}`, { credentials: 'same-origin' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error || 'Não foi possível baixar o arquivo.', response.status);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export const query = (params: Record<string, string | number | undefined | null>) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params))

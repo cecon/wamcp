@@ -4,6 +4,7 @@ import { AgentsPage } from './AgentsPage';
 import { TeamsPage } from './TeamsPage';
 import { InboxesPage } from './InboxesPage';
 import { LabelsPage } from './LabelsPage';
+import { AttributesPage } from './AttributesPage';
 import { CannedPage } from './CannedPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
@@ -27,6 +28,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <InboxesPage catalog={catalog} inboxId={route.id} onNavigate={onNavigate} onChange={onChange} />;
     case 'labels':
       return <LabelsPage catalog={catalog} onChange={onChange} />;
+    case 'attributes':
+      return <AttributesPage />;
     case 'canned':
       return <CannedPage />;
     case 'automation':

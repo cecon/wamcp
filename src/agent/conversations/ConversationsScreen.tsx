@@ -1,22 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
-import { http, query, type Realtime } from '../api';
-import type { Catalog, Conversation, Meta, User } from '../types';
+import type { Realtime } from '../api';
+import type { Catalog, CustomFilter, User } from '../types';
 import type { Route } from '../route';
+import { CONVERSATION_TYPE_LABEL } from '../labels';
 import { cn } from '../ui/cn';
 import { ChatList, type AssigneeType, type StatusFilter } from './ChatList';
 import { ConversationBox } from './ConversationBox';
+import { ConversationFilters } from './ConversationFilters';
+import { useConversationList } from './useConversationList';
 
 type ConversationsRoute = Extract<Route, { page: 'conversations' }>;
-const REFRESH = new Set([
-  'conversation.created',
-  'conversation.updated',
-  'conversation.status_changed',
-  'conversation.bot_handoff',
-  'assignee.changed',
-  'team.changed',
-  'message.created',
-]);
 
 interface Props {
   route: ConversationsRoute;
@@ -24,78 +18,70 @@ interface Props {
   catalog: Catalog;
   realtime: Realtime;
   onNavigate: (route: Route) => void;
+  /** Saved conversation views (sidebar folders) and a callback to reload them after changes. */
+  views?: CustomFilter[];
+  onViewsChange?: () => void;
+}
+
+function listTitle(route: ConversationsRoute, catalog: Catalog, view?: CustomFilter) {
+  const { inboxId, teamId, label, q, conversationType, filters } = route;
+  if (view) return view.name;
+  if (filters) return 'Resultados do filtro';
+  if (conversationType) return CONVERSATION_TYPE_LABEL[conversationType];
+  if (inboxId) return catalog.inboxes.find((i) => i.id === inboxId)?.name || 'Caixa de entrada';
+  if (teamId) return catalog.teams.find((t) => t.id === teamId)?.name || 'Time';
+  if (label) return `#${label}`;
+  return q ? `Busca: “${q}”` : 'Conversas';
 }
 
 /** Chatwoot ConversationView: ChatList | ConversationBox | ContactPanel. */
-export function ConversationsScreen({ route, user, catalog, realtime, onNavigate }: Props) {
+export function ConversationsScreen({
+  route,
+  user,
+  catalog,
+  realtime,
+  onNavigate,
+  views = [],
+  onViewsChange = () => {},
+}: Props) {
   const [status, setStatus] = useState<StatusFilter>('open'),
     [tab, setTab] = useState<AssigneeType>('me'),
-    [items, setItems] = useState<Conversation[]>([]),
-    [meta, setMeta] = useState<Meta>({ mine: 0, unassigned: 0, all: 0 }),
-    [page, setPage] = useState(1),
-    [hasMore, setHasMore] = useState(false),
-    [error, setError] = useState('');
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const { inboxId, teamId, label, q, displayId } = route;
-
-  const load = useCallback(
-    async (nextPage = 1) => {
-      const base = { status, inbox_id: inboxId, team_id: teamId, label, q };
-      const [list, counts] = await Promise.all([
-        http<Conversation[]>(`/conversations${query({ ...base, assignee_type: tab, page: nextPage })}`),
-        http<Meta>(`/conversations/meta${query(base)}`),
-      ]);
-      setItems((current) => (nextPage === 1 ? list : [...current, ...list]));
-      setHasMore(list.length === 25);
-      setPage(nextPage);
-      setMeta(counts);
-      setError('');
-    },
-    [status, tab, inboxId, teamId, label, q],
-  );
-  useEffect(() => {
-    const handle = setTimeout(() => void load().catch((e: Error) => setError(e.message)), 0);
-    return () => clearTimeout(handle);
-  }, [load]);
-  useEffect(
-    () =>
-      realtime.subscribe(({ event }) => {
-        if (!REFRESH.has(event)) return;
-        clearTimeout(timer.current);
-        // Bursts (message + activity + assignment) collapse into one refresh.
-        timer.current = setTimeout(() => void load().catch(() => {}), 300);
-      }),
-    [realtime, load],
-  );
-
-  const title = inboxId
-    ? catalog.inboxes.find((i) => i.id === inboxId)?.name || 'Caixa de entrada'
-    : teamId
-      ? catalog.teams.find((t) => t.id === teamId)?.name || 'Time'
-      : label
-        ? `#${label}`
-        : q
-          ? `Busca: “${q}”`
-          : 'Conversas';
+    [sort, setSort] = useState('last_activity_at_desc');
+  const list = useConversationList({ route, status, tab, sort, realtime });
+  const { displayId } = route;
+  const view = route.viewId ? views.find((v) => v.id === route.viewId) : undefined;
   const select = (id: number | undefined) => onNavigate({ ...route, displayId: id });
 
   return (
     <div className="flex h-full w-full">
       <div className={cn('h-full w-full md:w-auto', displayId ? 'hidden md:block' : false)}>
         <ChatList
-          title={title}
-          items={items}
-          meta={meta}
+          title={listTitle(route, catalog, view)}
+          items={list.items}
+          meta={list.meta}
           status={status}
           tab={tab}
+          sort={sort}
+          filtering={Boolean(route.filters)}
+          toolbar={
+            <ConversationFilters
+              route={route}
+              catalog={catalog}
+              view={view}
+              onNavigate={onNavigate}
+              onViewsChange={onViewsChange}
+            />
+          }
           catalog={catalog}
           selected={displayId}
-          hasMore={hasMore}
-          error={error}
+          hasMore={list.hasMore}
+          error={list.error}
           onStatus={setStatus}
           onTab={setTab}
+          onSort={setSort}
           onSelect={select}
-          onMore={() => void load(page + 1)}
+          onMore={list.more}
+          onReload={list.reload}
         />
       </div>
       {displayId ? (
@@ -107,6 +93,10 @@ export function ConversationsScreen({ route, user, catalog, realtime, onNavigate
           realtime={realtime}
           onBack={() => select(undefined)}
           onOpen={select}
+          onDeleted={() => {
+            list.reload();
+            select(undefined);
+          }}
         />
       ) : (
         <div className="hidden flex-1 flex-col items-center justify-center gap-2 border-l border-n-weak bg-n-surface-1 text-n-slate-11 md:flex">

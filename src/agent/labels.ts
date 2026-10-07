@@ -1,4 +1,4 @@
-import type { ConversationStatus } from './types';
+import type { AttributeDisplayType, ConversationStatus, ConversationType, FilterType } from './types';
 
 export const STATUS_LABEL: Record<ConversationStatus | 'all', string> = {
   open: 'Abertas',
@@ -60,4 +60,40 @@ export const PRIORITY_LABEL: Record<string, string> = {
   medium: 'Média',
   high: 'Alta',
   urgent: 'Urgente',
+};
+/** Advanced filter operators (automation rules use the first six). */
+export const FILTER_OPERATORS: Record<string, string> = {
+  ...OPERATORS,
+  is_greater_than: 'é maior que',
+  is_less_than: 'é menor que',
+  days_before: 'há mais de (dias)',
+};
+export const SORT_LABEL: Record<string, string> = {
+  last_activity_at_desc: 'Última atividade: mais recentes',
+  last_activity_at_asc: 'Última atividade: mais antigas',
+  created_at_desc: 'Criação: mais recentes',
+  created_at_asc: 'Criação: mais antigas',
+  priority_desc: 'Prioridade: mais alta primeiro',
+  priority_asc: 'Prioridade: mais baixa primeiro',
+  waiting_since_asc: 'Aguardando resposta: há mais tempo',
+  waiting_since_desc: 'Aguardando resposta: há menos tempo',
+};
+export const CONVERSATION_TYPE_LABEL: Record<ConversationType, string> = {
+  mentions: 'Menções',
+  unattended: 'Não atendidas',
+  participating: 'Participando',
+};
+export const ATTRIBUTE_TYPE_LABEL: Record<AttributeDisplayType, string> = {
+  text: 'Texto',
+  number: 'Número',
+  currency: 'Moeda',
+  percent: 'Porcentagem',
+  link: 'Link',
+  date: 'Data',
+  list: 'Lista',
+  checkbox: 'Caixa de seleção',
+};
+export const ATTRIBUTE_MODEL_LABEL: Record<FilterType, string> = {
+  conversation: 'Conversa',
+  contact: 'Contato',
 };

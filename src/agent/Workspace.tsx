@@ -8,6 +8,7 @@ import { NotificationsPage } from './NotificationsPage';
 import { ContactsPage } from './ContactsPage';
 import { Reports } from './Reports';
 import { SettingsRouter } from './settings/SettingsRouter';
+import { useSavedViews } from './filters/useSavedViews';
 
 interface Props {
   user: User;
@@ -23,6 +24,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     [unread, setUnread] = useState(0);
   const [realtime] = useState<Realtime>(() => connectRealtime(setOnline));
   useEffect(() => () => realtime.close(), [realtime]);
+  const { views, reload: reloadViews } = useSavedViews('conversation');
 
   const reloadCatalog = useCallback(async () => {
     const [inboxes, agents, teams, labels] = await Promise.all([
@@ -74,6 +76,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
       <Sidebar
         user={user}
         catalog={catalog}
+        views={views}
         route={route}
         unread={unread}
         online={online}
@@ -89,6 +92,8 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             catalog={catalog}
             realtime={realtime}
             onNavigate={setRoute}
+            views={views}
+            onViewsChange={() => void reloadViews()}
           />
         )}
         {route.page === 'notifications' && (
@@ -99,7 +104,11 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         )}
         {route.page === 'contacts' && (
-          <ContactsPage onOpenConversation={(displayId) => setRoute({ page: 'conversations', displayId })} />
+          <ContactsPage
+            user={user}
+            catalog={catalog}
+            onOpenConversation={(displayId) => setRoute({ page: 'conversations', displayId })}
+          />
         )}
         {route.page === 'reports' && isAdmin && <Reports catalog={catalog} />}
         {route.page === 'settings' && isAdmin && (

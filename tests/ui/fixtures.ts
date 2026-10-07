@@ -1,4 +1,13 @@
-import type { Attachment, Conversation, Inbox, Label, Message, Team, User } from '../../src/agent/types';
+import type {
+  AttributeDefinition,
+  Attachment,
+  Conversation,
+  Inbox,
+  Label,
+  Message,
+  Team,
+  User,
+} from '../../src/agent/types';
 import type { Route } from './fake-api';
 
 export const admin: User = {
@@ -111,6 +120,10 @@ export function workspaceRoutes(user: User = admin): Record<string, Route> {
     'GET /conversations/7/messages': [message(1), message(2, { content: 'Alguém aí?' })],
     'POST /conversations/7/update_last_seen': { ...conversation, unread_count: 0 },
     'GET /contacts/50': contact,
+    'GET /contacts/50/notes': [],
+    'GET /conversations/7/participants': [],
+    'GET /custom_filters': [],
+    'GET /custom_attribute_definitions': [],
   };
 }
 
@@ -125,5 +138,18 @@ export const attachment = (id: number, fields: Partial<Attachment> = {}): Attach
   voice: false,
   downloaded: true,
   data_url: `/api/v1/attachments/${id}`,
+  ...fields,
+});
+
+export const definition = (id: number, fields: Partial<AttributeDefinition> = {}): AttributeDefinition => ({
+  id,
+  attribute_display_name: `Atributo ${id}`,
+  attribute_key: `attr_${id}`,
+  attribute_model: 'conversation',
+  attribute_display_type: 'text',
+  attribute_description: null,
+  attribute_values: [],
+  regex_pattern: null,
+  regex_cue: null,
   ...fields,
 });

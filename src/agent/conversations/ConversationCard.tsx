@@ -1,4 +1,12 @@
-import { AlertTriangle, MessageCircle, SignalHigh, SignalLow, SignalMedium, UserRound } from 'lucide-react';
+import {
+  AlertTriangle,
+  BellOff,
+  MessageCircle,
+  SignalHigh,
+  SignalLow,
+  SignalMedium,
+  UserRound,
+} from 'lucide-react';
 import { timeAgo } from '../api';
 import type { Conversation, Label } from '../types';
 import { Avatar } from '../ui/Avatar';
@@ -16,15 +24,39 @@ interface Props {
   labels: Label[];
   selected: boolean;
   onSelect: () => void;
+  /** Bulk selection checkbox over the avatar (on hover, always while selecting). */
+  checked?: boolean;
+  selecting?: boolean;
+  onCheck?: (checked: boolean) => void;
 }
 
 /** Chatwoot ConversationCard (condensed): meta row, name, preview, labels; time and unread at top-right. */
-export function ConversationCard({ conversation: c, labels, selected, onSelect }: Props) {
+export function ConversationCard({
+  conversation: c,
+  labels,
+  selected,
+  onSelect,
+  checked = false,
+  selecting = false,
+  onCheck,
+}: Props) {
   const unread = c.unread_count > 0;
   const name = c.contact_name || c.contact_phone || 'Contato';
   const color = (title: string) => labels.find((l) => l.title === title)?.color || '#8B8D98';
   return (
-    <li>
+    <li className="group relative">
+      {onCheck && (
+        <input
+          type="checkbox"
+          aria-label={`Selecionar conversa #${c.display_id}`}
+          checked={checked}
+          onChange={(e) => onCheck(e.target.checked)}
+          className={cn(
+            'absolute top-10 left-5 z-10 size-4 cursor-pointer',
+            selecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100',
+          )}
+        />
+      )}
       <button
         type="button"
         onClick={onSelect}
@@ -45,7 +77,16 @@ export function ConversationCard({ conversation: c, labels, selected, onSelect }
                 <span className="truncate">{c.assignee_name}</span>
               </span>
             )}
-            {c.priority && <span className="ml-auto shrink-0">{PRIORITY[c.priority]}</span>}
+            {c.muted ? (
+              <BellOff
+                size={14}
+                className="ml-auto shrink-0 text-n-slate-10"
+                aria-label="Conversa silenciada"
+              />
+            ) : null}
+            {c.priority && (
+              <span className={cn('shrink-0', !c.muted && 'ml-auto')}>{PRIORITY[c.priority]}</span>
+            )}
           </span>
           <span
             className={cn(

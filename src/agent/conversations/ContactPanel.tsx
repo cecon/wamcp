@@ -1,41 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { AtSign, Mail, Minus, Phone, Plus, X } from 'lucide-react';
+import { AtSign, Mail, Phone, X } from 'lucide-react';
 import { http, timeAgo } from '../api';
-import type { Catalog, Contact, Conversation, User } from '../types';
+import type { Catalog, Contact, Conversation, FilterValue, User } from '../types';
 import { STATUS_LABEL } from '../labels';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
+import { AttributesSection } from '../attributes/AttributesSection';
+import { Accordion } from '../ui/Accordion';
 import { ConversationActions } from './ConversationActions';
-
-function Accordion({
-  title,
-  open: initial = false,
-  children,
-}: {
-  title: string;
-  open?: boolean;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(initial);
-  return (
-    <section>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-lg bg-n-slate-2 px-4 py-2 text-sm text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak"
-      >
-        {title}
-        {open ? (
-          <Minus size={16} className="text-n-blue-11" />
-        ) : (
-          <Plus size={16} className="text-n-blue-11" />
-        )}
-      </button>
-      {open && <div className="rounded-b-lg px-2 py-4">{children}</div>}
-    </section>
-  );
-}
+import { ParticipantsSection } from './ParticipantsSection';
 
 const Row = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
   <p className="flex min-w-0 items-center gap-2 text-sm text-n-slate-11">
@@ -71,6 +44,17 @@ export function ContactPanel({
       .catch(() => setContact(null));
   }, [c.contact_id, c.id]);
   const name = c.contact_name || c.contact_phone || 'Contato';
+  const saveConversationAttribute = async (key: string, value: FilterValue | null) =>
+    onChange(
+      await http<Conversation>(`/conversations/${c.display_id}/custom_attributes`, 'POST', {
+        custom_attributes: { [key]: value },
+      }),
+    );
+  const saveContactAttribute = async (key: string, value: FilterValue | null) =>
+    setContact({
+      ...contact,
+      ...(await http<Contact>(`/contacts/${c.contact_id}`, 'PATCH', { custom_attributes: { [key]: value } })),
+    });
   const previous = (contact?.conversations || []).filter((p) => p.id !== c.id);
 
   return (
@@ -97,6 +81,23 @@ export function ContactPanel({
             catalog={catalog}
             onChange={onChange}
             onError={onError}
+          />
+        </Accordion>
+        <Accordion title="Participantes da conversa">
+          <ParticipantsSection conversation={c} user={user} catalog={catalog} onError={onError} />
+        </Accordion>
+        <Accordion title="Atributos da conversa">
+          <AttributesSection
+            model="conversation"
+            values={c.custom_attributes}
+            onSave={saveConversationAttribute}
+          />
+        </Accordion>
+        <Accordion title="Atributos do contato">
+          <AttributesSection
+            model="contact"
+            values={contact?.custom_attributes}
+            onSave={saveContactAttribute}
           />
         </Accordion>
         <Accordion title="Informações da conversa">
