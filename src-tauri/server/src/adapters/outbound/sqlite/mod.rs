@@ -2,6 +2,8 @@
 mod attachments;
 mod automation;
 mod catalog;
+mod contact_book;
+mod contacts;
 mod conversations;
 mod custom;
 mod db;

@@ -1,5 +1,7 @@
 use crate::domain::error::Result;
-use crate::domain::model::{Credentials, Team, TeamFields, TokenOwner, User, UserChanges, WebSession};
+use crate::domain::model::{
+    Contact, ContactChannel, ContactNote, Credentials, Team, TeamFields, TokenOwner, User, UserChanges, WebSession,
+};
 
 /// Users, web sessions, API tokens, teams and inbox membership.
 pub trait UsersRepo {
@@ -44,4 +46,21 @@ pub trait TeamsRepo {
     fn assignable_ids(&self, inbox_id: i64, team_id: Option<i64>) -> Result<Vec<i64>>;
     fn assignment_cursor(&self, inbox_id: i64) -> Result<Option<i64>>;
     fn set_assignment_cursor(&self, inbox_id: i64, user_id: i64) -> Result<()>;
+}
+
+/// Contact book: notes, labels, channels, deletion, merging and export.
+pub trait ContactBookRepo {
+    fn contact_notes(&self, contact_id: i64) -> Result<Vec<ContactNote>>;
+    fn contact_note(&self, id: i64) -> Result<Option<ContactNote>>;
+    fn create_contact_note(&self, contact_id: i64, user_id: Option<i64>, content: &str, at: i64)
+        -> Result<ContactNote>;
+    fn delete_contact_note(&self, id: i64) -> Result<()>;
+    fn set_contact_labels(&self, contact_id: i64, label_ids: &[i64]) -> Result<()>;
+    fn set_contact_avatar(&self, contact_id: i64, url: Option<&str>) -> Result<()>;
+    fn contact_channels(&self, contact_id: i64) -> Result<Vec<ContactChannel>>;
+    fn delete_contact(&self, id: i64) -> Result<()>;
+    /// Moves channels, conversations, labels, notes and CSAT answers to `base`, then deletes `mergee`.
+    fn merge_contacts(&self, base: i64, mergee: i64) -> Result<()>;
+    /// Contacts ordered by id, after `after_id` (for exports).
+    fn contacts_after(&self, after_id: i64, limit: i64) -> Result<Vec<Contact>>;
 }

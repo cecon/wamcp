@@ -24,6 +24,7 @@ pub trait Repository:
     + TeamsRepo
     + InboxRepo
     + ContactRepo
+    + ContactBookRepo
     + ConversationRepo
     + MessageRepo
     + AttachmentRepo
@@ -45,6 +46,7 @@ impl<T> Repository for T where
         + TeamsRepo
         + InboxRepo
         + ContactRepo
+        + ContactBookRepo
         + ConversationRepo
         + MessageRepo
         + AttachmentRepo

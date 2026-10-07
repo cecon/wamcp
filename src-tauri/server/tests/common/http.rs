@@ -130,3 +130,39 @@ impl Fixture {
         })
     }
 }
+
+pub const BOUNDARY: &str = "XBOUNDARYX";
+
+/// A multipart body with text fields and `(field, file name, mime, bytes)` files.
+pub fn multipart(fields: &[(&str, &str)], files: &[(&str, &str, &str, &[u8])]) -> Vec<u8> {
+    let mut body = Vec::new();
+    for (name, value) in fields {
+        body.extend(
+            format!("--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").bytes(),
+        );
+    }
+    for (name, file, mime, bytes) in files {
+        let head = format!(
+            "--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"{name}\"; filename=\"{file}\"\r\nContent-Type: {mime}\r\n\r\n"
+        );
+        body.extend(head.bytes());
+        body.extend_from_slice(bytes);
+        body.extend(b"\r\n");
+    }
+    body.extend(format!("--{BOUNDARY}--\r\n").bytes());
+    body
+}
+
+/// POSTs a multipart body as the agent.
+pub async fn send_multipart(agent: &Agent, path: &str, body: Vec<u8>) -> Reply {
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1{path}"))
+        .header("host", "wamcp.test")
+        .header("cookie", &agent.cookie)
+        .header("x-csrf-token", &agent.csrf)
+        .header("content-type", format!("multipart/form-data; boundary={BOUNDARY}"))
+        .body(Body::from(body))
+        .unwrap();
+    send(&agent.router, request).await
+}

@@ -1,11 +1,11 @@
 //! Conversations, messages and contacts under /api/v1 (requires an authenticated agent).
 use super::auth::CurrentUser;
 use super::error::{ok, ApiError, ApiResult};
-use super::input::{check, email, id, int_param, nullable_text, one_of, optional_id, text, Body, Query};
+use super::input::{check, id, int_param, one_of, optional_id, text, Body, Query};
 use super::state::AppState;
 use crate::application::ports::HistoryPage;
 use crate::domain::helpdesk::{CONVERSATION_TYPES, PRIORITIES, SORTS, STATUSES};
-use crate::domain::model::{ContactChanges, ConversationFilters};
+use crate::domain::model::ConversationFilters;
 use axum::extract::{Path, Query as Params, State};
 use axum::response::Response;
 use axum::routing::{get, post};
@@ -187,57 +187,6 @@ async fn labels(
         .set_labels(&current.actor(), id(&display)?, &body.labels)?)
 }
 
-async fn contacts(
-    State(state): State<AppState>,
-    _user: CurrentUser,
-    Params(query): Params<Query>,
-) -> ApiResult<Response> {
-    let q = text(query.get("q").map_or("", String::as_str), 0, 100)?;
-    let page = int_param(&query, "page", 1, 1, 10_000)?;
-    ok(state.support().helpdesk.contacts(&q, page)?)
-}
-
-async fn contact(
-    State(state): State<AppState>,
-    current: CurrentUser,
-    Path(contact): Path<String>,
-) -> ApiResult<Response> {
-    ok(state.support().helpdesk.contact(&current.actor(), id(&contact)?)?)
-}
-
-#[derive(Deserialize)]
-struct ContactUpdate {
-    #[serde(flatten)]
-    changes: ContactChanges,
-    custom_attributes: Option<serde_json::Map<String, serde_json::Value>>,
-}
-
-async fn update_contact(
-    State(state): State<AppState>,
-    current: CurrentUser,
-    Path(contact): Path<String>,
-    Body(update): Body<ContactUpdate>,
-) -> ApiResult<Response> {
-    let body = update.changes;
-    let address = match body.email.clone() {
-        Some(Some(value)) => Some(Some(email(&value)?)),
-        other => other,
-    };
-    let changes = ContactChanges {
-        name: nullable_text(body.name.clone(), 120)?,
-        email: address,
-        identifier: nullable_text(body.identifier.clone(), 120)?,
-        blocked: body.blocked,
-        last_activity_at: None,
-    };
-    let (helpdesk, actor, contact) = (&state.support().helpdesk, current.actor(), id(&contact)?);
-    let updated = helpdesk.update_contact(&actor, contact, &changes)?;
-    match update.custom_attributes {
-        Some(attributes) => ok(helpdesk.set_contact_attributes(&actor, contact, &attributes)?),
-        None => ok(updated),
-    }
-}
-
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/conversations", get(list))
@@ -249,6 +198,4 @@ pub fn routes() -> Router<AppState> {
         .route("/conversations/{id}/assignments", post(assign))
         .route("/conversations/{id}/toggle_priority", post(priority))
         .route("/conversations/{id}/labels", post(labels))
-        .route("/contacts", get(contacts))
-        .route("/contacts/{id}", get(contact).patch(update_contact))
 }

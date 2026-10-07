@@ -2,6 +2,7 @@
 pub mod access;
 pub mod actor;
 pub mod automation;
+pub mod contacts;
 pub mod csat;
 pub mod error;
 pub mod events;

@@ -4,6 +4,8 @@ mod admin;
 pub mod auth;
 mod automation;
 mod catalog;
+mod contact_book;
+mod contacts;
 mod conversation_tools;
 mod conversations;
 mod custom_data;
@@ -41,6 +43,8 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(accounts::routes())
         .merge(teams::routes())
         .merge(conversations::routes())
+        .merge(contacts::routes())
+        .merge(contact_book::routes())
         .merge(conversation_tools::routes())
         .merge(custom_data::routes())
         .merge(messages::routes())

@@ -75,6 +75,10 @@ pub struct Contact {
     pub blocked: i64,
     pub last_activity_at: Option<i64>,
     pub created: String,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub labels: Vec<String>,
 }
 
 /// Editable contact columns; `Some(None)` clears a nullable column.
@@ -86,6 +90,8 @@ pub struct ContactChanges {
     pub email: Option<Option<String>>,
     #[serde(default, deserialize_with = "super::nullable")]
     pub identifier: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub phone_number: Option<Option<String>>,
     pub blocked: Option<bool>,
     #[serde(skip)]
     pub last_activity_at: Option<i64>,

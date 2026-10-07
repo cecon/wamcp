@@ -165,6 +165,10 @@ impl HelpdeskService {
         let Some(ci) = self.contact_inbox_for(&inbox, d, events)? else {
             return Ok(None);
         };
+        // Blocked contacts are kept out of the helpdesk (the message stays in the WhatsApp mirror).
+        if !d.from_me && repo.contact(ci.contact_id)?.is_some_and(|c| c.blocked != 0) {
+            return Ok(None);
+        }
         let latest = repo.latest_conversation(ci.id)?;
         if let Some(message) = self.capture_csat(latest.as_ref(), &ci, d, events)? {
             return Ok(message);

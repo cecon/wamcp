@@ -66,3 +66,22 @@ Atributos de conversa: `status`, `assignee_id`, `inbox_id`, `team_id`, `labels`,
 Tipos de atributo: `text`, `number`, `currency`, `percent`, `link`, `date` (`AAAA-MM-DD`), `list` (valor deve estar em
 `attribute_values`) e `checkbox`. `regex_pattern` valida textos e `regex_cue` é a dica exibida ao agente.
 `custom_attributes` agora é um objeto JSON nas conversas e contatos.
+
+## Contatos
+
+| Método   | Rota                          | Descrição                                                                                                                  |
+| -------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| POST     | `/contacts`                   | Cria contato `{ name, phone_number, email, identifier }`; telefone normalizado para `+DDI...` e único                      |
+| PATCH    | `/contacts/{id}`              | Edita nome, e-mail, identificador, telefone, `blocked` (bloqueia também no WhatsApp) e `custom_attributes`                 |
+| DELETE   | `/contacts/{id}`              | Administrador; remove o contato e as conversas dele                                                                        |
+| GET/POST | `/contacts/{id}/notes`        | Notas do contato `{ content }`                                                                                             |
+| DELETE   | `/contacts/{id}/notes/{note}` | Autor ou administrador                                                                                                     |
+| POST     | `/contacts/{id}/labels`       | `{ labels: [...] }` (etiquetas existentes)                                                                                 |
+| POST     | `/contacts/{id}/avatar`       | Busca a foto de perfil do WhatsApp (`avatar_url`)                                                                          |
+| POST     | `/actions/contact_merge`      | `{ base_contact_id, mergee_contact_id }`: o base mantém seus dados e recebe canais, conversas, notas e etiquetas           |
+| GET      | `/contacts/export`            | CSV (administrador): `name,phone_number,email,identifier,labels`                                                           |
+| POST     | `/contacts/import`            | Multipart com `import_file` (administrador); atualiza pelo telefone; responde `{ created, updated, failed[{line,error}] }` |
+| POST     | `/conversations`              | `{ contact_id, inbox_id, message: { content } }`: inicia (ou reabre a conversa aberta) e envia a primeira mensagem         |
+
+Mensagens de contatos bloqueados não entram no atendimento (continuam no espelho do WhatsApp). Contatos agora expõem
+`labels` e `avatar_url`. Eventos: `contact.created`, `contact.updated` e `contact.deleted`.

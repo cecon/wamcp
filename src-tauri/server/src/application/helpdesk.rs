@@ -93,15 +93,11 @@ impl HelpdeskService {
 
     pub fn update_contact(&self, actor: &Actor, id: i64, changes: &ContactChanges) -> Result<Contact> {
         self.find_contact(id)?;
+        if let Some(phone) = &changes.phone_number {
+            self.ensure_free_phone(phone.as_deref(), id)?;
+        }
         let updated = self.core.repo.update_contact(id, changes)?;
         self.core.emit("contact.updated", &updated, Some(actor));
         Ok(updated)
-    }
-
-    fn find_contact(&self, id: i64) -> Result<Contact> {
-        self.core
-            .repo
-            .contact(id)?
-            .ok_or_else(|| HelpdeskError::not_found("Contato não encontrado").into())
     }
 }

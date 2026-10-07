@@ -29,5 +29,12 @@ pub fn steps() -> Vec<String> {
            attribute_display_type TEXT NOT NULL,attribute_description TEXT,attribute_values TEXT NOT NULL DEFAULT '[]',
            regex_pattern TEXT,regex_cue TEXT,created TEXT NOT NULL,UNIQUE(attribute_key,attribute_model));"
             .into(),
+        // v12: notas de contato e foto de perfil do WhatsApp
+        "CREATE TABLE contact_notes(id INTEGER PRIMARY KEY,
+           contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+           user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,content TEXT NOT NULL,created_at INTEGER NOT NULL);
+         CREATE INDEX contact_notes_contact ON contact_notes(contact_id,created_at);
+         ALTER TABLE contacts ADD COLUMN avatar_url TEXT;"
+            .into(),
     ]
 }

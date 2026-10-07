@@ -1,7 +1,8 @@
 //! Advanced filters: translates validated conditions into a parameterised WHERE clause.
+use super::contacts::{CONTACT, CONTACT_SELECT};
 use super::conversations::{order, SELECT, SHAPE};
 use super::db::{int, placeholders, text, SqliteStore};
-use super::inboxes::{CONTACT, PAGE};
+use super::inboxes::PAGE;
 use crate::domain::error::Result;
 use crate::domain::filters::attribute_kind;
 use crate::domain::model::{Condition, Contact, Conversation, FilterQuery};
@@ -181,7 +182,7 @@ impl SqliteStore {
     pub(super) fn filtered_contacts(&self, query: &FilterQuery) -> Result<Vec<Contact>> {
         let mut args = Vec::new();
         let sql = format!(
-            "SELECT ct.* FROM contacts ct WHERE {} ORDER BY ct.last_activity_at DESC NULLS LAST, ct.id DESC LIMIT ? OFFSET ?",
+            "{CONTACT_SELECT} WHERE {} ORDER BY ct.last_activity_at DESC NULLS LAST, ct.id DESC LIMIT ? OFFSET ?",
             where_clause("contact", query, &mut args)
         );
         args.push(int(PAGE));
