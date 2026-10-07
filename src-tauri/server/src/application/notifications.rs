@@ -52,7 +52,7 @@ impl NotificationService {
                 self.notify(assignee, "conversation_assignment", &current, Some(performer))
             }
             "message.created" if data["message_type"] == "incoming" => match conversation(&data["conversation_id"])? {
-                Some(c) if c.assignee_id.is_some() => {
+                Some(c) if c.assignee_id.is_some() && c.muted == 0 => {
                     let assignee = c.assignee_id.unwrap_or_default();
                     self.notify(assignee, "assigned_conversation_new_message", &c, None)
                 }

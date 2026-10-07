@@ -28,6 +28,20 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
         wheres.push("c.status=?".to_string());
         args.push(text(status));
     }
+    match f.conversation_type.as_deref() {
+        Some("unattended") => wheres.push("(c.first_reply_at IS NULL OR c.waiting_since IS NOT NULL)".into()),
+        Some("participating") => {
+            wheres.push(
+                "EXISTS(SELECT 1 FROM conversation_participants p WHERE p.conversation_id=c.id AND p.user_id=?)".into(),
+            );
+            args.push(opt_int(f.user_id));
+        }
+        Some("mentions") => {
+            wheres.push("EXISTS(SELECT 1 FROM mentions x WHERE x.conversation_id=c.id AND x.user_id=?)".into());
+            args.push(opt_int(f.user_id));
+        }
+        _ => {}
+    }
     if let Some(inbox) = f.inbox_id {
         wheres.push("c.inbox_id=?".into());
         args.push(int(inbox));
@@ -50,6 +64,20 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
         args.push(text(format!("%{q}%")));
     }
     (wheres, args)
+}
+
+/// ORDER BY for a chat list sort (unknown values fall back to the latest activity).
+fn order(sort: Option<&str>) -> &'static str {
+    match sort.unwrap_or_default() {
+        "last_activity_at_asc" => "c.last_activity_at ASC, c.id ASC",
+        "created_at_desc" => "c.id DESC",
+        "created_at_asc" => "c.id ASC",
+        "priority_desc" => "CASE c.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END DESC, c.last_activity_at DESC",
+        "priority_asc" => "CASE c.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END ASC, c.last_activity_at DESC",
+        "waiting_since_desc" => "c.waiting_since IS NULL, c.waiting_since DESC, c.id DESC",
+        "waiting_since_asc" => "c.waiting_since IS NULL, c.waiting_since ASC, c.id ASC",
+        _ => "c.last_activity_at DESC, c.id DESC",
+    }
 }
 
 fn clause(wheres: &[String], joiner: &str) -> String {
@@ -78,6 +106,9 @@ fn changes_to_fields(c: &ConversationChanges) -> Vec<(&'static str, Sql)> {
         ("csat_requested_at", c.csat_requested_at),
     ];
     fields.extend(optional.into_iter().filter_map(|(k, v)| v.map(|v| (k, opt_int(v)))));
+    if let Some(muted) = c.muted {
+        fields.push(("muted", int(i64::from(muted))));
+    }
     if let Some(at) = c.last_activity_at {
         fields.push(("last_activity_at", int(at)));
     }
@@ -147,8 +178,9 @@ impl ConversationRepo for SqliteStore {
         args.push(int(PAGE));
         args.push(int((page - 1) * PAGE));
         let sql = format!(
-            "{SELECT} {} ORDER BY c.last_activity_at DESC, c.id DESC LIMIT ? OFFSET ?",
-            clause(&wheres, "WHERE")
+            "{SELECT} {} ORDER BY {} LIMIT ? OFFSET ?",
+            clause(&wheres, "WHERE"),
+            order(filters.sort_by.as_deref())
         );
         self.rows(&sql, args, SHAPE)
     }
@@ -213,5 +245,15 @@ impl ConversationRepo for SqliteStore {
         }
         self.conversation_by_id(conversation_id)?
             .ok_or_else(|| Error::internal("conversation vanished"))
+    }
+
+    fn remove_participant(&self, conversation_id: i64, user_id: i64) -> Result<()> {
+        let sql = "DELETE FROM conversation_participants WHERE conversation_id=? AND user_id=?";
+        self.exec(sql, vec![int(conversation_id), int(user_id)]).map(drop)
+    }
+
+    fn delete_conversation(&self, id: i64) -> Result<()> {
+        self.exec("DELETE FROM conversations WHERE id=?", vec![int(id)])
+            .map(drop)
     }
 }

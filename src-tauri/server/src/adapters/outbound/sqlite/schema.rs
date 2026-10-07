@@ -10,5 +10,14 @@ pub fn steps() -> Vec<String> {
            voice INTEGER NOT NULL DEFAULT 0,path TEXT,created_at INTEGER NOT NULL);
          CREATE INDEX attachments_message ON attachments(message_id);"
             .into(),
+        // v10: conversas silenciadas e menções (@agente) em notas privadas
+        "ALTER TABLE conversations ADD COLUMN muted INTEGER NOT NULL DEFAULT 0;
+         CREATE TABLE mentions(id INTEGER PRIMARY KEY,
+           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+           conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+           message_id INTEGER NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
+           created_at INTEGER NOT NULL,UNIQUE(user_id,message_id));
+         CREATE INDEX mentions_user ON mentions(user_id,conversation_id);"
+            .into(),
     ]
 }

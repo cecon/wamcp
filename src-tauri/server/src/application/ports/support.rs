@@ -50,6 +50,8 @@ pub trait ConversationRepo {
     fn due_snoozed(&self, now: i64) -> Result<Vec<i64>>;
     fn add_participant(&self, conversation_id: i64, user_id: i64) -> Result<()>;
     fn participant_ids(&self, conversation_id: i64) -> Result<Vec<i64>>;
+    fn remove_participant(&self, conversation_id: i64, user_id: i64) -> Result<()>;
+    fn delete_conversation(&self, id: i64) -> Result<()>;
     /// Replaces the conversation's labels with the given label ids.
     fn set_conversation_labels(&self, conversation_id: i64, label_ids: &[i64]) -> Result<Conversation>;
 }

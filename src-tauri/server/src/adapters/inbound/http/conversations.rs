@@ -4,7 +4,7 @@ use super::error::{ok, ApiError, ApiResult};
 use super::input::{check, email, id, int_param, nullable_text, one_of, optional_id, text, Body, Query};
 use super::state::AppState;
 use crate::application::ports::HistoryPage;
-use crate::domain::helpdesk::{PRIORITIES, STATUSES};
+use crate::domain::helpdesk::{CONVERSATION_TYPES, PRIORITIES, SORTS, STATUSES};
 use crate::domain::model::{ContactChanges, ConversationFilters};
 use axum::extract::{Path, Query as Params, State};
 use axum::response::Response;
@@ -26,6 +26,11 @@ fn filters(query: &Query) -> ApiResult<ConversationFilters> {
         label: trimmed("label", 40)?,
         q: trimmed("q", 100)?,
         page: int_param(query, "page", 1, 1, 10_000)?,
+        sort_by: query.get("sort_by").map(|s| one_of(s, &SORTS)).transpose()?,
+        conversation_type: query
+            .get("conversation_type")
+            .map(|s| one_of(s, &CONVERSATION_TYPES))
+            .transpose()?,
         ..Default::default()
     })
 }

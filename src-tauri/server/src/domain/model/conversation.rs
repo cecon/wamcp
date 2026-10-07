@@ -22,6 +22,8 @@ pub struct Conversation {
     pub custom_attributes: String,
     pub created: String,
     pub csat_requested_at: Option<i64>,
+    #[serde(default)]
+    pub muted: i64,
     pub contact_name: Option<String>,
     pub contact_phone: Option<String>,
     pub contact_jid: String,
@@ -47,6 +49,7 @@ pub struct ConversationChanges {
     pub agent_last_seen_at: Option<Option<i64>>,
     pub last_activity_at: Option<i64>,
     pub csat_requested_at: Option<Option<i64>>,
+    pub muted: Option<bool>,
 }
 
 /// List filters shared by the conversation list and the tab counters.
@@ -61,6 +64,10 @@ pub struct ConversationFilters {
     pub page: i64,
     pub user_id: Option<i64>,
     pub visible_inbox_ids: Option<Vec<i64>>,
+    /// One of `domain::helpdesk::SORTS` (default `last_activity_at_desc`).
+    pub sort_by: Option<String>,
+    /// `unattended` (no first reply yet, or waiting), `mentions` or `participating`.
+    pub conversation_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

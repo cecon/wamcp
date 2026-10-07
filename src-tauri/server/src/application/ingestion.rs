@@ -169,8 +169,12 @@ impl HelpdeskService {
         if let Some(message) = self.capture_csat(latest.as_ref(), &ci, d, events)? {
             return Ok(message);
         }
+        // Muted conversations keep new contact messages without reopening or alerting anyone.
+        let muted = latest.as_ref().is_some_and(|c| c.muted != 0);
         let route = if d.from_me {
             route_own_message(latest.as_ref())
+        } else if muted {
+            Route::Reuse { reopen: false }
         } else {
             route_incoming(latest.as_ref(), &inbox)
         };
@@ -200,11 +204,11 @@ impl HelpdeskService {
             last_activity_at: Some(conversation.last_activity_at.max(d.ts)),
             ..Default::default()
         };
-        if !d.from_me {
+        if !d.from_me && !muted {
             changes.waiting_since = Some(Some(conversation.waiting_since.unwrap_or(d.ts)));
         }
         let updated = core.update(conversation.id, changes)?;
-        if !d.from_me {
+        if !d.from_me && !muted {
             core.auto_assign(updated, events)?;
         }
         Ok(message)
