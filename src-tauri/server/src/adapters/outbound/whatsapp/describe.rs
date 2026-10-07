@@ -82,11 +82,10 @@ pub fn media(jid: &str, id: &str, from_me: bool, message: &wa::Message) -> Optio
             None,
             false,
         )
-    } else if let Some(m) = b.sticker_message.as_option() {
+    } else {
+        let m = b.sticker_message.as_option()?;
         only.sticker_message = MessageField::some(m.clone());
         metadata("sticker", m.mimetype.as_ref(), None, m.file_length, None, false)
-    } else {
-        return None;
     };
     let key = wa::MessageKey {
         remote_jid: Some(jid.into()),
