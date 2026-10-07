@@ -9,12 +9,22 @@ use serde_json::{json, Value};
 /// The JSON-RPC outcome of one request and the HTTP status that carries it.
 pub enum Outcome {
     Result(Value),
-    Error { status: u16, code: i64, message: String, data: Option<Value> },
+    Error {
+        status: u16,
+        code: i64,
+        message: String,
+        data: Option<Value>,
+    },
 }
 
 impl Outcome {
     pub fn error(status: u16, code: i64, message: impl Into<String>) -> Self {
-        Self::Error { status, code, message: message.into(), data: None }
+        Self::Error {
+            status,
+            code,
+            message: message.into(),
+            data: None,
+        }
     }
 
     pub fn not_found() -> Self {
@@ -28,7 +38,11 @@ fn server_info(call: &Call) -> Value {
 
 fn listed(call: &Call, modern: bool) -> Vec<Value> {
     let helpdesk = call.state.mcp.helpdesk.is_some();
-    tools().iter().filter(|t| helpdesk || !t.helpdesk).map(|t| describe(t, modern)).collect()
+    tools()
+        .iter()
+        .filter(|t| helpdesk || !t.helpdesk)
+        .map(|t| describe(t, modern))
+        .collect()
 }
 
 async fn call_tool(call: &Call<'_>, params: &Value) -> Outcome {
@@ -53,11 +67,15 @@ pub async fn modern(call: &Call<'_>, method: &str, params: &Value) -> Outcome {
             if has_events {
                 capabilities["events"] = json!({});
             }
-            Outcome::Result(json!({ "supportedVersions": [MODERN], "capabilities": capabilities, "ttlMs": 0, "cacheScope": "private" }))
+            Outcome::Result(
+                json!({ "supportedVersions": [MODERN], "capabilities": capabilities, "ttlMs": 0, "cacheScope": "private" }),
+            )
         }
         "tools/list" => Outcome::Result(json!({ "tools": listed(call, true), "ttlMs": 0, "cacheScope": "private" })),
         "tools/call" => call_tool(call, params).await,
-        "events/list" | "events/subscribe" | "events/unsubscribe" if has_events => events::handle(call, method, params).await,
+        "events/list" | "events/subscribe" | "events/unsubscribe" if has_events => {
+            events::handle(call, method, params).await
+        }
         _ => Outcome::not_found(),
     };
     match outcome {
@@ -81,7 +99,11 @@ pub async fn legacy(call: &Call<'_>, method: &str, params: &Value) -> Outcome {
     match method {
         "initialize" => {
             let requested = params["protocolVersion"].as_str().unwrap_or_default();
-            let version = if LEGACY_VERSIONS.contains(&requested) { requested } else { LEGACY_VERSIONS[0] };
+            let version = if LEGACY_VERSIONS.contains(&requested) {
+                requested
+            } else {
+                LEGACY_VERSIONS[0]
+            };
             Outcome::Result(json!({
                 "protocolVersion": version,
                 "capabilities": { "tools": { "listChanged": true } },

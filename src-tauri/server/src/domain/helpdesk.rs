@@ -33,11 +33,7 @@ pub fn require_inbox_access(actor: &Actor, member_inbox_ids: &[i64], inbox_id: i
 
 /// WhatsApp groups, broadcasts and channels never become support conversations.
 pub fn is_support_jid(jid: &str, ignore_groups: bool) -> bool {
-    if jid.is_empty()
-        || jid == "status@broadcast"
-        || jid.ends_with("@newsletter")
-        || jid.ends_with("@broadcast")
-    {
+    if jid.is_empty() || jid == "status@broadcast" || jid.ends_with("@newsletter") || jid.ends_with("@broadcast") {
         return false;
     }
     !(ignore_groups && jid.ends_with("@g.us"))
@@ -103,11 +99,7 @@ pub fn next_assignee(candidates: &[i64], last_user_id: Option<i64>) -> Option<i6
     let mut sorted = candidates.to_vec();
     sorted.sort_unstable();
     let last = last_user_id.unwrap_or(0);
-    sorted
-        .iter()
-        .find(|&&id| id > last)
-        .or_else(|| sorted.first())
-        .copied()
+    sorted.iter().find(|&&id| id > last).or_else(|| sorted.first()).copied()
 }
 
 fn who(actor: Option<&str>) -> &str {
@@ -159,15 +151,12 @@ pub fn validate_password(password: &str) -> Result<()> {
     }
 }
 
-static SLUG: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\p{L}\p{N}_-]{1,40}$").expect("valid regex"));
+static SLUG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{L}\p{N}_-]{1,40}$").expect("valid regex"));
 static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").expect("valid regex"));
 
 /// Labels are lowercase slugs, like Chatwoot (`suporte-n1`, `vip`).
 pub fn normalize_label_title(title: &str) -> Result<String> {
-    let slug = SPACES
-        .replace_all(&title.trim().to_lowercase(), "-")
-        .into_owned();
+    let slug = SPACES.replace_all(&title.trim().to_lowercase(), "-").into_owned();
     if SLUG.is_match(&slug) {
         Ok(slug)
     } else {

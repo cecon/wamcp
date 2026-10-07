@@ -1,8 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-const roots = ['src', 'scripts', 'tests', 'src-tauri/src', 'src-tauri/server/src', 'src-tauri/server/tests'].filter(
-  existsSync,
-);
+const roots = [
+  'src',
+  'scripts',
+  'tests',
+  'src-tauri/src',
+  'src-tauri/server/src',
+  'src-tauri/server/tests',
+].filter(existsSync);
 function files(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)],

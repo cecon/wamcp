@@ -111,7 +111,11 @@ impl Core {
                 ..Default::default()
             },
         )?;
-        self.activity(&updated, assignment_activity(None, updated.assignee_name.as_deref()), events)?;
+        self.activity(
+            &updated,
+            assignment_activity(None, updated.assignee_name.as_deref()),
+            events,
+        )?;
         events.push("assignee.changed", &updated);
         Ok(updated)
     }

@@ -62,14 +62,14 @@ pub async fn check_update(
         return Ok(None);
     };
     let _ = app.emit("update-downloading", &update.version);
-    let bytes = update.download(|_, _| {}, || {}).await.map_err(|_| {
-        "Falha ao baixar ou validar a assinatura da atualização. A versão atual foi mantida."
-    })?;
+    let bytes = update
+        .download(|_, _| {}, || {})
+        .await
+        .map_err(|_| "Falha ao baixar ou validar a assinatura da atualização. A versão atual foi mantida.")?;
     let info = UpdateInfo {
         version: update.version.clone(),
     };
-    *state.prepared.lock().map_err(|_| "Falha no atualizador")? =
-        Some(PreparedUpdate { update, bytes });
+    *state.prepared.lock().map_err(|_| "Falha no atualizador")? = Some(PreparedUpdate { update, bytes });
     Ok(Some(info))
 }
 

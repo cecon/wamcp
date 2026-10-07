@@ -22,7 +22,10 @@ pub trait UsersRepo {
 
     fn issue_api_token(&self, owner_type: &str, owner_id: i64) -> Result<String>;
     fn api_token_owner(&self, token: &str) -> Result<Option<TokenOwner>>;
+}
 
+/// Teams, inbox membership and the round-robin assignment cursor.
+pub trait TeamsRepo {
     fn teams(&self) -> Result<Vec<Team>>;
     fn team(&self, id: i64) -> Result<Option<Team>>;
     fn team_by_name(&self, name: &str, except_id: i64) -> Result<Option<Team>>;

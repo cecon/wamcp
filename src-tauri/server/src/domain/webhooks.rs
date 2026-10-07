@@ -32,10 +32,7 @@ const BACKOFF: [i64; 4] = [30, 120, 600, 3600];
 pub const MAX_ATTEMPTS: i64 = BACKOFF.len() as i64 + 1;
 
 pub fn retry_delay(attempts: i64) -> Option<i64> {
-    usize::try_from(attempts - 1)
-        .ok()
-        .and_then(|i| BACKOFF.get(i))
-        .copied()
+    usize::try_from(attempts - 1).ok().and_then(|i| BACKOFF.get(i)).copied()
 }
 
 pub fn validate_webhook(url: &str, subscriptions: &[String]) -> Result<()> {

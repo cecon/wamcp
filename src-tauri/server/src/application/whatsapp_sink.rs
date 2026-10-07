@@ -9,7 +9,12 @@ use std::sync::Arc;
 /// Live messages older than this (e.g. replayed after a long outage) stay in the mirror only.
 pub const LIVE_WINDOW_SECONDS: i64 = 2 * 86_400;
 /// Protocol and control messages never start a support conversation or an MCP event.
-const CONTROL_KINDS: [&str; 4] = ["protocolMessage", "reactionMessage", "senderKeyDistributionMessage", "unknown"];
+const CONTROL_KINDS: [&str; 4] = [
+    "protocolMessage",
+    "reactionMessage",
+    "senderKeyDistributionMessage",
+    "unknown",
+];
 
 /// How a message reached us: history sync, a new message, or an echo of one we (or the phone) sent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,7 +28,14 @@ pub enum Arrival {
 pub trait WhatsAppEvents: Send + Sync {
     fn status(&self, session_id: &str, status: &str, phone: Option<&str>);
     fn chat(&self, session_id: &str, chat: &ChatUpdate);
-    fn message(&self, session_id: &str, message: &WaMessage, media: Option<(&MediaMetadata, &[u8])>, arrival: Arrival, now: i64);
+    fn message(
+        &self,
+        session_id: &str,
+        message: &WaMessage,
+        media: Option<(&MediaMetadata, &[u8])>,
+        arrival: Arrival,
+        now: i64,
+    );
     fn receipt(&self, session_id: &str, message_id: &str, status: &str);
     fn logged_out(&self, session_id: &str);
 }
@@ -43,7 +55,14 @@ impl WhatsAppEvents for WhatsAppSink {
         let _ = self.repo.upsert_chat(session_id, chat);
     }
 
-    fn message(&self, session_id: &str, message: &WaMessage, media: Option<(&MediaMetadata, &[u8])>, arrival: Arrival, now: i64) {
+    fn message(
+        &self,
+        session_id: &str,
+        message: &WaMessage,
+        media: Option<(&MediaMetadata, &[u8])>,
+        arrival: Arrival,
+        now: i64,
+    ) {
         let stored = self.repo.store_message(session_id, message, media).unwrap_or(false);
         if !stored || CONTROL_KINDS.contains(&message.kind.as_str()) {
             return;

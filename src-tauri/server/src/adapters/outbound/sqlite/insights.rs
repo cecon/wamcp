@@ -23,7 +23,10 @@ fn inbox_filter(p: &Period, prefix: &str) -> String {
 
 impl SqliteStore {
     fn average(&self, name: &str, p: &Period) -> Result<Value> {
-        let sql = format!("SELECT COUNT(*) AS count, AVG(value) AS average FROM reporting_events WHERE name=? AND {RANGE}{}", inbox_filter(p, ""));
+        let sql = format!(
+            "SELECT COUNT(*) AS count, AVG(value) AS average FROM reporting_events WHERE name=? AND {RANGE}{}",
+            inbox_filter(p, "")
+        );
         let mut params = vec![text(name)];
         params.extend(args(p));
         Ok(self.row::<Value>(&sql, params, PLAIN)?.unwrap_or(Value::Null))
@@ -36,7 +39,8 @@ impl SqliteStore {
 
 impl InsightsRepo for SqliteStore {
     fn create_csat(&self, c: &CsatResponse) -> Result<CsatResponse> {
-        let sql = "INSERT INTO csat_responses(conversation_id,contact_id,assignee_id,inbox_id,rating,feedback,created_at)
+        let sql =
+            "INSERT INTO csat_responses(conversation_id,contact_id,assignee_id,inbox_id,rating,feedback,created_at)
                    VALUES(?,?,?,?,?,?,?) ON CONFLICT(conversation_id) DO UPDATE SET rating=excluded.rating,
                    feedback=excluded.feedback,created_at=excluded.created_at";
         let params = vec![
@@ -66,18 +70,27 @@ impl InsightsRepo for SqliteStore {
 
     fn record_event(&self, e: &ReportingEvent) -> Result<()> {
         let sql = "INSERT OR IGNORE INTO reporting_events(name,value,user_id,inbox_id,conversation_id,created_at) VALUES(?,?,?,?,?,?)";
-        let params = vec![text(e.name), int(e.value), opt_int(e.user_id), int(e.inbox_id), int(e.conversation_id), int(e.created_at)];
+        let params = vec![
+            text(e.name),
+            int(e.value),
+            opt_int(e.user_id),
+            int(e.inbox_id),
+            int(e.conversation_id),
+            int(e.created_at),
+        ];
         self.exec(sql, params).map(drop)
     }
 
     fn first_incoming_at(&self, conversation_id: i64) -> Result<Option<i64>> {
-        let sql = "SELECT MIN(created_at) FROM conversation_messages WHERE conversation_id=? AND message_type='incoming'";
+        let sql =
+            "SELECT MIN(created_at) FROM conversation_messages WHERE conversation_id=? AND message_type='incoming'";
         self.scalar(sql, vec![int(conversation_id)])
     }
 
     fn summary(&self, p: &Period) -> Result<Value> {
         let inbox = inbox_filter(p, "");
-        let csat_sql = format!("SELECT COUNT(*) AS count, AVG(rating) AS average FROM csat_responses WHERE {RANGE}{inbox}");
+        let csat_sql =
+            format!("SELECT COUNT(*) AS count, AVG(rating) AS average FROM csat_responses WHERE {RANGE}{inbox}");
         let created = "CAST(strftime('%s',created) AS INTEGER)";
         Ok(json!({
             "conversations": self.period_count(&format!("SELECT COUNT(*) FROM conversations WHERE {created}>=? AND {created}<?{inbox}"), p)?,

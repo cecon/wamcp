@@ -59,15 +59,25 @@ pub fn echo_id(body: &Value) -> Value {
 }
 
 fn invalid(body: &Value, message: &str) -> Rejection {
-    Rejection { status: 400, code: -32600, message: message.into(), data: None, id: Box::new(echo_id(body)) }
+    Rejection {
+        status: 400,
+        code: -32600,
+        message: message.into(),
+        data: None,
+        id: Box::new(echo_id(body)),
+    }
 }
 
 /// Validates a JSON-RPC request or notification shape.
 pub fn shape(body: &Value) -> Result<(), Rejection> {
     let not_rpc = "Bad Request: the request body is not a valid JSON-RPC message";
     if body.is_array() {
-        let message = format!("Bad Request: JSON-RPC batches may not contain requests for protocol revision {MODERN} or later");
-        return Err(Rejection { id: Box::default(), ..invalid(body, &message) });
+        let message =
+            format!("Bad Request: JSON-RPC batches may not contain requests for protocol revision {MODERN} or later");
+        return Err(Rejection {
+            id: Box::default(),
+            ..invalid(body, &message)
+        });
     }
     let Some(object) = body.as_object() else {
         return Err(invalid(body, not_rpc));
@@ -79,12 +89,18 @@ pub fn shape(body: &Value) -> Result<(), Rejection> {
         _ => false,
     };
     let params_ok = object.get("params").is_none_or(Value::is_object);
-    let valid = object.get("jsonrpc") == Some(&json!("2.0")) && object.get("method").is_some_and(Value::is_string) && id_ok && params_ok;
+    let valid = object.get("jsonrpc") == Some(&json!("2.0"))
+        && object.get("method").is_some_and(Value::is_string)
+        && id_ok
+        && params_ok;
     if valid {
         Ok(())
     } else {
         let id = if id_ok { echo_id(body) } else { Value::Null };
-        Err(Rejection { id: Box::new(id), ..invalid(body, not_rpc) })
+        Err(Rejection {
+            id: Box::new(id),
+            ..invalid(body, not_rpc)
+        })
     }
 }
 
@@ -115,7 +131,10 @@ pub fn envelope(body: &Value, headers: &HeaderMap) -> Result<String, Rejection> 
     let revision = header_version.unwrap_or(MODERN).to_string();
     let empty = serde_json::Map::new();
     let meta = meta(body).unwrap_or(&empty);
-    let missing: Vec<&str> = [VERSION_KEY, CAPABILITIES_KEY].into_iter().filter(|k| !meta.contains_key(*k)).collect();
+    let missing: Vec<&str> = [VERSION_KEY, CAPABILITIES_KEY]
+        .into_iter()
+        .filter(|k| !meta.contains_key(*k))
+        .collect();
     if !missing.is_empty() {
         return Err(Rejection {
             status: 400,
@@ -127,9 +146,12 @@ pub fn envelope(body: &Value, headers: &HeaderMap) -> Result<String, Rejection> 
     }
     let expect = |key: &str, kind: &str| -> Result<(), Rejection> {
         match meta.get(key) {
-            Some(v) if type_name(v) != kind => {
-                Err(envelope_error(body, &revision, key, format!("Invalid input: expected {kind}, received {}", type_name(v))))
-            }
+            Some(v) if type_name(v) != kind => Err(envelope_error(
+                body,
+                &revision,
+                key,
+                format!("Invalid input: expected {kind}, received {}", type_name(v)),
+            )),
             _ => Ok(()),
         }
     };
@@ -167,7 +189,11 @@ fn mismatch(body: &Value, header: &str, detail: &str) -> Rejection {
 pub fn routing_headers(body: &Value, headers: &HeaderMap) -> Result<(), Rejection> {
     let method = body["method"].as_str().unwrap_or_default();
     if let Some(named) = header(headers, "mcp-method").filter(|h| *h != method) {
-        return Err(mismatch(body, named, &format!("the body names method {method} but the Mcp-Method header names {named}")));
+        return Err(mismatch(
+            body,
+            named,
+            &format!("the body names method {method} but the Mcp-Method header names {named}"),
+        ));
     }
     if method == "tools/call" {
         let name = body["params"]["name"].as_str().unwrap_or_default();

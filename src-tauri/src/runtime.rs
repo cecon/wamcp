@@ -21,10 +21,7 @@ pub struct Runtime {
 fn hidden(command: &mut Command) -> &mut Command {
     #[cfg(windows)]
     command.creation_flags(0x08000000);
-    command
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+    command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
 }
 impl Runtime {
     pub fn start(app: &tauri::AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
@@ -91,8 +88,7 @@ impl Runtime {
         {
             return Err("Token do túnel inválido".into());
         }
-        fs::write(self.dir.join("tunnel.token"), value)
-            .map_err(|_| "Não foi possível salvar o token".to_string())?;
+        fs::write(self.dir.join("tunnel.token"), value).map_err(|_| "Não foi possível salvar o token".to_string())?;
         self.start_tunnel()
     }
     pub fn status(&self) -> serde_json::Value {

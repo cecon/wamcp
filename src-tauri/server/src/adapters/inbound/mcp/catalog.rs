@@ -71,7 +71,11 @@ pub fn security(scope: Scope) -> Value {
 
 /// The tool as listed to clients; `modern` selects the JSON Schema dialect of each protocol era.
 pub fn describe(tool: &Tool, modern: bool) -> Value {
-    let dialect = if modern { "https://json-schema.org/draft/2020-12/schema" } else { "http://json-schema.org/draft-07/schema#" };
+    let dialect = if modern {
+        "https://json-schema.org/draft/2020-12/schema"
+    } else {
+        "http://json-schema.org/draft-07/schema#"
+    };
     let mut input = json!({ "type": "object", "$schema": dialect, "properties": tool.properties });
     if !tool.required.is_empty() {
         input["required"] = json!(tool.required);

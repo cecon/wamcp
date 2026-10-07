@@ -27,13 +27,21 @@ fn json_response(status: u16, body: Value) -> Response {
 }
 
 fn protocol_error(status: u16, code: i64, message: &str) -> Response {
-    json_response(status, json!({ "jsonrpc": "2.0", "id": null, "error": { "code": code, "message": message } }))
+    json_response(
+        status,
+        json!({ "jsonrpc": "2.0", "id": null, "error": { "code": code, "message": message } }),
+    )
 }
 
 fn reply(id: Value, outcome: Outcome) -> Response {
     match outcome {
         Outcome::Result(result) => json_response(200, json!({ "result": result, "jsonrpc": "2.0", "id": id })),
-        Outcome::Error { status, code, message, data } => {
+        Outcome::Error {
+            status,
+            code,
+            message,
+            data,
+        } => {
             let mut error = json!({ "code": code, "message": message });
             if let Some(data) = data {
                 error["data"] = data;
@@ -49,7 +57,10 @@ fn rejected(rejection: Rejection) -> Response {
 
 async fn serve(call: &Call<'_>, body: &Value, headers: &HeaderMap) -> Response {
     if is_modern(body, headers) {
-        if let Err(rejection) = shape(body).and_then(|_| envelope(body, headers).map(drop)).and_then(|_| routing_headers(body, headers)) {
+        if let Err(rejection) = shape(body)
+            .and_then(|_| envelope(body, headers).map(drop))
+            .and_then(|_| routing_headers(body, headers))
+        {
             return rejected(rejection);
         }
         let Some(id) = body.get("id").cloned() else {
@@ -80,7 +91,9 @@ async fn serve(call: &Call<'_>, body: &Value, headers: &HeaderMap) -> Response {
         (true, _) => {
             let mut items = Vec::new();
             for response in responses {
-                let bytes = axum::body::to_bytes(response.into_body(), BODY_LIMIT * 4).await.unwrap_or_default();
+                let bytes = axum::body::to_bytes(response.into_body(), BODY_LIMIT * 4)
+                    .await
+                    .unwrap_or_default();
                 items.push(serde_json::from_slice::<Value>(&bytes).unwrap_or(Value::Null));
             }
             json_response(200, Value::Array(items))
@@ -111,25 +124,43 @@ pub async fn endpoint(
         None
     };
     if headers.contains_key(header::ORIGIN) {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Browser access is not allowed" }))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "error": "Browser access is not allowed" })),
+        )
+            .into_response();
     }
     let credential = bearer(&headers).unwrap_or_default();
     if state.mcp.authenticate(&session, &credential).is_none() {
         let value = challenge(&state.public_url, &session, "invalid_token", "whatsapp:read");
-        let mut response = (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Token inválido, expirado ou de outra sessão" }))).into_response();
+        let mut response = (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "Token inválido, expirado ou de outra sessão" })),
+        )
+            .into_response();
         if let Ok(value) = HeaderValue::from_str(&value) {
             response.headers_mut().insert(header::WWW_AUTHENTICATE, value);
         }
         return response;
     }
     if method != Method::POST {
-        let mut response = (StatusCode::METHOD_NOT_ALLOWED, Json(json!({ "error": "Use MCP Streamable HTTP POST" }))).into_response();
-        response.headers_mut().insert(header::ALLOW, HeaderValue::from_static("POST"));
+        let mut response = (
+            StatusCode::METHOD_NOT_ALLOWED,
+            Json(json!({ "error": "Use MCP Streamable HTTP POST" })),
+        )
+            .into_response();
+        response
+            .headers_mut()
+            .insert(header::ALLOW, HeaderValue::from_static("POST"));
         return response;
     }
     let Some(body) = body else {
         return protocol_error(400, -32700, "Parse error: invalid JSON");
     };
-    let call = Call { state: &state, session_id: &session, credential: &credential };
+    let call = Call {
+        state: &state,
+        session_id: &session,
+        credential: &credential,
+    };
     serve(&call, &body, &headers).await
 }

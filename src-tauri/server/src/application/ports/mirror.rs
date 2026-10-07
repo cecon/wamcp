@@ -1,7 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    AuditEntry, Chat, ChatUpdate, Credential, IssuedToken, MediaMetadata, MirrorMessage, Session,
-    StoredMedia, TokenInfo, WaMessage,
+    AuditEntry, Chat, ChatUpdate, Credential, IssuedToken, MediaMetadata, MirrorMessage, Session, StoredMedia,
+    TokenInfo, WaMessage,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -14,7 +14,12 @@ pub trait MirrorRepo {
     fn set_status(&self, id: &str, status: &str, phone: Option<&str>) -> Result<()>;
     fn upsert_chat(&self, session_id: &str, chat: &ChatUpdate) -> Result<()>;
     /// Stores the message (and media) in the mirror; `true` only when it was not stored before.
-    fn store_message(&self, session_id: &str, message: &WaMessage, media: Option<(&MediaMetadata, &[u8])>) -> Result<bool>;
+    fn store_message(
+        &self,
+        session_id: &str,
+        message: &WaMessage,
+        media: Option<(&MediaMetadata, &[u8])>,
+    ) -> Result<bool>;
     fn chats(&self, session_id: &str, q: &str) -> Result<Vec<Chat>>;
     fn mirror_messages(&self, session_id: &str, jid: &str, page: &HistoryPage) -> Result<Vec<MirrorMessage>>;
     fn search(&self, session_id: &str, q: &str, limit: i64) -> Result<Vec<MirrorMessage>>;

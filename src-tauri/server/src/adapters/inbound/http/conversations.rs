@@ -30,11 +30,22 @@ fn filters(query: &Query) -> ApiResult<ConversationFilters> {
     })
 }
 
-async fn list(State(state): State<AppState>, current: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
-    ok(state.support().helpdesk.conversations(&current.actor(), filters(&query)?)?)
+async fn list(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
+    ok(state
+        .support()
+        .helpdesk
+        .conversations(&current.actor(), filters(&query)?)?)
 }
 
-async fn meta(State(state): State<AppState>, current: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn meta(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     ok(state.support().helpdesk.meta(&current.actor(), filters(&query)?)?)
 }
 
@@ -50,7 +61,10 @@ async fn messages(
 ) -> ApiResult<Response> {
     let before = optional_id(&query, "before")?;
     let limit = int_param(&query, "limit", 50, 1, 100)?;
-    ok(state.support().helpdesk.messages(&current.actor(), id(&display)?, before, limit)?)
+    ok(state
+        .support()
+        .helpdesk
+        .messages(&current.actor(), id(&display)?, before, limit)?)
 }
 
 #[derive(Deserialize)]
@@ -68,7 +82,13 @@ async fn reply(
 ) -> ApiResult<Response> {
     let content = text(&body.content, 1, 4096)?;
     let display = id(&display)?;
-    created(state.support().helpdesk.reply(&current.actor(), display, &content, body.private).await?)
+    created(
+        state
+            .support()
+            .helpdesk
+            .reply(&current.actor(), display, &content, body.private)
+            .await?,
+    )
 }
 
 async fn history(
@@ -79,12 +99,25 @@ async fn history(
 ) -> ApiResult<Response> {
     let before = match query.get("before") {
         None => None,
-        Some(v) => Some(v.trim().parse::<f64>().ok().filter(|b| *b > 0.0).ok_or(ApiError::Invalid)?),
+        Some(v) => Some(
+            v.trim()
+                .parse::<f64>()
+                .ok()
+                .filter(|b| *b > 0.0)
+                .ok_or(ApiError::Invalid)?,
+        ),
     };
     let before_id = query.get("before_id").cloned();
     check(before_id.as_ref().is_none_or(|b| b.chars().count() <= 200))?;
-    let page = HistoryPage { before, before_id, limit: int_param(&query, "limit", 50, 1, 100)? };
-    ok(state.support().helpdesk.history(&current.actor(), id(&display)?, &page)?)
+    let page = HistoryPage {
+        before,
+        before_id,
+        limit: int_param(&query, "limit", 50, 1, 100)?,
+    };
+    ok(state
+        .support()
+        .helpdesk
+        .history(&current.actor(), id(&display)?, &page)?)
 }
 
 #[derive(Deserialize)]
@@ -102,7 +135,10 @@ async fn toggle_status(
     let status = one_of(&body.status, &STATUSES)?;
     check(body.snoozed_until.is_none_or(|s| s > 0))?;
     let display = id(&display)?;
-    ok(state.support().helpdesk.toggle_status(&current.actor(), display, &status, body.snoozed_until)?)
+    ok(state
+        .support()
+        .helpdesk
+        .toggle_status(&current.actor(), display, &status, body.snoozed_until)?)
 }
 
 #[derive(Deserialize)]
@@ -123,7 +159,10 @@ async fn assign(
     let positive = |v: Option<Option<i64>>| v.flatten().is_none_or(|i| i > 0);
     check(positive(body.assignee_id) && positive(body.team_id))?;
     let display = id(&display)?;
-    ok(state.support().helpdesk.assign(&current.actor(), display, body.assignee_id, body.team_id)?)
+    ok(state
+        .support()
+        .helpdesk
+        .assign(&current.actor(), display, body.assignee_id, body.team_id)?)
 }
 
 #[derive(Deserialize)]
@@ -143,7 +182,10 @@ async fn priority(
         one_of(p, &PRIORITIES)?;
     }
     let display = id(&display)?;
-    ok(state.support().helpdesk.set_priority(&current.actor(), display, priority.as_deref())?)
+    ok(state
+        .support()
+        .helpdesk
+        .set_priority(&current.actor(), display, priority.as_deref())?)
 }
 
 #[derive(Deserialize)]
@@ -158,20 +200,31 @@ async fn labels(
     Body(body): Body<Labels>,
 ) -> ApiResult<Response> {
     check(body.labels.len() <= 50 && body.labels.iter().all(|l| l.chars().count() <= 40))?;
-    ok(state.support().helpdesk.set_labels(&current.actor(), id(&display)?, &body.labels)?)
+    ok(state
+        .support()
+        .helpdesk
+        .set_labels(&current.actor(), id(&display)?, &body.labels)?)
 }
 
 async fn seen(State(state): State<AppState>, current: CurrentUser, Path(display): Path<String>) -> ApiResult<Response> {
     ok(state.support().helpdesk.mark_seen(&current.actor(), id(&display)?)?)
 }
 
-async fn contacts(State(state): State<AppState>, _user: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn contacts(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     let q = text(query.get("q").map_or("", String::as_str), 0, 100)?;
     let page = int_param(&query, "page", 1, 1, 10_000)?;
     ok(state.support().helpdesk.contacts(&q, page)?)
 }
 
-async fn contact(State(state): State<AppState>, current: CurrentUser, Path(contact): Path<String>) -> ApiResult<Response> {
+async fn contact(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(contact): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().helpdesk.contact(&current.actor(), id(&contact)?)?)
 }
 
@@ -192,7 +245,10 @@ async fn update_contact(
         blocked: body.blocked,
         last_activity_at: None,
     };
-    ok(state.support().helpdesk.update_contact(&current.actor(), id(&contact)?, &changes)?)
+    ok(state
+        .support()
+        .helpdesk
+        .update_contact(&current.actor(), id(&contact)?, &changes)?)
 }
 
 pub fn routes() -> Router<AppState> {

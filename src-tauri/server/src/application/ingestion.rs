@@ -4,7 +4,9 @@ use super::helpdesk::HelpdeskService;
 use crate::domain::actor::Actor;
 use crate::domain::csat::{awaiting_csat, parse_rating};
 use crate::domain::error::Result;
-use crate::domain::helpdesk::{initial_status, is_support_jid, phone_from_jid, route_incoming, route_own_message, Route};
+use crate::domain::helpdesk::{
+    initial_status, is_support_jid, phone_from_jid, route_incoming, route_own_message, Route,
+};
 use crate::domain::model::{
     ContactChanges, ContactInbox, Conversation, ConversationChanges as Changes, CsatResponse, Inbox, Message,
     NewMessage, WaMessage,
@@ -47,9 +49,19 @@ impl HelpdeskService {
         repo.create_contact_inbox(contact.id, inbox.id, &d.jid).map(Some)
     }
 
-    fn store_incoming(&self, conversation: &Conversation, ci: &ContactInbox, d: &WaMessage, events: &mut Events) -> Result<Option<Message>> {
+    fn store_incoming(
+        &self,
+        conversation: &Conversation,
+        ci: &ContactInbox,
+        d: &WaMessage,
+        events: &mut Events,
+    ) -> Result<Option<Message>> {
         let repo = &self.core.repo;
-        let content_type = if TEXT_KINDS.contains(&d.kind.as_str()) { "text" } else { d.kind.as_str() };
+        let content_type = if TEXT_KINDS.contains(&d.kind.as_str()) {
+            "text"
+        } else {
+            d.kind.as_str()
+        };
         let message = repo.insert_message(&NewMessage {
             conversation_id: conversation.id,
             inbox_id: conversation.inbox_id,
@@ -65,10 +77,18 @@ impl HelpdeskService {
             ..NewMessage::default()
         })?;
         if let Some(contact) = repo.contact(ci.contact_id)? {
-            let name = contact.name.clone().filter(|n| !n.is_empty()).or_else(|| d.push_name.clone());
+            let name = contact
+                .name
+                .clone()
+                .filter(|n| !n.is_empty())
+                .or_else(|| d.push_name.clone());
             repo.update_contact(
                 contact.id,
-                &ContactChanges { last_activity_at: Some(d.ts), name: name.map(Some), ..Default::default() },
+                &ContactChanges {
+                    last_activity_at: Some(d.ts),
+                    name: name.map(Some),
+                    ..Default::default()
+                },
             )?;
         }
         if let Some(message) = &message {
@@ -78,9 +98,19 @@ impl HelpdeskService {
     }
 
     /// A 1–5 reply to a pending survey is recorded without reopening the resolved conversation.
-    fn capture_csat(&self, conversation: Option<&Conversation>, ci: &ContactInbox, d: &WaMessage, events: &mut Events) -> Result<Option<Option<Message>>> {
+    fn capture_csat(
+        &self,
+        conversation: Option<&Conversation>,
+        ci: &ContactInbox,
+        d: &WaMessage,
+        events: &mut Events,
+    ) -> Result<Option<Option<Message>>> {
         let now = self.core.now();
-        let answer = if d.from_me || !awaiting_csat(conversation, now) { None } else { parse_rating(&d.body) };
+        let answer = if d.from_me || !awaiting_csat(conversation, now) {
+            None
+        } else {
+            parse_rating(&d.body)
+        };
         let (Some(answer), Some(conversation)) = (answer, conversation) else {
             return Ok(None);
         };
@@ -95,7 +125,13 @@ impl HelpdeskService {
             feedback: answer.feedback,
             created_at: now,
         })?;
-        self.core.update(conversation.id, Changes { csat_requested_at: Some(None), ..Default::default() })?;
+        self.core.update(
+            conversation.id,
+            Changes {
+                csat_requested_at: Some(None),
+                ..Default::default()
+            },
+        )?;
         events.push("csat.created", &csat);
         Ok(Some(message))
     }
@@ -103,7 +139,8 @@ impl HelpdeskService {
     /// Live WhatsApp message (not history sync) entering the support flow.
     pub fn ingest(&self, session_id: &str, d: &WaMessage) -> Result<Option<Message>> {
         let contact = Actor::contact();
-        self.core.commit(Some(&contact), |events| self.route(session_id, d, events))
+        self.core
+            .commit(Some(&contact), |events| self.route(session_id, d, events))
     }
 
     fn route(&self, session_id: &str, d: &WaMessage, events: &mut Events) -> Result<Option<Message>> {
@@ -121,7 +158,11 @@ impl HelpdeskService {
         if let Some(message) = self.capture_csat(latest.as_ref(), &ci, d, events)? {
             return Ok(message);
         }
-        let route = if d.from_me { route_own_message(latest.as_ref()) } else { route_incoming(latest.as_ref(), &inbox) };
+        let route = if d.from_me {
+            route_own_message(latest.as_ref())
+        } else {
+            route_incoming(latest.as_ref(), &inbox)
+        };
         let status = initial_status(inbox.agent_bot_enabled != 0);
         let conversation = match (route, latest) {
             (Route::Ignore, _) => return Ok(None),
@@ -144,7 +185,10 @@ impl HelpdeskService {
             (Route::Reuse { reopen: false }, Some(latest)) => latest,
         };
         let message = self.store_incoming(&conversation, &ci, d, events)?;
-        let mut changes = Changes { last_activity_at: Some(conversation.last_activity_at.max(d.ts)), ..Default::default() };
+        let mut changes = Changes {
+            last_activity_at: Some(conversation.last_activity_at.max(d.ts)),
+            ..Default::default()
+        };
         if !d.from_me {
             changes.waiting_since = Some(Some(conversation.waiting_since.unwrap_or(d.ts)));
         }
@@ -176,7 +220,11 @@ impl HelpdeskService {
     pub fn wake_snoozed(&self) -> Result<()> {
         for id in self.core.repo.due_snoozed(self.core.now())? {
             self.core.commit(None, |events| {
-                let changes = Changes { status: Some("open".into()), snoozed_until: Some(None), ..Default::default() };
+                let changes = Changes {
+                    status: Some("open".into()),
+                    snoozed_until: Some(None),
+                    ..Default::default()
+                };
                 let updated = self.core.update(id, changes)?;
                 events.push("conversation.status_changed", &updated);
                 self.core.auto_assign(updated, events)?;

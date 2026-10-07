@@ -64,7 +64,11 @@ pub fn callback_url(value: &str) -> Option<CallbackUrl> {
     if url.scheme() != "https" || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
         return None;
     }
-    let host = url.host_str()?.trim_start_matches('[').trim_end_matches(']').to_string();
+    let host = url
+        .host_str()?
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .to_string();
     if let Ok(ip) = host.parse::<IpAddr>() {
         if !public_address(ip) {
             return None;
@@ -79,7 +83,10 @@ pub async fn resolve_callback(target: &CallbackUrl) -> Option<SocketAddr> {
     if let Ok(ip) = target.host.parse::<IpAddr>() {
         return Some(SocketAddr::new(ip, port));
     }
-    let addresses: Vec<SocketAddr> = tokio::net::lookup_host((target.host.as_str(), port)).await.ok()?.collect();
+    let addresses: Vec<SocketAddr> = tokio::net::lookup_host((target.host.as_str(), port))
+        .await
+        .ok()?
+        .collect();
     if addresses.is_empty() || addresses.len() > 64 || addresses.iter().any(|a| !public_address(a.ip())) {
         return None;
     }

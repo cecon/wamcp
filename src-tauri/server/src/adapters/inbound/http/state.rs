@@ -67,7 +67,10 @@ pub struct AppState(pub Arc<Services>);
 
 impl AppState {
     pub fn support(&self) -> &Support {
-        self.0.support.as_ref().expect("helpdesk routes are only mounted with support")
+        self.0
+            .support
+            .as_ref()
+            .expect("helpdesk routes are only mounted with support")
     }
 }
 

@@ -2,12 +2,11 @@ use super::db::{int, iso, now_ms, opt_int, opt_text, placeholders, text, Shape, 
 use super::inboxes::PAGE;
 use crate::application::ports::ConversationRepo;
 use crate::domain::error::{Error, Result};
-use crate::domain::model::{
-    ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters,
-};
+use crate::domain::model::{ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters};
 use rusqlite::types::Value as Sql;
 
-const SELECT: &str = "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ci.source_id AS contact_jid,
+const SELECT: &str =
+    "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ci.source_id AS contact_jid,
   i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, t.name AS team_name,
   (SELECT json_group_array(l.title) FROM (SELECT l.title FROM conversation_labels cl JOIN labels l ON l.id=cl.label_id
      WHERE cl.conversation_id=c.id ORDER BY l.title) l) AS labels,
@@ -17,7 +16,10 @@ const SELECT: &str = "SELECT c.*, ct.name AS contact_name, ct.phone_number AS co
      AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count
   FROM conversations c JOIN contacts ct ON ct.id=c.contact_id JOIN contact_inboxes ci ON ci.id=c.contact_inbox_id
   JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id LEFT JOIN teams t ON t.id=c.team_id";
-const SHAPE: Shape = Shape { json: &["labels"], bools: &[] };
+const SHAPE: Shape = Shape {
+    json: &["labels"],
+    bools: &[],
+};
 
 /// WHERE clauses shared by the list and the tab counters.
 fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
@@ -111,18 +113,23 @@ impl ConversationRepo for SqliteStore {
     }
 
     fn create_conversation(&self, inbox_id: i64, ci: &ContactInbox, status: &str, ts: i64) -> Result<Conversation> {
-        let next = self.count("SELECT COALESCE(MAX(display_id),0)+1 FROM conversations WHERE account_id=1", vec![])?;
+        let next = self.count(
+            "SELECT COALESCE(MAX(display_id),0)+1 FROM conversations WHERE account_id=1",
+            vec![],
+        )?;
         let id = self.insert(
             "INSERT INTO conversations(display_id,inbox_id,contact_id,contact_inbox_id,status,waiting_since,last_activity_at,created)
              VALUES(?,?,?,?,?,?,?,?)",
             vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(now_ms()))],
         )?;
-        self.conversation_by_id(id)?.ok_or_else(|| Error::internal("conversation vanished"))
+        self.conversation_by_id(id)?
+            .ok_or_else(|| Error::internal("conversation vanished"))
     }
 
     fn update_conversation(&self, id: i64, changes: &ConversationChanges) -> Result<Conversation> {
         self.update_fields("conversations", int(id), changes_to_fields(changes))?;
-        self.conversation_by_id(id)?.ok_or_else(|| Error::internal("conversation vanished"))
+        self.conversation_by_id(id)?
+            .ok_or_else(|| Error::internal("conversation vanished"))
     }
 
     fn conversations(&self, filters: &ConversationFilters) -> Result<Vec<Conversation>> {
@@ -139,7 +146,10 @@ impl ConversationRepo for SqliteStore {
         let page = filters.page.max(1);
         args.push(int(PAGE));
         args.push(int((page - 1) * PAGE));
-        let sql = format!("{SELECT} {} ORDER BY c.last_activity_at DESC, c.id DESC LIMIT ? OFFSET ?", clause(&wheres, "WHERE"));
+        let sql = format!(
+            "{SELECT} {} ORDER BY c.last_activity_at DESC, c.id DESC LIMIT ? OFFSET ?",
+            clause(&wheres, "WHERE")
+        );
         self.rows(&sql, args, SHAPE)
     }
 
@@ -159,16 +169,25 @@ impl ConversationRepo for SqliteStore {
     }
 
     fn contact_conversations(&self, contact_id: i64, visible: Option<&[i64]>) -> Result<Vec<Conversation>> {
-        let filters = ConversationFilters { visible_inbox_ids: visible.map(<[i64]>::to_vec), ..Default::default() };
+        let filters = ConversationFilters {
+            visible_inbox_ids: visible.map(<[i64]>::to_vec),
+            ..Default::default()
+        };
         let (wheres, args) = scope(&filters);
         let mut params = vec![int(contact_id)];
         params.extend(args);
-        let sql = format!("{SELECT} WHERE c.contact_id=? {} ORDER BY c.last_activity_at DESC", clause(&wheres, "AND"));
+        let sql = format!(
+            "{SELECT} WHERE c.contact_id=? {} ORDER BY c.last_activity_at DESC",
+            clause(&wheres, "AND")
+        );
         self.rows(&sql, params, SHAPE)
     }
 
     fn due_snoozed(&self, now: i64) -> Result<Vec<i64>> {
-        self.ids("SELECT id FROM conversations WHERE status='snoozed' AND snoozed_until<=?", vec![int(now)])
+        self.ids(
+            "SELECT id FROM conversations WHERE status='snoozed' AND snoozed_until<=?",
+            vec![int(now)],
+        )
     }
 
     fn add_participant(&self, conversation_id: i64, user_id: i64) -> Result<()> {
@@ -177,15 +196,22 @@ impl ConversationRepo for SqliteStore {
     }
 
     fn participant_ids(&self, conversation_id: i64) -> Result<Vec<i64>> {
-        self.ids("SELECT user_id FROM conversation_participants WHERE conversation_id=?", vec![int(conversation_id)])
+        self.ids(
+            "SELECT user_id FROM conversation_participants WHERE conversation_id=?",
+            vec![int(conversation_id)],
+        )
     }
 
     fn set_conversation_labels(&self, conversation_id: i64, label_ids: &[i64]) -> Result<Conversation> {
-        self.exec("DELETE FROM conversation_labels WHERE conversation_id=?", vec![int(conversation_id)])?;
+        self.exec(
+            "DELETE FROM conversation_labels WHERE conversation_id=?",
+            vec![int(conversation_id)],
+        )?;
         for id in label_ids {
             let sql = "INSERT INTO conversation_labels(conversation_id,label_id) VALUES(?,?)";
             self.exec(sql, vec![int(conversation_id), int(*id)])?;
         }
-        self.conversation_by_id(conversation_id)?.ok_or_else(|| Error::internal("conversation vanished"))
+        self.conversation_by_id(conversation_id)?
+            .ok_or_else(|| Error::internal("conversation vanished"))
     }
 }

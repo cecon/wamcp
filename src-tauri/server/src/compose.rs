@@ -54,7 +54,10 @@ fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&Eve
         exists
             && match owner.principal_kind.as_str() {
                 "oauth" => oauth.event_principal(&owner.session_id, &owner.principal_id).is_some(),
-                "token" => matches!(repo.event_principal(&owner.session_id, &owner.principal_id), Ok(Some(_))),
+                "token" => matches!(
+                    repo.event_principal(&owner.session_id, &owner.principal_id),
+                    Ok(Some(_))
+                ),
                 _ => false,
             }
     })
@@ -63,15 +66,39 @@ fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&Eve
 /// Builds every service and subscribes the event listeners (must run inside a Tokio runtime).
 pub fn compose(ports: Ports, settings: Settings) -> App {
     let bus = Arc::new(EventBus::default());
-    let core = Core { repo: ports.repo.clone(), bus: bus.clone(), clock: ports.clock.clone() };
-    let helpdesk = HelpdeskService { core: core.clone(), whatsapp: ports.whatsapp.clone() };
+    let core = Core {
+        repo: ports.repo.clone(),
+        bus: bus.clone(),
+        clock: ports.clock.clone(),
+    };
+    let helpdesk = HelpdeskService {
+        core: core.clone(),
+        whatsapp: ports.whatsapp.clone(),
+    };
     let notifications = NotificationService { core: core.clone() };
-    let webhooks = WebhookService { core: core.clone(), sender: ports.sender.clone(), delivering: Arc::new(AtomicBool::new(false)) };
-    let automations = AutomationService { helpdesk: helpdesk.clone() };
+    let webhooks = WebhookService {
+        core: core.clone(),
+        sender: ports.sender.clone(),
+        delivering: Arc::new(AtomicBool::new(false)),
+    };
+    let automations = AutomationService {
+        helpdesk: helpdesk.clone(),
+    };
     let reports = ReportService { core: core.clone() };
-    let auto_replies = AutoReplyService { helpdesk: helpdesk.clone() };
-    let oauth = OAuthService { repo: ports.repo.clone(), clock: ports.clock.clone(), public_url: settings.public_url.clone() };
-    let events = EventService::new(ports.repo.clone(), ports.callback.clone(), ports.clock.clone(), authorizer(ports.repo.clone(), oauth.clone()));
+    let auto_replies = AutoReplyService {
+        helpdesk: helpdesk.clone(),
+    };
+    let oauth = OAuthService {
+        repo: ports.repo.clone(),
+        clock: ports.clock.clone(),
+        public_url: settings.public_url.clone(),
+    };
+    let events = EventService::new(
+        ports.repo.clone(),
+        ports.callback.clone(),
+        ports.clock.clone(),
+        authorizer(ports.repo.clone(), oauth.clone()),
+    );
 
     let listener = notifications.clone();
     bus.subscribe(move |e| drop(listener.on_event(e)));
@@ -95,7 +122,10 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
-        accounts: AccountService { core: core.clone(), hasher: ports.hasher.clone() },
+        accounts: AccountService {
+            core: core.clone(),
+            hasher: ports.hasher.clone(),
+        },
         helpdesk: helpdesk.clone(),
         catalog: CatalogService { core: core.clone() },
         notifications,
@@ -105,14 +135,22 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         bus,
         web_dir: settings.web_dir,
     };
-    let sessions = SessionService { repo: ports.repo.clone(), whatsapp: ports.whatsapp.clone(), events: Some(events.clone()) };
+    let sessions = SessionService {
+        repo: ports.repo.clone(),
+        whatsapp: ports.whatsapp.clone(),
+        events: Some(events.clone()),
+    };
     let mcp = McpService {
         repo: ports.repo.clone(),
         whatsapp: ports.whatsapp.clone(),
         oauth: Some(oauth.clone()),
         helpdesk: Some(helpdesk.clone()),
     };
-    let sink = Arc::new(WhatsAppSink { repo: ports.repo.clone(), helpdesk: Some(helpdesk), events: Some(events.clone()) });
+    let sink = Arc::new(WhatsAppSink {
+        repo: ports.repo.clone(),
+        helpdesk: Some(helpdesk),
+        events: Some(events.clone()),
+    });
     let state = AppState(Arc::new(Services {
         public_url: settings.public_url,
         admin_token: settings.admin_token,
@@ -124,7 +162,11 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         version: settings.version,
         limits: Limits::default(),
     }));
-    App { state, workers: vec![automation_worker, reply_worker], sink }
+    App {
+        state,
+        workers: vec![automation_worker, reply_worker],
+        sink,
+    }
 }
 
 impl App {

@@ -9,7 +9,13 @@ use crate::domain::helpdesk::{
 use crate::domain::model::{Conversation, ConversationChanges as Changes};
 
 impl HelpdeskService {
-    pub fn toggle_status(&self, actor: &Actor, display_id: i64, status: &str, snoozed_until: Option<i64>) -> Result<Conversation> {
+    pub fn toggle_status(
+        &self,
+        actor: &Actor,
+        display_id: i64,
+        status: &str,
+        snoozed_until: Option<i64>,
+    ) -> Result<Conversation> {
         let conversation = self.core.load(Some(actor), display_id)?;
         validate_status_change(status, snoozed_until, self.core.now())?;
         if conversation.status == status && status != "snoozed" {
@@ -24,7 +30,8 @@ impl HelpdeskService {
                     ..Default::default()
                 },
             )?;
-            self.core.activity(&updated, status_activity(actor.name().as_deref(), status), events)?;
+            self.core
+                .activity(&updated, status_activity(actor.name().as_deref(), status), events)?;
             events.push("conversation.status_changed", &updated);
             if conversation.status == "pending" && status == "open" {
                 events.push("conversation.bot_handoff", &updated);
@@ -37,7 +44,13 @@ impl HelpdeskService {
     }
 
     /// `None` leaves the field untouched; `Some(None)` removes the assignee or team.
-    pub fn assign(&self, actor: &Actor, display_id: i64, assignee: Option<Option<i64>>, team: Option<Option<i64>>) -> Result<Conversation> {
+    pub fn assign(
+        &self,
+        actor: &Actor,
+        display_id: i64,
+        assignee: Option<Option<i64>>,
+        team: Option<Option<i64>>,
+    ) -> Result<Conversation> {
         let conversation = self.core.load(Some(actor), display_id)?;
         let (core, name) = (&self.core, actor.name());
         core.commit(Some(actor), |events| {
@@ -48,8 +61,18 @@ impl HelpdeskService {
                         return fail_with("Time não encontrado", 404);
                     }
                 }
-                updated = core.update(conversation.id, Changes { team_id: Some(team_id), ..Default::default() })?;
-                core.activity(&updated, team_activity(name.as_deref(), updated.team_name.as_deref()), events)?;
+                updated = core.update(
+                    conversation.id,
+                    Changes {
+                        team_id: Some(team_id),
+                        ..Default::default()
+                    },
+                )?;
+                core.activity(
+                    &updated,
+                    team_activity(name.as_deref(), updated.team_name.as_deref()),
+                    events,
+                )?;
                 events.push("team.changed", &updated);
             }
             match assignee {
@@ -58,9 +81,19 @@ impl HelpdeskService {
                         self.require_assignable(id, conversation.inbox_id)?;
                         core.repo.add_participant(conversation.id, id)?;
                     }
-                    updated = core.update(conversation.id, Changes { assignee_id: Some(assignee_id), ..Default::default() })?;
+                    updated = core.update(
+                        conversation.id,
+                        Changes {
+                            assignee_id: Some(assignee_id),
+                            ..Default::default()
+                        },
+                    )?;
                     let assignee_name = updated.assignee_name.clone();
-                    core.activity(&updated, assignment_activity(name.as_deref(), assignee_name.as_deref()), events)?;
+                    core.activity(
+                        &updated,
+                        assignment_activity(name.as_deref(), assignee_name.as_deref()),
+                        events,
+                    )?;
                     events.push("assignee.changed", &updated);
                 }
                 None if matches!(team, Some(Some(_))) => updated = core.auto_assign(updated, events)?,
@@ -96,7 +129,11 @@ impl HelpdeskService {
                 wanted.push(slug);
             }
         }
-        let labels = if wanted.is_empty() { Vec::new() } else { self.core.repo.labels_by_titles(&wanted)? };
+        let labels = if wanted.is_empty() {
+            Vec::new()
+        } else {
+            self.core.repo.labels_by_titles(&wanted)?
+        };
         let missing: Vec<&str> = wanted
             .iter()
             .filter(|t| !labels.iter().any(|l| l.title.to_lowercase() == **t))
@@ -106,15 +143,28 @@ impl HelpdeskService {
             return fail_with(format!("Etiqueta inexistente: {}", missing.join(", ")), 422);
         }
         let next: Vec<String> = labels.iter().map(|l| l.title.clone()).collect();
-        let added: Vec<String> = next.iter().filter(|t| !conversation.labels.contains(t)).cloned().collect();
-        let removed: Vec<String> = conversation.labels.iter().filter(|t| !next.contains(t)).cloned().collect();
+        let added: Vec<String> = next
+            .iter()
+            .filter(|t| !conversation.labels.contains(t))
+            .cloned()
+            .collect();
+        let removed: Vec<String> = conversation
+            .labels
+            .iter()
+            .filter(|t| !next.contains(t))
+            .cloned()
+            .collect();
         if added.is_empty() && removed.is_empty() {
             return Ok(conversation);
         }
         let ids: Vec<i64> = labels.iter().map(|l| l.id).collect();
         self.core.commit(Some(actor), |events| {
             let updated = self.core.repo.set_conversation_labels(conversation.id, &ids)?;
-            self.core.activity(&updated, labels_activity(actor.name().as_deref(), &added, &removed), events)?;
+            self.core.activity(
+                &updated,
+                labels_activity(actor.name().as_deref(), &added, &removed),
+                events,
+            )?;
             events.push("conversation.updated", &updated);
             Ok(updated)
         })
@@ -129,11 +179,13 @@ impl HelpdeskService {
             return Ok(conversation);
         }
         self.core.commit(Some(actor), |events| {
-            let changes = Changes { priority: Some(priority.map(String::from)), ..Default::default() };
+            let changes = Changes {
+                priority: Some(priority.map(String::from)),
+                ..Default::default()
+            };
             let updated = self.core.update(conversation.id, changes)?;
             events.push("conversation.updated", &updated);
             Ok(updated)
         })
     }
-
 }

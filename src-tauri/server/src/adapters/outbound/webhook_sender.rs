@@ -51,11 +51,20 @@ impl WebhookSender for HttpWebhookSender {
             .header("Content-Type", "application/json")
             .header("X-Wamcp-Event", body["event"].as_str().unwrap_or_default())
             .header("X-Wamcp-Timestamp", &timestamp)
-            .header("X-Wamcp-Signature", format!("sha256={}", signature(secret, &timestamp, &raw)))
+            .header(
+                "X-Wamcp-Signature",
+                format!("sha256={}", signature(secret, &timestamp, &raw)),
+            )
             .body(raw)
             .send()
             .await
-            .map_err(|e| if e.is_timeout() { SendFailure::Timeout } else { SendFailure::Connection })?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    SendFailure::Timeout
+                } else {
+                    SendFailure::Connection
+                }
+            })?;
         Ok(response.status().as_u16())
     }
 }

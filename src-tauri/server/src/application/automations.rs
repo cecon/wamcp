@@ -32,7 +32,9 @@ fn context(conversation: &Conversation, message: Option<&Value>) -> Value {
 }
 
 fn param_id(params: &[Value]) -> Option<i64> {
-    params.first().and_then(|p| p.as_i64().or_else(|| p.as_str()?.trim().parse().ok()))
+    params
+        .first()
+        .and_then(|p| p.as_i64().or_else(|| p.as_str()?.trim().parse().ok()))
 }
 
 impl AutomationService {

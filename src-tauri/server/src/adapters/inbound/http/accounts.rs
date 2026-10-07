@@ -36,7 +36,9 @@ async fn login(
     let session = accounts.login(&address, &body.password, agent).await?;
     let me = accounts.me(&session.user)?;
     let mut response = Json(json!({ "user": me, "csrf": session.csrf })).into_response();
-    response.headers_mut().insert(header::SET_COOKIE, session_cookie(&session.cookie, SESSION_TTL_MS));
+    response
+        .headers_mut()
+        .insert(header::SET_COOKIE, session_cookie(&session.cookie, SESSION_TTL_MS));
     Ok(response)
 }
 
@@ -63,11 +65,19 @@ struct Profile {
     password: Option<String>,
 }
 
-async fn update_profile(State(state): State<AppState>, current: CurrentUser, Body(body): Body<Profile>) -> ApiResult<Response> {
+async fn update_profile(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<Profile>,
+) -> ApiResult<Response> {
     let changes = ProfileChanges {
         name: body.name.as_deref().map(|n| text(n, 1, 80)).transpose()?,
         display_name: nullable_text(body.display_name, 80)?,
-        availability: body.availability.as_deref().map(|a| one_of(a, &AVAILABILITY)).transpose()?,
+        availability: body
+            .availability
+            .as_deref()
+            .map(|a| one_of(a, &AVAILABILITY))
+            .transpose()?,
         current_password: body.current_password.as_deref().map(|p| raw(p, 0, 200)).transpose()?,
         password: body.password.as_deref().map(|p| raw(p, 10, 200)).transpose()?,
     };
@@ -92,7 +102,11 @@ struct NewAgentBody {
     inbox_ids: Vec<i64>,
 }
 
-async fn create_agent(State(state): State<AppState>, current: CurrentUser, Body(body): Body<NewAgentBody>) -> ApiResult<Response> {
+async fn create_agent(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<NewAgentBody>,
+) -> ApiResult<Response> {
     check(body.inbox_ids.len() <= 100 && body.inbox_ids.iter().all(|i| *i > 0))?;
     let agent = NewAgent {
         name: text(&body.name, 1, 80)?,
@@ -128,10 +142,18 @@ async fn update_agent(
         password: body.password.as_deref().map(|p| raw(p, 10, 200)).transpose()?,
     };
     let id = id(&agent)?;
-    ok(state.support().accounts.update_agent(&current.actor(), id, changes).await?)
+    ok(state
+        .support()
+        .accounts
+        .update_agent(&current.actor(), id, changes)
+        .await?)
 }
 
-async fn delete_agent(State(state): State<AppState>, current: CurrentUser, Path(agent): Path<String>) -> ApiResult<Response> {
+async fn delete_agent(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(agent): Path<String>,
+) -> ApiResult<Response> {
     state.support().accounts.delete_agent(&current.actor(), id(&agent)?)?;
     done()
 }
@@ -160,7 +182,11 @@ async fn helpdesk_status(State(state): State<AppState>) -> ApiResult<Response> {
 }
 
 async fn bootstrap(State(state): State<AppState>, Body(body): Body<Bootstrap>) -> ApiResult<Response> {
-    let (name, address, password) = (text(&body.name, 1, 80)?, email(&body.email)?, raw(&body.password, 10, 200)?);
+    let (name, address, password) = (
+        text(&body.name, 1, 80)?,
+        email(&body.email)?,
+        raw(&body.password, 10, 200)?,
+    );
     created(state.support().accounts.bootstrap(&name, &address, &password).await?)
 }
 

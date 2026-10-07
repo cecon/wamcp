@@ -9,8 +9,12 @@ const MESSAGE: &str = "SELECT m.*, CASE m.sender_type WHEN 'user' THEN u.name WH
     WHEN 'agent_bot' THEN 'Assistente IA' END AS sender_name
   FROM conversation_messages m JOIN conversations c ON c.id=m.conversation_id JOIN contacts ct ON ct.id=c.contact_id
   LEFT JOIN users u ON m.sender_type='user' AND u.id=m.sender_id";
-const MESSAGE_SHAPE: Shape = Shape { json: &["content_attributes"], bools: &["private"] };
-const NOTIFICATION: &str = "SELECT n.*, c.display_id, ct.name AS contact_name, u.name AS actor_name FROM notifications n
+const MESSAGE_SHAPE: Shape = Shape {
+    json: &["content_attributes"],
+    bools: &["private"],
+};
+const NOTIFICATION: &str =
+    "SELECT n.*, c.display_id, ct.name AS contact_name, u.name AS actor_name FROM notifications n
   LEFT JOIN conversations c ON c.id=n.conversation_id LEFT JOIN contacts ct ON ct.id=c.contact_id
   LEFT JOIN users u ON u.id=n.actor_user_id";
 
@@ -20,7 +24,11 @@ impl MessageRepo for SqliteStore {
     }
 
     fn insert_message(&self, m: &NewMessage) -> Result<Option<Message>> {
-        let attributes = if m.content_attributes.is_null() { "{}".to_string() } else { m.content_attributes.to_string() };
+        let attributes = if m.content_attributes.is_null() {
+            "{}".to_string()
+        } else {
+            m.content_attributes.to_string()
+        };
         let params = vec![
             int(m.conversation_id),
             int(m.inbox_id),
@@ -85,7 +93,11 @@ impl CatalogRepo for SqliteStore {
     }
 
     fn label_by_title(&self, title: &str, except_id: i64) -> Result<Option<Label>> {
-        self.row("SELECT * FROM labels WHERE title=? AND id<>?", vec![text(title), int(except_id)], PLAIN)
+        self.row(
+            "SELECT * FROM labels WHERE title=? AND id<>?",
+            vec![text(title), int(except_id)],
+            PLAIN,
+        )
     }
 
     fn labels_by_titles(&self, titles: &[String]) -> Result<Vec<Label>> {
@@ -99,7 +111,13 @@ impl CatalogRepo for SqliteStore {
             vec![
                 text(title),
                 opt_text(fields.description.clone().flatten().as_deref()),
-                text(fields.color.clone().filter(|c| !c.is_empty()).unwrap_or_else(|| "#1f93ff".into())),
+                text(
+                    fields
+                        .color
+                        .clone()
+                        .filter(|c| !c.is_empty())
+                        .unwrap_or_else(|| "#1f93ff".into()),
+                ),
                 flag(fields.show_on_sidebar.unwrap_or(true)),
             ],
         )?;
@@ -130,7 +148,8 @@ impl CatalogRepo for SqliteStore {
 
     fn canned_responses(&self, q: &str) -> Result<Vec<CannedResponse>> {
         let like = text(format!("%{q}%"));
-        let sql = "SELECT * FROM canned_responses WHERE short_code LIKE ? OR content LIKE ? ORDER BY short_code LIMIT 200";
+        let sql =
+            "SELECT * FROM canned_responses WHERE short_code LIKE ? OR content LIKE ? ORDER BY short_code LIMIT 200";
         self.rows(sql, vec![like.clone(), like], PLAIN)
     }
 
@@ -144,8 +163,12 @@ impl CatalogRepo for SqliteStore {
     }
 
     fn create_canned(&self, code: &str, content: &str) -> Result<CannedResponse> {
-        let id = self.insert("INSERT INTO canned_responses(short_code,content) VALUES(?,?)", vec![text(code), text(content)])?;
-        self.canned_response(id)?.ok_or_else(|| Error::internal("canned vanished"))
+        let id = self.insert(
+            "INSERT INTO canned_responses(short_code,content) VALUES(?,?)",
+            vec![text(code), text(content)],
+        )?;
+        self.canned_response(id)?
+            .ok_or_else(|| Error::internal("canned vanished"))
     }
 
     fn update_canned(&self, id: i64, code: Option<&str>, content: Option<&str>) -> Result<CannedResponse> {
@@ -157,14 +180,23 @@ impl CatalogRepo for SqliteStore {
             changes.push(("content", text(content)));
         }
         self.update_fields("canned_responses", int(id), changes)?;
-        self.canned_response(id)?.ok_or_else(|| Error::internal("canned vanished"))
+        self.canned_response(id)?
+            .ok_or_else(|| Error::internal("canned vanished"))
     }
 
     fn delete_canned(&self, id: i64) -> Result<()> {
-        self.exec("DELETE FROM canned_responses WHERE id=?", vec![int(id)]).map(drop)
+        self.exec("DELETE FROM canned_responses WHERE id=?", vec![int(id)])
+            .map(drop)
     }
 
-    fn create_notification(&self, user_id: i64, kind: &str, conversation_id: i64, actor: Option<i64>, at: i64) -> Result<Notification> {
+    fn create_notification(
+        &self,
+        user_id: i64,
+        kind: &str,
+        conversation_id: i64,
+        actor: Option<i64>,
+        at: i64,
+    ) -> Result<Notification> {
         let id = self.insert(
             "INSERT INTO notifications(user_id,notification_type,conversation_id,actor_user_id,created_at) VALUES(?,?,?,?,?)",
             vec![int(user_id), text(kind), int(conversation_id), opt_int(actor), int(at)],

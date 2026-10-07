@@ -18,11 +18,7 @@ async fn api_request(
     method: String,
     body: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    if !path.starts_with("/api/")
-        || path.contains("..")
-        || path.contains('\\')
-        || path.contains('#')
-    {
+    if !path.starts_with("/api/") || path.contains("..") || path.contains('\\') || path.contains('#') {
         return Err("Caminho inválido".into());
     }
     let verb = match method.as_str() {
@@ -35,20 +31,13 @@ async fn api_request(
         .client
         .request(verb, format!("http://127.0.0.1:17381{path}"))
         .bearer_auth(&state.admin_token);
-    let request = if body.is_null() {
-        request
-    } else {
-        request.json(&body)
-    };
+    let request = if body.is_null() { request } else { request.json(&body) };
     let response = request
         .send()
         .await
         .map_err(|_| "Serviço iniciando. Aguarde alguns segundos.".to_string())?;
     let status = response.status();
-    let data: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|_| "Resposta inválida".to_string())?;
+    let data: serde_json::Value = response.json().await.map_err(|_| "Resposta inválida".to_string())?;
     if !status.is_success() {
         return Err(data["error"].as_str().unwrap_or("Falha na operação").into());
     }
@@ -69,11 +58,7 @@ fn autostart_status(app: tauri::AppHandle) -> bool {
 #[tauri::command]
 fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     let manager = app.autolaunch();
-    let result = if enabled {
-        manager.enable()
-    } else {
-        manager.disable()
-    };
+    let result = if enabled { manager.enable() } else { manager.disable() };
     result.map_err(|_| "Não foi possível atualizar o início automático.".to_string())
 }
 fn show(app: &tauri::AppHandle) {
@@ -103,10 +88,7 @@ fn main() {
         .setup(|app| {
             let runtime = Runtime::start(app.handle())?;
             app.manage(runtime);
-            let marker = app
-                .path()
-                .app_local_data_dir()?
-                .join("autostart-initialized");
+            let marker = app.path().app_local_data_dir()?.join("autostart-initialized");
             if !marker.exists() {
                 let _ = app.autolaunch().enable();
                 let _ = std::fs::write(&marker, "");

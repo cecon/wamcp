@@ -6,7 +6,11 @@ use qrcode::QrCode;
 /// The QR code as an SVG data URL the desktop app shows in an `<img>`.
 pub fn qr_data_url(code: &str) -> Option<String> {
     let qr = QrCode::new(code.as_bytes()).ok()?;
-    let image = qr.render::<svg::Color>().min_dimensions(280, 280).quiet_zone(true).build();
+    let image = qr
+        .render::<svg::Color>()
+        .min_dimensions(280, 280)
+        .quiet_zone(true)
+        .build();
     Some(format!("data:image/svg+xml;base64,{}", STANDARD.encode(image)))
 }
 

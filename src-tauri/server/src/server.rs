@@ -30,16 +30,26 @@ pub struct Config {
 impl Config {
     /// Defaults plus `WAMCP_*` environment overrides, like the Node service.
     pub fn from_env() -> Self {
-        let base = std::env::var_os("LOCALAPPDATA").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."));
+        let base = std::env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("."));
         let port = |name: &str, default| std::env::var(name).ok().and_then(|v| v.parse().ok()).unwrap_or(default);
-        let mut web_dirs: Vec<PathBuf> = std::env::var_os("WAMCP_WEB_DIR").map(PathBuf::from).into_iter().collect();
-        if let Some(exe) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+        let mut web_dirs: Vec<PathBuf> = std::env::var_os("WAMCP_WEB_DIR")
+            .map(PathBuf::from)
+            .into_iter()
+            .collect();
+        if let Some(exe) = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(Path::to_path_buf))
+        {
             web_dirs.push(exe.join("runtime").join("web"));
             web_dirs.push(exe.join("web"));
         }
         web_dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dist"));
         Self {
-            data_dir: std::env::var_os("WAMCP_DATA_DIR").map(PathBuf::from).unwrap_or_else(|| base.join("com.cappyfy.wamcp")),
+            data_dir: std::env::var_os("WAMCP_DATA_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| base.join("com.cappyfy.wamcp")),
             admin_token: std::env::var("WAMCP_ADMIN_TOKEN").ok().filter(|t| !t.is_empty()),
             admin_port: port("WAMCP_ADMIN_PORT", 17381),
             public_port: port("WAMCP_MCP_PORT", 17382),
@@ -55,7 +65,10 @@ pub fn admin_token(dir: &Path) -> Result<String> {
     if !path.exists() {
         std::fs::write(&path, base64url(&random_bytes(32))).map_err(Error::internal)?;
     }
-    Ok(std::fs::read_to_string(&path).map_err(Error::internal)?.trim().to_string())
+    Ok(std::fs::read_to_string(&path)
+        .map_err(Error::internal)?
+        .trim()
+        .to_string())
 }
 
 /// A running backend; dropping `stop` (or calling it) shuts the listeners down gracefully.
@@ -80,12 +93,24 @@ impl Running {
 }
 
 #[cfg(feature = "whatsapp")]
-fn whatsapp_port(dir: &Path, repo: Arc<SqliteStore>) -> Arc<crate::adapters::outbound::whatsapp::client::WhatsAppClients> {
-    Arc::new(crate::adapters::outbound::whatsapp::client::WhatsAppClients::new(dir.join("wa"), repo))
+fn whatsapp_port(
+    dir: &Path,
+    repo: Arc<SqliteStore>,
+) -> Arc<crate::adapters::outbound::whatsapp::client::WhatsAppClients> {
+    Arc::new(crate::adapters::outbound::whatsapp::client::WhatsAppClients::new(
+        dir.join("wa"),
+        repo,
+    ))
 }
 
-async fn serve(router: axum::Router, port: u16, mut stop: watch::Receiver<bool>) -> Result<(SocketAddr, JoinHandle<()>)> {
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await.map_err(Error::internal)?;
+async fn serve(
+    router: axum::Router,
+    port: u16,
+    mut stop: watch::Receiver<bool>,
+) -> Result<(SocketAddr, JoinHandle<()>)> {
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+        .await
+        .map_err(Error::internal)?;
     let address = listener.local_addr().map_err(Error::internal)?;
     let service = router.into_make_service_with_connect_info::<SocketAddr>();
     let task = tokio::spawn(async move {
@@ -139,5 +164,11 @@ pub async fn run(config: Config) -> Result<Running> {
     #[cfg(feature = "whatsapp")]
     clients.restore().await;
     tracing::info!("WA MCP: serviço local iniciado.");
-    Ok(Running { app, admin_addr, public_addr, stop, tasks })
+    Ok(Running {
+        app,
+        admin_addr,
+        public_addr,
+        stop,
+        tasks,
+    })
 }

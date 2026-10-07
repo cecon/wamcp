@@ -122,7 +122,13 @@ impl McpService {
     }
 
     /// Read operation: the credential must belong to the session; the action is audited first.
-    pub fn read<T>(&self, id: &str, token: &Credential, action: &str, operation: impl FnOnce() -> Result<T>) -> Result<T> {
+    pub fn read<T>(
+        &self,
+        id: &str,
+        token: &Credential,
+        action: &str,
+        operation: impl FnOnce() -> Result<T>,
+    ) -> Result<T> {
         require_session_credential(token, id)?;
         self.repo.audit(id, &token.id, action)?;
         operation()
@@ -149,7 +155,9 @@ impl McpService {
     pub async fn media(&self, id: &str, token: &Credential, jid: &str, message_id: &str) -> Result<MediaFile> {
         require_session_credential(token, id)?;
         let Some(media) = self.repo.media(id, jid, message_id)? else {
-            return fail("Anexo indisponível no histórico local. Consulte uma mensagem sincronizada após a atualização.");
+            return fail(
+                "Anexo indisponível no histórico local. Consulte uma mensagem sincronizada após a atualização.",
+            );
         };
         if media_too_large(media.metadata.size) {
             return fail(MEDIA_TOO_LARGE);
@@ -159,6 +167,9 @@ impl McpService {
         if data.len() > crate::domain::access::MAX_MEDIA_BYTES {
             return Err(Error::from(HelpdeskError::new(MEDIA_TOO_LARGE)));
         }
-        Ok(MediaFile { metadata: media.metadata, data })
+        Ok(MediaFile {
+            metadata: media.metadata,
+            data,
+        })
     }
 }

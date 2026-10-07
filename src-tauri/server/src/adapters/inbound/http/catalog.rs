@@ -32,8 +32,17 @@ async fn labels(State(state): State<AppState>, _user: CurrentUser) -> ApiResult<
     ok(state.support().catalog.labels()?)
 }
 
-async fn create_label(State(state): State<AppState>, current: CurrentUser, Body(body): Body<LabelFields>) -> ApiResult<Response> {
-    created(state.support().catalog.create_label(&current.actor(), &label_fields(body, false)?)?)
+async fn create_label(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<LabelFields>,
+) -> ApiResult<Response> {
+    created(
+        state
+            .support()
+            .catalog
+            .create_label(&current.actor(), &label_fields(body, false)?)?,
+    )
 }
 
 async fn update_label(
@@ -43,10 +52,17 @@ async fn update_label(
     Body(body): Body<LabelFields>,
 ) -> ApiResult<Response> {
     let id = id(&label)?;
-    ok(state.support().catalog.update_label(&current.actor(), id, &label_fields(body, true)?)?)
+    ok(state
+        .support()
+        .catalog
+        .update_label(&current.actor(), id, &label_fields(body, true)?)?)
 }
 
-async fn delete_label(State(state): State<AppState>, current: CurrentUser, Path(label): Path<String>) -> ApiResult<Response> {
+async fn delete_label(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(label): Path<String>,
+) -> ApiResult<Response> {
     state.support().catalog.delete_label(&current.actor(), id(&label)?)?;
     done()
 }
@@ -57,12 +73,20 @@ struct Canned {
     content: Option<String>,
 }
 
-async fn canned(State(state): State<AppState>, _user: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn canned(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     let q = raw(query.get("q").map_or("", String::as_str), 0, 100)?;
     ok(state.support().catalog.canned_responses(&q)?)
 }
 
-async fn create_canned(State(state): State<AppState>, _user: CurrentUser, Body(body): Body<Canned>) -> ApiResult<Response> {
+async fn create_canned(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    Body(body): Body<Canned>,
+) -> ApiResult<Response> {
     let code = text(body.short_code.as_deref().unwrap_or_default(), 1, 40)?;
     let content = text(body.content.as_deref().unwrap_or_default(), 1, 4096)?;
     created(state.support().catalog.create_canned(&code, &content)?)
@@ -77,10 +101,17 @@ async fn update_canned(
     let code = body.short_code.as_deref().map(|c| text(c, 1, 40)).transpose()?;
     let content = body.content.as_deref().map(|c| text(c, 1, 4096)).transpose()?;
     let id = id(&canned)?;
-    ok(state.support().catalog.update_canned(id, code.as_deref(), content.as_deref())?)
+    ok(state
+        .support()
+        .catalog
+        .update_canned(id, code.as_deref(), content.as_deref())?)
 }
 
-async fn delete_canned(State(state): State<AppState>, current: CurrentUser, Path(canned): Path<String>) -> ApiResult<Response> {
+async fn delete_canned(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(canned): Path<String>,
+) -> ApiResult<Response> {
     state.support().catalog.delete_canned(&current.actor(), id(&canned)?)?;
     done()
 }
@@ -97,7 +128,11 @@ async fn read_all(State(state): State<AppState>, current: CurrentUser) -> ApiRes
     ok(state.support().notifications.read_all(&current.user)?)
 }
 
-async fn read(State(state): State<AppState>, current: CurrentUser, Path(notification): Path<String>) -> ApiResult<Response> {
+async fn read(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(notification): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().notifications.read(&current.user, id(&notification)?)?)
 }
 

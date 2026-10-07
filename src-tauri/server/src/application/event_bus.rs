@@ -79,11 +79,7 @@ impl Worker {
                 }
             }
         });
-        Self {
-            sender,
-            pending,
-            idle,
-        }
+        Self { sender, pending, idle }
     }
 
     pub fn push(&self, envelope: &Envelope) {

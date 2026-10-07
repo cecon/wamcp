@@ -1,7 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Action, AutomationRule, CannedResponse, Condition, CsatEntry, CsatResponse, Delivery, DueDelivery,
-    Label, LabelFields, Notification, ReportingEvent, RuleFields, Webhook, WebhookFields,
+    Action, AutomationRule, CannedResponse, Condition, CsatEntry, CsatResponse, Delivery, DueDelivery, Label,
+    LabelFields, Notification, ReportingEvent, RuleFields, Webhook, WebhookFields,
 };
 use serde_json::Value;
 
@@ -41,7 +41,13 @@ pub trait CatalogRepo {
 pub trait AutomationRepo {
     fn webhooks(&self) -> Result<Vec<Webhook>>;
     fn webhook(&self, id: i64) -> Result<Option<Webhook>>;
-    fn create_webhook(&self, url: &str, subscriptions: &[String], inbox_id: Option<i64>, secret: &str) -> Result<Webhook>;
+    fn create_webhook(
+        &self,
+        url: &str,
+        subscriptions: &[String],
+        inbox_id: Option<i64>,
+        secret: &str,
+    ) -> Result<Webhook>;
     fn update_webhook(&self, id: i64, fields: &WebhookFields) -> Result<Webhook>;
     fn delete_webhook(&self, id: i64) -> Result<()>;
     fn enqueue_delivery(&self, webhook_id: i64, event: &str, payload: &Value, now: i64) -> Result<()>;

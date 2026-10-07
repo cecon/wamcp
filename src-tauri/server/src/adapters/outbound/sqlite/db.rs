@@ -67,7 +67,11 @@ impl SqliteStore {
         conn.busy_timeout(std::time::Duration::from_secs(5))?;
         conn.execute_batch(BASE)?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        for (step, sql) in migrations().iter().enumerate().skip(usize::try_from(version).unwrap_or(0)) {
+        for (step, sql) in migrations()
+            .iter()
+            .enumerate()
+            .skip(usize::try_from(version).unwrap_or(0))
+        {
             conn.execute_batch(&format!("BEGIN;{sql};PRAGMA user_version={};COMMIT;", step + 1))
                 .inspect_err(|_| {
                     let _ = conn.execute_batch("ROLLBACK");
@@ -75,7 +79,9 @@ impl SqliteStore {
         }
         conn.execute_batch(EXTRAS)?;
         conn.execute("UPDATE sessions SET status='disconnected'", [])?;
-        Ok(Self { conn: ReentrantMutex::new((conn, Cell::new(0))) })
+        Ok(Self {
+            conn: ReentrantMutex::new((conn, Cell::new(0))),
+        })
     }
 
     /// Runs `f` with the connection (re-entrant on the same thread).
@@ -127,10 +133,18 @@ impl SqliteStore {
         let guard = self.conn.lock();
         let depth = guard.1.get();
         let (begin, commit, rollback) = if depth == 0 {
-            ("BEGIN IMMEDIATE".to_string(), "COMMIT".to_string(), "ROLLBACK".to_string())
+            (
+                "BEGIN IMMEDIATE".to_string(),
+                "COMMIT".to_string(),
+                "ROLLBACK".to_string(),
+            )
         } else {
             let name = format!("nested_{depth}");
-            (format!("SAVEPOINT {name}"), format!("RELEASE {name}"), format!("ROLLBACK TO {name}; RELEASE {name}"))
+            (
+                format!("SAVEPOINT {name}"),
+                format!("RELEASE {name}"),
+                format!("ROLLBACK TO {name}; RELEASE {name}"),
+            )
         };
         guard.0.execute_batch(&begin)?;
         guard.1.set(depth + 1);

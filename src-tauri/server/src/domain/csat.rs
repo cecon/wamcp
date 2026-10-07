@@ -4,13 +4,11 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 pub const CSAT_WINDOW_SECONDS: i64 = 24 * 3600;
-pub const CSAT_SURVEY: &str =
-    "Como você avalia nosso atendimento? Responda com uma nota de 1 (ruim) a 5 (excelente).";
+pub const CSAT_SURVEY: &str = "Como você avalia nosso atendimento? Responda com uma nota de 1 (ruim) a 5 (excelente).";
 pub const CSAT_THANKS: &str = "Obrigado pela avaliação!";
 
-static RATING: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?is)^\s*(?:nota\s*)?([1-5])(?:\s*(?:[-–:,.!]\s*)?(.*))?$").expect("valid regex")
-});
+static RATING: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?is)^\s*(?:nota\s*)?([1-5])(?:\s*(?:[-–:,.!]\s*)?(.*))?$").expect("valid regex"));
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rating {

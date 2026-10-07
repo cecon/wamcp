@@ -18,7 +18,10 @@ static OPAQUE: LazyLock<Regex> = LazyLock::new(|| Regex::new("^[A-Za-z0-9_-]{43}
 
 fn missing(field: &str) -> Response {
     let description = json!([{ "expected": "string", "code": "invalid_type", "path": [field], "message": "Invalid input: expected string, received undefined" }]);
-    oauth_error("invalid_request", &serde_json::to_string_pretty(&description).unwrap_or_default())
+    oauth_error(
+        "invalid_request",
+        &serde_json::to_string_pretty(&description).unwrap_or_default(),
+    )
 }
 
 /// Authenticates the client of a token or revocation request (public or `client_secret_post`).
@@ -26,7 +29,9 @@ fn client(oauth: &OAuthService, form: &Fields) -> Result<Value, Box<Response>> {
     let Some(id) = form.get("client_id") else {
         return Err(Box::new(missing("client_id")));
     };
-    let client = oauth.get_client(id).ok_or_else(|| Box::new(oauth_error("invalid_client", "Invalid client_id")))?;
+    let client = oauth
+        .get_client(id)
+        .ok_or_else(|| Box::new(oauth_error("invalid_client", "Invalid client_id")))?;
     if let Some(secret) = client["client_secret"].as_str() {
         let Some(given) = form.get("client_secret") else {
             return Err(Box::new(oauth_error("invalid_client", "Client secret is required")));
@@ -44,12 +49,7 @@ fn tokens(value: Value) -> Response {
     response
 }
 
-pub async fn token(
-    State(state): State<AppState>,
-    peer: Peer,
-    headers: HeaderMap,
-    bytes: Bytes,
-) -> Response {
+pub async fn token(State(state): State<AppState>, peer: Peer, headers: HeaderMap, bytes: Bytes) -> Response {
     let Some(oauth) = state.oauth.as_ref() else {
         return StatusCode::NOT_FOUND.into_response();
     };
@@ -90,7 +90,10 @@ pub async fn token(
                 Err(error) => failure(error),
             }
         }
-        Some(_) => oauth_error("unsupported_grant_type", "The grant type is not supported by this authorization server."),
+        Some(_) => oauth_error(
+            "unsupported_grant_type",
+            "The grant type is not supported by this authorization server.",
+        ),
     };
     cors(response)
 }
@@ -122,19 +125,16 @@ fn page(status: StatusCode, text: &str) -> Response {
     response
 }
 
-pub async fn approve(
-    State(state): State<AppState>,
-    peer: Peer,
-    headers: HeaderMap,
-    bytes: Bytes,
-) -> Response {
+pub async fn approve(State(state): State<AppState>, peer: Peer, headers: HeaderMap, bytes: Bytes) -> Response {
     let Some(oauth) = state.oauth.as_ref() else {
         return StatusCode::NOT_FOUND.into_response();
     };
     if let Some(limited) = state.limits.approve.reject(&client_key(&headers, peer.0)) {
         return limited;
     }
-    let origin = url::Url::parse(&state.public_url).map(|u| u.origin().ascii_serialization()).unwrap_or_default();
+    let origin = url::Url::parse(&state.public_url)
+        .map(|u| u.origin().ascii_serialization())
+        .unwrap_or_default();
     if headers.get(header::ORIGIN).and_then(|v| v.to_str().ok()) != Some(origin.as_str()) {
         return page(StatusCode::FORBIDDEN, "Origem inválida. Reabra a conexão pelo ChatGPT.");
     }
@@ -142,7 +142,10 @@ pub async fn approve(
     let request = form.get("request").map(String::as_str).unwrap_or_default();
     let code = form.get("code").map(|c| c.trim()).unwrap_or_default();
     if bytes.len() > 4096 || !OPAQUE.is_match(request) || !OPAQUE.is_match(code) {
-        return page(StatusCode::BAD_REQUEST, "Código inválido. Volte à página anterior e tente novamente.");
+        return page(
+            StatusCode::BAD_REQUEST,
+            "Código inválido. Volte à página anterior e tente novamente.",
+        );
     }
     match oauth.approve(request, code) {
         Ok(location) => {

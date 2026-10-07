@@ -1,7 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges, ConversationCounts,
-    ConversationFilters, DaySchedule, Inbox, InboxChanges, Message, NewMessage, WorkingHour,
+    Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters,
+    DaySchedule, Inbox, InboxChanges, Message, NewMessage, WorkingHour,
 };
 use serde_json::Value;
 

@@ -25,9 +25,7 @@ pub fn is_open(inbox: &Inbox, schedule: &[WorkingHour], epoch_seconds: i64) -> b
     }
     let (day, minutes) = local_time(epoch_seconds, &inbox.timezone);
     match schedule.iter().find(|d| d.day_of_week == day) {
-        Some(today) if today.closed_all_day == 0 => {
-            minutes >= today.open_minutes && minutes < today.close_minutes
-        }
+        Some(today) if today.closed_all_day == 0 => minutes >= today.open_minutes && minutes < today.close_minutes,
         _ => false,
     }
 }

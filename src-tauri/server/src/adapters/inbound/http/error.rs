@@ -42,7 +42,10 @@ impl IntoResponse for ApiError {
             }
             Self::App(Error::Internal(detail)) => {
                 tracing::error!("request failed: {detail}");
-                error_body(StatusCode::INTERNAL_SERVER_ERROR, "Não foi possível concluir a operação")
+                error_body(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Não foi possível concluir a operação",
+                )
             }
             Self::Invalid => error_body(StatusCode::BAD_REQUEST, INVALID),
             Self::TooLarge => error_body(StatusCode::PAYLOAD_TOO_LARGE, INVALID),

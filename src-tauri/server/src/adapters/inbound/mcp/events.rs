@@ -9,7 +9,10 @@ fn invalid(method: &str, problem: &str) -> Outcome {
 }
 
 fn only(object: &Map<String, Value>, allowed: &[&str]) -> Option<String> {
-    object.keys().find(|k| !allowed.contains(&k.as_str())).map(|k| format!("Unrecognized key: \"{k}\""))
+    object
+        .keys()
+        .find(|k| !allowed.contains(&k.as_str()))
+        .map(|k| format!("Unrecognized key: \"{k}\""))
 }
 
 /// The zod-equivalent shape check of each method's params; the domain validates the rest.
@@ -41,7 +44,10 @@ fn check(method: &str, params: &Value) -> Option<String> {
         if let Some(extra) = only(arguments, &["jid"]) {
             return Some(format!("arguments: {extra}"));
         }
-        if arguments.get("jid").is_some_and(|j| !j.as_str().is_some_and(|j| j.len() <= 200 && JID.is_match(j))) {
+        if arguments
+            .get("jid")
+            .is_some_and(|j| !j.as_str().is_some_and(|j| j.len() <= 200 && JID.is_match(j)))
+        {
             return Some("arguments.jid: Invalid string".into());
         }
     }
@@ -49,18 +55,30 @@ fn check(method: &str, params: &Value) -> Option<String> {
     let Some(delivery) = delivery else {
         return Some("delivery: Invalid input: expected object, received undefined".into());
     };
-    let destination: &[&str] = if subscribing { &["mode", "url", "secret"] } else { &["mode", "url"] };
+    let destination: &[&str] = if subscribing {
+        &["mode", "url", "secret"]
+    } else {
+        &["mode", "url"]
+    };
     if let Some(extra) = only(delivery, destination) {
         return Some(format!("delivery: {extra}"));
     }
     if delivery.get("mode").and_then(Value::as_str) != Some("webhook") {
         return Some("delivery.mode: Invalid input: expected \"webhook\"".into());
     }
-    if delivery.get("url").and_then(Value::as_str).is_none_or(|u| u.len() > 2048) {
+    if delivery
+        .get("url")
+        .and_then(Value::as_str)
+        .is_none_or(|u| u.len() > 2048)
+    {
         return Some("delivery.url: Invalid input".into());
     }
     if subscribing {
-        if delivery.get("secret").and_then(Value::as_str).is_none_or(|s| s.len() > 100) {
+        if delivery
+            .get("secret")
+            .and_then(Value::as_str)
+            .is_none_or(|s| s.len() > 100)
+        {
             return Some("delivery.secret: Invalid input".into());
         }
         if !matches!(object.get("cursor"), None | Some(Value::Null)) {
@@ -79,7 +97,12 @@ fn check(method: &str, params: &Value) -> Option<String> {
 
 fn failure(error: EventError) -> Outcome {
     let data = error.reason.map(|reason| json!({ "reason": reason }));
-    Outcome::Error { status: 200, code: error.code, message: error.message, data }
+    Outcome::Error {
+        status: 200,
+        code: error.code,
+        message: error.message,
+        data,
+    }
 }
 
 pub async fn handle(call: &Call<'_>, method: &str, params: &Value) -> Outcome {

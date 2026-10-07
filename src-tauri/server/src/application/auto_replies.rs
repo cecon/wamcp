@@ -42,7 +42,8 @@ impl AutoReplyService {
             if let Some(away) = inbox.out_of_office_message.as_deref().filter(|m| !m.is_empty()) {
                 let schedule = core.repo.working_hours(inbox.id).unwrap_or_default();
                 if !is_open(&inbox, &schedule, core.now()) {
-                    self.send("out_of_office", "Fora do horário", data.display_id, away).await;
+                    self.send("out_of_office", "Fora do horário", data.display_id, away)
+                        .await;
                 }
             }
         } else if envelope.event == "conversation.status_changed" && data.status == "resolved" {
@@ -57,7 +58,8 @@ impl AutoReplyService {
                 ..Default::default()
             };
             if core.update(data.id, changes).is_ok() {
-                self.send("csat", "Pesquisa de satisfação", data.display_id, CSAT_SURVEY).await;
+                self.send("csat", "Pesquisa de satisfação", data.display_id, CSAT_SURVEY)
+                    .await;
             }
         }
     }

@@ -26,10 +26,20 @@ pub async fn send(router: &Router, request: Request<Body>) -> Reply {
     let response = router.clone().oneshot(request).await.expect("infallible router");
     let status = response.status().as_u16();
     let headers = response.headers().clone();
-    let bytes = response.into_body().collect().await.map(|b| b.to_bytes()).unwrap_or_default();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .map(|b| b.to_bytes())
+        .unwrap_or_default();
     let text = String::from_utf8_lossy(&bytes).into_owned();
     let body = serde_json::from_str(&text).unwrap_or(Value::Null);
-    Reply { status, headers, body, text }
+    Reply {
+        status,
+        headers,
+        body,
+        text,
+    }
 }
 
 pub fn request(method: &str, path: &str, body: Option<Value>, headers: &[(&str, &str)]) -> Request<Body> {
@@ -87,7 +97,11 @@ impl Agent {
 impl Fixture {
     pub async fn admin(&self, method: &str, path: &str, body: Option<Value>) -> Reply {
         let auth = format!("Bearer {ADMIN_TOKEN}");
-        send(&self.app.admin_router(), request(method, path, body, &[("authorization", &auth)])).await
+        send(
+            &self.app.admin_router(),
+            request(method, path, body, &[("authorization", &auth)]),
+        )
+        .await
     }
 
     pub async fn public(&self, request: Request<Body>) -> Reply {
@@ -95,7 +109,8 @@ impl Fixture {
     }
 
     pub async fn api(&self, method: &str, path: &str, body: Option<Value>, headers: &[(&str, &str)]) -> Reply {
-        self.public(request(method, &format!("/api/v1{path}"), body, headers)).await
+        self.public(request(method, &format!("/api/v1{path}"), body, headers))
+            .await
     }
 
     /// Logs in through the API; `Err(status)` when the login is refused.

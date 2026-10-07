@@ -6,8 +6,8 @@ use crate::domain::actor::Actor;
 use crate::domain::error::{Error, HelpdeskError, Result};
 use crate::domain::helpdesk::assignment_activity;
 use crate::domain::model::{
-    Contact, ContactChanges, Conversation, ConversationChanges as Changes, ConversationCounts,
-    ConversationFilters, Inbox, Message, MirrorMessage, NewMessage,
+    Contact, ContactChanges, Conversation, ConversationChanges as Changes, ConversationCounts, ConversationFilters,
+    Inbox, Message, MirrorMessage, NewMessage,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -93,9 +93,9 @@ impl HelpdeskService {
     pub async fn reply(&self, actor: &Actor, display_id: i64, content: &str, private: bool) -> Result<Message> {
         let conversation = self.core.load(Some(actor), display_id)?;
         let inbox = self.core.inbox(conversation.inbox_id)?;
-        let message = self
-            .core
-            .commit(Some(actor), |events| self.store_reply(actor, &conversation, content, private, events))?;
+        let message = self.core.commit(Some(actor), |events| {
+            self.store_reply(actor, &conversation, content, private, events)
+        })?;
         if private {
             return Ok(message);
         }
@@ -143,7 +143,13 @@ impl HelpdeskService {
         let now = core.now();
         // Greetings, out-of-office and surveys must not count as the team's first reply.
         if matches!(actor, Actor::System { .. }) {
-            core.update(conversation.id, Changes { last_activity_at: Some(now), ..Default::default() })?;
+            core.update(
+                conversation.id,
+                Changes {
+                    last_activity_at: Some(now),
+                    ..Default::default()
+                },
+            )?;
             return Ok(stored);
         }
         let updated = core.update(
@@ -159,7 +165,10 @@ impl HelpdeskService {
         if updated.assignee_id.is_none() && actor.is_agent() && !actor.is_admin() {
             let taken = core.update(
                 conversation.id,
-                Changes { assignee_id: Some(actor.user_id()), ..Default::default() },
+                Changes {
+                    assignee_id: Some(actor.user_id()),
+                    ..Default::default()
+                },
             )?;
             let name = actor.name();
             core.activity(&taken, assignment_activity(name.as_deref(), name.as_deref()), events)?;
@@ -168,12 +177,23 @@ impl HelpdeskService {
         Ok(stored)
     }
 
-    async fn deliver(&self, message: Message, inbox: &Inbox, conversation: &Conversation, actor: &Actor) -> Result<Message> {
+    async fn deliver(
+        &self,
+        message: Message,
+        inbox: &Inbox,
+        conversation: &Conversation,
+        actor: &Actor,
+    ) -> Result<Message> {
         let repo = &self.core.repo;
         let content = message.content.clone().unwrap_or_default();
         let sent = self
             .whatsapp
-            .send(&inbox.session_id, &conversation.contact_jid, &content, message.source_id.as_deref())
+            .send(
+                &inbox.session_id,
+                &conversation.contact_jid,
+                &content,
+                message.source_id.as_deref(),
+            )
             .await;
         let updated = match sent {
             Ok(_) => {

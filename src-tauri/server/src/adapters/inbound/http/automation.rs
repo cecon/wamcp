@@ -16,20 +16,36 @@ use serde_json::Value;
 
 fn webhook_fields(body: WebhookFields, partial: bool) -> ApiResult<WebhookFields> {
     check(partial || (body.url.is_some() && body.subscriptions.is_some()))?;
-    check(body.subscriptions.as_ref().is_none_or(|s| !s.is_empty() && s.iter().all(|e| is_webhook_event(e))))?;
+    check(
+        body.subscriptions
+            .as_ref()
+            .is_none_or(|s| !s.is_empty() && s.iter().all(|e| is_webhook_event(e))),
+    )?;
     check(body.inbox_id.flatten().is_none_or(|i| i > 0))?;
-    Ok(WebhookFields { url: body.url.as_deref().map(|u| text(u, 0, 2000)).transpose()?, ..body })
+    Ok(WebhookFields {
+        url: body.url.as_deref().map(|u| text(u, 0, 2000)).transpose()?,
+        ..body
+    })
 }
 
 async fn webhooks(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
     ok(state.support().webhooks.list(&current.actor())?)
 }
 
-async fn create_webhook(State(state): State<AppState>, current: CurrentUser, Body(body): Body<WebhookFields>) -> ApiResult<Response> {
+async fn create_webhook(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<WebhookFields>,
+) -> ApiResult<Response> {
     let fields = webhook_fields(body, false)?;
     let (url, subscriptions) = (fields.url.unwrap_or_default(), fields.subscriptions.unwrap_or_default());
     let inbox = fields.inbox_id.flatten();
-    created(state.support().webhooks.create(&current.actor(), &url, &subscriptions, inbox)?)
+    created(
+        state
+            .support()
+            .webhooks
+            .create(&current.actor(), &url, &subscriptions, inbox)?,
+    )
 }
 
 async fn update_webhook(
@@ -39,15 +55,26 @@ async fn update_webhook(
     Body(body): Body<WebhookFields>,
 ) -> ApiResult<Response> {
     let id = id(&webhook)?;
-    ok(state.support().webhooks.update(&current.actor(), id, &webhook_fields(body, true)?)?)
+    ok(state
+        .support()
+        .webhooks
+        .update(&current.actor(), id, &webhook_fields(body, true)?)?)
 }
 
-async fn delete_webhook(State(state): State<AppState>, current: CurrentUser, Path(webhook): Path<String>) -> ApiResult<Response> {
+async fn delete_webhook(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(webhook): Path<String>,
+) -> ApiResult<Response> {
     state.support().webhooks.remove(&current.actor(), id(&webhook)?)?;
     done()
 }
 
-async fn deliveries(State(state): State<AppState>, current: CurrentUser, Path(webhook): Path<String>) -> ApiResult<Response> {
+async fn deliveries(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(webhook): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().webhooks.deliveries(&current.actor(), id(&webhook)?)?)
 }
 
@@ -72,12 +99,24 @@ fn valid_conditions(conditions: &[Condition]) -> bool {
 
 fn valid_actions(actions: &[Action]) -> bool {
     (1..=20).contains(&actions.len())
-        && actions.iter().all(|a| ACTIONS.contains(&a.action_name.as_str()) && scalars(&a.action_params))
+        && actions
+            .iter()
+            .all(|a| ACTIONS.contains(&a.action_name.as_str()) && scalars(&a.action_params))
 }
 
 fn rule_fields(body: RuleFields, partial: bool) -> ApiResult<RuleFields> {
-    check(partial || (body.name.is_some() && body.event_name.is_some() && body.conditions.is_some() && body.actions.is_some()))?;
-    check(body.event_name.as_deref().is_none_or(|e| AUTOMATION_EVENTS.contains(&e)))?;
+    check(
+        partial
+            || (body.name.is_some()
+                && body.event_name.is_some()
+                && body.conditions.is_some()
+                && body.actions.is_some()),
+    )?;
+    check(
+        body.event_name
+            .as_deref()
+            .is_none_or(|e| AUTOMATION_EVENTS.contains(&e)),
+    )?;
     check(body.conditions.as_deref().is_none_or(valid_conditions))?;
     check(body.actions.as_deref().is_none_or(valid_actions))?;
     Ok(RuleFields {
@@ -91,7 +130,11 @@ async fn rules(State(state): State<AppState>, current: CurrentUser) -> ApiResult
     ok(state.support().automations.list(&current.actor())?)
 }
 
-async fn create_rule(State(state): State<AppState>, current: CurrentUser, Body(body): Body<RuleFields>) -> ApiResult<Response> {
+async fn create_rule(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<RuleFields>,
+) -> ApiResult<Response> {
     let fields = rule_fields(body, false)?;
     let rule = NewRule {
         name: fields.name.unwrap_or_default(),
@@ -111,10 +154,17 @@ async fn update_rule(
     Body(body): Body<RuleFields>,
 ) -> ApiResult<Response> {
     let id = id(&rule)?;
-    ok(state.support().automations.update(&current.actor(), id, &rule_fields(body, true)?)?)
+    ok(state
+        .support()
+        .automations
+        .update(&current.actor(), id, &rule_fields(body, true)?)?)
 }
 
-async fn delete_rule(State(state): State<AppState>, current: CurrentUser, Path(rule): Path<String>) -> ApiResult<Response> {
+async fn delete_rule(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(rule): Path<String>,
+) -> ApiResult<Response> {
     state.support().automations.remove(&current.actor(), id(&rule)?)?;
     done()
 }
@@ -127,15 +177,27 @@ fn period(query: &Query) -> ApiResult<PeriodQuery> {
     })
 }
 
-async fn summary(State(state): State<AppState>, current: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn summary(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     ok(state.support().reports.summary(&current.actor(), period(&query)?)?)
 }
 
-async fn agent_report(State(state): State<AppState>, current: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn agent_report(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     ok(state.support().reports.agents(&current.actor(), period(&query)?)?)
 }
 
-async fn csat(State(state): State<AppState>, current: CurrentUser, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn csat(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     ok(state.support().reports.csat(&current.actor(), period(&query)?)?)
 }
 

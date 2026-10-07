@@ -11,8 +11,7 @@ pub const MAX_EVENT_TEXT: usize = 8000;
 pub const JID_PATTERN: &str = r"^[0-9][0-9A-Za-z:._-]*@(s\.whatsapp\.net|g\.us|lid)$";
 
 pub static JID: LazyLock<Regex> = LazyLock::new(|| Regex::new(JID_PATTERN).expect("valid regex"));
-static SECRET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^whsec_[A-Za-z0-9+/]+={0,2}$").expect("valid regex"));
+static SECRET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^whsec_[A-Za-z0-9+/]+={0,2}$").expect("valid regex"));
 
 /// A JSON-RPC error for the events methods (`code`, safe `message`, optional `data.reason`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,15 +88,21 @@ pub struct EventParams {
     pub ttl: Option<i64>,
 }
 
-fn valid_secret(secret: &str) -> bool {
-    if secret.len() > 94 || !SECRET.is_match(secret) {
-        return false;
-    }
+/// A `whsec_` secret in canonical base64 encoding 24–64 bytes.
+fn check_secret(secret: Option<&str>) -> Result<(), EventError> {
+    let invalid = || EventError::new("Segredo de assinatura inválido");
+    let secret = secret
+        .filter(|s| s.len() <= 94 && SECRET.is_match(s))
+        .ok_or_else(invalid)?;
     let encoded = &secret[6..];
-    match STANDARD.decode(encoded) {
-        Ok(bytes) => STANDARD.encode(&bytes) == encoded && (24..=64).contains(&bytes.len()),
-        Err(_) => false,
+    let bytes = STANDARD.decode(encoded).map_err(|_| invalid())?;
+    if STANDARD.encode(&bytes) != encoded {
+        return Err(invalid());
     }
+    if !(24..=64).contains(&bytes.len()) {
+        return Err(EventError::new("Segredo de assinatura deve conter 24–64 bytes"));
+    }
+    Ok(())
 }
 
 pub fn event_parameters(params: &Value, subscribing: bool) -> Result<EventParams, EventError> {
@@ -130,9 +135,7 @@ pub fn event_parameters(params: &Value, subscribing: bool) -> Result<EventParams
         || parsed.password().is_some()
         || parsed.fragment().is_some()
     {
-        return Err(EventError::new(
-            "Callback deve usar HTTPS sem credenciais ou fragmento",
-        ));
+        return Err(EventError::new("Callback deve usar HTTPS sem credenciais ou fragmento"));
     }
     let mut result = EventParams {
         args: args.clone(),
@@ -141,14 +144,11 @@ pub fn event_parameters(params: &Value, subscribing: bool) -> Result<EventParams
         ttl: None,
     };
     if subscribing {
-        let secret = delivery
-            .and_then(|d| d.get("secret")?.as_str())
-            .filter(|s| valid_secret(s))
-            .ok_or_else(|| EventError::new("Segredo de assinatura inválido"))?;
+        let secret = delivery.and_then(|d| d.get("secret")?.as_str());
+        check_secret(secret)?;
+        let secret = secret.unwrap_or_default();
         if !matches!(object.get("cursor"), None | Some(Value::Null)) {
-            return Err(EventError::new(
-                "Este evento não oferece replay; cursor deve ser null",
-            ));
+            return Err(EventError::new("Este evento não oferece replay; cursor deve ser null"));
         }
         let ttl = match object.get("ttlMs") {
             None | Some(Value::Null) => EVENT_TTL,

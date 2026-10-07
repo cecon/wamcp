@@ -77,12 +77,28 @@ impl EventCallback for RecordingCallback {
         }
     }
 
-    async fn deliver(&self, url: &str, _subscription: &str, secrets: &[String], event: &Value) -> std::result::Result<CallbackResponse, CallbackError> {
-        self.delivered.lock().push((url.into(), secrets.to_vec(), event.clone()));
+    async fn deliver(
+        &self,
+        url: &str,
+        _subscription: &str,
+        secrets: &[String],
+        event: &Value,
+    ) -> std::result::Result<CallbackResponse, CallbackError> {
+        self.delivered
+            .lock()
+            .push((url.into(), secrets.to_vec(), event.clone()));
         match *self.status.lock() {
-            Some(0) => Err(CallbackError { reason: "delivery_failed".into() }),
-            Some(status) => Ok(CallbackResponse { status, body: String::new() }),
-            None => Ok(CallbackResponse { status: 200, body: String::new() }),
+            Some(0) => Err(CallbackError {
+                reason: "delivery_failed".into(),
+            }),
+            Some(status) => Ok(CallbackResponse {
+                status,
+                body: String::new(),
+            }),
+            None => Ok(CallbackResponse {
+                status: 200,
+                body: String::new(),
+            }),
         }
     }
 }
@@ -110,7 +126,14 @@ pub struct Incoming<'a> {
 
 impl Default for Incoming<'_> {
     fn default() -> Self {
-        Self { id: "IN1", jid: "5511988887777@s.whatsapp.net", body: "Olá", from_me: false, ts: None, name: "Cliente" }
+        Self {
+            id: "IN1",
+            jid: "5511988887777@s.whatsapp.net",
+            body: "Olá",
+            from_me: false,
+            ts: None,
+            name: "Cliente",
+        }
     }
 }
 
@@ -128,7 +151,11 @@ impl Fixture {
     }
 
     pub async fn with_web(web: &Path) -> Self {
-        Self::build(Arc::new(SqliteStore::in_memory().expect("store")), None, Some(web.to_path_buf()))
+        Self::build(
+            Arc::new(SqliteStore::in_memory().expect("store")),
+            None,
+            Some(web.to_path_buf()),
+        )
     }
 
     fn build(store: Arc<SqliteStore>, dir: Option<tempfile::TempDir>, web: Option<std::path::PathBuf>) -> Self {
@@ -153,8 +180,20 @@ impl Fixture {
         let app = compose(ports, settings);
         let events = Arc::new(Mutex::new(Vec::new()));
         let recorded = events.clone();
-        app.state.support().bus.subscribe(move |e| recorded.lock().push(e.clone()));
-        Self { app, store, wa, sender, callback, clock, events, dir }
+        app.state
+            .support()
+            .bus
+            .subscribe(move |e| recorded.lock().push(e.clone()));
+        Self {
+            app,
+            store,
+            wa,
+            sender,
+            callback,
+            clock,
+            events,
+            dir,
+        }
     }
 
     pub fn session(&self, name: &str) -> Session {
@@ -191,7 +230,12 @@ impl Fixture {
             ts: m.ts.unwrap_or_else(|| self.now()),
         };
         let _ = self.store.store_message(session_id, &message, None);
-        self.app.state.support().helpdesk.ingest(session_id, &message).expect("ingest")
+        self.app
+            .state
+            .support()
+            .helpdesk
+            .ingest(session_id, &message)
+            .expect("ingest")
     }
 
     pub async fn bootstrap(&self) -> Agent {

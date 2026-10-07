@@ -1,9 +1,7 @@
 use super::db::{flag, int, iso, now_ms, opt_int, opt_text, placeholders, text, SqliteStore, PLAIN};
 use crate::application::ports::{ContactRepo, InboxRepo};
 use crate::domain::error::{Error, Result};
-use crate::domain::model::{
-    Contact, ContactChanges, ContactInbox, DaySchedule, Inbox, InboxChanges, WorkingHour,
-};
+use crate::domain::model::{Contact, ContactChanges, ContactInbox, DaySchedule, Inbox, InboxChanges, WorkingHour};
 use rusqlite::types::Value as Sql;
 
 const INBOX: &str = "SELECT i.*, w.session_id, w.ignore_groups, s.status AS session_status, s.phone FROM inboxes i
@@ -38,7 +36,10 @@ impl InboxRepo for SqliteStore {
         let Some(name) = name else {
             return Ok(None);
         };
-        let channel = self.insert("INSERT INTO channel_whatsapp(session_id) VALUES(?)", vec![text(session_id)])?;
+        let channel = self.insert(
+            "INSERT INTO channel_whatsapp(session_id) VALUES(?)",
+            vec![text(session_id)],
+        )?;
         let id = self.insert(
             "INSERT INTO inboxes(name,channel_type,channel_id,created) VALUES(?,'whatsapp',?,?)",
             vec![text(name), int(channel), text(iso(now_ms()))],
@@ -93,7 +94,11 @@ impl InboxRepo for SqliteStore {
     }
 
     fn working_hours(&self, inbox_id: i64) -> Result<Vec<WorkingHour>> {
-        self.rows("SELECT * FROM working_hours WHERE inbox_id=? ORDER BY day_of_week", vec![int(inbox_id)], PLAIN)
+        self.rows(
+            "SELECT * FROM working_hours WHERE inbox_id=? ORDER BY day_of_week",
+            vec![int(inbox_id)],
+            PLAIN,
+        )
     }
 
     fn set_working_hours(&self, inbox_id: i64, days: &[DaySchedule]) -> Result<()> {
@@ -144,12 +149,20 @@ impl ContactRepo for SqliteStore {
         let sql = "SELECT * FROM contacts WHERE COALESCE(name,'') LIKE ? OR COALESCE(phone_number,'') LIKE ?
                    OR COALESCE(email,'') LIKE ? ORDER BY last_activity_at DESC NULLS LAST, id DESC LIMIT ? OFFSET ?";
         let offset = (page.max(1) - 1) * PAGE;
-        self.rows(sql, vec![like.clone(), like.clone(), like, int(PAGE), int(offset)], PLAIN)
+        self.rows(
+            sql,
+            vec![like.clone(), like.clone(), like, int(PAGE), int(offset)],
+            PLAIN,
+        )
     }
 
     fn update_contact(&self, id: i64, changes: &ContactChanges) -> Result<Contact> {
         let mut fields: Vec<(&str, Sql)> = Vec::new();
-        for (key, value) in [("name", &changes.name), ("email", &changes.email), ("identifier", &changes.identifier)] {
+        for (key, value) in [
+            ("name", &changes.name),
+            ("email", &changes.email),
+            ("identifier", &changes.identifier),
+        ] {
             if let Some(value) = value {
                 fields.push((key, opt_text(value.as_deref())));
             }

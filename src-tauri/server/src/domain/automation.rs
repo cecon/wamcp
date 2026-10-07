@@ -144,9 +144,7 @@ pub fn raw_text(value: &Value) -> String {
 pub fn automation_events_for(event: &str, data: &Value) -> Vec<&'static str> {
     match event {
         "conversation.created" => vec!["conversation_created"],
-        "message.created"
-            if data["message_type"] != "activity" && !data["private"].as_bool().unwrap_or(false) =>
-        {
+        "message.created" if data["message_type"] != "activity" && !data["private"].as_bool().unwrap_or(false) => {
             vec!["message_created"]
         }
         "conversation.status_changed" => match data["status"].as_str() {

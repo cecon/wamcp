@@ -21,6 +21,7 @@ pub trait Transactional {
 /// The helpdesk repository: every aggregate store behind one handle.
 pub trait Repository:
     UsersRepo
+    + TeamsRepo
     + InboxRepo
     + ContactRepo
     + ConversationRepo
@@ -39,6 +40,7 @@ pub trait Repository:
 
 impl<T> Repository for T where
     T: UsersRepo
+        + TeamsRepo
         + InboxRepo
         + ContactRepo
         + ConversationRepo

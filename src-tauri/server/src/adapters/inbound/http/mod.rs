@@ -12,13 +12,13 @@ pub mod state;
 mod teams;
 mod web_app;
 
-use state::AppState;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{any, get};
 use axum::{Json, Router};
 use serde_json::json;
+use state::AppState;
 
 /// Requests up to this size reach the handlers, which answer bodies over 256 KiB with 413.
 const TRANSPORT_LIMIT: usize = 1024 * 1024;

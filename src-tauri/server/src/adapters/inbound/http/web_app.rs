@@ -3,7 +3,7 @@ use super::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderValue, StatusCode};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::Router;
 use std::path::{Component, PathBuf};
@@ -50,7 +50,11 @@ async fn index(State(state): State<AppState>) -> Response {
     // Resolved per request so a UI rebuilt while the service runs is picked up without a restart.
     let response = match (state.support().web_dir)() {
         Some(dir) => file(dir.join("agent.html"), "no-cache"),
-        None => (StatusCode::SERVICE_UNAVAILABLE, "Interface web não foi gerada. Execute npm run build.").into_response(),
+        None => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Interface web não foi gerada. Execute npm run build.",
+        )
+            .into_response(),
     };
     secured(response)
 }
@@ -65,12 +69,17 @@ async fn asset(State(state): State<AppState>, Path(path): Path<String>) -> Respo
     secured(response)
 }
 
+/// 302 Found, like Express `res.redirect`.
+async fn to_app() -> Response {
+    (StatusCode::FOUND, [(header::LOCATION, "/app/")]).into_response()
+}
+
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/", get(|| async { Redirect::to("/app/") }))
+        .route("/", get(to_app))
         // The source page is agent.html (what Vite serves in dev); on the backend it lives at /app/.
-        .route("/agent.html", get(|| async { Redirect::to("/app/") }))
-        .route("/app", get(|| async { Redirect::to("/app/") }))
+        .route("/agent.html", get(to_app))
+        .route("/app", get(to_app))
         .route("/app/", get(index))
         .route("/app/assets/{*path}", get(asset))
 }

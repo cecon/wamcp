@@ -33,8 +33,17 @@ async fn create_session(State(state): State<AppState>, Body(body): Body<Named>) 
 }
 
 /// Every `/api/sessions/{id}/…` route answers 404 for unknown sessions.
-async fn known_session(State(state): State<AppState>, Path(params): Path<Vec<(String, String)>>, request: Request, next: Next) -> Response {
-    let id = params.iter().find(|(k, _)| k == "id").map(|(_, v)| v.as_str()).unwrap_or_default();
+async fn known_session(
+    State(state): State<AppState>,
+    Path(params): Path<Vec<(String, String)>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let id = params
+        .iter()
+        .find(|(k, _)| k == "id")
+        .map(|(_, v)| v.as_str())
+        .unwrap_or_default();
     match state.sessions.session(id) {
         Ok(Some(_)) => next.run(request).await,
         _ => error_body(StatusCode::NOT_FOUND, "Sessão não encontrada"),
@@ -66,11 +75,19 @@ async fn logout(State(state): State<AppState>, Path(id): Path<String>) -> ApiRes
     done()
 }
 
-async fn chats(State(state): State<AppState>, Path(id): Path<String>, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn chats(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     ok(state.sessions.chats(&id, query.get("q").map_or("", String::as_str))?)
 }
 
-async fn messages(State(state): State<AppState>, Path(id): Path<String>, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn messages(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     let jid = query.get("jid").ok_or(ApiError::Invalid)?;
     check(JID.is_match(jid))?;
     let before = match query.get("before") {
@@ -79,11 +96,19 @@ async fn messages(State(state): State<AppState>, Path(id): Path<String>, Params(
     };
     let before_id = query.get("beforeId").cloned();
     check(before_id.as_ref().is_none_or(|b| b.chars().count() <= 200))?;
-    let page = HistoryPage { before, before_id, limit: int_param(&query, "limit", 100, 1, 200)? };
+    let page = HistoryPage {
+        before,
+        before_id,
+        limit: int_param(&query, "limit", 100, 1, 200)?,
+    };
     ok(state.sessions.messages(&id, jid, &page)?)
 }
 
-async fn search(State(state): State<AppState>, Path(id): Path<String>, Params(query): Params<Query>) -> ApiResult<Response> {
+async fn search(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Params(query): Params<Query>,
+) -> ApiResult<Response> {
     let q = query.get("q").ok_or(ApiError::Invalid)?;
     check((1..=200).contains(&q.chars().count()))?;
     ok(state.sessions.search(&id, q, 100)?)
@@ -100,7 +125,11 @@ struct NewToken {
     days: Option<i64>,
 }
 
-async fn issue_token(State(state): State<AppState>, Path(id): Path<String>, Body(body): Body<NewToken>) -> ApiResult<Response> {
+async fn issue_token(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Body(body): Body<NewToken>,
+) -> ApiResult<Response> {
     let (name, scope) = (text(&body.name, 1, 80)?, one_of(&body.scope, &["read", "read_write"])?);
     let days = body.days.unwrap_or(90);
     check((1..=365).contains(&days))?;
@@ -121,10 +150,16 @@ struct Link {
     scope: String,
 }
 
-async fn chatgpt_link(State(state): State<AppState>, Path(id): Path<String>, Body(body): Body<Link>) -> ApiResult<Response> {
+async fn chatgpt_link(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Body(body): Body<Link>,
+) -> ApiResult<Response> {
     let scope = one_of(&body.scope, &["read", "read_write"])?;
     let oauth = state.oauth.as_ref().ok_or(ApiError::Invalid)?;
-    let link = oauth.create_link(&id, &scope).map_err(|e| ApiError::from(crate::domain::error::HelpdeskError::new(e.message)))?;
+    let link = oauth
+        .create_link(&id, &scope)
+        .map_err(|e| ApiError::from(crate::domain::error::HelpdeskError::new(e.message)))?;
     ok(link)
 }
 
@@ -132,9 +167,14 @@ async fn chatgpt(State(state): State<AppState>, Path(id): Path<String>) -> ApiRe
     ok(state.oauth.as_ref().map(|o| o.connections(&id)).unwrap_or_default())
 }
 
-async fn chatgpt_disconnect(State(state): State<AppState>, Path((id, grant)): Path<(String, String)>) -> ApiResult<Response> {
+async fn chatgpt_disconnect(
+    State(state): State<AppState>,
+    Path((id, grant)): Path<(String, String)>,
+) -> ApiResult<Response> {
     if let Some(oauth) = &state.oauth {
-        oauth.disconnect(&id, &grant).map_err(|e| ApiError::from(crate::domain::error::HelpdeskError::new(e.message)))?;
+        oauth
+            .disconnect(&id, &grant)
+            .map_err(|e| ApiError::from(crate::domain::error::HelpdeskError::new(e.message)))?;
     }
     done()
 }

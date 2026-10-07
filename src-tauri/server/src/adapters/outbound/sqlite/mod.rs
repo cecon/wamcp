@@ -8,6 +8,7 @@ mod inboxes;
 mod insights;
 mod migrations;
 mod mirror;
+mod teams;
 mod users;
 
 pub use db::SqliteStore;

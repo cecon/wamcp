@@ -2,8 +2,8 @@
 //!
 //! Layers follow a hexagonal layout: `domain` (pure rules), `application` (use cases over ports) and
 //! `adapters` (HTTP inbound, SQLite/WhatsApp/HTTP outbound). `compose` wires them together.
-pub mod domain;
-pub mod application;
 pub mod adapters;
+pub mod application;
 pub mod compose;
+pub mod domain;
 pub mod server;

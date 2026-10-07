@@ -50,7 +50,8 @@ impl WebhookService {
             if webhook.inbox_id.is_some() && envelope.data["inbox_id"].as_i64() != webhook.inbox_id {
                 continue;
             }
-            let payload = json!({ "event": name, "data": envelope.data, "performer": envelope.performer, "timestamp": now });
+            let payload =
+                json!({ "event": name, "data": envelope.data, "performer": envelope.performer, "timestamp": now });
             self.core.repo.enqueue_delivery(webhook.id, name, &payload, now)?;
         }
         Ok(())

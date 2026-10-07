@@ -29,7 +29,9 @@ fn check_number(schema: &Value, n: f64, integer: bool) -> Option<String> {
     if let Some(min) = number(schema, "minimum").filter(|m| n < *m) {
         return Some(format!("Too small: expected number to be >={min}"));
     }
-    number(schema, "maximum").filter(|m| n > *m).map(|max| format!("Too big: expected number to be <={max}"))
+    number(schema, "maximum")
+        .filter(|m| n > *m)
+        .map(|max| format!("Too big: expected number to be <={max}"))
 }
 
 fn check_string(schema: &Value, s: &str) -> Option<String> {
@@ -48,7 +50,11 @@ fn check_string(schema: &Value, s: &str) -> Option<String> {
 /// The problem with `value` under `schema`, if any.
 fn problem(schema: &Value, value: &Value) -> Option<String> {
     if let Some(options) = schema.get("anyOf").and_then(Value::as_array) {
-        return if options.iter().any(|o| problem(o, value).is_none()) { None } else { Some("Invalid input".into()) };
+        return if options.iter().any(|o| problem(o, value).is_none()) {
+            None
+        } else {
+            Some("Invalid input".into())
+        };
     }
     let expected = schema.get("type").and_then(Value::as_str).unwrap_or("any");
     let mismatch = || Some(format!("Invalid input: expected {expected}, received {}", kind(value)));
@@ -109,6 +115,10 @@ pub fn validate(tool: &Tool, arguments: Option<&Value>) -> Result<Map<String, Va
     if issues.is_empty() {
         Ok(output)
     } else {
-        Err(format!("Input validation error: Invalid arguments for tool {}: {}", tool.name, issues.join("; ")))
+        Err(format!(
+            "Input validation error: Invalid arguments for tool {}: {}",
+            tool.name,
+            issues.join("; ")
+        ))
     }
 }

@@ -65,7 +65,11 @@ impl Call<'_> {
 
     pub async fn run(&self, tool: &Tool, args: &Map<String, Value>) -> Value {
         let Some(token) = self.authenticate() else {
-            let scope = if tool.scope == Scope::Send { SEND_SCOPE } else { "whatsapp:read" };
+            let scope = if tool.scope == Scope::Send {
+                SEND_SCOPE
+            } else {
+                "whatsapp:read"
+            };
             return self.auth_result("invalid_token", scope);
         };
         if tool.scope == Scope::Send && !token.can_send() {
@@ -101,7 +105,11 @@ impl Call<'_> {
                     };
                     serde_json::to_value(repo.mirror_messages(id, arg_str(args, "jid").unwrap_or_default(), &page)?)?
                 }
-                _ => serde_json::to_value(repo.search(id, arg_str(args, "query").unwrap_or_default(), arg_int(args, "limit"))?)?,
+                _ => serde_json::to_value(repo.search(
+                    id,
+                    arg_str(args, "query").unwrap_or_default(),
+                    arg_int(args, "limit"),
+                )?)?,
             })
         });
         match result {
@@ -112,7 +120,10 @@ impl Call<'_> {
     }
 
     async fn send(&self, token: &Credential, args: &Map<String, Value>) -> Value {
-        let (jid, body) = (arg_str(args, "jid").unwrap_or_default(), arg_str(args, "text").unwrap_or_default());
+        let (jid, body) = (
+            arg_str(args, "jid").unwrap_or_default(),
+            arg_str(args, "text").unwrap_or_default(),
+        );
         match self.state.mcp.send(self.session_id, token, jid, body).await {
             Ok(id) => output(&json!({ "id": id })),
             Err(_) => failure("Não foi possível confirmar o envio. Verifique o histórico antes de tentar novamente para evitar duplicatas."),
@@ -120,7 +131,10 @@ impl Call<'_> {
     }
 
     async fn media(&self, token: &Credential, args: &Map<String, Value>) -> Value {
-        let (jid, message) = (arg_str(args, "jid").unwrap_or_default(), arg_str(args, "messageId").unwrap_or_default());
+        let (jid, message) = (
+            arg_str(args, "jid").unwrap_or_default(),
+            arg_str(args, "messageId").unwrap_or_default(),
+        );
         let file = match self.state.mcp.media(self.session_id, token, jid, message).await {
             Ok(file) => file,
             Err(Error::Helpdesk(e)) => return failure(&e.message),
@@ -137,7 +151,12 @@ impl Call<'_> {
             json!({ "type": "audio", "data": data, "mimeType": mime })
         } else {
             let part = |v: &str| url::form_urlencoded::byte_serialize(v.as_bytes()).collect::<String>();
-            let uri = format!("wamcp://sessions/{}/chats/{}/messages/{}", part(self.session_id), part(jid), part(message));
+            let uri = format!(
+                "wamcp://sessions/{}/chats/{}/messages/{}",
+                part(self.session_id),
+                part(jid),
+                part(message)
+            );
             json!({ "type": "resource", "resource": { "uri": uri, "mimeType": mime, "blob": data } })
         };
         json!({ "content": [text(&metadata.to_string()), attachment] })
@@ -176,13 +195,26 @@ impl Call<'_> {
                             let content = arg_str(args, "content").unwrap_or_default().trim().to_string();
                             serde_json::to_value(support.reply(&bot, display, &content, private).await?)?
                         }
-                        "set_conversation_status" => serde_json::to_value(support.toggle_status(&bot, display, arg_str(args, "status").unwrap_or_default(), None)?)?,
+                        "set_conversation_status" => serde_json::to_value(support.toggle_status(
+                            &bot,
+                            display,
+                            arg_str(args, "status").unwrap_or_default(),
+                            None,
+                        )?)?,
                         "assign_conversation" => {
                             let field = |k: &str| args.get(k).map(Value::as_i64);
-                            serde_json::to_value(support.assign(&bot, display, field("assignee_id"), field("team_id"))?)?
+                            serde_json::to_value(support.assign(
+                                &bot,
+                                display,
+                                field("assignee_id"),
+                                field("team_id"),
+                            )?)?
                         }
                         _ => {
-                            let labels: Vec<String> = args["labels"].as_array().map(|l| l.iter().filter_map(|v| v.as_str().map(String::from)).collect()).unwrap_or_default();
+                            let labels: Vec<String> = args["labels"]
+                                .as_array()
+                                .map(|l| l.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                                .unwrap_or_default();
                             serde_json::to_value(support.set_labels(&bot, display, &labels)?)?
                         }
                     };

@@ -11,7 +11,10 @@ use rusqlite::types::Value as Sql;
 /// Mirror rows with their media metadata (parsed JSON) joined in.
 const MESSAGE: &str = "SELECT m.*, (SELECT metadata FROM message_media x
   WHERE x.session_id=m.session_id AND x.jid=m.jid AND x.id=m.id) AS media FROM messages m";
-const MESSAGE_SHAPE: Shape = Shape { json: &["media"], bools: &[] };
+const MESSAGE_SHAPE: Shape = Shape {
+    json: &["media"],
+    bools: &[],
+};
 
 impl MirrorRepo for SqliteStore {
     fn sessions(&self) -> Result<Vec<Session>> {
@@ -42,17 +45,44 @@ impl MirrorRepo for SqliteStore {
         let sql = "INSERT INTO chats(session_id,jid,name,updated) VALUES(?,?,?,?) ON CONFLICT(session_id,jid)
                    DO UPDATE SET name=COALESCE(excluded.name,chats.name),updated=MAX(chats.updated,excluded.updated)";
         let name = chat.name.as_deref().filter(|n| !n.is_empty());
-        self.exec(sql, vec![text(session_id), text(chat.jid.as_str()), opt_text(name), int(chat.updated)]).map(drop)
+        self.exec(
+            sql,
+            vec![
+                text(session_id),
+                text(chat.jid.as_str()),
+                opt_text(name),
+                int(chat.updated),
+            ],
+        )
+        .map(drop)
     }
 
     fn store_message(&self, session_id: &str, m: &WaMessage, media: Option<(&MediaMetadata, &[u8])>) -> Result<bool> {
         let key = vec![text(session_id), text(m.jid.as_str()), text(m.id.as_str())];
-        let existed = self.scalar("SELECT 1 FROM messages WHERE session_id=? AND jid=? AND id=?", key.clone())?.is_some();
-        self.upsert_chat(session_id, &ChatUpdate { jid: m.jid.clone(), name: None, updated: m.ts })?;
+        let existed = self
+            .scalar(
+                "SELECT 1 FROM messages WHERE session_id=? AND jid=? AND id=?",
+                key.clone(),
+            )?
+            .is_some();
+        self.upsert_chat(
+            session_id,
+            &ChatUpdate {
+                jid: m.jid.clone(),
+                name: None,
+                updated: m.ts,
+            },
+        )?;
         let sql = "INSERT INTO messages(session_id,jid,id,sender,body,kind,from_me,ts) VALUES(?,?,?,?,?,?,?,?)
                    ON CONFLICT(session_id,jid,id) DO UPDATE SET body=excluded.body,kind=excluded.kind";
         let mut params = key.clone();
-        params.extend([text(m.sender.as_str()), text(m.body.as_str()), text(m.kind.as_str()), int(i64::from(m.from_me)), int(m.ts)]);
+        params.extend([
+            text(m.sender.as_str()),
+            text(m.body.as_str()),
+            text(m.kind.as_str()),
+            int(i64::from(m.from_me)),
+            int(m.ts),
+        ]);
         self.exec(sql, params)?;
         if let Some((metadata, payload)) = media {
             let sql = "INSERT INTO message_media VALUES(?,?,?,?,?) ON CONFLICT(session_id,jid,id)
@@ -90,7 +120,11 @@ impl MirrorRepo for SqliteStore {
 
     fn search(&self, session_id: &str, q: &str, limit: i64) -> Result<Vec<MirrorMessage>> {
         let sql = format!("{MESSAGE} WHERE m.session_id=? AND m.body LIKE ? ORDER BY m.ts DESC LIMIT ?");
-        self.rows(&sql, vec![text(session_id), text(format!("%{q}%")), int(limit)], MESSAGE_SHAPE)
+        self.rows(
+            &sql,
+            vec![text(session_id), text(format!("%{q}%")), int(limit)],
+            MESSAGE_SHAPE,
+        )
     }
 
     fn media(&self, session_id: &str, jid: &str, id: &str) -> Result<Option<StoredMedia>> {
@@ -104,7 +138,10 @@ impl MirrorRepo for SqliteStore {
             }
         })?;
         match found {
-            Some((metadata, payload)) => Ok(Some(StoredMedia { metadata: serde_json::from_str(&metadata)?, payload })),
+            Some((metadata, payload)) => Ok(Some(StoredMedia {
+                metadata: serde_json::from_str(&metadata)?,
+                payload,
+            })),
             None => Ok(None),
         }
     }
@@ -116,9 +153,23 @@ impl MirrorRepo for SqliteStore {
         let expires = iso(now + days * 86_400_000);
         self.exec(
             "INSERT INTO tokens(id,session_id,name,hash,scope,created,expires) VALUES(?,?,?,?,?,?,?)",
-            vec![text(id.as_str()), text(session_id), text(name), text(sha256_hex(&token)), text(scope), text(iso(now)), text(expires.as_str())],
+            vec![
+                text(id.as_str()),
+                text(session_id),
+                text(name),
+                text(sha256_hex(&token)),
+                text(scope),
+                text(iso(now)),
+                text(expires.as_str()),
+            ],
         )?;
-        Ok(IssuedToken { id, token, name: name.into(), scope: scope.into(), expires })
+        Ok(IssuedToken {
+            id,
+            token,
+            name: name.into(),
+            scope: scope.into(),
+            expires,
+        })
     }
 
     fn tokens(&self, session_id: &str) -> Result<Vec<TokenInfo>> {
@@ -134,17 +185,31 @@ impl MirrorRepo for SqliteStore {
         let found = self.with(|c| {
             let mut statement = c.prepare_cached(sql)?;
             let mut rows = statement.query([session_id, sha256_hex(token).as_str(), iso(now_ms()).as_str()])?;
-            rows.next()?.map(|r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))).transpose()
+            rows.next()?
+                .map(|r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+                .transpose()
         })?;
         let Some((id, scope)) = found else {
             return Ok(None);
         };
-        self.exec("UPDATE tokens SET last_used=? WHERE id=?", vec![text(iso(now_ms())), text(id.as_str())])?;
-        Ok(Some(Credential { id, session_id: session_id.into(), scope, client_id: None }))
+        self.exec(
+            "UPDATE tokens SET last_used=? WHERE id=?",
+            vec![text(iso(now_ms())), text(id.as_str())],
+        )?;
+        Ok(Some(Credential {
+            id,
+            session_id: session_id.into(),
+            scope,
+            client_id: None,
+        }))
     }
 
     fn revoke(&self, session_id: &str, token_id: &str) -> Result<()> {
-        self.exec("DELETE FROM tokens WHERE session_id=? AND id=?", vec![text(session_id), text(token_id)]).map(drop)
+        self.exec(
+            "DELETE FROM tokens WHERE session_id=? AND id=?",
+            vec![text(session_id), text(token_id)],
+        )
+        .map(drop)
     }
 
     fn event_principal(&self, session_id: &str, token_id: &str) -> Result<Option<Credential>> {
@@ -154,12 +219,21 @@ impl MirrorRepo for SqliteStore {
             let mut rows = statement.query([session_id, token_id, iso(now_ms()).as_str()])?;
             rows.next()?.map(|r| r.get::<_, String>(0)).transpose()
         })?;
-        Ok(scope.map(|scope| Credential { id: token_id.into(), session_id: session_id.into(), scope, client_id: None }))
+        Ok(scope.map(|scope| Credential {
+            id: token_id.into(),
+            session_id: session_id.into(),
+            scope,
+            client_id: None,
+        }))
     }
 
     fn audit(&self, session_id: &str, token_id: &str, action: &str) -> Result<()> {
         let sql = "INSERT INTO audit(session_id,token_id,action,at) VALUES(?,?,?,?)";
-        self.exec(sql, vec![text(session_id), text(token_id), text(action), text(iso(now_ms()))]).map(drop)
+        self.exec(
+            sql,
+            vec![text(session_id), text(token_id), text(action), text(iso(now_ms()))],
+        )
+        .map(drop)
     }
 
     fn audit_events(&self, session_id: &str) -> Result<Vec<AuditEntry>> {

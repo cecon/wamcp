@@ -1,0 +1,447 @@
+[
+  {
+    "name": "as_metadata",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "issuer": "https://wamcp.cappyfy.com/",
+      "authorization_endpoint": "https://wamcp.cappyfy.com/authorize",
+      "response_types_supported": ["code"],
+      "code_challenge_methods_supported": ["S256"],
+      "token_endpoint": "https://wamcp.cappyfy.com/token",
+      "token_endpoint_auth_methods_supported": ["client_secret_post", "none"],
+      "grant_types_supported": ["authorization_code", "refresh_token"],
+      "scopes_supported": ["whatsapp:read", "whatsapp:send"],
+      "revocation_endpoint": "https://wamcp.cappyfy.com/revoke",
+      "revocation_endpoint_auth_methods_supported": ["client_secret_post"],
+      "registration_endpoint": "https://wamcp.cappyfy.com/register"
+    }
+  },
+  {
+    "name": "pr_metadata",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "resource": "https://wamcp.cappyfy.com/mcp/<SESSION_A>",
+      "authorization_servers": ["https://wamcp.cappyfy.com/"],
+      "scopes_supported": ["whatsapp:read", "whatsapp:send"],
+      "resource_name": "WA MCP"
+    }
+  },
+  {
+    "name": "pr_metadata_bad",
+    "status": 404,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": "Not Found"
+  },
+  {
+    "name": "register",
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "redirect_uris": ["https://chatgpt.com/connector/oauth/test-client"],
+      "token_endpoint_auth_method": "none",
+      "grant_types": ["authorization_code", "refresh_token"],
+      "response_types": ["code"],
+      "client_name": "ChatGPT test",
+      "client_id": "<CLIENT>",
+      "client_id_issued_at": 1791327953
+    }
+  },
+  {
+    "name": "register_secret",
+    "status": 201,
+    "headers": {},
+    "body": {
+      "redirect_uris": ["https://chatgpt.com/connector/oauth/test-client"],
+      "client_name": "Secret",
+      "client_secret": "<CLIENT_SECRET>",
+      "client_secret_expires_at": 0,
+      "client_id": "<SECRET_CLIENT>",
+      "client_id_issued_at": 1791327953,
+      "token_endpoint_auth_method": "client_secret_post"
+    }
+  },
+  {
+    "name": "register_bad_redirect",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_client_metadata",
+      "error_description": "Callback deve ser do ChatGPT ou o retorno local do aplicativo desktop"
+    }
+  },
+  {
+    "name": "register_no_redirect",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_client_metadata",
+      "error_description": "[\n  {\n    \"expected\": \"array\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"redirect_uris\"\n    ],\n    \"message\": \"Invalid input: expected array, received undefined\"\n  }\n]"
+    }
+  },
+  {
+    "name": "register_bad_method",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_client_metadata",
+      "error_description": "Método de autenticação não suportado"
+    }
+  },
+  {
+    "name": "register_bad_json",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "error": "Dados inválidos"
+    }
+  },
+  {
+    "name": "authorize_ok",
+    "status": 200,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com/connector/oauth/test-client; base-uri 'none'; frame-ancestors 'none'"
+    },
+    "body": "<!doctype html><html lang=\"pt-BR\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Autorizar WA MCP</title><style>body{font:16px system-ui;background:#f4f8f6;color:#163c32;margin:0;padding:32px}main{max-width:520px;margin:6vh auto;background:white;padding:32px;border-radius:16px}label,input,button{display:block;margin-top:20px}input{box-sizing:border-box;width:100%;padding:14px;border:1px solid #abc;border-radius:8px}button{background:#07865f;color:white;border:0;border-radius:8px;padding:14px 24px;cursor:pointer}p{line-height:1.6}small{color:#576b64}.error{color:#ac2727}</style><main><h1>Conectar ao ChatGPT</h1><p>O cliente <strong>ChatGPT test</strong> solicita acesso a uma sessão do WhatsApp.</p><p>Permissões solicitadas: <strong>leitura de conversas e envio de mensagens</strong>. O limite escolhido no aplicativo sempre será respeitado.</p><p>No WA MCP, abra a sessão desejada → Acesso MCP → ChatGPT e gere um código temporário. Autorize apenas uma conexão que você iniciou.</p><small>Sessão: <SESSION_A><br>Retorno: https://chatgpt.com</small><form method=\"post\" action=\"/oauth/approve\"><input type=\"hidden\" name=\"request\" value=\"<REQUEST>\"><label for=\"code\">Código temporário do aplicativo</label><input id=\"code\" name=\"code\" required maxlength=\"64\" autocomplete=\"off\" spellcheck=\"false\"><button type=\"submit\">Autorizar conexão</button></form><p><small>Para cancelar, feche esta página. Você pode revogar o acesso no aplicativo a qualquer momento.</small></p></main></html>"
+  },
+  {
+    "name": "authorize_unknown_client",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    },
+    "body": {
+      "error": "invalid_client",
+      "error_description": "Invalid client_id"
+    }
+  },
+  {
+    "name": "authorize_bad_redirect",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    },
+    "body": {
+      "error": "invalid_request",
+      "error_description": "Unregistered redirect_uri"
+    }
+  },
+  {
+    "name": "authorize_no_pkce",
+    "status": 302,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "location": "https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22S256%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22code_challenge_method%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22S256%5C%22%22%0A++%7D%0A%5D",
+      "cache-control": "no-store"
+    },
+    "body": "Found. Redirecting to https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22S256%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22code_challenge_method%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22S256%5C%22%22%0A++%7D%0A%5D"
+  },
+  {
+    "name": "authorize_bad_scope",
+    "status": 302,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "location": "https://chatgpt.com/connector/oauth/test-client?error=invalid_scope&error_description=Escopo+inv%C3%A1lido&state=st",
+      "cache-control": "no-store"
+    },
+    "body": "Found. Redirecting to https://chatgpt.com/connector/oauth/test-client?error=invalid_scope&error_description=Escopo+inv%C3%A1lido&state=st"
+  },
+  {
+    "name": "authorize_bad_resource",
+    "status": 302,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "location": "https://chatgpt.com/connector/oauth/test-client?error=invalid_target&error_description=Recurso+inv%C3%A1lido&state=st",
+      "cache-control": "no-store"
+    },
+    "body": "Found. Redirecting to https://chatgpt.com/connector/oauth/test-client?error=invalid_target&error_description=Recurso+inv%C3%A1lido&state=st"
+  },
+  {
+    "name": "authorize_plain",
+    "status": 302,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "location": "https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22S256%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22code_challenge_method%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22S256%5C%22%22%0A++%7D%0A%5D",
+      "cache-control": "no-store"
+    },
+    "body": "Found. Redirecting to https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22S256%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22code_challenge_method%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22S256%5C%22%22%0A++%7D%0A%5D"
+  },
+  {
+    "name": "authorize_bad_response_type",
+    "status": 302,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8",
+      "location": "https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22code%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22response_type%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22code%5C%22%22%0A++%7D%0A%5D",
+      "cache-control": "no-store"
+    },
+    "body": "Found. Redirecting to https://chatgpt.com/connector/oauth/test-client?error=invalid_request&error_description=%5B%0A++%7B%0A++++%22code%22%3A+%22invalid_value%22%2C%0A++++%22values%22%3A+%5B%0A++++++%22code%22%0A++++%5D%2C%0A++++%22path%22%3A+%5B%0A++++++%22response_type%22%0A++++%5D%2C%0A++++%22message%22%3A+%22Invalid+input%3A+expected+%5C%22code%5C%22%22%0A++%7D%0A%5D"
+  },
+  {
+    "name": "authorize_post",
+    "status": 200,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com/connector/oauth/test-client; base-uri 'none'; frame-ancestors 'none'"
+    },
+    "body": "<!doctype html><html lang=\"pt-BR\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Autorizar WA MCP</title><style>body{font:16px system-ui;background:#f4f8f6;color:#163c32;margin:0;padding:32px}main{max-width:520px;margin:6vh auto;background:white;padding:32px;border-radius:16px}label,input,button{display:block;margin-top:20px}input{box-sizing:border-box;width:100%;padding:14px;border:1px solid #abc;border-radius:8px}button{background:#07865f;color:white;border:0;border-radius:8px;padding:14px 24px;cursor:pointer}p{line-height:1.6}small{color:#576b64}.error{color:#ac2727}</style><main><h1>Conectar ao ChatGPT</h1><p>O cliente <strong>ChatGPT test</strong> solicita acesso a uma sessão do WhatsApp.</p><p>Permissões solicitadas: <strong>leitura de conversas e envio de mensagens</strong>. O limite escolhido no aplicativo sempre será respeitado.</p><p>No WA MCP, abra a sessão desejada → Acesso MCP → ChatGPT e gere um código temporário. Autorize apenas uma conexão que você iniciou.</p><small>Sessão: <SESSION_A><br>Retorno: https://chatgpt.com</small><form method=\"post\" action=\"/oauth/approve\"><input type=\"hidden\" name=\"request\" value=\"QZHQuFm0V9f9yL0xvpDaLzuJ0oE7lXcJjyup7oDEOf4\"><label for=\"code\">Código temporário do aplicativo</label><input id=\"code\" name=\"code\" required maxlength=\"64\" autocomplete=\"off\" spellcheck=\"false\"><button type=\"submit\">Autorizar conexão</button></form><p><small>Para cancelar, feche esta página. Você pode revogar o acesso no aplicativo a qualquer momento.</small></p></main></html>"
+  },
+  {
+    "name": "approve_bad_origin",
+    "status": 403,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store"
+    },
+    "body": "Origem inválida. Reabra a conexão pelo ChatGPT."
+  },
+  {
+    "name": "approve_bad_body",
+    "status": 400,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store"
+    },
+    "body": "Código inválido. Volte à página anterior e tente novamente."
+  },
+  {
+    "name": "approve_bad_code",
+    "status": 400,
+    "headers": {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store"
+    },
+    "body": "Código inválido, expirado ou de outra sessão. Volte e gere um novo código no aplicativo."
+  },
+  {
+    "name": "token_no_grant",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_request",
+      "error_description": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"grant_type\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"
+    }
+  },
+  {
+    "name": "token_bad_grant",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "unsupported_grant_type",
+      "error_description": "The grant type is not supported by this authorization server."
+    }
+  },
+  {
+    "name": "token_unknown_client",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_client",
+      "error_description": "Invalid client_id"
+    }
+  },
+  {
+    "name": "token_bad_code",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_grant",
+      "error_description": "Código inválido"
+    }
+  },
+  {
+    "name": "token_secret_missing",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_client",
+      "error_description": "Client secret is required"
+    }
+  },
+  {
+    "name": "token_bad_refresh",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_grant",
+      "error_description": "Refresh token inválido"
+    }
+  },
+  {
+    "name": "token_wrong_verifier",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_grant",
+      "error_description": "code_verifier does not match the challenge"
+    }
+  },
+  {
+    "name": "token_ok",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "access_token": "<ACCESS_TOKEN>",
+      "token_type": "Bearer",
+      "expires_in": 3600,
+      "refresh_token": "<REFRESH_TOKEN>",
+      "scope": "whatsapp:read whatsapp:send"
+    }
+  },
+  {
+    "name": "token_reuse_code",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_grant",
+      "error_description": "Código inválido"
+    }
+  },
+  {
+    "name": "token_refresh",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "access_token": "<NEXT_ACCESS_TOKEN>",
+      "token_type": "Bearer",
+      "expires_in": 3600,
+      "refresh_token": "<NEXT_REFRESH_TOKEN>",
+      "scope": "whatsapp:read whatsapp:send"
+    }
+  },
+  {
+    "name": "token_refresh_reuse",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_grant",
+      "error_description": "Refresh token reutilizado; autorize novamente"
+    }
+  },
+  {
+    "name": "revoke_ok",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {}
+  },
+  {
+    "name": "revoke_missing",
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*"
+    },
+    "body": {
+      "error": "invalid_request",
+      "error_description": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"token\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]"
+    }
+  },
+  {
+    "name": "mcp_get_unauth",
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "www-authenticate": "Bearer resource_metadata=\"https://wamcp.cappyfy.com/.well-known/oauth-protected-resource/mcp/<SESSION_A>\", scope=\"whatsapp:read\", error=\"invalid_token\", error_description=\"Autorize esta sessao no WA MCP\""
+    },
+    "body": {
+      "error": "Token inválido, expirado ou de outra sessão"
+    }
+  },
+  {
+    "name": "healthz",
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "service": "wamcp",
+      "ok": true
+    }
+  },
+  {
+    "name": "cors_preflight_token",
+    "status": 204,
+    "headers": {
+      "access-control-allow-origin": "*"
+    },
+    "body": ""
+  }
+]

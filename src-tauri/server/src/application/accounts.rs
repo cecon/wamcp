@@ -92,7 +92,11 @@ impl AccountService {
             return fail_with("E-mail ou senha inválidos", 401);
         };
         let session = repo.create_web_session(credentials.id, SESSION_TTL_MS, user_agent)?;
-        Ok(Login { cookie: session.cookie, csrf: session.csrf, user: self.find_user(credentials.id)? })
+        Ok(Login {
+            cookie: session.cookie,
+            csrf: session.csrf,
+            user: self.find_user(credentials.id)?,
+        })
     }
 
     pub fn logout(&self, cookie: &str) -> Result<()> {
@@ -120,7 +124,10 @@ impl AccountService {
     }
 
     pub fn me(&self, user: &User) -> Result<Agent> {
-        Ok(Agent { user: user.clone(), inbox_ids: self.core.repo.member_inbox_ids(user.id)? })
+        Ok(Agent {
+            user: user.clone(),
+            inbox_ids: self.core.repo.member_inbox_ids(user.id)?,
+        })
     }
 
     pub fn issue_api_token(&self, user: &User) -> Result<serde_json::Value> {
@@ -138,7 +145,11 @@ impl AccountService {
         if let Some(password) = changes.password {
             validate_password(&password)?;
             let stored = repo.password_hash(user.id)?.unwrap_or_default();
-            if !self.hasher.verify(changes.current_password.as_deref().unwrap_or(""), &stored).await {
+            if !self
+                .hasher
+                .verify(changes.current_password.as_deref().unwrap_or(""), &stored)
+                .await
+            {
                 return fail_with("Senha atual incorreta", 403);
             }
             fields.password_hash = Some(self.hasher.hash(&password).await?);

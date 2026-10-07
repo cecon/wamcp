@@ -15,12 +15,18 @@ pub struct NotificationService {
 }
 
 impl NotificationService {
-    fn notify(&self, user_id: i64, kind: &str, conversation: &Conversation, performer: Option<&Performer>) -> Result<()> {
+    fn notify(
+        &self,
+        user_id: i64,
+        kind: &str,
+        conversation: &Conversation,
+        performer: Option<&Performer>,
+    ) -> Result<()> {
         let actor = performer.filter(|p| p.is("user")).and_then(|p| p.id);
-        let notification = self
-            .core
-            .repo
-            .create_notification(user_id, kind, conversation.id, actor, self.core.now())?;
+        let notification =
+            self.core
+                .repo
+                .create_notification(user_id, kind, conversation.id, actor, self.core.now())?;
         self.core.emit("notification.created", &notification, None);
         Ok(())
     }
@@ -45,15 +51,13 @@ impl NotificationService {
                 let current: Conversation = serde_json::from_value(data.clone())?;
                 self.notify(assignee, "conversation_assignment", &current, Some(performer))
             }
-            "message.created" if data["message_type"] == "incoming" => {
-                match conversation(&data["conversation_id"])? {
-                    Some(c) if c.assignee_id.is_some() => {
-                        let assignee = c.assignee_id.unwrap_or_default();
-                        self.notify(assignee, "assigned_conversation_new_message", &c, None)
-                    }
-                    _ => Ok(()),
+            "message.created" if data["message_type"] == "incoming" => match conversation(&data["conversation_id"])? {
+                Some(c) if c.assignee_id.is_some() => {
+                    let assignee = c.assignee_id.unwrap_or_default();
+                    self.notify(assignee, "assigned_conversation_new_message", &c, None)
                 }
-            }
+                _ => Ok(()),
+            },
             // Auto-assignment runs in the same commit; only still-unassigned conversations alert the inbox.
             "conversation.created" if data["status"] == "open" => match conversation(&data["id"])? {
                 Some(c) if c.assignee_id.is_none() => {

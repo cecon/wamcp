@@ -30,8 +30,17 @@ async fn teams(State(state): State<AppState>, _user: CurrentUser) -> ApiResult<R
     ok(state.support().accounts.teams()?)
 }
 
-async fn create_team(State(state): State<AppState>, current: CurrentUser, Body(body): Body<TeamFields>) -> ApiResult<Response> {
-    created(state.support().accounts.create_team(&current.actor(), &team_fields(body, false)?)?)
+async fn create_team(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Body(body): Body<TeamFields>,
+) -> ApiResult<Response> {
+    created(
+        state
+            .support()
+            .accounts
+            .create_team(&current.actor(), &team_fields(body, false)?)?,
+    )
 }
 
 async fn update_team(
@@ -41,15 +50,26 @@ async fn update_team(
     Body(body): Body<TeamFields>,
 ) -> ApiResult<Response> {
     let id = id(&team)?;
-    ok(state.support().accounts.update_team(&current.actor(), id, &team_fields(body, true)?)?)
+    ok(state
+        .support()
+        .accounts
+        .update_team(&current.actor(), id, &team_fields(body, true)?)?)
 }
 
-async fn delete_team(State(state): State<AppState>, current: CurrentUser, Path(team): Path<String>) -> ApiResult<Response> {
+async fn delete_team(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(team): Path<String>,
+) -> ApiResult<Response> {
     state.support().accounts.delete_team(&current.actor(), id(&team)?)?;
     done()
 }
 
-async fn team_members(State(state): State<AppState>, _user: CurrentUser, Path(team): Path<String>) -> ApiResult<Response> {
+async fn team_members(
+    State(state): State<AppState>,
+    _user: CurrentUser,
+    Path(team): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().accounts.team_members(id(&team)?)?)
 }
 
@@ -60,7 +80,10 @@ async fn add_team_members(
     Body(body): Body<Members>,
 ) -> ApiResult<Response> {
     let (team, users) = (id(&team)?, ids(&body.user_ids, 1, 200)?);
-    ok(state.support().accounts.change_team_members(&current.actor(), team, &users, true)?)
+    ok(state
+        .support()
+        .accounts
+        .change_team_members(&current.actor(), team, &users, true)?)
 }
 
 async fn remove_team_members(
@@ -70,7 +93,10 @@ async fn remove_team_members(
     Body(body): Body<Members>,
 ) -> ApiResult<Response> {
     let (team, users) = (id(&team)?, ids(&body.user_ids, 1, 200)?);
-    ok(state.support().accounts.change_team_members(&current.actor(), team, &users, false)?)
+    ok(state
+        .support()
+        .accounts
+        .change_team_members(&current.actor(), team, &users, false)?)
 }
 
 async fn inboxes(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
@@ -107,7 +133,11 @@ struct Schedule {
     working_hours: Vec<DaySchedule>,
 }
 
-async fn working_hours(State(state): State<AppState>, current: CurrentUser, Path(inbox): Path<String>) -> ApiResult<Response> {
+async fn working_hours(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(inbox): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().accounts.working_hours(&current.actor(), id(&inbox)?)?)
 }
 
@@ -120,11 +150,21 @@ async fn set_working_hours(
     let days = body.working_hours;
     let minutes = |m: i64| (0..=1440).contains(&m);
     check(days.len() <= 7)?;
-    check(days.iter().all(|d| (0..=6).contains(&d.day_of_week) && minutes(d.open_minutes) && minutes(d.close_minutes)))?;
-    ok(state.support().accounts.set_working_hours(&current.actor(), id(&inbox)?, &days)?)
+    check(
+        days.iter()
+            .all(|d| (0..=6).contains(&d.day_of_week) && minutes(d.open_minutes) && minutes(d.close_minutes)),
+    )?;
+    ok(state
+        .support()
+        .accounts
+        .set_working_hours(&current.actor(), id(&inbox)?, &days)?)
 }
 
-async fn inbox_members(State(state): State<AppState>, current: CurrentUser, Path(inbox): Path<String>) -> ApiResult<Response> {
+async fn inbox_members(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(inbox): Path<String>,
+) -> ApiResult<Response> {
     ok(state.support().accounts.inbox_members(&current.actor(), id(&inbox)?)?)
 }
 
@@ -135,7 +175,10 @@ async fn add_inbox_members(
     Body(body): Body<Members>,
 ) -> ApiResult<Response> {
     let (inbox, users) = (id(&inbox)?, ids(&body.user_ids, 1, 200)?);
-    ok(state.support().accounts.change_inbox_members(&current.actor(), inbox, &users, true)?)
+    ok(state
+        .support()
+        .accounts
+        .change_inbox_members(&current.actor(), inbox, &users, true)?)
 }
 
 async fn remove_inbox_members(
@@ -145,16 +188,25 @@ async fn remove_inbox_members(
     Body(body): Body<Members>,
 ) -> ApiResult<Response> {
     let (inbox, users) = (id(&inbox)?, ids(&body.user_ids, 1, 200)?);
-    ok(state.support().accounts.change_inbox_members(&current.actor(), inbox, &users, false)?)
+    ok(state
+        .support()
+        .accounts
+        .change_inbox_members(&current.actor(), inbox, &users, false)?)
 }
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/teams", get(teams).post(create_team))
         .route("/teams/{id}", axum::routing::patch(update_team).delete(delete_team))
-        .route("/teams/{id}/members", get(team_members).post(add_team_members).delete(remove_team_members))
+        .route(
+            "/teams/{id}/members",
+            get(team_members).post(add_team_members).delete(remove_team_members),
+        )
         .route("/inboxes", get(inboxes))
         .route("/inboxes/{id}", get(inbox).patch(update_inbox))
         .route("/inboxes/{id}/working_hours", get(working_hours).put(set_working_hours))
-        .route("/inboxes/{id}/members", get(inbox_members).post(add_inbox_members).delete(remove_inbox_members))
+        .route(
+            "/inboxes/{id}/members",
+            get(inbox_members).post(add_inbox_members).delete(remove_inbox_members),
+        )
 }

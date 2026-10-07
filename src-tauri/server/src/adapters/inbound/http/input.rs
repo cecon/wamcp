@@ -25,7 +25,9 @@ impl<S: Send + Sync, T: DeserializeOwned> FromRequest<S> for Body<T> {
 
     async fn from_request(request: Request, state: &S) -> Result<Self, ApiError> {
         let json = is_json(request.headers().get(CONTENT_TYPE).and_then(|v| v.to_str().ok()));
-        let bytes = Bytes::from_request(request, state).await.map_err(|_| ApiError::TooLarge)?;
+        let bytes = Bytes::from_request(request, state)
+            .await
+            .map_err(|_| ApiError::TooLarge)?;
         if bytes.len() > BODY_LIMIT {
             return Err(ApiError::TooLarge);
         }
@@ -40,7 +42,12 @@ pub type Query = HashMap<String, String>;
 
 /// Positive integer path or query parameter (`z.coerce.number().int().positive()`).
 pub fn id(value: &str) -> Result<i64, ApiError> {
-    value.trim().parse::<i64>().ok().filter(|v| *v > 0).ok_or(ApiError::Invalid)
+    value
+        .trim()
+        .parse::<i64>()
+        .ok()
+        .filter(|v| *v > 0)
+        .ok_or(ApiError::Invalid)
 }
 
 pub fn optional_id(query: &Query, key: &str) -> Result<Option<i64>, ApiError> {
@@ -51,7 +58,12 @@ pub fn optional_id(query: &Query, key: &str) -> Result<Option<i64>, ApiError> {
 pub fn int_param(query: &Query, key: &str, default: i64, min: i64, max: i64) -> Result<i64, ApiError> {
     match query.get(key) {
         None => Ok(default),
-        Some(v) => v.trim().parse::<i64>().ok().filter(|n| (min..=max).contains(n)).ok_or(ApiError::Invalid),
+        Some(v) => v
+            .trim()
+            .parse::<i64>()
+            .ok()
+            .filter(|n| (min..=max).contains(n))
+            .ok_or(ApiError::Invalid),
     }
 }
 

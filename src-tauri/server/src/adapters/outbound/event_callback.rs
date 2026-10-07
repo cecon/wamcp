@@ -18,7 +18,10 @@ pub fn error(reason: &str) -> CallbackError {
 }
 
 fn signing_key(secret: &str) -> Result<Vec<u8>, CallbackError> {
-    let encoded = secret.strip_prefix("whsec_").filter(|_| secret.len() <= 94).ok_or_else(|| error("invalid_secret"))?;
+    let encoded = secret
+        .strip_prefix("whsec_")
+        .filter(|_| secret.len() <= 94)
+        .ok_or_else(|| error("invalid_secret"))?;
     let key = STANDARD.decode(encoded).map_err(|_| error("invalid_secret"))?;
     if !(24..=64).contains(&key.len()) || STANDARD.encode(&key) != encoded {
         return Err(error("invalid_secret"));
@@ -34,7 +37,11 @@ pub fn webhook_signature(secret: &str, id: &str, timestamp: &str, body: &str) ->
 }
 
 fn identifier(value: &str) -> Result<&str, CallbackError> {
-    let valid = !value.is_empty() && value.len() <= 256 && value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    let valid = !value.is_empty()
+        && value.len() <= 256
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     if valid {
         Ok(value)
     } else {
@@ -50,7 +57,14 @@ pub struct Prepared {
 }
 
 /// Validates the event and destination, then signs the body with every active secret.
-pub fn prepare(url: &str, subscription: &str, secrets: &[String], value: &Value, id: &str, timestamp: &str) -> Result<Prepared, CallbackError> {
+pub fn prepare(
+    url: &str,
+    subscription: &str,
+    secrets: &[String],
+    value: &Value,
+    id: &str,
+    timestamp: &str,
+) -> Result<Prepared, CallbackError> {
     let body = value.to_string();
     if body.len() > MAX_BODY {
         return Err(error("payload_too_large"));
@@ -101,7 +115,10 @@ impl HttpEventCallback {
         let status = response.status().as_u16();
         // Error bodies are never consumed; success bodies are bounded.
         if !(200..300).contains(&status) {
-            return Ok(CallbackResponse { status, body: String::new() });
+            return Ok(CallbackResponse {
+                status,
+                body: String::new(),
+            });
         }
         if response.content_length().is_some_and(|l| l as usize > MAX_RESPONSE) {
             return Err(error("delivery_failed"));
@@ -113,14 +130,26 @@ impl HttpEventCallback {
                 return Err(error("delivery_failed"));
             }
         }
-        Ok(CallbackResponse { status, body: String::from_utf8_lossy(&bytes).into_owned() })
+        Ok(CallbackResponse {
+            status,
+            body: String::from_utf8_lossy(&bytes).into_owned(),
+        })
     }
 
-    async fn send(&self, url: &str, subscription: &str, secrets: &[String], value: &Value, id: &str) -> Result<CallbackResponse, CallbackError> {
+    async fn send(
+        &self,
+        url: &str,
+        subscription: &str,
+        secrets: &[String],
+        value: &Value,
+        id: &str,
+    ) -> Result<CallbackResponse, CallbackError> {
         let timestamp = chrono::Utc::now().timestamp().to_string();
         let prepared = prepare(url, subscription, secrets, value, id, &timestamp)?;
         // A wall-clock deadline covers DNS, connect, TLS, headers and the full response.
-        tokio::time::timeout(Duration::from_secs(10), self.post(prepared)).await.map_err(|_| error("timeout"))?
+        tokio::time::timeout(Duration::from_secs(10), self.post(prepared))
+            .await
+            .map_err(|_| error("timeout"))?
     }
 }
 
@@ -130,10 +159,13 @@ impl EventCallback for HttpEventCallback {
         let challenge = random_secret();
         let id = format!("msg_{}", uuid::Uuid::new_v4().simple());
         let payload = json!({ "type": "verification", "challenge": challenge });
-        let response = self.send(url, subscription, &[secret.to_string()], &payload, &id).await.map_err(|e| {
-            let known = e.reason == "invalid_url" || e.reason == "timeout";
-            error(if known { &e.reason } else { "challenge_failed" })
-        })?;
+        let response = self
+            .send(url, subscription, &[secret.to_string()], &payload, &id)
+            .await
+            .map_err(|e| {
+                let known = e.reason == "invalid_url" || e.reason == "timeout";
+                error(if known { &e.reason } else { "challenge_failed" })
+            })?;
         if accepts_challenge(&response, &challenge) {
             Ok(())
         } else {
@@ -141,7 +173,13 @@ impl EventCallback for HttpEventCallback {
         }
     }
 
-    async fn deliver(&self, url: &str, subscription: &str, secrets: &[String], event: &Value) -> Result<CallbackResponse, CallbackError> {
+    async fn deliver(
+        &self,
+        url: &str,
+        subscription: &str,
+        secrets: &[String],
+        event: &Value,
+    ) -> Result<CallbackResponse, CallbackError> {
         let id = event["eventId"].as_str().unwrap_or_default().to_string();
         self.send(url, subscription, secrets, event, &id).await
     }

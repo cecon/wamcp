@@ -5,8 +5,14 @@ use crate::domain::model::{AutomationRule, Delivery, DueDelivery, RuleFields, We
 use rusqlite::types::Value as Sql;
 use serde_json::Value;
 
-const WEBHOOK: Shape = Shape { json: &["subscriptions"], bools: &[] };
-const RULE: Shape = Shape { json: &["conditions", "actions"], bools: &[] };
+const WEBHOOK: Shape = Shape {
+    json: &["subscriptions"],
+    bools: &[],
+};
+const RULE: Shape = Shape {
+    json: &["conditions", "actions"],
+    bools: &[],
+};
 
 fn json_text(value: &impl serde::Serialize) -> Result<Sql> {
     Ok(text(serde_json::to_string(value)?))
@@ -21,10 +27,22 @@ impl AutomationRepo for SqliteStore {
         self.row("SELECT * FROM webhooks WHERE id=?", vec![int(id)], WEBHOOK)
     }
 
-    fn create_webhook(&self, url: &str, subscriptions: &[String], inbox_id: Option<i64>, secret: &str) -> Result<Webhook> {
+    fn create_webhook(
+        &self,
+        url: &str,
+        subscriptions: &[String],
+        inbox_id: Option<i64>,
+        secret: &str,
+    ) -> Result<Webhook> {
         let id = self.insert(
             "INSERT INTO webhooks(url,subscriptions,inbox_id,secret,created) VALUES(?,?,?,?,?)",
-            vec![text(url), json_text(&subscriptions)?, opt_int(inbox_id), text(secret), text(iso(now_ms()))],
+            vec![
+                text(url),
+                json_text(&subscriptions)?,
+                opt_int(inbox_id),
+                text(secret),
+                text(iso(now_ms())),
+            ],
         )?;
         self.webhook(id)?.ok_or_else(|| Error::internal("webhook vanished"))
     }
@@ -52,8 +70,19 @@ impl AutomationRepo for SqliteStore {
     }
 
     fn enqueue_delivery(&self, webhook_id: i64, event: &str, payload: &Value, now: i64) -> Result<()> {
-        let sql = "INSERT INTO webhook_deliveries(webhook_id,event,payload,next_attempt_at,created_at) VALUES(?,?,?,?,?)";
-        self.exec(sql, vec![int(webhook_id), text(event), text(payload.to_string()), int(now), int(now)]).map(drop)
+        let sql =
+            "INSERT INTO webhook_deliveries(webhook_id,event,payload,next_attempt_at,created_at) VALUES(?,?,?,?,?)";
+        self.exec(
+            sql,
+            vec![
+                int(webhook_id),
+                text(event),
+                text(payload.to_string()),
+                int(now),
+                int(now),
+            ],
+        )
+        .map(drop)
     }
 
     fn due_deliveries(&self, now: i64, limit: i64) -> Result<Vec<DueDelivery>> {
@@ -107,7 +136,8 @@ impl AutomationRepo for SqliteStore {
                 text(iso(now_ms())),
             ],
         )?;
-        self.automation_rule(id)?.ok_or_else(|| Error::internal("rule vanished"))
+        self.automation_rule(id)?
+            .ok_or_else(|| Error::internal("rule vanished"))
     }
 
     fn update_rule(&self, id: i64, fields: &RuleFields) -> Result<AutomationRule> {
@@ -131,10 +161,12 @@ impl AutomationRepo for SqliteStore {
             changes.push(("active", flag(active)));
         }
         self.update_fields("automation_rules", int(id), changes)?;
-        self.automation_rule(id)?.ok_or_else(|| Error::internal("rule vanished"))
+        self.automation_rule(id)?
+            .ok_or_else(|| Error::internal("rule vanished"))
     }
 
     fn delete_rule(&self, id: i64) -> Result<()> {
-        self.exec("DELETE FROM automation_rules WHERE id=?", vec![int(id)]).map(drop)
+        self.exec("DELETE FROM automation_rules WHERE id=?", vec![int(id)])
+            .map(drop)
     }
 }
