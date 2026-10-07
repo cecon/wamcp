@@ -14,12 +14,12 @@ use serde_json::{Map, Value};
 
 async fn contacts(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    current: CurrentUser,
     Params(query): Params<Query>,
 ) -> ApiResult<Response> {
     let q = text(query.get("q").map_or("", String::as_str), 0, 100)?;
     let page = int_param(&query, "page", 1, 1, 10_000)?;
-    ok(state.support().helpdesk.contacts(&q, page)?)
+    ok(state.support().helpdesk.contacts(&current.actor(), &q, page)?)
 }
 
 async fn contact(

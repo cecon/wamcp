@@ -13,8 +13,15 @@ use serde::Deserialize;
 /// CSV imports up to 5 MiB.
 const IMPORT_LIMIT: usize = 5 * 1024 * 1024;
 
-async fn notes(State(state): State<AppState>, _user: CurrentUser, Path(contact): Path<String>) -> ApiResult<Response> {
-    ok(state.support().helpdesk.contact_notes(id(&contact)?)?)
+async fn notes(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(contact): Path<String>,
+) -> ApiResult<Response> {
+    ok(state
+        .support()
+        .helpdesk
+        .contact_notes(&current.actor(), id(&contact)?)?)
 }
 
 #[derive(Deserialize)]

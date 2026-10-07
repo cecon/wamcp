@@ -68,6 +68,8 @@ pub struct ConversationFilters {
     pub sort_by: Option<String>,
     /// `unattended` (no first reply yet, or waiting), `mentions` or `participating`.
     pub conversation_type: Option<String>,
+    /// Set for agents whose custom role limits which conversations they see.
+    pub limit: Option<crate::domain::roles::ConversationLimit>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

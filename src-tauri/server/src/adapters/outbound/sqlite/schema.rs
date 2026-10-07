@@ -78,5 +78,10 @@ pub fn steps() -> Vec<String> {
            webhook_id INTEGER NOT NULL UNIQUE REFERENCES webhooks(id) ON DELETE CASCADE,created TEXT NOT NULL);
          ALTER TABLE inboxes ADD COLUMN agent_bot_id INTEGER REFERENCES agent_bots(id) ON DELETE SET NULL;"
             .into(),
+        // v19: perfis personalizados (permissões) atribuídos a agentes
+        "CREATE TABLE custom_roles(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,description TEXT,
+           permissions TEXT NOT NULL DEFAULT '[]',created TEXT NOT NULL);
+         ALTER TABLE users ADD COLUMN custom_role_id INTEGER REFERENCES custom_roles(id) ON DELETE SET NULL;"
+            .into(),
     ]
 }

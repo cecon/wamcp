@@ -7,6 +7,7 @@ use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{
     AttributeDefinition, AttributeFields, Condition, Contact, Conversation, CustomFilter, FilterQuery,
 };
+use crate::domain::roles::{conversation_limit, require_permission};
 use regex::Regex;
 use serde_json::{Map, Value};
 
@@ -61,6 +62,7 @@ impl HelpdeskService {
             visible_inbox_ids: self.core.visible_inbox_ids(actor)?,
             page,
             now: self.core.now(),
+            limit: conversation_limit(actor),
         })
     }
 
@@ -75,6 +77,7 @@ impl HelpdeskService {
     }
 
     pub fn filter_contacts(&self, actor: &Actor, conditions: Vec<Condition>, page: i64) -> Result<Vec<Contact>> {
+        require_permission(actor, "contact_manage")?;
         let query = self.filter_query(actor, "contact", conditions, page)?;
         self.core.repo.filter_contacts(&query)
     }

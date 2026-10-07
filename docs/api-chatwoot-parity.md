@@ -200,3 +200,18 @@ O robô recebe na `outgoing_url` (mesma fila, assinatura e novas tentativas dos 
 caixas conectadas. Novas conversas nessas caixas começam `pending`. Com o cabeçalho `api_access_token: <token do robô>`
 ele responde em `POST /conversations/{id}/messages` (como `agent_bot`) e transfere para humanos com
 `POST /conversations/{id}/toggle_status` `{ "status": "open" }`, apenas nas suas caixas.
+
+## Perfis personalizados (custom roles)
+
+| Método           | Rota                 | Descrição                                               |
+| ---------------- | -------------------- | ------------------------------------------------------- |
+| GET/POST         | `/custom_roles`      | Administrador; `{ name, description, permissions }`     |
+| PUT/PATCH/DELETE | `/custom_roles/{id}` | Substitui / remove (os agentes voltam ao acesso padrão) |
+| PATCH            | `/agents/{id}`       | Também aceita `custom_role_id` (ou `null`)              |
+
+Permissões: `conversation_manage` (todas as conversas das suas caixas), `conversation_unassigned_manage` (sem
+responsável + as suas), `conversation_participating_manage` (em que participa + as suas), `contact_manage` (contatos,
+notas, etiquetas, mesclagem e filtros de contatos) e `report_manage` (relatórios, CSAT e métricas de SLA). Agente com
+perfil tem exatamente essas permissões (sem permissão de conversa vê só as atribuídas a ele); agente sem perfil mantém
+o acesso padrão (todas as conversas e contatos, sem relatórios). Os limites valem para lista, contadores, filtros,
+busca e acesso direto. `GET /auth/me` e `/agents` trazem `custom_role_id` e `permissions`.

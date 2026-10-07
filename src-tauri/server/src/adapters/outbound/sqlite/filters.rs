@@ -1,6 +1,6 @@
 //! Advanced filters: translates validated conditions into a parameterised WHERE clause.
 use super::contacts::{CONTACT, CONTACT_SELECT};
-use super::conversations::{order, SELECT, SHAPE};
+use super::conversations::{limit_clause, order, SELECT, SHAPE};
 use super::db::{int, placeholders, text, SqliteStore};
 use super::inboxes::PAGE;
 use crate::domain::error::Result;
@@ -172,6 +172,9 @@ impl SqliteStore {
         if let Some(ids) = &query.visible_inbox_ids {
             sql.push_str(&format!(" AND c.inbox_id IN ({})", placeholders(ids.len())));
             args.extend(ids.iter().map(|id| int(*id)));
+        }
+        if let Some(limit) = &query.limit {
+            sql.push_str(&format!(" AND {}", limit_clause(limit, &mut args)));
         }
         sql.push_str(&format!(" ORDER BY {} LIMIT ? OFFSET ?", order(None)));
         args.push(int(PAGE));

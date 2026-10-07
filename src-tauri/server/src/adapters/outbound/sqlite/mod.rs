@@ -19,6 +19,7 @@ mod migrations;
 mod mirror;
 mod notifications;
 mod reports;
+mod roles;
 mod schema;
 mod search;
 mod security;

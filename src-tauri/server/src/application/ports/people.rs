@@ -1,7 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Account, AuditLog, Contact, ContactChannel, ContactNote, Credentials, MfaState, NewAuditLog, SessionInfo, Team,
-    TeamFields, TokenOwner, User, UserChanges, WebSession,
+    Account, AuditLog, Contact, ContactChannel, ContactNote, Credentials, CustomRole, MfaState, NewAuditLog,
+    SessionInfo, Team, TeamFields, TokenOwner, User, UserChanges, WebSession,
 };
 use serde_json::Value;
 
@@ -95,4 +95,13 @@ pub trait AccountRepo {
     fn update_account(&self, name: Option<&str>, locale: Option<&str>, settings: Option<&Value>) -> Result<Account>;
     /// Open or pending conversations with no activity since `before`.
     fn inactive_conversations(&self, before: i64) -> Result<Vec<i64>>;
+}
+
+/// Custom roles (named permission sets) for agents.
+pub trait RoleRepo {
+    fn custom_roles(&self) -> Result<Vec<CustomRole>>;
+    fn custom_role(&self, id: i64) -> Result<Option<CustomRole>>;
+    fn role_name_taken(&self, name: &str, except_id: i64) -> Result<bool>;
+    fn save_custom_role(&self, role: &CustomRole) -> Result<CustomRole>;
+    fn delete_custom_role(&self, id: i64) -> Result<()>;
 }

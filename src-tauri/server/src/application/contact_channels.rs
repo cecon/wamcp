@@ -5,6 +5,7 @@ use crate::domain::actor::Actor;
 use crate::domain::contacts::phone_jid;
 use crate::domain::error::{fail_with, Result};
 use crate::domain::model::{Contact, ContactChanges, Conversation};
+use crate::domain::roles::require_permission;
 
 impl HelpdeskService {
     /// Blocks or unblocks on every WhatsApp session the contact talks to; failures are logged.
@@ -28,6 +29,7 @@ impl HelpdeskService {
 
     /// Fetches the WhatsApp profile picture from the first session that knows the contact.
     pub async fn refresh_avatar(&self, actor: &Actor, id: i64) -> Result<Contact> {
+        require_permission(actor, "contact_manage")?;
         self.find_contact(id)?;
         let mut url = None;
         for channel in self.core.repo.contact_channels(id)? {

@@ -1,7 +1,7 @@
 use super::contacts::{CONTACT, CONTACT_SELECT};
-use super::conversations::{SELECT, SHAPE};
+use super::conversations::{limit_clause, SELECT, SHAPE};
 use super::db::{int, placeholders, text, SqliteStore, PLAIN};
-use crate::application::ports::SearchRepo;
+use crate::application::ports::{SearchRepo, SearchScope};
 use crate::domain::error::Result;
 use crate::domain::model::{Contact, Conversation};
 use rusqlite::types::Value as Sql;
@@ -13,26 +13,28 @@ fn like(q: &str) -> Sql {
     text(format!("%{escaped}%"))
 }
 
-/// ` AND <column> IN (...)` for agents limited to some inboxes.
-fn visible_clause(column: &str, visible: Option<&[i64]>, args: &mut Vec<Sql>) -> String {
-    match visible {
-        Some(ids) => {
-            args.extend(ids.iter().map(|id| int(*id)));
-            format!(" AND {column} IN ({})", placeholders(ids.len()))
-        }
-        None => String::new(),
+/// ` AND ...` restricting conversations (alias `c`) to what the agent may see.
+fn scope_clause(scope: &SearchScope, args: &mut Vec<Sql>) -> String {
+    let mut sql = String::new();
+    if let Some(ids) = &scope.visible {
+        args.extend(ids.iter().map(|id| int(*id)));
+        sql.push_str(&format!(" AND c.inbox_id IN ({})", placeholders(ids.len())));
     }
+    if let Some(limit) = &scope.limit {
+        sql.push_str(&format!(" AND {}", limit_clause(limit, args)));
+    }
+    sql
 }
 
 impl SearchRepo for SqliteStore {
-    fn search_conversations(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Conversation>> {
+    fn search_conversations(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Conversation>> {
         let mut args = vec![
             like(q),
             like(q),
             like(q),
             int(q.trim_start_matches('#').parse().unwrap_or(-1)),
         ];
-        let scope = visible_clause("c.inbox_id", visible, &mut args);
+        let scope = scope_clause(scope, &mut args);
         args.push(int(limit));
         let sql = format!(
             "{SELECT} WHERE (ct.name LIKE ? ESCAPE '!' OR ct.phone_number LIKE ? ESCAPE '!'
@@ -50,9 +52,9 @@ impl SearchRepo for SqliteStore {
         self.rows(&sql, vec![like(q), like(q), like(q), like(q), int(limit)], CONTACT)
     }
 
-    fn search_messages(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Value>> {
+    fn search_messages(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Value>> {
         let mut args = vec![like(q)];
-        let scope = visible_clause("m.inbox_id", visible, &mut args);
+        let scope = scope_clause(scope, &mut args);
         args.push(int(limit));
         let sql = format!(
             "SELECT m.id, m.content, m.message_type, m.created_at, m.conversation_id, c.display_id,

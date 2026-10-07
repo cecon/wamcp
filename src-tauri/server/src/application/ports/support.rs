@@ -112,12 +112,19 @@ pub trait MacroRepo {
     fn delete_macro(&self, id: i64) -> Result<()>;
 }
 
+/// What the searching agent may see: inboxes (`None` = all) and the custom role limit.
+#[derive(Debug, Clone, Default)]
+pub struct SearchScope {
+    pub visible: Option<Vec<i64>>,
+    pub limit: Option<crate::domain::roles::ConversationLimit>,
+}
+
 /// Global search (Chatwoot's search page) over conversations, contacts and messages.
 pub trait SearchRepo {
-    fn search_conversations(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Conversation>>;
+    fn search_conversations(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Conversation>>;
     fn search_contacts(&self, q: &str, limit: i64) -> Result<Vec<Contact>>;
     /// Matching non-private messages with their conversation's display id and contact name.
-    fn search_messages(&self, q: &str, visible: Option<&[i64]>, limit: i64) -> Result<Vec<Value>>;
+    fn search_messages(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Value>>;
 }
 
 /// SLA policies, the SLA applied to each conversation and SLA metrics.

@@ -30,6 +30,7 @@ mod presence;
 pub mod replies;
 pub mod reports;
 pub mod reports_v2;
+pub mod roles;
 pub mod search;
 pub mod security;
 pub mod sessions;

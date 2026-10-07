@@ -5,8 +5,8 @@ use super::reports::ReportService;
 use crate::domain::actor::Actor;
 use crate::domain::contacts::csv_field;
 use crate::domain::error::{fail, Result};
-use crate::domain::helpdesk::require_admin;
 use crate::domain::reports::{buckets, percent, METRICS};
+use crate::domain::roles::require_permission;
 use serde_json::{json, Map, Value};
 
 const DAY: i64 = 86_400;
@@ -49,7 +49,7 @@ impl ReportService {
 
     /// One point per bucket (zero when nothing happened), like Chatwoot's charts.
     pub fn timeseries(&self, actor: &Actor, q: &ReportQuery) -> Result<Vec<Value>> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let scope = self.scope(q)?;
         let metric = q.metric.as_deref().unwrap_or_default();
         let found = self.core.repo.metric_series(metric, &scope, &q.group_by)?;
@@ -64,7 +64,7 @@ impl ReportService {
 
     /// Every metric for the period and for the period of the same length just before it.
     pub fn summary_v2(&self, actor: &Actor, q: &ReportQuery) -> Result<Value> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let current = self.scope(q)?;
         let length = current.until - current.since;
         let previous = ReportScope {
@@ -82,7 +82,7 @@ impl ReportService {
 
     /// Metrics for each inbox, agent, team or label.
     pub fn breakdown(&self, actor: &Actor, kind: &str, q: &ReportQuery) -> Result<Vec<Value>> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let repo = &self.core.repo;
         let items: Vec<(Option<i64>, String)> = match kind {
             "inbox" => repo.inboxes(None)?.into_iter().map(|i| (Some(i.id), i.name)).collect(),
@@ -123,7 +123,7 @@ impl ReportService {
 
     /// Ratings distribution, average, response rate and satisfaction score (share of 4–5 ratings).
     pub fn csat_metrics(&self, actor: &Actor, q: &ReportQuery) -> Result<Value> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let raw = self.core.repo.csat_metrics(&self.v2_period(q)?)?;
         let count = |r: &str| raw["ratings"][r].as_i64().unwrap_or(0);
         let total: i64 = (1..=5).map(|r| count(&r.to_string())).sum();
@@ -141,7 +141,7 @@ impl ReportService {
     }
 
     pub fn csat_csv(&self, actor: &Actor, q: &ReportQuery) -> Result<String> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let mut out = String::from("conversa,contato,agente,nota,comentario,data\n");
         for entry in self.core.repo.csat_responses(&self.v2_period(q)?, 10_000)? {
             let date = chrono::DateTime::from_timestamp(entry.response.created_at, 0).unwrap_or_default();
@@ -161,7 +161,7 @@ impl ReportService {
 
     /// Conversations the AI assistant answered, resolved alone or handed off to an agent.
     pub fn bot_summary(&self, actor: &Actor, q: &ReportQuery) -> Result<Value> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let mut metrics = self.core.repo.bot_metrics(&self.v2_period(q)?)?;
         let total = metrics["conversations"].as_i64().unwrap_or(0);
         let rate = |key: &str| json!(percent(metrics[key].as_i64().unwrap_or(0), total));

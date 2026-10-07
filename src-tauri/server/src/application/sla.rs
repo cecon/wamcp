@@ -6,6 +6,7 @@ use crate::domain::error::{fail, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{Conversation, SlaPolicy};
 use crate::domain::reports::percent;
+use crate::domain::roles::require_permission;
 use crate::domain::sla::{evaluate, SlaState};
 use serde_json::{json, Value};
 
@@ -121,7 +122,7 @@ impl HelpdeskService {
     }
 
     pub fn sla_metrics(&self, actor: &Actor, since: i64, until: i64) -> Result<Value> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         let mut counts = self.core.repo.sla_counts(since, until)?;
         let number = |key: &str| counts[key].as_i64().unwrap_or(0);
         let rate = percent(number("hit"), number("hit") + number("missed"));

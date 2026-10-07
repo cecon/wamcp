@@ -54,6 +54,8 @@ pub struct AgentChanges {
     pub role: Option<String>,
     pub active: Option<bool>,
     pub password: Option<String>,
+    /// `Some(None)` removes the custom role.
+    pub custom_role_id: Option<Option<i64>>,
 }
 
 impl AccountService {
@@ -194,11 +196,15 @@ impl AccountService {
         if agent.role == "administrator" && demoting && repo.count_admins()? <= 1 {
             return fail_with("É preciso manter ao menos um administrador ativo", 409);
         }
+        if let Some(Some(role)) = changes.custom_role_id {
+            self.find_role(role)?;
+        }
         let mut fields = UserChanges {
             name: changes.name,
             display_name: changes.display_name,
             role: changes.role,
             active: changes.active,
+            custom_role_id: changes.custom_role_id,
             ..Default::default()
         };
         let reset = changes.password.is_some();

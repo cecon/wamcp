@@ -134,6 +134,8 @@ struct AgentBody {
     role: Option<String>,
     active: Option<bool>,
     password: Option<String>,
+    #[serde(default, deserialize_with = "crate::domain::model::nullable")]
+    custom_role_id: Option<Option<i64>>,
 }
 
 async fn update_agent(
@@ -148,6 +150,7 @@ async fn update_agent(
         role: body.role.as_deref().map(|r| one_of(r, &ROLES)).transpose()?,
         active: body.active,
         password: body.password.as_deref().map(|p| raw(p, 10, 200)).transpose()?,
+        custom_role_id: body.custom_role_id,
     };
     let id = id(&agent)?;
     ok(state

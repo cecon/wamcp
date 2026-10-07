@@ -47,6 +47,7 @@ pub struct FilterQuery {
     pub visible_inbox_ids: Option<Vec<i64>>,
     pub page: i64,
     pub now: i64,
+    pub limit: Option<crate::domain::roles::ConversationLimit>,
 }
 
 /// A saved sequence of actions an agent runs on conversations (Chatwoot "macro").

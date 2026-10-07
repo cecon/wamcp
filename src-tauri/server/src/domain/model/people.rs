@@ -15,6 +15,11 @@ pub struct User {
     pub last_login: Option<String>,
     #[serde(default)]
     pub mfa_enabled: i64,
+    #[serde(default)]
+    pub custom_role_id: Option<i64>,
+    /// The custom role permissions (empty without a role).
+    #[serde(default)]
+    pub permissions: Vec<String>,
 }
 
 impl User {
@@ -68,6 +73,7 @@ pub struct UserChanges {
     pub availability: Option<String>,
     pub active: Option<bool>,
     pub password_hash: Option<String>,
+    pub custom_role_id: Option<Option<i64>>,
 }
 
 /// A browser session: the cookie and CSRF token given to the client.
@@ -82,4 +88,14 @@ pub struct WebSession {
 pub struct TokenOwner {
     pub owner_type: String,
     pub owner_id: i64,
+}
+
+/// A named set of permissions assigned to agents.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CustomRole {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub permissions: Vec<String>,
+    pub created: String,
 }

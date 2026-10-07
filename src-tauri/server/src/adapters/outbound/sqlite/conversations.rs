@@ -3,6 +3,7 @@ use super::inboxes::PAGE;
 use crate::application::ports::ConversationRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters};
+use crate::domain::roles::ConversationLimit;
 use rusqlite::types::Value as Sql;
 
 pub(super) const SELECT: &str =
@@ -20,6 +21,20 @@ pub(super) const SHAPE: Shape = Shape {
     json: &["labels", "custom_attributes"],
     bools: &[],
 };
+
+/// `(assigned to me OR unassigned OR participating)` for agents limited by a custom role.
+pub(super) fn limit_clause(limit: &ConversationLimit, args: &mut Vec<Sql>) -> String {
+    let mut parts = vec!["c.assignee_id=?"];
+    args.push(int(limit.user_id));
+    if limit.unassigned {
+        parts.push("c.assignee_id IS NULL");
+    }
+    if limit.participating {
+        parts.push("EXISTS(SELECT 1 FROM conversation_participants p WHERE p.conversation_id=c.id AND p.user_id=?)");
+        args.push(int(limit.user_id));
+    }
+    format!("({})", parts.join(" OR "))
+}
 
 /// WHERE clauses shared by the list and the tab counters.
 fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
@@ -57,6 +72,10 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
     if let Some(ids) = &f.visible_inbox_ids {
         wheres.push(format!("c.inbox_id IN ({})", placeholders(ids.len())));
         args.extend(ids.iter().map(|id| int(*id)));
+    }
+    if let Some(limit) = &f.limit {
+        let clause = limit_clause(limit, &mut args);
+        wheres.push(clause);
     }
     if let Some(q) = f.q.as_deref().filter(|q| !q.is_empty()) {
         wheres.push("(ct.name LIKE ? OR ct.phone_number LIKE ?)".into());

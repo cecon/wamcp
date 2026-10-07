@@ -14,6 +14,7 @@ pub mod model;
 pub mod notifications;
 pub mod oauth;
 pub mod reports;
+pub mod roles;
 pub mod schedule;
 pub mod sla;
 pub mod totp;

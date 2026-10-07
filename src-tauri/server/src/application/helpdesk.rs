@@ -8,6 +8,7 @@ use crate::domain::model::{
     Contact, ContactChanges, Conversation, ConversationChanges as Changes, ConversationCounts, ConversationFilters,
     Message, MirrorMessage,
 };
+use crate::domain::roles::{conversation_limit, require_permission};
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -39,6 +40,7 @@ impl HelpdeskService {
     fn scoped(&self, actor: &Actor, mut filters: ConversationFilters) -> Result<ConversationFilters> {
         filters.user_id = actor.user_id();
         filters.visible_inbox_ids = self.core.visible_inbox_ids(actor)?;
+        filters.limit = conversation_limit(actor);
         Ok(filters)
     }
 
@@ -80,11 +82,13 @@ impl HelpdeskService {
         )
     }
 
-    pub fn contacts(&self, q: &str, page: i64) -> Result<Vec<Contact>> {
+    pub fn contacts(&self, actor: &Actor, q: &str, page: i64) -> Result<Vec<Contact>> {
+        require_permission(actor, "contact_manage")?;
         self.core.repo.contacts(q, page)
     }
 
     pub fn contact(&self, actor: &Actor, id: i64) -> Result<ContactDetail> {
+        require_permission(actor, "contact_manage")?;
         let contact = self.find_contact(id)?;
         let visible = self.core.visible_inbox_ids(actor)?;
         let conversations = self.core.repo.contact_conversations(id, visible.as_deref())?;
@@ -92,6 +96,7 @@ impl HelpdeskService {
     }
 
     pub fn update_contact(&self, actor: &Actor, id: i64, changes: &ContactChanges) -> Result<Contact> {
+        require_permission(actor, "contact_manage")?;
         self.find_contact(id)?;
         if let Some(phone) = &changes.phone_number {
             self.ensure_free_phone(phone.as_deref(), id)?;

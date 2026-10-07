@@ -5,6 +5,7 @@ use crate::domain::actor::Actor;
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{Contact, ContactChanges, ContactNote, NewContact};
+use crate::domain::roles::require_permission;
 use serde_json::{json, Value};
 
 impl HelpdeskService {
@@ -39,6 +40,7 @@ impl HelpdeskService {
     }
 
     pub fn create_contact(&self, actor: &Actor, new: &NewContact) -> Result<Contact> {
+        require_permission(actor, "contact_manage")?;
         if new.name.is_none() && new.phone_number.is_none() && new.email.is_none() {
             return fail("Informe ao menos nome, telefone ou e-mail");
         }
@@ -54,12 +56,14 @@ impl HelpdeskService {
         Ok(())
     }
 
-    pub fn contact_notes(&self, id: i64) -> Result<Vec<ContactNote>> {
+    pub fn contact_notes(&self, actor: &Actor, id: i64) -> Result<Vec<ContactNote>> {
+        require_permission(actor, "contact_manage")?;
         self.find_contact(id)?;
         self.core.repo.contact_notes(id)
     }
 
     pub fn add_contact_note(&self, actor: &Actor, id: i64, content: &str) -> Result<ContactNote> {
+        require_permission(actor, "contact_manage")?;
         self.find_contact(id)?;
         let at = self.core.now();
         self.core
@@ -69,6 +73,7 @@ impl HelpdeskService {
 
     /// Notes are removed by their author or an administrator.
     pub fn delete_contact_note(&self, actor: &Actor, id: i64, note_id: i64) -> Result<()> {
+        require_permission(actor, "contact_manage")?;
         let note = match self.core.repo.contact_note(note_id)? {
             Some(note) if note.contact_id == id => note,
             _ => return Err(HelpdeskError::not_found("Nota não encontrada").into()),
@@ -80,6 +85,7 @@ impl HelpdeskService {
     }
 
     pub fn set_contact_labels(&self, actor: &Actor, id: i64, titles: &[String]) -> Result<Contact> {
+        require_permission(actor, "contact_manage")?;
         self.find_contact(id)?;
         let labels = self.resolve_labels(titles)?;
         let ids: Vec<i64> = labels.iter().map(|l| l.id).collect();
@@ -92,6 +98,7 @@ impl HelpdeskService {
     /// Merges `mergee` into `base` (Chatwoot `contact_merge`): base fields win, gaps are filled from
     /// the mergee, and its channels, conversations, labels and notes move to the base.
     pub fn merge_contacts(&self, actor: &Actor, base_id: i64, mergee_id: i64) -> Result<Contact> {
+        require_permission(actor, "contact_manage")?;
         if base_id == mergee_id {
             return fail("Escolha dois contatos diferentes");
         }

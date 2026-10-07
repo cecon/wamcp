@@ -5,8 +5,8 @@ use super::event_bus::Envelope;
 use super::ports::Period;
 use crate::domain::actor::Actor;
 use crate::domain::error::Result;
-use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{CsatEntry, ReportingEvent};
+use crate::domain::roles::require_permission;
 use serde_json::Value;
 
 const DAY: i64 = 86_400;
@@ -87,17 +87,17 @@ impl ReportService {
     }
 
     pub fn summary(&self, actor: &Actor, query: PeriodQuery) -> Result<Value> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         self.core.repo.summary(&self.period(query))
     }
 
     pub fn agents(&self, actor: &Actor, query: PeriodQuery) -> Result<Vec<Value>> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         self.core.repo.agent_report(&self.period(query))
     }
 
     pub fn csat(&self, actor: &Actor, query: PeriodQuery) -> Result<Vec<CsatEntry>> {
-        require_admin(actor)?;
+        require_permission(actor, "report_manage")?;
         self.core.repo.csat_responses(&self.period(query), 200)
     }
 }
