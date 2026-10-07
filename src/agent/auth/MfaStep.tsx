@@ -18,7 +18,7 @@ export function MfaStep({ token, onLogin, onRestart }: Props) {
     [busy, setBusy] = useState(false);
   return (
     <form
-      className="w-full max-w-md bg-white p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
+      className="w-full max-w-md bg-n-solid-1 p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);

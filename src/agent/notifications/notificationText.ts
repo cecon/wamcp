@@ -11,6 +11,7 @@ export const NOTIFICATION_TYPES: [NotificationType, string][] = [
     'participating_conversation_new_message',
     'Uma nova mensagem foi criada em uma conversa que você participa',
   ],
+  ['sla_missed', 'O SLA de uma conversa atribuída a você foi perdido'],
 ];
 
 const TEXT: Record<string, (n: AppNotification) => string> = {
@@ -20,6 +21,7 @@ const TEXT: Record<string, (n: AppNotification) => string> = {
   conversation_mention: (n) => `${n.actor_name || 'Alguém'} mencionou você na conversa #${n.display_id}`,
   participating_conversation_new_message: (n) =>
     `Nova mensagem na conversa #${n.display_id} em que você participa`,
+  sla_missed: (n) => `SLA perdido na conversa #${n.display_id}`,
 };
 
 /** pt-BR sentence for a notification; unknown types show their raw name. */

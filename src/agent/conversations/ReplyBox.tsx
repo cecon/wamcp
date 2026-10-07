@@ -196,6 +196,7 @@ export function ReplyBox({
       ) : (
         <textarea
           ref={area}
+          data-shortcut="composer"
           value={text}
           disabled={blocked}
           rows={3}

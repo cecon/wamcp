@@ -6,7 +6,8 @@ export type NotificationType =
   | 'conversation_assignment'
   | 'assigned_conversation_new_message'
   | 'conversation_mention'
-  | 'participating_conversation_new_message';
+  | 'participating_conversation_new_message'
+  | 'sla_missed';
 
 export interface NotificationSettings {
   flags: Record<string, boolean>;

@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { SettingsHeader, SettingsPage, Toggle } from '../ui/Settings';
 import { InboxAutomation } from './InboxAutomation';
+import { InboxLimit } from './InboxLimit';
 import { useAction } from './useAction';
 
 interface Props {
@@ -174,6 +175,7 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
               onChange={(v) => void patch({ agent_bot_enabled: v })}
             />
           </div>
+          <InboxLimit key={inbox.max_assignment_limit ?? 0} inbox={inbox} busy={busy} onSave={patch} />
         </div>
       )}
       {tab === 'collaborators' && (

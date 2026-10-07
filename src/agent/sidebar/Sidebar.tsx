@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import {
   AtSign,
   Bolt,
-  Braces,
   ChartSpline,
   Contact,
   Folder,
@@ -10,42 +9,25 @@ import {
   Mailbox,
   MessageCircle,
   MessageCircleDashed,
-  MessageSquareText,
-  Repeat,
-  ScrollText,
   Search,
-  SquareUser,
   Tag,
-  Tags,
+  TextSearch,
   Users,
   UsersRound,
-  Webhook,
-  Workflow,
 } from 'lucide-react';
 import type { Catalog, ConversationType, CustomFilter, User } from '../types';
 import { CONVERSATION_TYPE_LABEL } from '../labels';
-import type { Route, SettingsSection } from '../route';
+import type { Route } from '../route';
 import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
+import { REPORTS, SETTINGS } from './navItems';
 
-const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt }[] = [
-  { section: 'agents', label: 'Agentes', icon: SquareUser },
-  { section: 'teams', label: 'Times', icon: Users },
-  { section: 'inboxes', label: 'Caixas de entrada', icon: InboxIcon },
-  { section: 'labels', label: 'Etiquetas', icon: Tags },
-  { section: 'attributes', label: 'Atributos personalizados', icon: Braces },
-  { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
-  { section: 'automation', label: 'Automação', icon: Repeat },
-  { section: 'macros', label: 'Macros', icon: Workflow },
-  { section: 'webhooks', label: 'Webhooks', icon: Webhook },
-  { section: 'audit', label: 'Registro de auditoria', icon: ScrollText },
-];
 const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
   { type: 'mentions', icon: AtSign },
   { type: 'unattended', icon: MessageCircleDashed },
   { type: 'participating', icon: UsersRound },
 ];
-type Group = 'conversations' | 'settings' | null;
+type Group = 'conversations' | 'reports' | 'settings' | null;
 
 interface Props {
   user: User;
@@ -59,6 +41,8 @@ interface Props {
   onLogout: () => void;
   /** Notification bell shown next to the account name. */
   bell?: ReactNode;
+  /** Opens the keyboard shortcuts help (profile menu). */
+  onShortcuts?: () => void;
 }
 
 /** Chatwoot components-next/sidebar: account header, search, accordion nav and profile footer. */
@@ -73,9 +57,12 @@ export function Sidebar({
   onAvailability,
   onLogout,
   bell,
+  onShortcuts,
 }: Props) {
   const isAdmin = user.role === 'administrator';
-  const [expanded, setExpanded] = useState<Group>(route.page === 'settings' ? 'settings' : 'conversations');
+  const [expanded, setExpanded] = useState<Group>(
+    route.page === 'settings' || route.page === 'reports' ? route.page : 'conversations',
+  );
   const [q, setQ] = useState('');
   const conv = route.page === 'conversations' ? route : null;
   const allActive = Boolean(
@@ -117,6 +104,16 @@ export function Sidebar({
               className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-n-slate-10"
             />
           </label>
+          <button
+            type="button"
+            aria-label="Pesquisa global"
+            title="Pesquisa global (Ctrl+K)"
+            aria-current={route.page === 'search' ? 'page' : undefined}
+            onClick={() => open(null, { page: 'search' })}
+            className="grid size-7 shrink-0 place-content-center rounded-lg text-n-slate-11 outline outline-1 -outline-offset-1 outline-n-weak hover:bg-n-alpha-2"
+          >
+            <TextSearch size={16} />
+          </button>
         </form>
       </div>
 
@@ -209,10 +206,24 @@ export function Sidebar({
             <SidebarGroup
               icon={ChartSpline}
               label="Relatórios"
-              active={route.page === 'reports'}
-              parentOfActive={false}
-              onClick={() => open(null, { page: 'reports' })}
-            />
+              active={false}
+              parentOfActive={route.page === 'reports'}
+              expanded={expanded === 'reports'}
+              onClick={() =>
+                expanded === 'reports'
+                  ? setExpanded(null)
+                  : open('reports', { page: 'reports', section: 'overview' })
+              }
+            >
+              {REPORTS.map(({ section, label }) => (
+                <SidebarLeaf
+                  key={section}
+                  label={label}
+                  active={route.page === 'reports' && (route.section || 'overview') === section}
+                  onClick={() => onNavigate({ page: 'reports', section })}
+                />
+              ))}
+            </SidebarGroup>
           )}
           {isAdmin && (
             <SidebarGroup
@@ -248,6 +259,7 @@ export function Sidebar({
         onAvailability={onAvailability}
         onLogout={onLogout}
         onNavigate={onNavigate}
+        onShortcuts={onShortcuts}
       />
     </aside>
   );

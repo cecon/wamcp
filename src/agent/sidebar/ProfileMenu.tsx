@@ -1,9 +1,12 @@
-import { Power, UserCog, Workflow } from 'lucide-react';
+import { Keyboard, Monitor, Moon, Power, Sun, UserCog, Workflow } from 'lucide-react';
 import type { Availability, User } from '../types';
 import type { Route } from '../route';
 import { Avatar } from '../ui/Avatar';
 import { Dropdown, MenuItem } from '../ui/Overlay';
 import { cn } from '../ui/cn';
+import { THEME_LABEL, useTheme, type ThemeMode } from '../theme/theme';
+
+const THEME_ICON: Record<ThemeMode, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
 
 const AVAILABILITY: { value: Availability; label: string; color: string }[] = [
   { value: 'online', label: 'Online', color: 'bg-n-teal-9' },
@@ -17,10 +20,12 @@ interface Props {
   onAvailability: (value: Availability) => void;
   onLogout: () => void;
   onNavigate?: (route: Route) => void;
+  onShortcuts?: () => void;
 }
 
 /** Chatwoot SidebarProfileMenu: avatar + name/email, opening availability and logout. */
-export function ProfileMenu({ user, online, onAvailability, onLogout, onNavigate }: Props) {
+export function ProfileMenu({ user, online, onAvailability, onLogout, onNavigate, onShortcuts }: Props) {
+  const [theme, setTheme] = useTheme();
   return (
     <div className="border-t border-n-weak px-1 py-1.5 shadow-[0_-2px_4px_rgba(27,28,29,0.02)]">
       <Dropdown
@@ -68,6 +73,27 @@ export function ProfileMenu({ user, online, onAvailability, onLogout, onNavigate
               />
             ))}
             <div className="my-1 h-px bg-n-weak" />
+            <p className="px-2 pt-1 text-xs font-medium text-n-slate-10">Aparência</p>
+            {(Object.keys(THEME_LABEL) as ThemeMode[]).map((mode) => (
+              <MenuItem
+                key={mode}
+                icon={THEME_ICON[mode]}
+                active={theme === mode}
+                label={THEME_LABEL[mode]}
+                onClick={() => setTheme(mode)}
+              />
+            ))}
+            <div className="my-1 h-px bg-n-weak" />
+            {onShortcuts && (
+              <MenuItem
+                icon={Keyboard}
+                label="Atalhos de teclado"
+                onClick={() => {
+                  close();
+                  onShortcuts();
+                }}
+              />
+            )}
             {onNavigate && (
               <MenuItem
                 icon={UserCog}

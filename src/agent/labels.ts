@@ -65,6 +65,7 @@ export const ACTIONS: Record<string, string> = {
   mute_conversation: 'Silenciar conversa',
   change_priority: 'Alterar prioridade',
   set_priority: 'Definir prioridade',
+  add_sla: 'Adicionar SLA',
 };
 export const PRIORITY_LABEL: Record<string, string> = {
   low: 'Baixa',

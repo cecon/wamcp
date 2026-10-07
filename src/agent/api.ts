@@ -80,6 +80,7 @@ const EVENTS = [
   'presence.update',
   'conversation.typing_on',
   'conversation.typing_off',
+  'sla.missed',
 ];
 
 export interface RealtimeEvent {

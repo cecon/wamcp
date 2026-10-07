@@ -2,6 +2,7 @@ import type { ConversationType, FilterCondition } from './types';
 
 /** In-app navigation state (the agent UI is a single page served at /app/). */
 export type SettingsSection =
+  | 'account'
   | 'agents'
   | 'teams'
   | 'inboxes'
@@ -10,11 +11,15 @@ export type SettingsSection =
   | 'canned'
   | 'automation'
   | 'macros'
+  | 'sla'
   | 'webhooks'
   | 'audit';
 
 /** Settings pages every agent can open (the others are for administrators). */
 export const AGENT_SECTIONS: SettingsSection[] = ['macros'];
+
+/** Chatwoot report pages (administrators). */
+export type ReportSection = 'overview' | 'agents' | 'inboxes' | 'teams' | 'labels' | 'csat' | 'bots' | 'sla';
 
 export type Route =
   | { page: 'notifications' }
@@ -31,8 +36,9 @@ export type Route =
       /** Advanced filter payload; when set the list comes from POST /conversations/filter. */
       filters?: FilterCondition[];
     }
-  | { page: 'contacts' }
-  | { page: 'reports' }
+  | { page: 'contacts'; contactId?: number }
+  | { page: 'reports'; section?: ReportSection }
+  | { page: 'search' }
   | { page: 'profile' }
   | { page: 'settings'; section: SettingsSection; id?: number };
 

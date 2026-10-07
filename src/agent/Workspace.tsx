@@ -12,6 +12,9 @@ import { useSavedViews } from './filters/useSavedViews';
 import { NotificationBell } from './notifications/NotificationBell';
 import { alertNotification } from './notifications/browserAlerts';
 import { ProfilePage } from './profile/ProfilePage';
+import { SearchPage } from './search/SearchPage';
+import { ShortcutsModal } from './shortcuts/ShortcutsModal';
+import { useHotkeys } from './shortcuts/hotkeys';
 
 interface Props {
   user: User;
@@ -24,7 +27,8 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   const [route, setRoute] = useState<Route>(HOME),
     [online, setOnline] = useState(false),
     [catalog, setCatalog] = useState<Catalog>({ inboxes: [], agents: [], teams: [], labels: [] }),
-    [unread, setUnread] = useState(0);
+    [unread, setUnread] = useState(0),
+    [shortcuts, setShortcuts] = useState(false);
   const [realtime] = useState<Realtime>(() => connectRealtime(setOnline));
   useEffect(() => () => realtime.close(), [realtime]);
   const { views, reload: reloadViews } = useSavedViews('conversation');
@@ -77,6 +81,10 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   }
   const isAdmin = user.role === 'administrator';
   const openConversation = (displayId: number) => setRoute({ page: 'conversations', displayId });
+  useHotkeys([
+    { keys: '?', run: () => setShortcuts((open) => !open) },
+    { keys: 'mod+k', run: () => setRoute({ page: 'search' }) },
+  ]);
 
   return (
     <div className="flex h-full overflow-hidden text-n-slate-12">
@@ -90,6 +98,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         onNavigate={setRoute}
         onAvailability={setAvailability}
         onLogout={() => void logout()}
+        onShortcuts={() => setShortcuts(true)}
         bell={
           <NotificationBell
             realtime={realtime}
@@ -120,9 +129,16 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             catalog={catalog}
             realtime={realtime}
             onOpenConversation={openConversation}
+            contactId={route.contactId}
           />
         )}
-        {route.page === 'reports' && isAdmin && <Reports catalog={catalog} />}
+        {route.page === 'search' && (
+          <SearchPage
+            onOpenConversation={openConversation}
+            onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
+          />
+        )}
+        {route.page === 'reports' && isAdmin && <Reports catalog={catalog} section={route.section} />}
         {route.page === 'profile' && <ProfilePage user={user} />}
         {route.page === 'settings' && (isAdmin || AGENT_SECTIONS.includes(route.section)) && (
           <SettingsRouter
@@ -134,6 +150,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         )}
       </main>
+      {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
     </div>
   );
 }

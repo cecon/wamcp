@@ -9,6 +9,7 @@ import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
 import { TypingIndicator } from './TypingIndicator';
+import { useConversationShortcuts } from './useConversationShortcuts';
 
 interface Props {
   displayId: number;
@@ -100,6 +101,15 @@ export function ConversationBox({
       );
       setHistory((current) => [...list, ...(current || [])]);
     });
+  useConversationShortcuts({
+    conversation,
+    onStatus: (status) => void setStatus(status),
+    onAssignToMe: () =>
+      void act(async () =>
+        setConversation(await http<Conversation>(`${path}/assignments`, 'POST', { assignee_id: user.id })),
+      ),
+    onShowPanel: () => setPanel(true),
+  });
 
   if (!conversation)
     return (

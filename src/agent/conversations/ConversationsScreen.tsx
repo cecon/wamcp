@@ -9,6 +9,7 @@ import { ChatList, type AssigneeType, type StatusFilter } from './ChatList';
 import { ConversationBox } from './ConversationBox';
 import { ConversationFilters } from './ConversationFilters';
 import { useConversationList } from './useConversationList';
+import { useHotkeys } from '../shortcuts/hotkeys';
 
 type ConversationsRoute = Extract<Route, { page: 'conversations' }>;
 
@@ -51,6 +52,16 @@ export function ConversationsScreen({
   const { displayId } = route;
   const view = route.viewId ? views.find((v) => v.id === route.viewId) : undefined;
   const select = (id: number | undefined) => onNavigate({ ...route, displayId: id });
+  /** Alt+J / Alt+K: next / previous conversation of the list (Chatwoot). */
+  const step = (delta: number) => {
+    const index = list.items.findIndex((c) => c.display_id === displayId);
+    const next = list.items[index < 0 ? 0 : index + delta];
+    if (next) select(next.display_id);
+  };
+  useHotkeys([
+    { keys: 'alt+j', run: () => step(1) },
+    { keys: 'alt+k', run: () => step(-1) },
+  ]);
 
   return (
     <div className="flex h-full w-full">

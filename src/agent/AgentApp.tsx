@@ -6,8 +6,10 @@ import { Workspace } from './Workspace';
 import { Button } from './ui/Button';
 import { MfaStep } from './auth/MfaStep';
 import { authError, type LoginResult, type Me } from './auth/authError';
+import { useTheme } from './theme/theme';
 
 export default function AgentApp() {
+  useTheme();
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -63,7 +65,7 @@ function Login({ onLogin }: { onLogin: (me: Me) => void }) {
         />
       ) : (
         <form
-          className="w-full max-w-md bg-white p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
+          className="w-full max-w-md bg-n-solid-1 p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
           onSubmit={(e) => {
             e.preventDefault();
             setBusy(true);

@@ -29,6 +29,8 @@ export interface Inbox {
   out_of_office_message: string | null;
   csat_survey_enabled: number;
   timezone: string;
+  max_assignment_limit?: number | null;
+  csat_survey_message?: string | null;
 }
 export interface WorkingDay {
   day_of_week: number;

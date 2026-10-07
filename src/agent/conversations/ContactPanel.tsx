@@ -10,6 +10,7 @@ import { Accordion } from '../ui/Accordion';
 import { ConversationActions } from './ConversationActions';
 import { ParticipantsSection } from './ParticipantsSection';
 import { MacroRunner } from '../macros/MacroRunner';
+import { SlaSection } from '../sla/SlaSection';
 
 const Row = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
   <p className="flex min-w-0 items-center gap-2 text-sm text-n-slate-11">
@@ -83,6 +84,10 @@ export function ContactPanel({
             onChange={onChange}
             onError={onError}
           />
+        </Accordion>
+        <Accordion title="SLA">
+          {/* Remounts (and reloads the deadlines) when the conversation status or waiting time changes. */}
+          <SlaSection key={`${c.display_id}:${c.status}:${c.waiting_since ?? ''}`} displayId={c.display_id} />
         </Accordion>
         <Accordion title="Macros">
           <MacroRunner conversation={c} onChange={onChange} />

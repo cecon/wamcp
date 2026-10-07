@@ -83,6 +83,70 @@
   --color-n-label-border: rgb(226 227 231);
 }
 
+/* Dark palette (Chatwoot _next-colors.scss `.dark`), applied by the theme toggle via data-theme. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-n-slate-1: rgb(17 17 19);
+  --color-n-slate-2: rgb(24 25 27);
+  --color-n-slate-3: rgb(33 34 37);
+  --color-n-slate-4: rgb(39 42 45);
+  --color-n-slate-5: rgb(46 49 53);
+  --color-n-slate-6: rgb(54 58 63);
+  --color-n-slate-7: rgb(67 72 78);
+  --color-n-slate-8: rgb(90 97 105);
+  --color-n-slate-9: rgb(105 110 119);
+  --color-n-slate-10: rgb(119 123 132);
+  --color-n-slate-11: rgb(176 180 186);
+  --color-n-slate-12: rgb(237 238 240);
+
+  --color-n-blue-1: rgb(10 17 28);
+  --color-n-blue-2: rgb(15 24 38);
+  --color-n-blue-3: rgb(15 39 72);
+  --color-n-blue-4: rgb(10 49 99);
+  --color-n-blue-5: rgb(18 61 117);
+  --color-n-blue-10: rgb(21 116 231);
+  --color-n-blue-11: rgb(126 182 255);
+  --color-n-blue-12: rgb(205 227 255);
+
+  --color-n-ruby-2: rgb(30 21 23);
+  --color-n-ruby-4: rgb(78 19 37);
+  --color-n-ruby-8: rgb(179 68 90);
+  --color-n-ruby-11: rgb(255 148 157);
+  --color-n-ruby-12: rgb(254 210 225);
+
+  --color-n-amber-3: rgb(48 32 8);
+  --color-n-amber-10: rgb(255 214 10);
+  --color-n-amber-11: rgb(255 202 22);
+  --color-n-amber-12: rgb(255 231 179);
+
+  --color-n-teal-3: rgb(13 45 42);
+  --color-n-teal-10: rgb(14 179 158);
+  --color-n-teal-11: rgb(11 216 182);
+
+  --color-n-background: rgb(28 29 32);
+  --color-n-surface-1: rgb(20 21 23);
+  --color-n-surface-2: rgb(22 23 26);
+  --color-n-solid-1: rgb(23 23 26);
+  --color-n-solid-2: rgb(29 30 36);
+  --color-n-solid-3: rgb(44 45 54);
+  --color-n-solid-blue: rgb(15 57 102);
+  --color-n-solid-amber: rgb(56 50 41);
+  --color-n-solid-iris: rgb(38 42 101);
+  --color-n-solid-red: rgb(90 33 34);
+  --color-n-weak: rgb(31 31 37);
+  --color-n-strong: rgb(46 45 50);
+  --color-n-container: rgba(255 255 255 / 0.06);
+  --color-n-alpha-1: rgba(35 36 42 / 0.8);
+  --color-n-alpha-2: rgba(147 153 176 / 0.12);
+  --color-n-alpha-3: rgba(33 34 38 / 0.95);
+  --color-n-alpha-black1: rgba(0 0 0 / 0.3);
+  --color-n-alpha-black2: rgba(0 0 0 / 0.2);
+  --color-n-button-color: rgb(42 43 51);
+  --color-n-card: rgb(28 30 34);
+  --color-n-label-color: rgb(36 38 45);
+  --color-n-label-border: rgba(255 255 255 / 0.03);
+}
+
 @layer base {
   html,
   body,

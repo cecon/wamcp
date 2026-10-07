@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Realtime } from '../api';
 
 interface TypingEvent {
@@ -16,7 +16,8 @@ interface Props {
 export function TypingIndicator({ realtime, displayId, currentUserId }: Props) {
   const [typing, setTyping] = useState<{ name: string; recording: boolean } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => {
+  // Subscribes at commit (not after paint) so an event right after the conversation renders is not lost.
+  useLayoutEffect(() => {
     const unsubscribe = realtime.subscribe(({ event, data }) => {
       if (!event.startsWith('conversation.typing_')) return;
       const e = data as TypingEvent;

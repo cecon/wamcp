@@ -14,10 +14,12 @@ interface Props {
   catalog?: Catalog;
   /** Live updates: deleted contacts leave the list (and close their detail), edits are merged. */
   realtime?: Realtime;
+  /** Contact opened in the side panel on arrival (from the global search). */
+  contactId?: number;
 }
 
 /** Chatwoot Contacts: searchable/filterable list; a contact opens in a side panel with its details. */
-export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realtime }: Props) {
+export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realtime, contactId }: Props) {
   const [q, setQ] = useState(''),
     [scope, setScope] = useState<ContactScope>({ filters: null, viewId: null }),
     [items, setItems] = useState<Contact[]>([]),
@@ -46,6 +48,12 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
     void http<Contact>(`/contacts/${id}`)
       .then(setSelected)
       .catch((e: Error) => setError(e.message));
+  useEffect(() => {
+    if (!contactId) return;
+    void http<Contact>(`/contacts/${contactId}`)
+      .then(setSelected)
+      .catch((e: Error) => setError(e.message));
+  }, [contactId]);
   const replace = (c: Contact) => setItems((list) => list.map((x) => (x.id === c.id ? { ...x, ...c } : x)));
   const remove = (id: number) => {
     setSelected((current) => (current?.id === id ? null : current));
