@@ -1,0 +1,52 @@
+[package]
+name = "wamcp-server"
+version = "26.10.10"
+description = "WA MCP backend: WhatsApp sessions, helpdesk API, MCP and OAuth on Axum"
+authors = ["Cappyfy"]
+edition = "2021"
+license = "MIT"
+publish = false
+
+[features]
+default = ["whatsapp"]
+# The real WhatsApp adapter (whatsapp-rust). Tests use the in-memory fake port.
+whatsapp = ["dep:whatsapp-rust", "dep:waproto", "dep:buffa"]
+
+[dependencies]
+async-trait = "0.1"
+axum = { version = "0.8", features = ["macros"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+chrono-tz = { version = "0.10", features = ["case-insensitive"] }
+futures = "0.3"
+hex = "0.4"
+hmac = "0.12"
+parking_lot = "0.12"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+rand = "0.9"
+regex = "1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
+rusqlite = { version = "0.39", features = ["bundled"] }
+scrypt = { version = "0.11", default-features = false, features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+subtle = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "limit", "set-header"] }
+tracing = "0.1"
+url = "2"
+uuid = { version = "1", features = ["v4"] }
+buffa = { version = "0.9", optional = true }
+waproto = { version = "=0.7.0", optional = true }
+whatsapp-rust = { version = "=0.7.0", optional = true, default-features = false, features = ["sqlite-storage", "tokio-transport", "tokio-runtime", "ureq-client", "tokio-native", "signal"] }
+
+[dev-dependencies]
+http-body-util = "0.1"
+tempfile = "3"
+
+[lints.rust]
+unsafe_code = "forbid"

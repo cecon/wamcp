@@ -1,0 +1,20 @@
+//! Use cases. Depend only on the domain and on the ports declared in `ports`.
+pub mod accounts;
+pub mod auto_replies;
+pub mod automations;
+pub mod catalog;
+pub mod core;
+pub mod crypto;
+pub mod event_bus;
+pub mod events;
+pub mod helpdesk;
+mod ingestion;
+pub mod notifications;
+pub mod oauth;
+mod oauth_tokens;
+pub mod ports;
+pub mod reports;
+pub mod sessions;
+mod teams;
+pub mod webhooks;
+pub mod whatsapp_sink;
