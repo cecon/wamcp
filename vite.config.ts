@@ -2,9 +2,11 @@ import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },
-  plugins: [react()],
+  // Tailwind only reaches the agent UI: its stylesheet is imported by src/agent/main.tsx alone.
+  plugins: [react(), tailwindcss()],
   // Relative asset URLs let the same build run inside Tauri and under /app/ on the public listener.
   base: './',
   build: { rollupOptions: { input: { main: 'index.html', agent: 'agent.html' } } },

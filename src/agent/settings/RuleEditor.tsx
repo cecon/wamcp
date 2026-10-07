@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Action, Catalog, Condition } from '../types';
 import { ACTIONS, AUTOMATION_EVENTS, CONDITION_ATTRIBUTES, OPERATORS, PRIORITY_LABEL } from '../labels';
+import { Button } from '../ui/Button';
+import { ModalFooter } from '../ui/Settings';
 
 export interface RuleDraft {
   name: string;
@@ -18,6 +20,7 @@ const newCondition = (): Condition => ({
   query_operator: 'and',
 });
 const newAction = (): Action => ({ action_name: 'add_label', action_params: [] });
+const small = 'field !h-8 !w-auto flex-1 basis-36 !py-1';
 
 /** Option lists for selects that pick catalog entities instead of free text. */
 function choices(key: string, catalog: Catalog): [string, string][] | null {
@@ -43,22 +46,17 @@ function choices(key: string, catalog: Catalog): [string, string][] | null {
   return null;
 }
 
-function ValueInput({
-  id,
-  value,
-  options,
-  onChange,
-  multiline,
-}: {
+interface ValueProps {
   id: string;
   value: string;
   options: [string, string][] | null;
-  onChange: (value: string) => void;
   multiline?: boolean;
-}) {
+  onChange: (value: string) => void;
+}
+function ValueInput({ id, value, options, multiline, onChange }: ValueProps) {
   if (options)
     return (
-      <select aria-label={id} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select aria-label={id} className={small} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Selecione…</option>
         {options.map(([v, label]) => (
           <option key={v} value={v}>
@@ -70,23 +68,33 @@ function ValueInput({
   return multiline ? (
     <textarea
       aria-label={id}
+      className="field basis-full"
       value={value}
       rows={2}
       maxLength={4096}
       onChange={(e) => onChange(e.target.value)}
     />
   ) : (
-    <input aria-label={id} value={value} maxLength={200} onChange={(e) => onChange(e.target.value)} />
+    <input
+      aria-label={id}
+      className={small}
+      value={value}
+      maxLength={200}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
 
 interface Props {
   catalog: Catalog;
   busy: boolean;
+  error: string;
   onSave: (rule: RuleDraft) => void;
+  onCancel: () => void;
 }
 
-export function RuleEditor({ catalog, busy, onSave }: Props) {
+/** Chatwoot automation form: name, event, conditions box and actions box (ConditionRow / ActionInput). */
+export function RuleEditor({ catalog, busy, error, onSave, onCancel }: Props) {
   const [rule, setRule] = useState<RuleDraft>({
     name: '',
     event_name: 'message_created',
@@ -97,27 +105,33 @@ export function RuleEditor({ catalog, busy, onSave }: Props) {
     setRule((r) => ({ ...r, conditions: r.conditions.map((c, j) => (i === j ? { ...c, ...patch } : c)) }));
   const setAction = (i: number, patch: Partial<Action>) =>
     setRule((r) => ({ ...r, actions: r.actions.map((a, j) => (i === j ? { ...a, ...patch } : a)) }));
+  const box = 'grid gap-4 rounded-xl p-3 outline outline-1 -outline-offset-1 outline-n-weak';
+
   return (
     <form
-      className="panel rule-editor"
+      className="flex flex-col gap-6"
       onSubmit={(e) => {
         e.preventDefault();
         onSave(rule);
       }}
     >
-      <h2>Nova automação</h2>
       <label>
-        Nome
+        <span className="field-label">Nome da regra</span>
         <input
+          className="field"
           value={rule.name}
-          onChange={(e) => setRule({ ...rule, name: e.target.value })}
           maxLength={120}
           required
+          onChange={(e) => setRule({ ...rule, name: e.target.value })}
         />
       </label>
       <label>
-        Quando
-        <select value={rule.event_name} onChange={(e) => setRule({ ...rule, event_name: e.target.value })}>
+        <span className="field-label">Evento</span>
+        <select
+          className="field"
+          value={rule.event_name}
+          onChange={(e) => setRule({ ...rule, event_name: e.target.value })}
+        >
           {Object.entries(AUTOMATION_EVENTS).map(([id, label]) => (
             <option key={id} value={id}>
               {label}
@@ -126,112 +140,118 @@ export function RuleEditor({ catalog, busy, onSave }: Props) {
         </select>
       </label>
       <fieldset>
-        <legend>Condições</legend>
-        {rule.conditions.map((c, i) => (
-          <div key={i} className="rule-row">
-            <select
-              aria-label={`Atributo ${i + 1}`}
-              value={c.attribute_key}
-              onChange={(e) => setCondition(i, { attribute_key: e.target.value, values: [] })}
-            >
-              {Object.entries(CONDITION_ATTRIBUTES).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label={`Operador ${i + 1}`}
-              value={c.filter_operator}
-              onChange={(e) => setCondition(i, { filter_operator: e.target.value })}
-            >
-              {Object.entries(OPERATORS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {!NO_VALUE.has(c.filter_operator) && (
-              <ValueInput
-                id={`Valor ${i + 1}`}
-                value={String(c.values[0] ?? '')}
-                options={choices(c.attribute_key, catalog)}
-                onChange={(v) => setCondition(i, { values: v ? [v] : [] })}
-              />
-            )}
-            {i < rule.conditions.length - 1 && (
+        <legend className="field-label">Condições</legend>
+        <ul className={box}>
+          {rule.conditions.map((c, i) => (
+            <li key={i} className="flex flex-wrap items-center gap-2">
+              {i > 0 && (
+                <select
+                  aria-label={`Junção ${i}`}
+                  className="field !h-8 !w-20 !py-1"
+                  value={rule.conditions[i - 1].query_operator}
+                  onChange={(e) => setCondition(i - 1, { query_operator: e.target.value as 'and' | 'or' })}
+                >
+                  <option value="and">E</option>
+                  <option value="or">OU</option>
+                </select>
+              )}
               <select
-                aria-label={`Junção ${i + 1}`}
-                value={c.query_operator}
-                onChange={(e) => setCondition(i, { query_operator: e.target.value as 'and' | 'or' })}
+                aria-label={`Atributo ${i + 1}`}
+                className={small}
+                value={c.attribute_key}
+                onChange={(e) => setCondition(i, { attribute_key: e.target.value, values: [] })}
               >
-                <option value="and">E</option>
-                <option value="or">OU</option>
+                {Object.entries(CONDITION_ATTRIBUTES).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
               </select>
-            )}
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label={`Remover condição ${i + 1}`}
-              onClick={() => setRule({ ...rule, conditions: rule.conditions.filter((_, j) => j !== i) })}
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className="btn ghost small"
-          onClick={() => setRule({ ...rule, conditions: [...rule.conditions, newCondition()] })}
-        >
-          <Plus size={14} /> Condição
-        </button>
+              <select
+                aria-label={`Operador ${i + 1}`}
+                className={small}
+                value={c.filter_operator}
+                onChange={(e) => setCondition(i, { filter_operator: e.target.value })}
+              >
+                {Object.entries(OPERATORS).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {!NO_VALUE.has(c.filter_operator) && (
+                <ValueInput
+                  id={`Valor ${i + 1}`}
+                  value={String(c.values[0] ?? '')}
+                  options={choices(c.attribute_key, catalog)}
+                  onChange={(v) => setCondition(i, { values: v ? [v] : [] })}
+                />
+              )}
+              <Button
+                color="slate"
+                variant="faded"
+                icon={Trash2}
+                aria-label={`Remover condição ${i + 1}`}
+                onClick={() => setRule({ ...rule, conditions: rule.conditions.filter((_, j) => j !== i) })}
+              />
+            </li>
+          ))}
+          <li>
+            <Button
+              variant="faded"
+              icon={Plus}
+              label="Adicionar condição"
+              onClick={() => setRule({ ...rule, conditions: [...rule.conditions, newCondition()] })}
+            />
+          </li>
+        </ul>
       </fieldset>
       <fieldset>
-        <legend>Ações</legend>
-        {rule.actions.map((a, i) => (
-          <div key={i} className="rule-row">
-            <select
-              aria-label={`Ação ${i + 1}`}
-              value={a.action_name}
-              onChange={(e) => setAction(i, { action_name: e.target.value, action_params: [] })}
-            >
-              {Object.entries(ACTIONS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {!NO_PARAM.has(a.action_name) && (
-              <ValueInput
-                id={`Parâmetro ${i + 1}`}
-                value={String(a.action_params[0] ?? '')}
-                options={choices(a.action_name, catalog)}
-                multiline={a.action_name === 'send_message' || a.action_name === 'add_private_note'}
-                onChange={(v) => setAction(i, { action_params: v ? [v] : [] })}
+        <legend className="field-label">Ações</legend>
+        <ul className={box}>
+          {rule.actions.map((a, i) => (
+            <li key={i} className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label={`Ação ${i + 1}`}
+                className={small}
+                value={a.action_name}
+                onChange={(e) => setAction(i, { action_name: e.target.value, action_params: [] })}
+              >
+                {Object.entries(ACTIONS).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {!NO_PARAM.has(a.action_name) && (
+                <ValueInput
+                  id={`Parâmetro ${i + 1}`}
+                  value={String(a.action_params[0] ?? '')}
+                  options={choices(a.action_name, catalog)}
+                  multiline={a.action_name === 'send_message' || a.action_name === 'add_private_note'}
+                  onChange={(v) => setAction(i, { action_params: v ? [v] : [] })}
+                />
+              )}
+              <Button
+                color="slate"
+                variant="faded"
+                icon={Trash2}
+                aria-label={`Remover ação ${i + 1}`}
+                onClick={() => setRule({ ...rule, actions: rule.actions.filter((_, j) => j !== i) })}
               />
-            )}
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label={`Remover ação ${i + 1}`}
-              onClick={() => setRule({ ...rule, actions: rule.actions.filter((_, j) => j !== i) })}
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className="btn ghost small"
-          onClick={() => setRule({ ...rule, actions: [...rule.actions, newAction()] })}
-        >
-          <Plus size={14} /> Ação
-        </button>
+            </li>
+          ))}
+          <li>
+            <Button
+              variant="faded"
+              icon={Plus}
+              label="Adicionar ação"
+              onClick={() => setRule({ ...rule, actions: [...rule.actions, newAction()] })}
+            />
+          </li>
+        </ul>
       </fieldset>
-      <button className="btn primary" disabled={busy}>
-        Criar automação
-      </button>
+      <ModalFooter busy={busy} submit="Criar automação" onCancel={onCancel} error={error} />
     </form>
   );
 }
