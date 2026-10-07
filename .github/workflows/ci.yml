@@ -19,6 +19,12 @@ jobs:
       - run: npm run check
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
+      # The OAuth browser test runs the real Rust backend (without the WhatsApp adapter).
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: cargo build --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
