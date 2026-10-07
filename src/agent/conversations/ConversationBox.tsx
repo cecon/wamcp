@@ -4,9 +4,10 @@ import { http, query, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
 import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
-import { MessageItem } from './MessageItem';
+import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
+import { TypingIndicator } from './TypingIndicator';
 
 interface Props {
   displayId: number;
@@ -29,10 +30,12 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
     [older, setOlder] = useState(false),
     [history, setHistory] = useState<HistoryMessage[] | null>(null),
     [panel, setPanel] = useState(true),
+    [replyTo, setReplyTo] = useState<Message | null>(null),
     [error, setError] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
   const path = `/conversations/${displayId}`;
 
+  const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
   const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
   useEffect(() => {
     Promise.all([http<Conversation>(path), http<Message[]>(`${path}/messages`)])
@@ -144,17 +147,25 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
               ))}
             </div>
           )}
-          <ul className="px-4">
-            {messages.map((m) => (
-              <MessageItem key={m.id} message={m} />
-            ))}
-          </ul>
+          <MessageList
+            messages={messages}
+            path={path}
+            currentUserId={user.id}
+            onUpsert={upsertOne}
+            onReply={setReplyTo}
+            onError={setError}
+          />
           <div ref={bottom} />
         </div>
+        <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
         <ReplyBox
           path={path}
           disabled={conversation.status === 'resolved'}
-          onSent={(m) => setMessages((list) => upsert(list, m))}
+          conversation={conversation}
+          user={user}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onSent={upsertOne}
         />
       </section>
       {panel && (

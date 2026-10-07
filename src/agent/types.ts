@@ -120,8 +120,38 @@ export interface Message {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sender_type: 'user' | 'contact' | 'agent_bot' | 'system' | null;
   sender_name: string | null;
-  content_attributes: { external_error?: string; automated?: string };
+  content_attributes: MessageAttributes;
+  attachments?: Attachment[];
   created_at: number;
+}
+export type AttachmentType = 'image' | 'audio' | 'video' | 'file' | 'sticker';
+export interface Attachment {
+  id: number;
+  message_id: number;
+  file_type: AttachmentType;
+  mime_type: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  duration: number | null;
+  voice: boolean;
+  downloaded: boolean;
+  data_url: string;
+}
+export interface Reaction {
+  emoji: string;
+  sender_type: 'contact' | 'user';
+  sender_id: number | null;
+  sender_name: string | null;
+}
+export interface MessageAttributes {
+  external_error?: string;
+  automated?: string;
+  in_reply_to?: number | null;
+  in_reply_to_external_id?: string | null;
+  reactions?: Reaction[];
+  deleted?: boolean;
+  edited?: boolean;
+  previous_content?: string | null;
 }
 export interface HistoryMessage {
   id: string;

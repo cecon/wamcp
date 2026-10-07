@@ -7,8 +7,11 @@ import { FakeEventSource } from './fake-api';
 // Like current Chromium, scrollIntoView returns a Promise (effects must not return it as a cleanup).
 Element.prototype.scrollIntoView = vi.fn(() => Promise.resolve()) as unknown as Element['scrollIntoView'];
 vi.stubGlobal('EventSource', FakeEventSource);
+URL.createObjectURL = () => 'blob:preview';
+URL.revokeObjectURL = () => {};
 
 afterEach(() => {
   cleanup();
   FakeEventSource.instances = [];
+  localStorage.clear();
 });

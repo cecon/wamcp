@@ -28,6 +28,19 @@ export async function http<T>(path: string, method = 'GET', body?: unknown): Pro
   return data as T;
 }
 
+/** Multipart POST: the browser sets the boundary, so no JSON content-type here. */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const response = await fetch(`/api/v1${path}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: form,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError(data?.error || 'Não foi possível enviar o arquivo.', response.status);
+  return data as T;
+}
+
 export const query = (params: Record<string, string | number | undefined | null>) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params))
@@ -49,6 +62,8 @@ const EVENTS = [
   'contact.created',
   'contact.updated',
   'presence.update',
+  'conversation.typing_on',
+  'conversation.typing_off',
 ];
 
 export interface RealtimeEvent {
@@ -100,6 +115,19 @@ export function duration(seconds: number | null | undefined) {
   if (s < 3600) return `${Math.round(s / 60)}min`;
   const minutes = Math.round((s % 3600) / 60);
   return `${Math.floor(s / 3600)}h${minutes ? ` ${minutes}min` : ''}`;
+}
+
+/** Bytes → "820 B", "12 KB", "1,5 MB". */
+export function humanSize(bytes: number | null | undefined) {
+  if (bytes == null) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes,
+    unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toLocaleString('pt-BR', { maximumFractionDigits: unit ? 1 : 0 })} ${units[unit]}`;
 }
 
 /** Chatwoot-style short relative time: "agora", "5m", "3h", "2d", then the date. */

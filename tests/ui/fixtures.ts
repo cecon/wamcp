@@ -1,4 +1,4 @@
-import type { Conversation, Inbox, Label, Message, Team, User } from '../../src/agent/types';
+import type { Attachment, Conversation, Inbox, Label, Message, Team, User } from '../../src/agent/types';
 import type { Route } from './fake-api';
 
 export const admin: User = {
@@ -113,3 +113,17 @@ export function workspaceRoutes(user: User = admin): Record<string, Route> {
     'GET /contacts/50': contact,
   };
 }
+
+export const attachment = (id: number, fields: Partial<Attachment> = {}): Attachment => ({
+  id,
+  message_id: 1,
+  file_type: 'file',
+  mime_type: 'application/pdf',
+  file_name: `arquivo-${id}.pdf`,
+  file_size: 1536 * 1024,
+  duration: null,
+  voice: false,
+  downloaded: true,
+  data_url: `/api/v1/attachments/${id}`,
+  ...fields,
+});
