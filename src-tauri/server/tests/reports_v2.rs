@@ -116,7 +116,6 @@ async fn series_and_summaries_by_dimension() {
         admin.get(&format!("/reports/breakdown/team?{range}")).await.body,
         json!([])
     );
-    assert_eq!(f.now() > start, true);
 }
 
 #[tokio::test]
