@@ -29,7 +29,7 @@ describe('chat list power features', () => {
     const api = fakeApi({ ...workspaceRoutes(), 'GET /conversations': [{ ...conversation, muted: 1 }] });
     const { user } = renderScreen({ conversationType: 'mentions' });
     expect(await screen.findByRole('heading', { name: 'Menções' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Conversa silenciada')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Conversa silenciada')).toBeInTheDocument();
     const first = api.called('GET', '/conversations')[0].search;
     expect(first).toContain('conversation_type=mentions');
     expect(first).toContain('sort_by=last_activity_at_desc');
