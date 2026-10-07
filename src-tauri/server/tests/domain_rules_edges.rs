@@ -113,7 +113,7 @@ fn rule_validation_reports_each_problem() {
     assert!(validate_rule("conversation_opened", &[], &fine).is_ok());
     assert_eq!(
         (CONDITION_ATTRIBUTES.len(), OPERATORS.len(), ACTIONS.len()),
-        (11, 7, 15)
+        (11, 7, 16)
     );
 }
 
