@@ -9,6 +9,7 @@ import { EmojiPicker } from './composer/ComposerPickers';
 import { loadDraft, saveDraft, useTypingStatus } from './composer/composerState';
 import { useSuggestions } from './composer/useSuggestions';
 import { useVoiceRecorder } from './composer/useVoiceRecorder';
+import { onComposerInsert } from './composer/composerBus';
 
 interface Props {
   path: string;
@@ -54,6 +55,13 @@ export function ReplyBox({
   const blocked = disabled && !note;
 
   useEffect(() => saveDraft(path, text), [path, text]);
+  useEffect(
+    () =>
+      onComposerInsert(path, (snippet) =>
+        setText((t) => (t.trim() ? `${t.trimEnd()}\n${snippet}` : snippet)),
+      ),
+    [path],
+  );
 
   const addFiles = (list: FileList | File[] | null | undefined) => {
     const added = Array.from(list || []);

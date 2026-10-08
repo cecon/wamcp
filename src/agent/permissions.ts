@@ -1,6 +1,6 @@
 import type { Permission } from './adminTypes';
 import type { User } from './types';
-import { AGENT_SECTIONS, type Route } from './route';
+import { AGENT_SECTIONS, CATALOG_ADMIN_SECTIONS, type Route } from './route';
 
 /** Custom role permissions with their pt-BR descriptions (Chatwoot order). */
 export const PERMISSIONS: { key: Permission; label: string }[] = [
@@ -26,10 +26,15 @@ export function canViewReports(user: User) {
   return user.role === 'administrator' || (hasRole(user) && granted(user, 'report_manage'));
 }
 
+/** Catalog edits (categories, items, complements, import, settings) are for administrators. */
+export const canEditCatalog = (user: User) => user.role === 'administrator';
+
 /** Whether the agent may open the page (the sidebar hides the others; direct links show "no access"). */
 export function canOpen(user: User, route: Route) {
   if (route.page === 'contacts') return canManageContacts(user);
   if (route.page === 'reports') return canViewReports(user);
+  if (route.page === 'catalog')
+    return canEditCatalog(user) || !CATALOG_ADMIN_SECTIONS.includes(route.section || 'menu');
   if (route.page === 'settings')
     return user.role === 'administrator' || AGENT_SECTIONS.includes(route.section);
   return true;

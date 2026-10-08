@@ -15,6 +15,7 @@ import { NotificationBell } from './notifications/NotificationBell';
 import { alertNotification } from './notifications/browserAlerts';
 import { ProfilePage } from './profile/ProfilePage';
 import { SearchPage } from './search/SearchPage';
+import { CatalogScreen } from './catalog/CatalogScreen';
 import { ShortcutsModal } from './shortcuts/ShortcutsModal';
 import { useHotkeys } from './shortcuts/hotkeys';
 import { isDesktop } from './desktop/tauri';
@@ -144,6 +145,9 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         )}
         {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
+        {route.page === 'catalog' && allowed && (
+          <CatalogScreen user={user} section={route.section} realtime={realtime} onNavigate={setRoute} />
+        )}
         {route.page === 'profile' && <ProfilePage user={user} />}
         {route.page === 'settings' && allowed && (
           <SettingsRouter

@@ -93,6 +93,8 @@ const EVENTS = [
   'conversation.typing_on',
   'conversation.typing_off',
   'sla.missed',
+  'catalog.updated',
+  'catalog.import.updated',
 ];
 
 export interface RealtimeEvent {

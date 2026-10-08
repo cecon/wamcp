@@ -25,6 +25,10 @@ export const AGENT_SECTIONS: SettingsSection[] = ['macros'];
 /** Chatwoot report pages (administrators and roles with `report_manage`). */
 export type ReportSection = 'overview' | 'agents' | 'inboxes' | 'teams' | 'labels' | 'csat' | 'bots' | 'sla';
 
+/** Product catalog pages; `import` and `settings` are for administrators. */
+export type CatalogSection = 'menu' | 'groups' | 'import' | 'settings';
+export const CATALOG_ADMIN_SECTIONS: CatalogSection[] = ['import', 'settings'];
+
 export type Route =
   | { page: 'notifications' }
   | {
@@ -42,6 +46,7 @@ export type Route =
     }
   | { page: 'contacts'; contactId?: number }
   | { page: 'reports'; section?: ReportSection }
+  | { page: 'catalog'; section?: CatalogSection }
   | { page: 'search' }
   | { page: 'profile' }
   | { page: 'settings'; section: SettingsSection; id?: number; connectionId?: string };
