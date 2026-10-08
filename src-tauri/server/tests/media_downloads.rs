@@ -4,7 +4,7 @@ mod common;
 mod media_support;
 
 use async_trait::async_trait;
-use common::{PlainHasher, RecordingCallback, RecordingSender, ADMIN_TOKEN, ORIGIN, START};
+use common::{PlainHasher, RecordingCallback, RecordingSender, ORIGIN, START};
 use media_support::{call, get_media, store_audio, JID};
 use parking_lot::Mutex;
 use serde_json::json;
@@ -75,7 +75,6 @@ fn hooked() -> (App, Arc<SqliteStore>, Arc<HookedWhatsApp>) {
     };
     let settings = Settings {
         public_url: ORIGIN.into(),
-        admin_token: ADMIN_TOKEN.into(),
         version: "test".into(),
         web_dir: Arc::new(|| None),
     };

@@ -33,7 +33,6 @@ pub struct Support {
 
 pub struct Services {
     pub public_url: String,
-    pub admin_token: String,
     pub sessions: SessionService,
     pub mcp: McpService,
     pub oauth: Option<OAuthService>,

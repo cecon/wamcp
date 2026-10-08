@@ -1,7 +1,8 @@
 {
-  "identifier": "default",
-  "description": "Main window: desktop commands (start with Windows, tunnel, updates)",
+  "identifier": "app",
+  "description": "The web app served by the embedded backend, opened in the main window. Browsers on the network never get Tauri IPC.",
   "windows": ["main"],
+  "remote": { "urls": ["http://127.0.0.1:17382/*"] },
   "permissions": [
     "core:default",
     "allow-runtime-status",

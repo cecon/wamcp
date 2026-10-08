@@ -1,7 +1,7 @@
 //! Composition root: wires the SQLite store, the WhatsApp port and the event listeners into the use
 //! cases and the HTTP routers. Shared by the server entry point and the integration tests.
+use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
-use crate::adapters::inbound::http::{admin_router, public_router};
 use crate::application::accounts::AccountService;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
@@ -39,7 +39,6 @@ pub struct Ports {
 
 pub struct Settings {
     pub public_url: String,
-    pub admin_token: String,
     pub version: String,
     pub web_dir: WebDir,
 }
@@ -164,7 +163,6 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     });
     let state = AppState(Arc::new(Services {
         public_url: settings.public_url,
-        admin_token: settings.admin_token,
         sessions,
         mcp,
         oauth: Some(oauth),
@@ -181,10 +179,6 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
 }
 
 impl App {
-    pub fn admin_router(&self) -> Router {
-        admin_router(self.state.clone())
-    }
-
     pub fn public_router(&self) -> Router {
         public_router(self.state.clone())
     }

@@ -22,7 +22,6 @@ use wamcp_server::domain::model::{Message, Session, WaMessage};
 
 pub use http::Agent;
 
-pub const ADMIN_TOKEN: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 pub const PASSWORD: &str = "senha-segura-123";
 pub const START: i64 = 1_800_000_000;
 pub const ORIGIN: &str = "https://wamcp.cappyfy.com";
@@ -115,6 +114,8 @@ pub struct Fixture {
     pub storage: Arc<MemoryMediaStorage>,
     pub events: Arc<Mutex<Vec<Envelope>>>,
     pub dir: Option<tempfile::TempDir>,
+    /// The administrator session used by `admin()` and `bootstrap()`, created on first use.
+    pub admin_agent: Mutex<Option<Agent>>,
 }
 
 /// Options for a live WhatsApp message simulated through the adapter sink.
@@ -178,7 +179,6 @@ impl Fixture {
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
-            admin_token: ADMIN_TOKEN.into(),
             version: "test".into(),
             web_dir: Arc::new(move || web.clone()),
         };
@@ -199,6 +199,7 @@ impl Fixture {
             storage,
             events,
             dir,
+            admin_agent: Mutex::new(None),
         }
     }
 
@@ -244,11 +245,17 @@ impl Fixture {
             .expect("ingest")
     }
 
+    /// The first administrator ("Admin", admin@example.com), created through first-run setup.
     pub async fn bootstrap(&self) -> Agent {
+        if let Some(admin) = self.admin_agent.lock().clone() {
+            return admin;
+        }
         let body = json!({ "name": "Admin", "email": "admin@example.com", "password": PASSWORD });
         let reply = self.admin("POST", "/api/helpdesk/bootstrap", Some(body)).await;
         assert_eq!(reply.status, 201, "bootstrap: {:?}", reply.body);
-        self.login("admin@example.com", PASSWORD).await.expect("admin login")
+        let admin = self.login("admin@example.com", PASSWORD).await.expect("admin login");
+        *self.admin_agent.lock() = Some(admin.clone());
+        admin
     }
 
     /// Creates an agent (optionally in the first inbox) and logs in as them.

@@ -1,5 +1,5 @@
 //! In-process HTTP calls against the admin and public routers (no sockets).
-use super::{Fixture, ADMIN_TOKEN};
+use super::Fixture;
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use axum::Router;
@@ -95,13 +95,14 @@ impl Agent {
 }
 
 impl Fixture {
+    /// Administrator calls: first-run setup (`/api/helpdesk/…`, unauthenticated) or `/api/…` as the
+    /// administrator under `/api/v1` (bootstrapping one on first use).
     pub async fn admin(&self, method: &str, path: &str, body: Option<Value>) -> Reply {
-        let auth = format!("Bearer {ADMIN_TOKEN}");
-        send(
-            &self.app.admin_router(),
-            request(method, path, body, &[("authorization", &auth)]),
-        )
-        .await
+        if path.starts_with("/api/helpdesk/") {
+            return self.public(request(method, path, body, &[])).await;
+        }
+        let admin = Box::pin(self.bootstrap()).await;
+        admin.call(method, path.trim_start_matches("/api"), body).await
     }
 
     pub async fn public(&self, request: Request<Body>) -> Reply {

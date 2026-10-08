@@ -32,7 +32,7 @@ async fn complete(
     let (token, code) = (raw(&body.mfa_token, 1, 128)?, raw(&body.code, 1, 20)?);
     let agent = headers.get(header::USER_AGENT).and_then(|v| v.to_str().ok());
     let session = state.support().accounts.complete_mfa(&token, &code, agent)?;
-    signed_in(&state, session)
+    signed_in(&state, &headers, session)
 }
 
 async fn status(current: CurrentUser) -> ApiResult<Response> {

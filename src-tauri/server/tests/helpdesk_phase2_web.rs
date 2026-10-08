@@ -2,7 +2,7 @@
 mod common;
 
 use common::http::{request, send, Reply};
-use common::{Fixture, PlainHasher, RecordingCallback, RecordingSender, ADMIN_TOKEN, ORIGIN, START};
+use common::{Fixture, PlainHasher, RecordingCallback, RecordingSender, ORIGIN, START};
 use parking_lot::Mutex;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -11,10 +11,10 @@ use wamcp_server::adapters::outbound::sqlite::SqliteStore;
 use wamcp_server::adapters::outbound::whatsapp::memory::MemoryWhatsApp;
 use wamcp_server::compose::{compose, App, Ports, Settings};
 
-/// Writes a built agent UI (agent.html plus one asset) into `dir`.
+/// Writes a built web app (index.html plus one asset) into `dir`.
 fn build_web(dir: &Path) {
     std::fs::create_dir_all(dir.join("assets")).expect("assets dir");
-    std::fs::write(dir.join("agent.html"), "<!doctype html><title>Atendimento</title>").expect("agent.html");
+    std::fs::write(dir.join("index.html"), "<!doctype html><title>Atendimento</title>").expect("index.html");
     std::fs::write(dir.join("assets").join("app.js"), "console.log(1)").expect("app.js");
 }
 
@@ -56,7 +56,6 @@ async fn the_agent_web_app_appears_once_built_without_restarting_the_service() {
     };
     let settings = Settings {
         public_url: ORIGIN.into(),
-        admin_token: ADMIN_TOKEN.into(),
         version: "test".into(),
         web_dir: Arc::new(move || resolved.lock().clone()),
     };

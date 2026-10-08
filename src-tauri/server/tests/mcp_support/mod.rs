@@ -9,7 +9,7 @@ pub use hooks::{HookedCallback, HookedWhatsApp};
 pub use oauth::oauth_grant;
 
 use crate::common::http::{request, send, Reply};
-use crate::common::{Fixture, PlainHasher, RecordingCallback, RecordingSender, ADMIN_TOKEN, ORIGIN, START};
+use crate::common::{Fixture, PlainHasher, RecordingCallback, RecordingSender, ORIGIN, START};
 use axum::Router;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use parking_lot::Mutex;
@@ -96,7 +96,6 @@ impl Mcp {
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
-            admin_token: ADMIN_TOKEN.into(),
             version: "test".into(),
             web_dir: Arc::new(|| None),
         };
@@ -112,6 +111,7 @@ impl Mcp {
             storage,
             events,
             dir: None,
+            admin_agent: Mutex::new(None),
         };
         let session = f.session("Session A");
         let read = f
@@ -148,7 +148,6 @@ impl Mcp {
         }
         let services = Services {
             public_url: s.public_url.clone(),
-            admin_token: s.admin_token.clone(),
             sessions: s.sessions.clone(),
             mcp,
             oauth: s.oauth.clone(),
