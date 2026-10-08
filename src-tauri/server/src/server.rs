@@ -97,9 +97,17 @@ async fn serve(
     port: u16,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(SocketAddr, JoinHandle<()>)> {
+    // On Windows a wildcard bind succeeds even when another program already listens on
+    // 127.0.0.1 at the same port, and local requests would silently reach that program.
+    if bind.is_unspecified() && port != 0 {
+        drop(
+            std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, port))
+                .map_err(|_| Error::internal(format!("A porta {port} já está em uso por outro programa")))?,
+        );
+    }
     let listener = tokio::net::TcpListener::bind((bind, port))
         .await
-        .map_err(Error::internal)?;
+        .map_err(|e| Error::internal(format!("Não foi possível abrir a porta {port}: {e}")))?;
     let address = listener.local_addr().map_err(Error::internal)?;
     let service = router.into_make_service_with_connect_info::<SocketAddr>();
     let task = tokio::spawn(async move {
