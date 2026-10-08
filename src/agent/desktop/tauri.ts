@@ -7,6 +7,8 @@ export interface RuntimeStatus {
   dataDir: string;
   /** e.g. http://192.168.0.10:17382/app/ (null when no network address was found). */
   networkUrl: string | null;
+  /** False in development builds (`tauri dev`): no update is downloaded or installed. */
+  updatesEnabled: boolean;
 }
 
 /** Native commands exist only inside the Tauri window; browsers on the network never get them. */

@@ -101,6 +101,7 @@ impl Runtime {
             "tunnelRunning": running,
             "dataDir": self.dir,
             "networkUrl": lan_address().map(|ip| format!("http://{ip}:{PORT}/app/")),
+            "updatesEnabled": crate::updates::UPDATES_ENABLED,
         })
     }
     pub fn stop(&self) {

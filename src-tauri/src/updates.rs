@@ -8,6 +8,9 @@ use std::time::Duration;
 use tauri::{Emitter, Manager};
 use tauri_plugin_updater::{Update, UpdaterExt};
 
+/// Only installed (release) builds update themselves.
+pub const UPDATES_ENABLED: bool = !cfg!(debug_assertions);
+
 struct PreparedUpdate {
     update: Update,
     bytes: Vec<u8>,
@@ -33,6 +36,10 @@ pub async fn check_update(
     app: tauri::AppHandle,
     state: tauri::State<'_, Updates>,
 ) -> Result<Option<UpdateInfo>, String> {
+    // Development builds (`tauri dev`) never download or install releases.
+    if !UPDATES_ENABLED {
+        return Ok(None);
+    }
     if state.checking.swap(true, Ordering::AcqRel) {
         return Err("Verificação já em andamento.".into());
     }
@@ -75,6 +82,9 @@ pub async fn check_update(
 
 #[tauri::command]
 pub async fn install_update(state: tauri::State<'_, Updates>) -> Result<(), String> {
+    if !UPDATES_ENABLED {
+        return Err("Atualizações ficam desativadas no modo de desenvolvimento.".into());
+    }
     let prepared = state
         .prepared
         .lock()

@@ -6,6 +6,9 @@ import { ApiError, firstRun, formatTime, http, initials, query } from '../../src
 import { fakeApi, status, type Route } from './fake-api';
 import { admin, workspaceRoutes } from './fixtures';
 
+/** The first render loads the whole app; under a parallel full run it can take over a second. */
+const SLOW = { timeout: 5000 };
+
 function firstRunApi(setup: Route, extra: Record<string, Route> = {}) {
   let signedIn = false;
   return fakeApi({
@@ -24,7 +27,7 @@ function firstRunApi(setup: Route, extra: Record<string, Route> = {}) {
 }
 
 async function fillAdmin(user: ReturnType<typeof userEvent.setup>, password: string, confirm = password) {
-  await user.type(await screen.findByLabelText('Nome'), 'Admin');
+  await user.type(await screen.findByLabelText('Nome', {}, SLOW), 'Admin');
   await user.type(screen.getByLabelText('E-mail'), 'admin@example.com');
   await user.type(screen.getByLabelText('Senha (mínimo 10 caracteres)'), password);
   await user.type(screen.getByLabelText('Confirmar senha'), confirm);
@@ -39,7 +42,7 @@ describe('first run on this computer', () => {
     );
     const user = userEvent.setup();
     render(<AgentApp />);
-    expect(await screen.findByRole('heading', { name: 'Criar administrador' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Criar administrador' }, SLOW)).toBeInTheDocument();
     await fillAdmin(user, 'curta', 'curta');
     expect(await screen.findByRole('alert')).toHaveTextContent('pelo menos 10 caracteres');
     await user.clear(screen.getByLabelText('Senha (mínimo 10 caracteres)'));

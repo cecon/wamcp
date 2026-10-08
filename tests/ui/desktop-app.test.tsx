@@ -29,6 +29,7 @@ beforeEach(() => {
     tunnelRunning: false,
     dataDir: 'C:\\Users\\ana\\AppData\\Local\\com.cappyfy.wamcp',
     networkUrl: 'http://192.168.0.10:17382/app/',
+    updatesEnabled: true,
   };
   autostart = false;
   commands = {
@@ -155,6 +156,14 @@ describe('Configurações → Aplicativo', () => {
     await user.type(screen.getByLabelText('Token do túnel'), 'x');
     await user.click(screen.getByRole('button', { name: 'Salvar e conectar' }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Token inválido'));
+  });
+
+  it('hides update checks in development builds', async () => {
+    enterTauri();
+    runtime = { ...runtime, updatesEnabled: false };
+    renderSettings('app');
+    expect(await screen.findByText('Modo de desenvolvimento: atualizações desativadas.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Verificar atualizações' })).not.toBeInTheDocument();
   });
 
   it('reports a runtime that cannot be read', async () => {

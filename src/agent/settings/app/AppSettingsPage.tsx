@@ -164,12 +164,16 @@ function DesktopSettings() {
           description="O aplicativo verifica novas versões ao abrir e a cada seis horas, baixa e valida a assinatura."
         >
           <p className="text-sm text-n-slate-12">Versão instalada: {__APP_VERSION__}</p>
-          <Button
-            color="slate"
-            className="self-start"
-            label="Verificar atualizações"
-            onClick={() => window.dispatchEvent(new Event(CHECK_UPDATES_EVENT))}
-          />
+          {status?.updatesEnabled === false ? (
+            <p className="text-sm text-n-slate-11">Modo de desenvolvimento: atualizações desativadas.</p>
+          ) : (
+            <Button
+              color="slate"
+              className="self-start"
+              label="Verificar atualizações"
+              onClick={() => window.dispatchEvent(new Event(CHECK_UPDATES_EVENT))}
+            />
+          )}
         </Section>
       </div>
     </SettingsPage>
