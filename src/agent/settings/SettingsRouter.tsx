@@ -14,6 +14,8 @@ import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
 import { AgentBotsPage } from './bots/AgentBotsPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
+import { ConnectionsPage } from './connections/ConnectionsPage';
+import { AppSettingsPage } from './app/AppSettingsPage';
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -54,5 +56,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <AuditLogPage />;
     case 'custom_roles':
       return <CustomRolesPage onChange={onChange} />;
+    case 'connections':
+      return (
+        <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
+      );
+    case 'app':
+      return <AppSettingsPage />;
   }
 }

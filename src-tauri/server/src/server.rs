@@ -22,7 +22,7 @@ pub struct Config {
     pub bind: IpAddr,
     pub port: u16,
     pub public_url: String,
-    /// Directories searched (in order) for the built agent UI (`agent.html`).
+    /// Directories searched (in order) for the built web app (`index.html`).
     pub web_dirs: Vec<PathBuf>,
 }
 

@@ -78,7 +78,7 @@ async fn to_app() -> Response {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(to_app))
-        // The source page is agent.html (what Vite serves in dev); on the backend it lives at /app/.
+        // Old bookmarks of the former agent page still land on the app.
         .route("/agent.html", get(to_app))
         .route("/app", get(to_app))
         .route("/app/", get(index))

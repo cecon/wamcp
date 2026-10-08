@@ -14,7 +14,7 @@ use crate::application::webhooks::WebhookService;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Finds the built agent UI (a directory with `agent.html`), re-resolved on every request.
+/// Finds the built web app (a directory with `index.html`), re-resolved on every request.
 pub type WebDir = Arc<dyn Fn() -> Option<PathBuf> + Send + Sync>;
 
 /// Helpdesk use cases served under `/api/v1`.

@@ -17,6 +17,8 @@ import { ProfilePage } from './profile/ProfilePage';
 import { SearchPage } from './search/SearchPage';
 import { ShortcutsModal } from './shortcuts/ShortcutsModal';
 import { useHotkeys } from './shortcuts/hotkeys';
+import { isDesktop } from './desktop/tauri';
+import { UpdateNotice } from './desktop/UpdateNotice';
 
 interface Props {
   user: User;
@@ -154,6 +156,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         )}
       </main>
       {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
+      {isDesktop() && <UpdateNotice />}
     </div>
   );
 }

@@ -15,7 +15,9 @@ export type SettingsSection =
   | 'sla'
   | 'webhooks'
   | 'audit'
-  | 'custom_roles';
+  | 'custom_roles'
+  | 'connections'
+  | 'app';
 
 /** Settings pages every agent can open (the others are for administrators). */
 export const AGENT_SECTIONS: SettingsSection[] = ['macros'];
@@ -42,6 +44,6 @@ export type Route =
   | { page: 'reports'; section?: ReportSection }
   | { page: 'search' }
   | { page: 'profile' }
-  | { page: 'settings'; section: SettingsSection; id?: number };
+  | { page: 'settings'; section: SettingsSection; id?: number; connectionId?: string };
 
 export const HOME: Route = { page: 'conversations' };

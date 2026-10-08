@@ -16,10 +16,19 @@ export class ApiError extends Error {
 export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;
 
 /** Same-origin call to /api/v1 with the session cookie; state-changing requests carry the CSRF token. */
-export async function http<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export function http<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/api/v1${path}`, method, body);
+}
+
+/** First-run setup under /api/helpdesk: whether an administrator exists, and creating it. */
+export function firstRun<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/api/helpdesk${path}`, method, body);
+}
+
+async function request<T>(url: string, method: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(url, {
     method,
     credentials: 'same-origin',
     headers,

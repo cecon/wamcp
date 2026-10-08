@@ -22,6 +22,7 @@ import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
 import { REPORTS, SETTINGS } from './navItems';
 import { canManageContacts, canViewReports } from '../permissions';
+import { isDesktop } from '../desktop/tauri';
 
 const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
   { type: 'mentions', icon: AtSign },
@@ -241,7 +242,7 @@ export function Sidebar({
                   : open('settings', { page: 'settings', section: 'agents' })
               }
             >
-              {SETTINGS.map(({ section, label, icon: Icon }) => (
+              {SETTINGS.filter((s) => !s.desktop || isDesktop()).map(({ section, label, icon: Icon }) => (
                 <SidebarLeaf
                   key={section}
                   label={label}
