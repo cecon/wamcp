@@ -85,13 +85,17 @@ O download exige a sessão conectada, tem limite de 10 MiB e espera de até 30 s
 - `wamcp.sqlite`: sessões, conversas, mensagens, hashes dos tokens e auditoria.
 - `auth/`: credenciais de aparelhos WhatsApp.
 - `tunnel.token`: credencial local do Cloudflare Tunnel.
-- `admin.token`: segredo da API administrativa local.
+- `media/<sessão>/<AAAA>/<MM>/`: anexos das conversas.
 
 O SQLite é criado automaticamente no PC da instalação. Nenhum histórico ou token é incluído no instalador ou enviado ao GitHub. Para backup, encerre o aplicativo e copie a pasta de dados. O banco não é criptografado; ele usa as proteções do perfil do Windows.
 
 ## Túnel
 
-Configure o hostname público para `http://127.0.0.1:17382`. A API administrativa usa `127.0.0.1:17381` e **não deve ser publicada**. O aplicativo inicia seu próprio processo cloudflared com um arquivo de token, sem instalar um serviço global do Windows.
+Configure o hostname público para `http://127.0.0.1:17382`. O aplicativo inicia seu próprio processo cloudflared com um arquivo de token, sem instalar um serviço global do Windows.
+
+## Um só aplicativo: desktop e rede
+
+O backend embutido escuta em uma única porta (`0.0.0.0:17382`) com o app web, a API, o MCP e o OAuth. A janela do Tauri abre `http://127.0.0.1:17382/app/`; outros computadores da rede abrem `http://<ip-deste-pc>:17382/app/` no navegador (o endereço aparece em Configurações > Aplicativo). Todos entram com e-mail e senha; o primeiro administrador só pode ser criado no próprio computador. Iniciar com o Windows, túnel e atualização aparecem apenas na janela do aplicativo. Libere a porta 17382 no firewall do Windows para a rede local.
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
 
@@ -110,7 +114,7 @@ npm ci
 npm run desktop
 ```
 
-Prévia web: execute `npm run server` (backend Rust em `src-tauri/server`) e `npm run dev`; informe o conteúdo do arquivo local `admin.token` no formulário de desenvolvimento. O aplicativo Tauri usa comunicação interna e não precisa desse passo.
+Prévia web: execute `npm run server` (backend Rust em `src-tauri/server`) e `npm run dev`, e abra `http://127.0.0.1:1420`; o Vite encaminha a API para a porta 17382. No primeiro acesso local, crie o administrador.
 
 ```sh
 npm run check
