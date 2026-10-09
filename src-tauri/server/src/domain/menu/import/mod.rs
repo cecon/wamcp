@@ -154,17 +154,21 @@ pub fn counts(tree: &ImportTree) -> ImportCounts {
     }
 }
 
-/// The first captured payload (network responses or `__NEXT_DATA__`) that holds a non-empty menu in
-/// either format, converted and normalized.
+/// The captured menu (network responses or `__NEXT_DATA__`), converted and normalized: the consumer
+/// menu with its items' complements merged in, else the first Catalog v2 payload with items.
 pub fn convert(payloads: &[Value]) -> Option<ImportTree> {
-    payloads.iter().find_map(|payload| {
-        let categories = legacy::find(payload)
-            .map(|menu| legacy::convert(menu.as_slice()))
-            .or_else(|| v2::find(payload).map(|(categories, pool)| v2::convert(categories, &pool)))?;
+    let tree = |categories| {
         let tree = normalize(ImportTree {
             pizza_pricing: "greater".into(),
             categories,
         });
         tree.categories.iter().any(|c| !c.items.is_empty()).then_some(tree)
-    })
+    };
+    legacy::merged(payloads)
+        .and_then(|menu| tree(legacy::convert(&menu)))
+        .or_else(|| {
+            payloads
+                .iter()
+                .find_map(|p| v2::find(p).and_then(|(categories, pool)| tree(v2::convert(categories, &pool))))
+        })
 }

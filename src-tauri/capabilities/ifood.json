@@ -1,0 +1,7 @@
+{
+  "identifier": "ifood",
+  "description": "The iFood store page opened to import its menu: it may only report what it read (see src/ifood.rs).",
+  "windows": ["ifood-import"],
+  "remote": { "urls": ["https://www.ifood.com.br/*", "https://ifood.com.br/*"] },
+  "permissions": ["allow-ifood-report"]
+}

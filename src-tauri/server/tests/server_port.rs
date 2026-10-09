@@ -8,6 +8,7 @@ fn config(dir: &std::path::Path, bind: IpAddr, port: u16) -> Config {
         bind,
         port,
         public_url: "https://wamcp.test".into(),
+        crawler: None,
         web_dirs: Vec::new(),
     }
 }

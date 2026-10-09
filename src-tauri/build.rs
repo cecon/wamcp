@@ -7,6 +7,7 @@ const COMMANDS: &[&str] = &[
     "set_autostart",
     "check_update",
     "install_update",
+    "ifood_report",
 ];
 
 fn main() {

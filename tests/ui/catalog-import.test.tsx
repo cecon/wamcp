@@ -38,23 +38,23 @@ describe('iFood import', () => {
     await start(ui);
     await waitFor(() => expect(api.called('POST', '/catalog/imports')[0].body).toEqual({ url: LINK }));
     expect(await screen.findByRole('region', { name: 'Importação em andamento' })).toBeInTheDocument();
-    expect(step('Abrindo navegador')).toHaveAttribute('aria-current', 'step');
+    expect(step('Abrindo o iFood')).toHaveAttribute('aria-current', 'step');
     expect(localStorage.getItem(KEY)).toBe('7f3c');
 
     api.route(
       'GET /catalog/imports/7f3c',
       importJob({ status: 'waiting_human', message: 'Confirme no navegador que você é humano' }),
     );
-    expect(
-      await screen.findByText(/Uma janela do navegador abriu no computador do WA MCP/),
-    ).toHaveTextContent("Se o iFood pedir 'Confirme que é humano', clique lá para continuar.");
+    expect(await screen.findByText(/Uma janela do iFood abriu no computador do WA MCP/)).toHaveTextContent(
+      "Se o iFood pedir 'Confirme que é humano', clique lá para continuar.",
+    );
     expect(screen.getByText('Confirme no navegador que você é humano')).toBeInTheDocument();
-    expect(step('Abrindo navegador')).toHaveAccessibleName('Abrindo navegador: concluída');
+    expect(step('Abrindo o iFood')).toHaveAccessibleName('Abrindo o iFood: concluída');
     expect(step('Aguardando verificação')).toHaveAccessibleName('Aguardando verificação: em andamento');
 
     api.route('GET /catalog/imports/7f3c', importJob({ status: 'loading' }));
     await waitFor(() => expect(step('Lendo cardápio')).toHaveAccessibleName('Lendo cardápio: em andamento'));
-    expect(screen.queryByText(/Uma janela do navegador abriu/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Uma janela do iFood abriu/)).not.toBeInTheDocument();
 
     api.route('GET /catalog/imports/7f3c', readyJob);
     const preview = within(await screen.findByLabelText('Prévia do cardápio'));
@@ -118,7 +118,9 @@ describe('iFood import', () => {
     await start(ui);
     await ui.click(await screen.findByRole('button', { name: 'Cancelar importação' }));
     await waitFor(() => expect(api.called('DELETE', '/catalog/imports/7f3c')).toHaveLength(1));
-    expect(await screen.findByText('Importação cancelada. O navegador foi fechado.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Importação cancelada. A janela do iFood foi fechada.'),
+    ).toBeInTheDocument();
     await ui.click(screen.getByRole('button', { name: 'Nova importação' }));
     expect(screen.getByLabelText('Link da loja no iFood')).toHaveValue(LINK);
 
@@ -150,7 +152,7 @@ describe('iFood import', () => {
     await screen.findByRole('region', { name: 'Importação em andamento' });
     FakeEventSource.emit('catalog.import.updated', { id: 'outra', status: 'failed' });
     FakeEventSource.emit('catalog.import.updated', { id: '7f3c', status: 'waiting_human', message: null });
-    expect(await screen.findByText(/Uma janela do navegador abriu/)).toBeInTheDocument();
+    expect(await screen.findByText(/Uma janela do iFood abriu/)).toBeInTheDocument();
     FakeEventSource.emit('catalog.import.updated', { id: '7f3c', status: 'failed', message: 'Loja fechada' });
     expect(await screen.findByText('Loja fechada')).toBeInTheDocument();
   });

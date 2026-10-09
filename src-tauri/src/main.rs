@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod ifood;
 mod runtime;
 mod updates;
 use runtime::{Runtime, APP_URL};
@@ -50,10 +51,17 @@ fn main() {
             autostart_status,
             set_autostart,
             updates::check_update,
-            updates::install_update
+            updates::install_update,
+            ifood::ifood_report
         ])
         .setup(|app| {
-            let runtime = Runtime::start(app.handle())?;
+            let bridge = ifood::Bridge::default();
+            app.manage(bridge.clone());
+            let crawler = ifood::WindowCrawler {
+                app: app.handle().clone(),
+                bridge,
+            };
+            let runtime = Runtime::start(app.handle(), std::sync::Arc::new(crawler))?;
             app.manage(runtime);
             // One app for everyone: the window shows the web app served by the backend, exactly
             // what browsers on the network open (in development, the Vite server proxying the API).
@@ -106,7 +114,8 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            // Closing the main window keeps the app in the tray; other windows (the iFood import) close.
+            if let ("main", tauri::WindowEvent::CloseRequested { api, .. }) = (window.label(), event) {
                 api.prevent_close();
                 let _ = window.hide();
             }

@@ -1,7 +1,10 @@
 //! Consumer (legacy) format: `{ data: { menu: [ { code, name, itens: [ { id, code, description,
 //! details, logoUrl, unitPrice, unitMinPrice, unitOriginalPrice, choices: [ { code, name, min, max,
 //! garnishItens: [ { id, code, description, unitPrice, logoUrl } ] } ] } ] } ] } }`. Item and option
-//! names come in `description`, item descriptions in `details`.
+//! names come in `description`, item descriptions in `details`, the PDV code in `externalCode`
+//! (`code` is usually just the iFood id) and paused items have `enabled: false` or an `availability`
+//! other than `AVAILABLE`. The store page lists items without `choices`: the complements of an item
+//! with `needChoices` come in its own detail response (`/items/{id}`, same shape), merged by id.
 //!
 //! Pizza heuristics (the consumer format has no template): a choice named like "tamanho" is the size,
 //! "sabor" choices are flavours (merged into one topping group whose maximum is the sum of theirs),
@@ -14,6 +17,7 @@ use crate::domain::menu::images::image_source;
 use crate::domain::menu::money::cents;
 use crate::domain::menu::rules::fold;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// The `menu` array of a consumer payload, wherever it sits (API response or `__NEXT_DATA__`).
 pub fn find(payload: &Value) -> Option<&Vec<Value>> {
@@ -23,6 +27,46 @@ pub fn find(payload: &Value) -> Option<&Vec<Value>> {
             .any(|c| c.get("itens").is_some_and(Value::is_array))
             .then_some(menu)
     })
+}
+
+/// The store's menu among the captured ones (the first with most items), with the complements of
+/// items whose `choices` only came in their own detail response.
+pub fn merged(payloads: &[Value]) -> Option<Vec<Value>> {
+    let menus: Vec<&Vec<Value>> = payloads.iter().filter_map(find).collect();
+    let size = |menu: &&&Vec<Value>| menu.iter().map(|c| array(c, "itens").len()).sum::<usize>();
+    let mut menu = (*menus.iter().rev().max_by_key(size)?).clone();
+    let mut details: HashMap<String, &Value> = HashMap::new();
+    for item in menus.iter().flat_map(|m| m.iter()).flat_map(|c| array(c, "itens")) {
+        if let (Some(id), false) = (text(item, "id"), array(item, "choices").is_empty()) {
+            details.entry(id).or_insert(&item["choices"]);
+        }
+    }
+    for category in &mut menu {
+        let Some(items) = category.get_mut("itens").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for item in items {
+            let missing = array(item, "choices").is_empty();
+            let found = text(item, "id").and_then(|id| details.get(&id).copied());
+            if let (true, Some(found), Some(fields)) = (missing, found, item.as_object_mut()) {
+                fields.insert("choices".into(), found.clone());
+            }
+        }
+    }
+    Some(menu)
+}
+
+/// PDV code: `externalCode`, else a `code` that is not just the iFood id.
+fn pdv_code(value: &Value) -> Option<String> {
+    let id = text(value, "id");
+    text(value, "externalCode").or_else(|| text(value, "code").filter(|c| Some(c) != id.as_ref()))
+}
+
+/// Paused on iFood: `enabled: false` or an `availability` other than `AVAILABLE`.
+fn availability(value: &Value) -> String {
+    let paused = value.get("enabled") == Some(&Value::Bool(false))
+        || text(value, "availability").is_some_and(|a| !a.eq_ignore_ascii_case("AVAILABLE"));
+    if paused { "unavailable" } else { "available" }.into()
 }
 
 fn has(choice: &Value, word: &str) -> bool {
@@ -48,9 +92,9 @@ fn option(garnish: &Value) -> ImportOption {
         description: text(garnish, "details"),
         price_cents,
         original_price_cents: number(garnish, "unitOriginalPrice").map(cents),
-        external_code: text(garnish, "code"),
+        external_code: pdv_code(garnish),
         ifood_id: text(garnish, "id").or_else(|| text(garnish, "code")),
-        status: "available".into(),
+        status: availability(garnish),
         max_quantity: 1,
         image_url: text(garnish, "logoUrl").and_then(|l| image_source(&l)),
         ..ImportOption::default()
@@ -91,16 +135,14 @@ fn group(choice: &Value, kind: &str) -> ImportGroup {
 
 fn base(item: &Value) -> ImportItem {
     let unit = price(item, "unitPrice").filter(|p| *p > 0);
-    let id = text(item, "id");
-    let code = text(item, "code").filter(|c| Some(c) != id.as_ref());
     ImportItem {
         name: text(item, "description").unwrap_or_default(),
         description: text(item, "details"),
         price_cents: unit.or_else(|| price(item, "unitMinPrice")).unwrap_or(0),
         original_price_cents: number(item, "unitOriginalPrice").map(cents),
-        external_code: code,
-        ifood_id: id,
-        status: "available".into(),
+        external_code: pdv_code(item),
+        ifood_id: text(item, "id"),
+        status: availability(item),
         image_url: text(item, "logoUrl").and_then(|l| image_source(&l)),
         serving: "not_applicable".into(),
         ..ImportItem::default()

@@ -1,0 +1,56 @@
+{
+  "code": "00",
+  "data": {
+    "menu": [
+      {
+        "code": "cat-lanches",
+        "name": "Lanches",
+        "itens": [
+          {
+            "id": "it-beirute",
+            "code": "it-beirute",
+            "description": "(8001) Beirute médio + suco",
+            "details": "Pão sírio, rosbife, queijo e salada",
+            "logoUrl": "loja-1/201902091309__beirute.jpg",
+            "needChoices": true,
+            "unitPrice": 51,
+            "unitMinPrice": 51,
+            "unitOriginalPrice": 0,
+            "externalCode": "8001",
+            "ean": "",
+            "type": "DEFAULT",
+            "tags": [],
+            "productTags": [{ "group": "PORTION_SIZE", "tags": ["NOT_APPLICABLE"] }],
+            "availability": "AVAILABLE",
+            "enabled": true
+          },
+          {
+            "id": "it-misto",
+            "code": "it-misto",
+            "description": "Misto quente",
+            "details": "",
+            "logoUrl": "",
+            "needChoices": false,
+            "unitPrice": 14.9,
+            "unitMinPrice": 14.9,
+            "unitOriginalPrice": 18.5,
+            "externalCode": "8002",
+            "type": "DEFAULT",
+            "availability": "AVAILABLE",
+            "enabled": true
+          },
+          {
+            "id": "it-pausado",
+            "code": "it-pausado",
+            "description": "Bauru",
+            "unitPrice": 22,
+            "externalCode": "",
+            "type": "DEFAULT",
+            "availability": "UNAVAILABLE",
+            "enabled": false
+          }
+        ]
+      }
+    ]
+  }
+}

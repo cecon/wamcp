@@ -165,7 +165,7 @@ Erros em português, por exemplo “Escolha 1 opção em ‘Escolha a bebida’�
 | POST             | `/catalog/imports`              | `{ url }` inicia importação do iFood (admin)                                                                         |
 | GET              | `/catalog/imports/{id}`         | andamento e prévia                                                                                                   |
 | POST             | `/catalog/imports/{id}/apply`   | `{ mode: merge\|replace }` grava no cardápio                                                                         |
-| DELETE           | `/catalog/imports/{id}`         | cancela (fecha o navegador)                                                                                          |
+| DELETE           | `/catalog/imports/{id}`         | cancela (fecha a janela)                                                                                             |
 
 Eventos: `catalog.updated` (qualquer alteração) e `catalog.import.updated` (andamento).
 
@@ -173,13 +173,18 @@ Eventos: `catalog.updated` (qualquer alteração) e `catalog.import.updated` (an
 
 1. O administrador cola o link da loja (`https://www.ifood.com.br/delivery/<cidade>/<loja>/<merchantId>`) em
    **Catálogo → Importar do iFood**.
-2. O servidor abre o **Microsoft Edge ou Google Chrome instalado**, visível, com um perfil próprio em
-   `<pasta de dados>/browser` (a verificação do iFood fica lembrada nas próximas vezes), e navega até a loja.
+2. No aplicativo desktop, a loja abre numa **janela do próprio WA MCP** (o WebView do app, então a verificação do
+   iFood fica lembrada nas próximas vezes). Sem o app (servidor avulso), o servidor abre o Microsoft Edge ou o Google
+   Chrome instalado, visível, com um perfil próprio em `<pasta de dados>/browser`.
 3. Se o iFood pedir “Confirme que é humano”, o andamento fica `waiting_human` e a tela pede para a pessoa clicar na
-   janela do navegador. O sistema **não** resolve a verificação sozinho.
-4. O crawler acompanha as respostas de rede da página (DevTools Protocol) e guarda as que trazem o cardápio
-   (`/catalog`, `/menu`, `site-api`), rola a página para carregar tudo e também lê os dados embutidos na página
-   (`__NEXT_DATA__`). Limite de 5 minutos.
+   janela. O sistema **não** resolve a verificação sozinho.
+4. Na janela do app, um script na página lê o cardápio pela mesma API que a página usa:
+   `GET /site-api/v1/merchants/restaurant/{merchantId}/catalog` (itens **sem** complementos) e, para cada item com
+   `needChoices`, `GET …/items/{itemId}` (o mesmo formato, com `choices[].garnishItens[]`), um por vez. Os
+   complementos são juntados aos itens pelo `id`. No Edge/Chrome avulso, o crawler acompanha as respostas de rede
+   (DevTools Protocol) e lê os dados embutidos (`__NEXT_DATA__`). Limite de 5 minutos.
+   Formato do iFood: preços em reais (`unitPrice` 51 = R$ 51,00), o código PDV em `externalCode` (`code` é o id do
+   iFood), fotos em `logoUrl` (relativo ao CDN), item pausado com `enabled: false` ou `availability` ≠ `AVAILABLE`.
 5. O conteúdo é convertido para o modelo acima (categorias, itens, preços de/por, códigos, complementos com mín/máx,
    pizzas com tamanhos/massas/bordas/sabores e preços por tamanho, combos, fotos) e mostrado como **prévia**.
 6. Ao aplicar: `merge` atualiza o que já veio do iFood (pelo `ifood_id`, depois `external_code`) e cria o resto;
