@@ -2,10 +2,12 @@
 use super::rate_limit::RateLimiter;
 use crate::application::accounts::AccountService;
 use crate::application::automations::AutomationService;
+use crate::application::avatars::AvatarService;
 use crate::application::catalog::CatalogService;
 use crate::application::event_bus::EventBus;
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::reports::ReportService;
@@ -14,15 +16,19 @@ use crate::application::webhooks::WebhookService;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Finds the built agent UI (a directory with `agent.html`), re-resolved on every request.
+/// Finds the built web app (a directory with `index.html`), re-resolved on every request.
 pub type WebDir = Arc<dyn Fn() -> Option<PathBuf> + Send + Sync>;
 
 /// Helpdesk use cases served under `/api/v1`.
 #[derive(Clone)]
 pub struct Support {
     pub accounts: AccountService,
+    /// Contact photos fetched from WhatsApp.
+    pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,
     pub catalog: CatalogService,
+    /// The product catalog (menu, `/catalog`).
+    pub menu: MenuService,
     pub notifications: NotificationService,
     pub webhooks: WebhookService,
     pub automations: AutomationService,
@@ -33,7 +39,6 @@ pub struct Support {
 
 pub struct Services {
     pub public_url: String,
-    pub admin_token: String,
     pub sessions: SessionService,
     pub mcp: McpService,
     pub oauth: Option<OAuthService>,

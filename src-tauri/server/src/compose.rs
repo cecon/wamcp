@@ -1,18 +1,22 @@
 //! Composition root: wires the SQLite store, the WhatsApp port and the event listeners into the use
 //! cases and the HTTP routers. Shared by the server entry point and the integration tests.
+use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
-use crate::adapters::inbound::http::{admin_router, public_router};
 use crate::application::accounts::AccountService;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
+use crate::application::avatars::AvatarService;
 use crate::application::catalog::CatalogService;
 use crate::application::core::Core;
 use crate::application::event_bus::{EventBus, Worker};
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
-use crate::application::ports::{Clock, EventCallback, PasswordHasher, Repository, WebhookSender, WhatsApp};
+use crate::application::ports::{
+    Clock, EventCallback, ImageFetcher, MediaStorage, MenuCrawler, PasswordHasher, Repository, WebhookSender, WhatsApp,
+};
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
 use crate::application::webhooks::WebhookService;
@@ -32,11 +36,15 @@ pub struct Ports {
     pub sender: Arc<dyn WebhookSender>,
     pub callback: Arc<dyn EventCallback>,
     pub clock: Arc<dyn Clock>,
+    pub storage: Arc<dyn MediaStorage>,
+    /// Opens iFood store pages for the catalog import (a scripted fake in tests).
+    pub crawler: Arc<dyn MenuCrawler>,
+    /// Downloads imported catalog photos.
+    pub images: Arc<dyn ImageFetcher>,
 }
 
 pub struct Settings {
     pub public_url: String,
-    pub admin_token: String,
     pub version: String,
     pub web_dir: WebDir,
 }
@@ -74,6 +82,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let helpdesk = HelpdeskService {
         core: core.clone(),
         whatsapp: ports.whatsapp.clone(),
+        storage: ports.storage.clone(),
     };
     let notifications = NotificationService { core: core.clone() };
     let webhooks = WebhookService {
@@ -85,6 +94,12 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         helpdesk: helpdesk.clone(),
     };
     let reports = ReportService { core: core.clone() };
+    let menu = MenuService::new(
+        core.clone(),
+        ports.storage.clone(),
+        ports.crawler.clone(),
+        ports.images.clone(),
+    );
     let auto_replies = AutoReplyService {
         helpdesk: helpdesk.clone(),
     };
@@ -120,14 +135,31 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = reply_worker.clone();
     bus.subscribe(move |e| worker.push(e));
+    let downloads = helpdesk.clone();
+    let media_worker = Worker::spawn(Arc::new(move |e| {
+        let downloads = downloads.clone();
+        Box::pin(async move { downloads.prefetch(&e).await })
+    }));
+    let worker = media_worker.clone();
+    bus.subscribe(move |e| worker.push(e));
+    let avatars = AvatarService::new(helpdesk.clone(), ports.images.clone());
+    let photos = avatars.clone();
+    let avatar_worker = Worker::spawn(Arc::new(move |e| {
+        let photos = photos.clone();
+        Box::pin(async move { photos.on_event(e).await })
+    }));
+    let worker = avatar_worker.clone();
+    bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
+        avatars,
         accounts: AccountService {
             core: core.clone(),
             hasher: ports.hasher.clone(),
         },
         helpdesk: helpdesk.clone(),
         catalog: CatalogService { core: core.clone() },
+        menu: menu.clone(),
         notifications,
         webhooks,
         automations,
@@ -145,6 +177,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         whatsapp: ports.whatsapp.clone(),
         oauth: Some(oauth.clone()),
         helpdesk: Some(helpdesk.clone()),
+        menu: Some(menu),
     };
     let sink = Arc::new(WhatsAppSink {
         repo: ports.repo.clone(),
@@ -153,7 +186,6 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     });
     let state = AppState(Arc::new(Services {
         public_url: settings.public_url,
-        admin_token: settings.admin_token,
         sessions,
         mcp,
         oauth: Some(oauth),
@@ -164,16 +196,12 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     App {
         state,
-        workers: vec![automation_worker, reply_worker],
+        workers: vec![automation_worker, reply_worker, media_worker, avatar_worker],
         sink,
     }
 }
 
 impl App {
-    pub fn admin_router(&self) -> Router {
-        admin_router(self.state.clone())
-    }
-
     pub fn public_router(&self) -> Router {
         public_router(self.state.clone())
     }
@@ -188,7 +216,7 @@ impl App {
         }
     }
 
-    /// Periodic jobs: snooze wake-ups (60 s), webhook deliveries (10 s) and MCP events (1 s).
+    /// Periodic jobs: snooze wake-ups, auto-resolve and SLA checks (60 s), webhook deliveries (10 s) and MCP events (1 s).
     pub fn start_jobs(&self) -> Vec<JoinHandle<()>> {
         let support = self.state.support().clone();
         let helpdesk = support.helpdesk.clone();
@@ -197,6 +225,8 @@ impl App {
             loop {
                 ticker.tick().await;
                 let _ = helpdesk.wake_snoozed();
+                let _ = helpdesk.auto_resolve().await;
+                let _ = helpdesk.check_slas();
             }
         });
         let webhooks = support.webhooks.clone();

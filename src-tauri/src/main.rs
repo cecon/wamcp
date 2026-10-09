@@ -1,48 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod runtime;
 mod updates;
-use runtime::Runtime;
+use runtime::{Runtime, APP_URL};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Manager, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 const AUTOSTART_ARG: &str = "--autostart";
 
-#[tauri::command]
-async fn api_request(
-    state: tauri::State<'_, Runtime>,
-    path: String,
-    method: String,
-    body: serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    if !path.starts_with("/api/") || path.contains("..") || path.contains('\\') || path.contains('#') {
-        return Err("Caminho inválido".into());
-    }
-    let verb = match method.as_str() {
-        "GET" => reqwest::Method::GET,
-        "POST" => reqwest::Method::POST,
-        "DELETE" => reqwest::Method::DELETE,
-        _ => return Err("Método inválido".into()),
-    };
-    let request = state
-        .client
-        .request(verb, format!("http://127.0.0.1:17381{path}"))
-        .bearer_auth(&state.admin_token);
-    let request = if body.is_null() { request } else { request.json(&body) };
-    let response = request
-        .send()
-        .await
-        .map_err(|_| "Serviço iniciando. Aguarde alguns segundos.".to_string())?;
-    let status = response.status();
-    let data: serde_json::Value = response.json().await.map_err(|_| "Resposta inválida".to_string())?;
-    if !status.is_success() {
-        return Err(data["error"].as_str().unwrap_or("Falha na operação").into());
-    }
-    Ok(data)
-}
 #[tauri::command]
 fn runtime_status(state: tauri::State<'_, Runtime>) -> serde_json::Value {
     state.status()
@@ -77,7 +45,6 @@ fn main() {
             Some(vec![AUTOSTART_ARG]),
         ))
         .invoke_handler(tauri::generate_handler![
-            api_request,
             runtime_status,
             configure_tunnel,
             autostart_status,
@@ -88,6 +55,19 @@ fn main() {
         .setup(|app| {
             let runtime = Runtime::start(app.handle())?;
             app.manage(runtime);
+            // One app for everyone: the window shows the web app served by the backend, exactly
+            // what browsers on the network open (in development, the Vite server proxying the API).
+            let url = if cfg!(debug_assertions) {
+                WebviewUrl::App("index.html".into())
+            } else {
+                WebviewUrl::External(APP_URL.parse()?)
+            };
+            WebviewWindowBuilder::new(app, "main", url)
+                .title("WA MCP · Cappyfy")
+                .inner_size(1240.0, 820.0)
+                .min_inner_size(800.0, 600.0)
+                .visible(false)
+                .build()?;
             let marker = app.path().app_local_data_dir()?.join("autostart-initialized");
             if !marker.exists() {
                 let _ = app.autolaunch().enable();

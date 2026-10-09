@@ -5,6 +5,7 @@ use crate::domain::actor::{Actor, Performer};
 use crate::domain::error::{Error, HelpdeskError, Result};
 use crate::domain::helpdesk::{assignment_activity, next_assignee, require_inbox_access};
 use crate::domain::model::{Conversation, ConversationChanges, Inbox, NewMessage};
+use crate::domain::roles::{conversation_limit, within_limit};
 use serde::Serialize;
 use serde_json::Value;
 use std::sync::Arc;
@@ -62,6 +63,12 @@ impl Core {
             .ok_or_else(|| Error::from(HelpdeskError::not_found("Conversa não encontrada")))?;
         if let Some(actor) = actor {
             require_inbox_access(actor, &self.member_inbox_ids(actor)?, conversation.inbox_id)?;
+            if let Some(limit) = conversation_limit(actor) {
+                let participants = self.repo.participant_ids(conversation.id)?;
+                if !within_limit(&limit, conversation.assignee_id, &participants) {
+                    return Err(HelpdeskError::not_found("Conversa não encontrada").into());
+                }
+            }
         }
         Ok(conversation)
     }
@@ -98,7 +105,9 @@ impl Core {
             None => None,
         };
         let team_scope = team.filter(|t| t.allow_auto_assign != 0).map(|t| t.id);
-        let candidates = self.repo.assignable_ids(inbox.id, team_scope)?;
+        let candidates = self
+            .repo
+            .assignable_ids(inbox.id, team_scope, inbox.max_assignment_limit)?;
         let Some(chosen) = next_assignee(&candidates, self.repo.assignment_cursor(inbox.id)?) else {
             return Ok(conversation);
         };

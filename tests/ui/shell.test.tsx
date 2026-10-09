@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import AgentApp from '../../src/agent/AgentApp';
 import { fakeApi, FakeEventSource, status } from './fake-api';
 import { admin, maria, workspaceRoutes } from './fixtures';
+import { row, summary } from './report-fixtures';
 
 const nav = () => screen.getByRole('navigation');
 
@@ -42,16 +43,8 @@ describe('sidebar', () => {
     const api = fakeApi({
       ...workspaceRoutes(),
       'GET /contacts': [],
-      'GET /reports/summary': {
-        conversations: 0,
-        incoming_messages: 0,
-        outgoing_messages: 0,
-        first_response: { count: 0, average: null },
-        resolutions: { count: 0, average: null },
-        csat: { count: 0, average: null },
-      },
-      'GET /reports/agents': [],
-      'GET /csat_responses': [],
+      'GET /reports/summary_v2': summary,
+      'GET /reports': [],
       'POST /auth/logout': { ok: true },
     });
     const user = userEvent.setup();
@@ -89,6 +82,32 @@ describe('sidebar', () => {
     await user.click(screen.getByRole('button', { name: 'Perfil' }));
     await user.click(screen.getByRole('menuitem', { name: 'Sair' }));
     expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+  });
+
+  it('opens each report page and the new settings pages', async () => {
+    fakeApi({
+      ...workspaceRoutes(),
+      'GET /reports/summary_v2': summary,
+      'GET /reports': [],
+      'GET /reports/breakdown/team': [row(5, 'Financeiro')],
+      'GET /account': { id: 1, name: 'Loja', locale: 'pt-BR', settings: {} },
+      'GET /sla_policies': [],
+    });
+    const user = userEvent.setup();
+    render(<AgentApp />);
+    await screen.findByRole('heading', { name: 'Conversas' });
+    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
+    expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
+    await user.click(within(nav()).getByRole('button', { name: 'Times' }));
+    expect(await screen.findByRole('button', { name: 'Financeiro' })).toBeInTheDocument();
+    expect(within(nav()).getByRole('button', { name: 'Times' })).toHaveAttribute('aria-current', 'page');
+    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
+    expect(within(nav()).queryByRole('button', { name: 'CSAT' })).not.toBeInTheDocument();
+    await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
+    await user.click(within(nav()).getByRole('button', { name: 'Configurações da conta' }));
+    expect(await screen.findByLabelText('Nome da conta')).toHaveValue('Loja');
+    await user.click(within(nav()).getByRole('button', { name: 'SLA' }));
+    expect(await screen.findByText('Nenhum SLA ainda.')).toBeInTheDocument();
   });
 
   it('hides reports and settings from agents', async () => {

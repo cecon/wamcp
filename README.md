@@ -6,21 +6,23 @@ Aplicativo Windows em **Tauri 2 + React**, com múltiplas sessões WhatsApp e um
 
 Baixe o instalador `.exe` em [Releases](https://github.com/cecon/wamcp/releases).
 
-1. Instale e abra WA MCP.
-2. Em Configurações, configure o token do seu Cloudflare Tunnel.
-3. Crie uma sessão e escaneie o QR Code em WhatsApp → Aparelhos conectados.
-4. Em Acesso MCP, siga a seção **Conectar ao ChatGPT**, ou gere um token para outro cliente MCP.
-5. Autorize somente a sessão e as permissões que deseja compartilhar.
+1. Instale e abra WA MCP. No primeiro acesso, crie o administrador (somente neste computador).
+2. Em **Configurações → Aplicativo**, configure o token do seu Cloudflare Tunnel.
+3. Em **Configurações → Conexões WhatsApp**, crie uma conexão e escaneie o QR Code em WhatsApp → Aparelhos conectados. Cada conexão vira uma caixa de entrada do atendimento.
+4. Na aba **ChatGPT** da conexão, gere o código de autorização, ou gere um token em **Acesso MCP** para outro cliente MCP.
+5. Autorize somente a conexão e as permissões que deseja compartilhar.
+
+O mesmo aplicativo web abre na janela do Windows e no navegador de outros computadores da rede: o endereço aparece em **Configurações → Aplicativo → Acesso pela rede** e cada pessoa entra com o próprio login e senha.
 
 O instalador inclui o serviço (em Rust, dentro do próprio aplicativo) e o cloudflared. Não é necessário instalar ferramentas de desenvolvimento para usar o aplicativo. O instalador inicial não tem assinatura Authenticode.
 
 Fechar a janela mantém o aplicativo na bandeja. Clique no ícone verde para abrir novamente; use **Sair** para encerrar o serviço e o túnel. O computador deve permanecer ligado e conectado à internet.
 
-Por padrão, o WA MCP inicia automaticamente com o Windows (minimizado na bandeja, sem abrir a janela). Desative em **Configurações → Iniciar com o Windows** se preferir abrir manualmente.
+Por padrão, o WA MCP inicia automaticamente com o Windows (minimizado na bandeja, sem abrir a janela). Desative em **Configurações → Aplicativo → Iniciar com o Windows** se preferir abrir manualmente.
 
 ### Atualizações automáticas
 
-A partir da versão 26.10.3, o aplicativo verifica novas releases ao abrir e a cada seis horas. O download ocorre em segundo plano e a assinatura é validada com a chave pública embutida. Quando estiver pronto, clique **Reiniciar e atualizar** no aviso; o aplicativo encerra seus serviços, instala silenciosamente e reabre. As sessões e o histórico permanecem no perfil do Windows. Também é possível usar **Configurações → Verificar atualizações**. Sem internet, a versão atual continua funcionando.
+A partir da versão 26.10.3, o aplicativo verifica novas releases ao abrir e a cada seis horas. O download ocorre em segundo plano e a assinatura é validada com a chave pública embutida. Quando estiver pronto, clique **Reiniciar e atualizar** no aviso; o aplicativo encerra seus serviços, instala silenciosamente e reabre. As sessões e o histórico permanecem no perfil do Windows. Também é possível usar **Configurações → Aplicativo → Verificar atualizações**. Sem internet, a versão atual continua funcionando.
 
 Versões anteriores precisam de uma instalação manual para receber o atualizador. A assinatura do atualizador é independente de Authenticode: ela protege o pacote de atualização, mas não remove avisos do Windows sobre editor desconhecido.
 
@@ -34,7 +36,7 @@ Transporte: Streamable HTTP sem estado. O ChatGPT usa OAuth 2.1 com PKCE S256 e 
 
 1. Ative o modo de desenvolvedor nas configurações do ChatGPT, se disponível para sua conta/workspace.
 2. Abra [Plugins](https://chatgpt.com/plugins), use **+** e informe a URL MCP da sessão. Escolha OAuth, deixando Client ID e Client Secret vazios para registro automático.
-3. No WA MCP → sessão → Acesso MCP, escolha **Somente leitura** ou **Leitura e envio** e gere um código temporário.
+3. No WA MCP → Configurações → Conexões WhatsApp → conexão → ChatGPT, escolha **Somente leitura** ou **Leitura e envio** e gere um código temporário.
 4. Na página de autorização em `wamcp.cappyfy.com`, cole esse código e confirme.
 
 O código é de uso único e expira em dez minutos. O access token dura uma hora; o refresh token é rotacionado, com autorização limitada a 90 dias. A lista **Conexões autorizadas** permite revogar a conexão imediatamente. O aplicativo e o túnel devem continuar funcionando no PC.
@@ -85,13 +87,17 @@ O download exige a sessão conectada, tem limite de 10 MiB e espera de até 30 s
 - `wamcp.sqlite`: sessões, conversas, mensagens, hashes dos tokens e auditoria.
 - `auth/`: credenciais de aparelhos WhatsApp.
 - `tunnel.token`: credencial local do Cloudflare Tunnel.
-- `admin.token`: segredo da API administrativa local.
+- `media/<sessão>/<AAAA>/<MM>/`: anexos das conversas.
 
 O SQLite é criado automaticamente no PC da instalação. Nenhum histórico ou token é incluído no instalador ou enviado ao GitHub. Para backup, encerre o aplicativo e copie a pasta de dados. O banco não é criptografado; ele usa as proteções do perfil do Windows.
 
 ## Túnel
 
-Configure o hostname público para `http://127.0.0.1:17382`. A API administrativa usa `127.0.0.1:17381` e **não deve ser publicada**. O aplicativo inicia seu próprio processo cloudflared com um arquivo de token, sem instalar um serviço global do Windows.
+Configure o hostname público para `http://127.0.0.1:17382`. O aplicativo inicia seu próprio processo cloudflared com um arquivo de token, sem instalar um serviço global do Windows.
+
+## Um só aplicativo: desktop e rede
+
+O backend embutido escuta em uma única porta (`0.0.0.0:17382`) com o app web, a API, o MCP e o OAuth. A janela do Tauri abre `http://127.0.0.1:17382/app/`; outros computadores da rede abrem `http://<ip-deste-pc>:17382/app/` no navegador (o endereço aparece em Configurações > Aplicativo). Todos entram com e-mail e senha; o primeiro administrador só pode ser criado no próprio computador. Iniciar com o Windows, túnel e atualização aparecem apenas na janela do aplicativo. Libere a porta 17382 no firewall do Windows para a rede local.
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
 
@@ -110,7 +116,7 @@ npm ci
 npm run desktop
 ```
 
-Prévia web: execute `npm run server` (backend Rust em `src-tauri/server`) e `npm run dev`; informe o conteúdo do arquivo local `admin.token` no formulário de desenvolvimento. O aplicativo Tauri usa comunicação interna e não precisa desse passo.
+Prévia web: execute `npm run server` (backend Rust em `src-tauri/server`) e `npm run dev`, e abra `http://127.0.0.1:1420`; o Vite encaminha a API para a porta 17382. No primeiro acesso local, crie o administrador.
 
 ```sh
 npm run check

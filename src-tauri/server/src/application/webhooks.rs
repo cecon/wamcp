@@ -24,6 +24,7 @@ impl WebhookService {
         self.core
             .repo
             .webhook(id)?
+            .filter(|w| w.kind != "agent_bot")
             .ok_or_else(|| HelpdeskError::not_found("Webhook não encontrado").into())
     }
 
@@ -43,12 +44,24 @@ impl WebhookService {
             return Ok(());
         };
         let now = self.core.now();
+        let inbox_id = envelope.data["inbox_id"].as_i64();
+        let mut inbox_bot = None;
         for webhook in self.core.repo.webhooks()? {
             if webhook.active == 0 || !webhook.subscriptions.iter().any(|s| s == name) {
                 continue;
             }
-            if webhook.inbox_id.is_some() && envelope.data["inbox_id"].as_i64() != webhook.inbox_id {
+            if webhook.inbox_id.is_some() && inbox_id != webhook.inbox_id {
                 continue;
+            }
+            // Agent bots only hear about the inboxes that point to them.
+            if webhook.agent_bot_id.is_some() {
+                if inbox_bot.is_none() {
+                    let inbox = inbox_id.map(|id| self.core.repo.inbox(id)).transpose()?.flatten();
+                    inbox_bot = Some(inbox.and_then(|i| i.agent_bot_id));
+                }
+                if inbox_bot.flatten() != webhook.agent_bot_id {
+                    continue;
+                }
             }
             let payload =
                 json!({ "event": name, "data": envelope.data, "performer": envelope.performer, "timestamp": now });
@@ -99,7 +112,8 @@ impl WebhookService {
 
     pub fn list(&self, actor: &Actor) -> Result<Vec<Webhook>> {
         require_admin(actor)?;
-        self.core.repo.webhooks()
+        let all = self.core.repo.webhooks()?;
+        Ok(all.into_iter().filter(|w| w.kind != "agent_bot").collect())
     }
 
     pub fn create(&self, actor: &Actor, url: &str, subscriptions: &[String], inbox_id: Option<i64>) -> Result<Webhook> {

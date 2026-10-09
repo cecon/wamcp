@@ -1,12 +1,23 @@
 //! Pure business rules and entities. Depends on nothing but std and data crates.
 pub mod access;
 pub mod actor;
+pub mod audit;
 pub mod automation;
+pub mod contacts;
 pub mod csat;
 pub mod error;
 pub mod events;
+pub mod filters;
 pub mod helpdesk;
+pub mod media;
+pub mod menu;
 pub mod model;
+pub mod notifications;
 pub mod oauth;
+pub mod reports;
+pub mod roles;
 pub mod schedule;
+pub mod sla;
+pub mod totp;
+pub mod voice;
 pub mod webhooks;

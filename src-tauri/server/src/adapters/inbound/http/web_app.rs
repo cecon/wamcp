@@ -1,4 +1,4 @@
-//! Serves the agent web app at /app on the public listener (the same port as the API and MCP).
+//! Serves the web app at /app (the same port as the API and MCP) for the desktop window and browsers.
 use super::state::AppState;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -8,7 +8,8 @@ use axum::routing::get;
 use axum::Router;
 use std::path::{Component, PathBuf};
 
-const CSP: &str = "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+/// `ipc:`/`ipc.localhost` let the desktop window reach its Tauri commands; browsers never use them.
+const CSP: &str = "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 fn mime(path: &std::path::Path) -> &'static str {
     match path.extension().and_then(|e| e.to_str()).unwrap_or_default() {
@@ -49,7 +50,7 @@ fn file(path: PathBuf, cache: &'static str) -> Response {
 async fn index(State(state): State<AppState>) -> Response {
     // Resolved per request so a UI rebuilt while the service runs is picked up without a restart.
     let response = match (state.support().web_dir)() {
-        Some(dir) => file(dir.join("agent.html"), "no-cache"),
+        Some(dir) => file(dir.join("index.html"), "no-cache"),
         None => (
             StatusCode::SERVICE_UNAVAILABLE,
             "Interface web não foi gerada. Execute npm run build.",
@@ -77,7 +78,7 @@ async fn to_app() -> Response {
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(to_app))
-        // The source page is agent.html (what Vite serves in dev); on the backend it lives at /app/.
+        // Old bookmarks of the former agent page still land on the app.
         .route("/agent.html", get(to_app))
         .route("/app", get(to_app))
         .route("/app/", get(index))

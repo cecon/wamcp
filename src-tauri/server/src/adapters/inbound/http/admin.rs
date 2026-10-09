@@ -1,5 +1,5 @@
-//! Desktop-only API on the local admin listener (admin token): sessions, history, MCP tokens,
-//! ChatGPT links and audit.
+//! WhatsApp connections for administrators (under /api/v1): sessions, QR and status, history,
+//! MCP tokens, ChatGPT links and audit.
 use super::error::{created, done, error_body, ok, ApiError, ApiResult};
 use super::input::{check, int_param, one_of, text, Body, Query};
 use super::state::AppState;
@@ -181,22 +181,26 @@ async fn chatgpt_disconnect(
 
 pub fn routes(state: AppState) -> Router<AppState> {
     let session = Router::new()
-        .route("/api/sessions/{id}", get(session))
-        .route("/api/sessions/{id}/connect", post(connect))
-        .route("/api/sessions/{id}/disconnect", post(disconnect))
-        .route("/api/sessions/{id}/logout", post(logout))
-        .route("/api/sessions/{id}/chats", get(chats))
-        .route("/api/sessions/{id}/messages", get(messages))
-        .route("/api/sessions/{id}/search", get(search))
-        .route("/api/sessions/{id}/tokens", get(tokens).post(issue_token))
-        .route("/api/sessions/{id}/tokens/{token}", delete(revoke))
-        .route("/api/sessions/{id}/audit", get(audit))
-        .route("/api/sessions/{id}/chatgpt/link", post(chatgpt_link))
-        .route("/api/sessions/{id}/chatgpt", get(chatgpt))
-        .route("/api/sessions/{id}/chatgpt/{grant}", delete(chatgpt_disconnect))
-        .route_layer(axum::middleware::from_fn_with_state(state, known_session));
+        .route("/sessions/{id}", get(session))
+        .route("/sessions/{id}/connect", post(connect))
+        .route("/sessions/{id}/disconnect", post(disconnect))
+        .route("/sessions/{id}/logout", post(logout))
+        .route("/sessions/{id}/chats", get(chats))
+        .route("/sessions/{id}/messages", get(messages))
+        .route("/sessions/{id}/search", get(search))
+        .route("/sessions/{id}/tokens", get(tokens).post(issue_token))
+        .route("/sessions/{id}/tokens/{token}", delete(revoke))
+        .route("/sessions/{id}/audit", get(audit))
+        .route("/sessions/{id}/chatgpt/link", post(chatgpt_link))
+        .route("/sessions/{id}/chatgpt", get(chatgpt))
+        .route("/sessions/{id}/chatgpt/{grant}", delete(chatgpt_disconnect))
+        .route_layer(axum::middleware::from_fn_with_state(state.clone(), known_session));
     Router::new()
-        .route("/api/status", get(status))
-        .route("/api/sessions", get(sessions).post(create_session))
+        .route("/status", get(status))
+        .route("/sessions", get(sessions).post(create_session))
         .merge(session)
+        .route_layer(axum::middleware::from_fn_with_state(
+            state,
+            super::auth::require_admin_user,
+        ))
 }

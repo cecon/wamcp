@@ -8,14 +8,16 @@ license = "MIT"
 publish = false
 
 [features]
-default = ["whatsapp"]
+default = ["whatsapp", "crawler"]
 # The real WhatsApp adapter (whatsapp-rust). Tests use the in-memory fake port.
 whatsapp = ["dep:whatsapp-rust", "dep:waproto", "dep:buffa"]
+# The iFood menu crawler driving the installed Edge/Chrome (DevTools Protocol). Tests use a scripted fake.
+crawler = ["dep:chromiumoxide"]
 
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-axum = { version = "0.8", features = ["macros"] }
+axum = { version = "0.8", features = ["macros", "multipart"] }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 chrono-tz = { version = "0.10", features = ["case-insensitive"] }
@@ -31,6 +33,7 @@ rusqlite = { version = "0.39", features = ["bundled"] }
 scrypt = { version = "0.11", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+sha1 = "0.10"
 sha2 = "0.10"
 subtle = "2"
 thiserror = "2"
@@ -42,6 +45,7 @@ tracing = "0.1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
 buffa = { version = "0.9", optional = true }
+chromiumoxide = { version = "0.9", optional = true, default-features = false }
 waproto = { version = "=0.7.0", optional = true }
 whatsapp-rust = { version = "=0.7.0", optional = true, default-features = false, features = ["sqlite-storage", "tokio-transport", "tokio-runtime", "ureq-client", "tokio-native", "signal"] }
 

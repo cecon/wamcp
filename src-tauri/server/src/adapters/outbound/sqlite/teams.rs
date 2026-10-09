@@ -119,18 +119,26 @@ impl TeamsRepo for SqliteStore {
         )
     }
 
-    fn assignable_ids(&self, inbox_id: i64, team_id: Option<i64>) -> Result<Vec<i64>> {
+    fn assignable_ids(&self, inbox_id: i64, team_id: Option<i64>, limit: Option<i64>) -> Result<Vec<i64>> {
         let team = if team_id.is_some() {
             "AND u.id IN (SELECT user_id FROM team_members WHERE team_id=?)"
         } else {
             ""
         };
+        // Agents at the inbox limit of open conversations are skipped.
+        let full = if limit.is_some() {
+            "AND (SELECT COUNT(*) FROM conversations c WHERE c.assignee_id=u.id AND c.inbox_id=m.inbox_id
+                  AND c.status='open') < ?"
+        } else {
+            ""
+        };
         let sql = format!(
             "SELECT u.id FROM users u JOIN inbox_members m ON m.user_id=u.id
-             WHERE m.inbox_id=? AND u.active=1 AND u.availability='online' {team}"
+             WHERE m.inbox_id=? AND u.active=1 AND u.availability='online' {team} {full}"
         );
         let mut params = vec![int(inbox_id)];
         params.extend(team_id.map(int));
+        params.extend(limit.map(int));
         self.with(|c| {
             let mut statement = c.prepare_cached(&sql)?;
             let ids = statement.query_map(rusqlite::params_from_iter(params), |r| r.get(0))?;

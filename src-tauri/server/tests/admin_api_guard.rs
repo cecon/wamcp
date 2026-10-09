@@ -1,94 +1,86 @@
-//! Desktop admin API guard: the admin token, desktop-only origins and their CORS headers.
+//! One listener for everyone: the WhatsApp connections API is for administrators, the first
+//! administrator is created only on this computer, and the session cookie works over plain HTTP.
 mod common;
 
-use common::http::{request, send, Reply};
-use common::{Fixture, ADMIN_TOKEN};
+use common::http::{request, Reply};
+use common::{Fixture, PASSWORD};
+use serde_json::json;
 
 async fn raw(f: &Fixture, method: &str, path: &str, headers: &[(&str, &str)]) -> Reply {
-    send(&f.app.admin_router(), request(method, path, None, headers)).await
+    f.public(request(method, path, None, headers)).await
 }
 
 #[tokio::test]
-async fn admin_listener_requires_the_admin_token() {
+async fn connections_api_is_for_administrators_only() {
     let f = Fixture::new().await;
-    assert_eq!(raw(&f, "GET", "/api/status", &[]).await.status, 401);
+    f.session("Suporte");
+    assert_eq!(raw(&f, "GET", "/api/v1/status", &[]).await.status, 401);
+    let admin = f.bootstrap().await;
+    let maria = f.agent(&admin, "maria@example.com", "agent", true).await;
+    let denied = maria.get("/sessions").await;
     assert_eq!(
-        raw(&f, "GET", "/api/status", &[("authorization", "Bearer wrong")])
-            .await
-            .status,
-        401
+        (denied.status, denied.body["error"].as_str()),
+        (403, Some("Somente administradores podem fazer isso"))
     );
-    let short = format!("Bearer {}", &ADMIN_TOKEN[..63]);
+    assert_eq!(admin.get("/status").await.body["sessions"], 1);
+    assert_eq!(admin.get("/sessions").await.body.as_array().unwrap().len(), 1);
+    assert_eq!(admin.get("/unknown").await.status, 404);
     assert_eq!(
-        raw(&f, "GET", "/api/status", &[("authorization", &short)]).await.status,
-        401
+        raw(&f, "GET", "/api/sessions", &[]).await.status,
+        404,
+        "no second, token-based API"
     );
-    let basic = format!("Basic {ADMIN_TOKEN}");
-    assert_eq!(
-        raw(&f, "GET", "/api/status", &[("authorization", &basic)]).await.status,
-        401
-    );
-    let lower = format!("bearer {ADMIN_TOKEN}");
-    assert_eq!(
-        raw(&f, "GET", "/api/status", &[("authorization", &lower)]).await.status,
-        200
-    );
-    assert_eq!(raw(&f, "GET", "/api/unknown", &[]).await.status, 401);
-    let missing = f.admin("GET", "/api/unknown", None).await;
-    assert_eq!(missing.status, 404);
-    assert_eq!(missing.header("x-content-type-options").as_deref(), Some("nosniff"));
 }
 
 #[tokio::test]
-async fn admin_listener_only_answers_desktop_origins_with_cors_headers() {
+async fn the_first_administrator_is_created_only_on_this_computer() {
     let f = Fixture::new().await;
-    let auth = format!("Bearer {ADMIN_TOKEN}");
-    let foreign = raw(
-        &f,
-        "GET",
-        "/api/status",
-        &[("authorization", &auth), ("origin", "https://evil.example")],
-    )
-    .await;
-    assert_eq!(foreign.status, 403);
-    assert_eq!(foreign.header("access-control-allow-origin"), None);
-    let preflight_foreign = raw(&f, "OPTIONS", "/api/status", &[("origin", "https://evil.example")]).await;
-    assert_eq!(preflight_foreign.status, 403);
-
-    let local = ["http://127.0.0.1:1420", "http://localhost:1420"];
-    let tauri = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost"];
-    for origin in local.into_iter().chain(tauri) {
-        let reply = raw(
-            &f,
-            "GET",
-            "/api/status",
-            &[("authorization", &auth), ("origin", origin)],
-        )
+    let network = [("x-forwarded-for", "192.168.0.20")];
+    let status = raw(&f, "GET", "/api/helpdesk/status", &network).await.body;
+    assert_eq!(
+        (status["needsBootstrap"].clone(), status["local"].clone()),
+        (json!(true), json!(false))
+    );
+    let body = json!({ "name": "Intruso", "email": "x@example.com", "password": PASSWORD });
+    let tunnel = f
+        .public(request(
+            "POST",
+            "/api/helpdesk/bootstrap",
+            Some(body.clone()),
+            &[("cf-connecting-ip", "1.2.3.4")],
+        ))
         .await;
-        assert_eq!(reply.status, 200, "{origin}");
-        assert_eq!(reply.header("access-control-allow-origin").as_deref(), Some(origin));
-        assert_eq!(reply.header("vary").as_deref(), Some("Origin"));
-        assert_eq!(
-            reply.header("access-control-allow-headers").as_deref(),
-            Some("Authorization,Content-Type")
-        );
-        assert_eq!(
-            reply.header("access-control-allow-methods").as_deref(),
-            Some("GET,POST,DELETE,OPTIONS")
-        );
-    }
-    let preflight = raw(&f, "OPTIONS", "/api/sessions", &[("origin", "tauri://localhost")]).await;
-    assert_eq!(preflight.status, 204);
+    assert_eq!(tunnel.status, 403);
+    assert_eq!(raw(&f, "GET", "/api/helpdesk/status", &[]).await.body["local"], true);
+    f.bootstrap().await;
+    let again = f
+        .public(request("POST", "/api/helpdesk/bootstrap", Some(body), &[]))
+        .await;
+    assert_eq!(again.status, 409);
     assert_eq!(
-        preflight.header("access-control-allow-origin").as_deref(),
-        Some("tauri://localhost")
+        raw(&f, "GET", "/api/helpdesk/status", &[]).await.body["needsBootstrap"],
+        false
     );
-    let unauthorized = raw(&f, "GET", "/api/status", &[("origin", "http://localhost:1420")]).await;
-    assert_eq!(unauthorized.status, 401);
-    assert_eq!(
-        unauthorized.header("access-control-allow-origin").as_deref(),
-        Some("http://localhost:1420")
-    );
-    let plain = raw(&f, "GET", "/api/status", &[("authorization", &auth)]).await;
-    assert_eq!(plain.header("access-control-allow-origin"), None);
+}
+
+#[tokio::test]
+async fn the_session_cookie_is_secure_only_over_https() {
+    let f = Fixture::new().await;
+    f.bootstrap().await;
+    let login = |headers: Vec<(&'static str, &'static str)>| {
+        let f = &f;
+        async move {
+            let body = json!({ "email": "admin@example.com", "password": PASSWORD });
+            let reply = f
+                .public(request("POST", "/api/v1/auth/login", Some(body), &headers))
+                .await;
+            reply.header("set-cookie").unwrap_or_default()
+        }
+    };
+    let lan = login(vec![]).await;
+    assert!(lan.contains("HttpOnly") && !lan.contains("Secure"), "{lan}");
+    let tunnel = login(vec![("cf-connecting-ip", "1.2.3.4")]).await;
+    assert!(tunnel.contains("; Secure"), "{tunnel}");
+    let proxy = login(vec![("x-forwarded-proto", "https")]).await;
+    assert!(proxy.contains("; Secure"), "{proxy}");
 }

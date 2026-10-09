@@ -5,12 +5,12 @@ use super::input::{check, id, optional_id, text, Body, Query};
 use super::state::AppState;
 use crate::application::ports::NewRule;
 use crate::application::reports::PeriodQuery;
-use crate::domain::automation::{ACTIONS, AUTOMATION_EVENTS, CONDITION_ATTRIBUTES, OPERATORS};
+use crate::domain::automation::{is_condition_attribute, ACTIONS, AUTOMATION_EVENTS, OPERATORS};
 use crate::domain::model::{Action, Condition, RuleFields, WebhookFields};
 use crate::domain::webhooks::is_webhook_event;
 use axum::extract::{Path, Query as Params, State};
 use axum::response::Response;
-use axum::routing::{get, patch};
+use axum::routing::{get, patch, post};
 use axum::Router;
 use serde_json::Value;
 
@@ -90,14 +90,14 @@ fn scalars(values: &[Value]) -> bool {
 fn valid_conditions(conditions: &[Condition]) -> bool {
     conditions.len() <= 20
         && conditions.iter().all(|c| {
-            CONDITION_ATTRIBUTES.contains(&c.attribute_key.as_str())
+            is_condition_attribute(&c.attribute_key)
                 && OPERATORS.contains(&c.filter_operator.as_str())
                 && (c.query_operator == "and" || c.query_operator == "or")
                 && scalars(&c.values)
         })
 }
 
-fn valid_actions(actions: &[Action]) -> bool {
+pub(super) fn valid_actions(actions: &[Action]) -> bool {
     (1..=20).contains(&actions.len())
         && actions
             .iter()
@@ -169,6 +169,14 @@ async fn delete_rule(
     done()
 }
 
+async fn clone_rule(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(rule): Path<String>,
+) -> ApiResult<Response> {
+    created(state.support().automations.clone_rule(&current.actor(), id(&rule)?)?)
+}
+
 fn period(query: &Query) -> ApiResult<PeriodQuery> {
     Ok(PeriodQuery {
         since: optional_id(query, "since")?,
@@ -208,6 +216,7 @@ pub fn routes() -> Router<AppState> {
         .route("/webhooks/{id}/deliveries", get(deliveries))
         .route("/automation_rules", get(rules).post(create_rule))
         .route("/automation_rules/{id}", patch(update_rule).delete(delete_rule))
+        .route("/automation_rules/{id}/clone", post(clone_rule))
         .route("/reports/summary", get(summary))
         .route("/reports/agents", get(agent_report))
         .route("/csat_responses", get(csat))

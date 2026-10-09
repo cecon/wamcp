@@ -161,12 +161,16 @@ describe('inboxes', () => {
     await user.click(screen.getByRole('switch', { name: 'Ignorar grupos' }));
     await user.click(screen.getByRole('switch', { name: 'Atribuição automática' }));
     await user.click(screen.getByRole('switch', { name: 'Uma conversa por contato' }));
+    const signature = screen.getByRole('switch', { name: 'Mostrar o nome do agente' });
+    expect(signature).toBeChecked();
+    await user.click(signature);
     expect(api.called('PATCH', '/inboxes/10').map((c) => c.body)).toEqual([
       { name: 'Vendas' },
       { agent_bot_enabled: true },
       { ignore_groups: false },
       { enable_auto_assignment: false },
       { lock_to_single_conversation: false },
+      { show_agent_name: false },
     ]);
 
     await user.click(screen.getByRole('tab', { name: 'Colaboradores' }));

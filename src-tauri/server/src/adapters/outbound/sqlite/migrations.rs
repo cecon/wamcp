@@ -48,8 +48,8 @@ fn json(column: &str) -> String {
     format!("{column} TEXT NOT NULL DEFAULT '{{}}' CHECK(json_valid({column}))")
 }
 
-/// Helpdesk migrations v1..v8, in order.
-pub fn migrations() -> Vec<String> {
+/// Helpdesk migrations v1..v8 (the Node schema), in order.
+fn legacy() -> Vec<String> {
     vec![
         // v1: conta única e usuários (agentes de suporte)
         format!(
@@ -180,4 +180,11 @@ pub fn migrations() -> Vec<String> {
          CREATE UNIQUE INDEX reporting_first_response ON reporting_events(conversation_id) WHERE name='first_response';"
             .into(),
     ]
+}
+
+/// Every helpdesk migration, in order: the Node schema (v1–v8) and the Chatwoot parity steps.
+pub fn migrations() -> Vec<String> {
+    let mut all = legacy();
+    all.extend(super::schema::steps());
+    all
 }

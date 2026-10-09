@@ -11,12 +11,13 @@ use mcp_support::{merge, subscription, Mcp, JID, VERSION};
 use serde_json::{json, Value};
 use wamcp_server::application::ports::{EventRepo, MirrorRepo};
 
-const SEND_TOOLS: [&str; 5] = [
+const SEND_TOOLS: [&str; 6] = [
     "send_message",
     "reply_conversation",
     "set_conversation_status",
     "assign_conversation",
     "set_conversation_labels",
+    "catalog_send_item",
 ];
 
 fn tool<'a>(tools: &'a Value, name: &str) -> &'a Value {
@@ -43,8 +44,8 @@ async fn modern_discovery_and_tools_work_without_initialize() {
     assert_eq!(tools["resultType"], "complete");
     assert_eq!(
         tools["tools"].as_array().map(Vec::len),
-        Some(13),
-        "7 session tools + 6 helpdesk tools"
+        Some(17),
+        "7 session tools + 6 helpdesk tools + 4 catalog tools"
     );
     for t in tools["tools"].as_array().unwrap() {
         let sends = SEND_TOOLS.contains(&t["name"].as_str().unwrap_or_default());

@@ -1,0 +1,86 @@
+{
+  "code": "00",
+  "data": {
+    "menu": [
+      {
+        "code": "cat-lanches",
+        "name": "Lanches",
+        "itens": [
+          {
+            "id": "it-xburger",
+            "code": "XB01",
+            "description": "X-Burger",
+            "details": "Pão brioche, hambúrguer 150 g, queijo e salada",
+            "logoUrl": "202401/xburger.jpg",
+            "unitPrice": 29.9,
+            "unitMinPrice": 29.9,
+            "unitOriginalPrice": 34.9,
+            "choices": [
+              {
+                "code": "ch-bebida",
+                "name": "Escolha a bebida",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-coca", "code": "COCA", "description": "Coca-Cola lata", "unitPrice": 0 },
+                  { "id": "g-guarana", "code": "GUAR", "description": "Guaraná lata", "unitPrice": 0 }
+                ]
+              },
+              {
+                "code": "ch-adicionais",
+                "name": "Adicionais",
+                "min": 0,
+                "max": 3,
+                "garnishItens": [
+                  { "id": "g-bacon", "code": "BAC", "description": "Bacon", "unitPrice": 4 },
+                  { "id": "g-cheddar", "code": "CHE", "description": "Cheddar", "unitPrice": 3.5 },
+                  {
+                    "id": "g-ovo",
+                    "code": "OVO",
+                    "description": "Ovo",
+                    "unitPrice": 2.5,
+                    "logoUrl": "https://static-images.ifood.com.br/image/upload/t_high/pratos/ovo.png"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "it-xsalada",
+            "code": "XS01",
+            "description": "X-Salada",
+            "details": "Hambúrguer, alface, tomate e maionese da casa",
+            "unitPrice": 27.5,
+            "choices": [
+              {
+                "code": "ch-bebida",
+                "name": "Escolha a bebida",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-coca", "code": "COCA", "description": "Coca-Cola lata", "unitPrice": 0 },
+                  { "id": "g-guarana", "code": "GUAR", "description": "Guaraná lata", "unitPrice": 0 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "cat-bebidas",
+        "name": "Bebidas",
+        "itens": [
+          {
+            "id": "it-suco",
+            "code": "SUC01",
+            "description": "Suco de laranja 500 ml",
+            "unitPrice": 0,
+            "unitMinPrice": 12,
+            "choices": []
+          }
+        ]
+      },
+      { "code": "cat-vazia", "name": "Sobremesas", "itens": [] }
+    ]
+  }
+}

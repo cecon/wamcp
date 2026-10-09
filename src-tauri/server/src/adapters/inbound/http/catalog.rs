@@ -8,7 +8,7 @@ use axum::body::{Body as Stream, Bytes};
 use axum::extract::{Path, Query as Params, State};
 use axum::http::header;
 use axum::response::Response;
-use axum::routing::{get, patch, post};
+use axum::routing::{get, patch};
 use axum::Router;
 use regex::Regex;
 use serde::Deserialize;
@@ -116,26 +116,6 @@ async fn delete_canned(
     done()
 }
 
-async fn notifications(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
-    ok(state.support().notifications.list(&current.user)?)
-}
-
-async fn unread(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
-    ok(state.support().notifications.unread_count(&current.user)?)
-}
-
-async fn read_all(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
-    ok(state.support().notifications.read_all(&current.user)?)
-}
-
-async fn read(
-    State(state): State<AppState>,
-    current: CurrentUser,
-    Path(notification): Path<String>,
-) -> ApiResult<Response> {
-    ok(state.support().notifications.read(&current.user, id(&notification)?)?)
-}
-
 /// Server-Sent Events: works through the Cloudflare tunnel without WebSocket upgrades.
 async fn events(State(state): State<AppState>, current: CurrentUser) -> Response {
     let support = state.support().clone();
@@ -181,9 +161,5 @@ pub fn routes() -> Router<AppState> {
         .route("/labels/{id}", patch(update_label).delete(delete_label))
         .route("/canned_responses", get(canned).post(create_canned))
         .route("/canned_responses/{id}", patch(update_canned).delete(delete_canned))
-        .route("/notifications", get(notifications))
-        .route("/notifications/unread_count", get(unread))
-        .route("/notifications/read_all", post(read_all))
-        .route("/notifications/{id}", patch(read))
         .route("/events", get(events))
 }

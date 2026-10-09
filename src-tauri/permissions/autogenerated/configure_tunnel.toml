@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-configure-tunnel"
+description = "Enables the configure_tunnel command without any pre-configured scope."
+commands.allow = ["configure_tunnel"]
+
+[[permission]]
+identifier = "deny-configure-tunnel"
+description = "Denies the configure_tunnel command without any pre-configured scope."
+commands.deny = ["configure_tunnel"]

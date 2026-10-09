@@ -11,7 +11,7 @@ mkdirSync(runtime, { recursive: true });
 // The backend is Rust and runs inside the app; drop leftovers of the former Node runtime.
 for (const stale of ['node.exe', 'server', 'node_modules', 'package.json', 'package-lock.json'])
   rmSync(path.join(runtime, stale), { recursive: true, force: true });
-// The backend serves the agent UI (/app) from runtime/web, in dev as well as in the installer.
+// The backend serves the web app (/app) from runtime/web, in dev as well as in the installer.
 execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npx vite build'], { stdio: 'inherit' });
 execFileSync(process.execPath, ['scripts/copy-web.mjs'], { stdio: 'inherit' });
 const binary = path.join(runtime, 'cloudflared.exe');
