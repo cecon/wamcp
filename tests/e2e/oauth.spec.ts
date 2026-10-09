@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { oauthFixture, origin, callback } from '../oauth-fixture.mjs';
+import { startBackend, origin, callback } from './backend';
+
+test.setTimeout(600_000);
 
 test('browser consent preserves Origin and approves only the selected test session', async ({ page }) => {
-  const cleanup: Array<() => Promise<void>> = [];
-  const f = await oauthFixture({ after: (fn: () => Promise<void>) => cleanup.push(fn) });
+  const backend = await startBackend();
   try {
-    const client = await f.register();
-    const flow = await f.begin(client);
-    const link = f.oauth.createLink(f.a.id, 'read');
+    const [a, b] = [await backend.session('Session A'), await backend.session('Session B')];
+    const resource = `${origin}/mcp/${a.id}`;
+    const client = await backend.register();
+    const flow = await backend.begin(client.client_id, resource);
+    expect(flow.response.status).toBe(200);
+    const link = await backend.admin(`/api/sessions/${a.id}/chatgpt/link`, { scope: 'read' });
     let submittedOrigin: string | undefined;
     let approvalStatus: number | undefined;
     const policyErrors: string[] = [];
@@ -28,9 +32,8 @@ test('browser consent preserves Origin and approves only the selected test sessi
         });
         return;
       }
-      const headers = await request.allHeaders();
-      submittedOrigin = headers.origin;
-      const response = await fetch(`${f.url}/oauth/approve`, {
+      submittedOrigin = (await request.allHeaders()).origin;
+      const response = await fetch(`${backend.url}/oauth/approve`, {
         method: 'POST',
         headers: {
           'content-type': 'application/x-www-form-urlencoded',
@@ -54,22 +57,22 @@ test('browser consent preserves Origin and approves only the selected test sessi
     expect(approvalStatus).toBe(303);
     await expect(page).toHaveURL(/https:\/\/chatgpt.com\/connector\/oauth\/test-client\?code=/);
     expect(policyErrors).toEqual([]);
-    const exchanged = await f.request('/token', {
+    const exchanged = await backend.form('/token', {
       grant_type: 'authorization_code',
       client_id: client.client_id,
-      code: new URL(page.url()).searchParams.get('code'),
+      code: new URL(page.url()).searchParams.get('code')!,
       code_verifier: flow.verifier,
       redirect_uri: callback,
-      resource: f.resource,
+      resource,
     });
     expect(exchanged.status).toBe(200);
     const tokens = await exchanged.json();
     expect(tokens.scope).toBe('whatsapp:read');
-    expect((await f.rpc(tokens.access_token)).status).toBe(200);
-    expect((await f.rpc(tokens.access_token, 'get_profile', f.b)).status).toBe(401);
-    expect(f.oauth.connections(f.a.id)).toHaveLength(1);
-    expect(f.oauth.connections(f.b.id)).toHaveLength(0);
+    expect((await backend.rpc(tokens.access_token, a.id)).status).toBe(200);
+    expect((await backend.rpc(tokens.access_token, b.id)).status).toBe(401);
+    expect(await backend.admin(`/api/sessions/${a.id}/chatgpt`)).toHaveLength(1);
+    expect(await backend.admin(`/api/sessions/${b.id}/chatgpt`)).toHaveLength(0);
   } finally {
-    for (const close of cleanup) await close();
+    await backend.stop();
   }
 });

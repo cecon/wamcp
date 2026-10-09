@@ -15,13 +15,13 @@ for (const file of files) {
   if (data.packages?.['']) data.packages[''].version = version;
   writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 }
-const cargo = readFileSync('src-tauri/Cargo.toml', 'utf8').replace(
-  /^version = "[^"]+"/m,
-  `version = "${version}"`,
-);
-writeFileSync('src-tauri/Cargo.toml', cargo);
+// The desktop crate and the embedded backend crate share the release version.
+for (const manifest of ['src-tauri/Cargo.toml', 'src-tauri/server/Cargo.toml']) {
+  const cargo = readFileSync(manifest, 'utf8').replace(/^version = "[^"]+"/m, `version = "${version}"`);
+  writeFileSync(manifest, cargo);
+}
 const lock = readFileSync('src-tauri/Cargo.lock', 'utf8').replace(
-  /(name = "wamcp"\r?\nversion = ")[^"]+("[\r\n])/,
+  /(name = "(?:wamcp|wamcp-server)"\r?\nversion = ")[^"]+("[\r\n])/g,
   `$1${version}$2`,
 );
 writeFileSync('src-tauri/Cargo.lock', lock);

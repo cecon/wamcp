@@ -12,7 +12,7 @@ Baixe o instalador `.exe` em [Releases](https://github.com/cecon/wamcp/releases)
 4. Em Acesso MCP, siga a seção **Conectar ao ChatGPT**, ou gere um token para outro cliente MCP.
 5. Autorize somente a sessão e as permissões que deseja compartilhar.
 
-O instalador inclui Node.js e cloudflared. Não é necessário instalar ferramentas de desenvolvimento para usar o aplicativo. O instalador inicial não tem assinatura Authenticode.
+O instalador inclui o serviço (em Rust, dentro do próprio aplicativo) e o cloudflared. Não é necessário instalar ferramentas de desenvolvimento para usar o aplicativo. O instalador inicial não tem assinatura Authenticode.
 
 Fechar a janela mantém o aplicativo na bandeja. Clique no ícone verde para abrir novamente; use **Sair** para encerrar o serviço e o túnel. O computador deve permanecer ligado e conectado à internet.
 
@@ -110,7 +110,7 @@ npm ci
 npm run desktop
 ```
 
-Prévia web: execute `npm run server` e `npm run dev`; informe o conteúdo do arquivo local `admin.token` no formulário de desenvolvimento. O aplicativo Tauri usa comunicação interna e não precisa desse passo.
+Prévia web: execute `npm run server` (backend Rust em `src-tauri/server`) e `npm run dev`; informe o conteúdo do arquivo local `admin.token` no formulário de desenvolvimento. O aplicativo Tauri usa comunicação interna e não precisa desse passo.
 
 ```sh
 npm run check
@@ -150,7 +150,7 @@ O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e public
 
 ## Limites desta versão
 
-- A integração usa Baileys, um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço.
+- A integração usa [whatsapp-rust](https://github.com/jlucaso1/whatsapp-rust), um cliente não oficial do WhatsApp Web, sem afiliação à Meta. Pode exigir novo pareamento após mudanças do serviço. Instalações que usavam a versão anterior (Baileys) precisam ler o QR de novo; conversas, contatos e histórico já salvos são mantidos.
 - O histórico depende do conteúdo disponibilizado pelo WhatsApp na sincronização; não há garantia de recuperar todo o histórico antigo.
 - Anexos são baixados sob demanda pelo MCP, até 10 MiB; disponibilidade depende do WhatsApp e da sincronização.
 - Envio MCP de texto; sem envio de mídia.
@@ -160,7 +160,8 @@ O CI usa o secret `TAURI_SIGNING_PRIVATE_KEY` para assinar o instalador e public
 
 - [Tauri: bandeja do sistema](https://v2.tauri.app/learn/system-tray/)
 - [Cloudflare: túnel pela API](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel-api/)
-- [Baileys](https://github.com/WhiskeySockets/Baileys)
+- [whatsapp-rust](https://github.com/jlucaso1/whatsapp-rust)
+- [Axum](https://github.com/tokio-rs/axum)
 - [Autenticação de plugins no ChatGPT](https://developers.openai.com/plugins/build/auth)
 
 Licença MIT.

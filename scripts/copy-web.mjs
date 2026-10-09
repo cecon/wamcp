@@ -1,7 +1,7 @@
 import { cpSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-// The Node runtime serves the agent web app (/app) from runtime/web; Tauri bundles runtime/ as a resource.
+// The Rust backend serves the agent web app (/app) from runtime/web; Tauri bundles runtime/ as a resource.
 const dist = path.resolve('dist'),
   target = path.resolve('src-tauri', 'runtime', 'web');
 if (!existsSync(path.join(dist, 'agent.html')))

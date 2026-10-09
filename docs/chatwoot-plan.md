@@ -1,5 +1,7 @@
 # Plano: helpdesk estilo Chatwoot sobre o WhatsAppMcp
 
+> **Atualização (2026-10-06):** o backend foi reescrito em Rust (Axum + rusqlite + whatsapp-rust) em `src-tauri/server`, com a mesma API, o mesmo esquema SQLite e a mesma arquitetura hexagonal (`domain`, `application`, `adapters`). Os caminhos `server/*.mjs` citados abaixo referem-se à implementação Node original, removida.
+
 Status: fases 1, 2 e 3 implementadas no branch `feat/helpdesk-fase1` (2026-10-06). Ficaram de fora macros e atributos customizados.
 
 ## Fase 1: o que foi entregue
