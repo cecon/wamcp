@@ -12,11 +12,23 @@ export class ApiError extends Error {
   }
 }
 
+/** A 403: the agent's role does not allow the resource. */
+export const isForbidden = (error: unknown) => error instanceof ApiError && error.status === 403;
+
 /** Same-origin call to /api/v1 with the session cookie; state-changing requests carry the CSRF token. */
-export async function http<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+export function http<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/api/v1${path}`, method, body);
+}
+
+/** First-run setup under /api/helpdesk: whether an administrator exists, and creating it. */
+export function firstRun<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(`/api/helpdesk${path}`, method, body);
+}
+
+async function request<T>(url: string, method: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(url, {
     method,
     credentials: 'same-origin',
     headers,
@@ -26,6 +38,34 @@ export async function http<T>(path: string, method = 'GET', body?: unknown): Pro
   if (!response.ok)
     throw new ApiError(data?.error || 'Não foi possível concluir a operação.', response.status);
   return data as T;
+}
+
+/** Multipart POST: the browser sets the boundary, so no JSON content-type here. */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const response = await fetch(`/api/v1${path}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body: form,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError(data?.error || 'Não foi possível enviar o arquivo.', response.status);
+  return data as T;
+}
+
+/** Downloads a file served by the API (transcripts, CSV exports) through a temporary link. */
+export async function download(path: string, filename: string) {
+  const response = await fetch(`/api/v1${path}`, { credentials: 'same-origin' });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error || 'Não foi possível baixar o arquivo.', response.status);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export const query = (params: Record<string, string | number | undefined | null>) => {
@@ -48,7 +88,13 @@ const EVENTS = [
   'notification.created',
   'contact.created',
   'contact.updated',
+  'contact.deleted',
   'presence.update',
+  'conversation.typing_on',
+  'conversation.typing_off',
+  'sla.missed',
+  'catalog.updated',
+  'catalog.import.updated',
 ];
 
 export interface RealtimeEvent {
@@ -100,6 +146,19 @@ export function duration(seconds: number | null | undefined) {
   if (s < 3600) return `${Math.round(s / 60)}min`;
   const minutes = Math.round((s % 3600) / 60);
   return `${Math.floor(s / 3600)}h${minutes ? ` ${minutes}min` : ''}`;
+}
+
+/** Bytes → "820 B", "12 KB", "1,5 MB". */
+export function humanSize(bytes: number | null | undefined) {
+  if (bytes == null) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes,
+    unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toLocaleString('pt-BR', { maximumFractionDigits: unit ? 1 : 0 })} ${units[unit]}`;
 }
 
 /** Chatwoot-style short relative time: "agora", "5m", "3h", "2d", then the date. */

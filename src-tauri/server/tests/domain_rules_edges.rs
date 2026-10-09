@@ -111,7 +111,10 @@ fn rule_validation_reports_each_problem() {
         action("open_conversation", json!([])),
     ];
     assert!(validate_rule("conversation_opened", &[], &fine).is_ok());
-    assert_eq!((CONDITION_ATTRIBUTES.len(), OPERATORS.len(), ACTIONS.len()), (9, 6, 9));
+    assert_eq!(
+        (CONDITION_ATTRIBUTES.len(), OPERATORS.len(), ACTIONS.len()),
+        (11, 7, 16)
+    );
 }
 
 #[test]
@@ -130,7 +133,11 @@ fn automation_events_ignore_unrelated_payloads() {
         ["message_created"]
     );
     assert!(automation_events_for("conversation.status_changed", &json!({})).is_empty());
-    assert!(automation_events_for("conversation.updated", &json!({ "status": "open" })).is_empty());
+    assert_eq!(
+        automation_events_for("conversation.updated", &json!({ "status": "open" })),
+        ["conversation_updated"]
+    );
+    assert!(automation_events_for("contact.updated", &json!({})).is_empty());
 }
 
 #[test]

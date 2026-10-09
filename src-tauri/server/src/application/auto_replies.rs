@@ -4,7 +4,7 @@ use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
 use crate::domain::actor::Actor;
 use crate::domain::csat::{CSAT_SURVEY, CSAT_THANKS};
-use crate::domain::model::{Conversation, ConversationChanges};
+use crate::domain::model::{Conversation, ConversationChanges, ReportingEvent};
 use crate::domain::schedule::is_open;
 
 #[derive(Clone)]
@@ -58,8 +58,23 @@ impl AutoReplyService {
                 ..Default::default()
             };
             if core.update(data.id, changes).is_ok() {
-                self.send("csat", "Pesquisa de satisfação", data.display_id, CSAT_SURVEY)
-                    .await;
+                let sent = ReportingEvent {
+                    name: "csat_sent",
+                    value: 0,
+                    user_id: data.assignee_id,
+                    inbox_id: data.inbox_id,
+                    conversation_id: data.id,
+                    created_at: core.now(),
+                };
+                let _ = core.repo.record_event(&sent);
+                let survey = inbox.csat_survey_message.as_deref().filter(|m| !m.trim().is_empty());
+                self.send(
+                    "csat",
+                    "Pesquisa de satisfação",
+                    data.display_id,
+                    survey.unwrap_or(CSAT_SURVEY),
+                )
+                .await;
             }
         }
     }

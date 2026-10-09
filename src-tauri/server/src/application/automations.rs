@@ -5,7 +5,7 @@ use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
 use super::ports::NewRule;
 use crate::domain::actor::Actor;
-use crate::domain::automation::{automation_events_for, matches_conditions, raw_text, validate_rule};
+use crate::domain::automation::{automation_events_for, matches_conditions, validate_rule};
 use crate::domain::error::{HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{AutomationRule, Conversation, RuleFields};
@@ -16,9 +16,9 @@ pub struct AutomationService {
     pub helpdesk: HelpdeskService,
 }
 
-fn context(conversation: &Conversation, message: Option<&Value>) -> Value {
+fn context(conversation: &Conversation, email: Option<String>, message: Option<&Value>) -> Value {
     let id = |v: Option<i64>| v.map(|v| v.to_string());
-    json!({
+    let mut context = json!({
         "content": message.map(|m| m["content"].clone()),
         "message_type": message.map(|m| m["message_type"].clone()),
         "status": conversation.status,
@@ -28,13 +28,15 @@ fn context(conversation: &Conversation, message: Option<&Value>) -> Value {
         "labels": conversation.labels,
         "contact_phone": conversation.contact_phone,
         "contact_name": conversation.contact_name,
-    })
-}
-
-fn param_id(params: &[Value]) -> Option<i64> {
-    params
-        .first()
-        .and_then(|p| p.as_i64().or_else(|| p.as_str()?.trim().parse().ok()))
+        "contact_email": email,
+        "priority": conversation.priority,
+    });
+    if let Some(attributes) = conversation.custom_attributes.as_object() {
+        for (key, value) in attributes {
+            context[format!("custom_attribute:{key}")] = value.clone();
+        }
+    }
+    context
 }
 
 impl AutomationService {
@@ -48,43 +50,24 @@ impl AutomationService {
 
     async fn run(&self, rule: &AutomationRule, conversation: &Conversation) {
         let actor = Actor::system("automation", &format!("Automação “{}”", rule.name));
-        let id = conversation.display_id;
-        let (hd, repo) = (&self.helpdesk, &self.helpdesk.core.repo);
-        for action in &rule.actions {
-            let params = &action.action_params;
-            let Ok(Some(current)) = repo.conversation_by_id(conversation.id) else {
-                continue;
-            };
-            let text = params.first().map(raw_text).unwrap_or_default();
-            let titles = |p: &[Value]| p.iter().map(raw_text).collect::<Vec<_>>();
-            // One failing action (e.g. an agent removed from the inbox) must not stop the others.
-            let _ = match action.action_name.as_str() {
-                "assign_agent" => match param_id(params) {
-                    Some(user) => hd.assign(&actor, id, Some(Some(user)), None).map(drop),
-                    None => Ok(()),
-                },
-                "assign_team" => match param_id(params) {
-                    Some(team) => hd.assign(&actor, id, None, Some(Some(team))).map(drop),
-                    None => Ok(()),
-                },
-                "add_label" => {
-                    let mut labels = current.labels.clone();
-                    labels.extend(titles(params).into_iter().filter(|t| !current.labels.contains(t)));
-                    hd.set_labels(&actor, id, &labels).map(drop)
-                }
-                "remove_label" => {
-                    let removed = titles(params);
-                    let labels: Vec<String> = current.labels.into_iter().filter(|l| !removed.contains(l)).collect();
-                    hd.set_labels(&actor, id, &labels).map(drop)
-                }
-                "send_message" => hd.reply(&actor, id, &text, false).await.map(drop),
-                "add_private_note" => hd.reply(&actor, id, &text, true).await.map(drop),
-                "resolve_conversation" => hd.toggle_status(&actor, id, "resolved", None).map(drop),
-                "open_conversation" => hd.toggle_status(&actor, id, "open", None).map(drop),
-                "set_priority" => hd.set_priority(&actor, id, Some(text.as_str())).map(drop),
-                _ => Ok(()),
-            };
-        }
+        let _ = self
+            .helpdesk
+            .run_actions(&actor, conversation.display_id, &rule.actions)
+            .await;
+    }
+
+    /// Duplicates a rule (Chatwoot "clone"); the copy starts inactive.
+    pub fn clone_rule(&self, actor: &Actor, id: i64) -> Result<AutomationRule> {
+        require_admin(actor)?;
+        let rule = self.find(id)?;
+        self.helpdesk.core.repo.create_rule(&NewRule {
+            name: format!("{} (cópia)", rule.name),
+            description: rule.description,
+            event_name: rule.event_name,
+            conditions: rule.conditions,
+            actions: rule.actions,
+            active: false,
+        })
     }
 
     pub async fn on_event(&self, envelope: Envelope) {
@@ -105,8 +88,14 @@ impl AutomationService {
             let Ok(rules) = repo.active_rules(name) else {
                 continue;
             };
+            let email = repo
+                .contact(conversation.contact_id)
+                .ok()
+                .flatten()
+                .and_then(|c| c.email);
+            let context = context(&conversation, email, message);
             for rule in rules {
-                if matches_conditions(&rule.conditions, &context(&conversation, message)) {
+                if matches_conditions(&rule.conditions, &context) {
                     self.run(&rule, &conversation).await;
                 }
             }

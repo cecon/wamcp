@@ -1,6 +1,14 @@
 {
   "identifier": "default",
-  "description": "Main window capabilities",
+  "description": "Main window: desktop commands (start with Windows, tunnel, updates)",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "allow-runtime-status",
+    "allow-configure-tunnel",
+    "allow-autostart-status",
+    "allow-set-autostart",
+    "allow-check-update",
+    "allow-install-update"
+  ]
 }

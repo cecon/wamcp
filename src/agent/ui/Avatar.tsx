@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { cn } from './cn';
 import { initials } from '../api';
 import type { Availability } from '../types';
@@ -28,20 +29,33 @@ interface Props {
   size?: number;
   status?: Availability;
   className?: string;
+  /** Photo (e.g. the contact's WhatsApp picture); initials show while missing or if it fails. */
+  src?: string | null;
 }
 
-export function Avatar({ name, size = 32, status, className }: Props) {
+export function Avatar({ name, size = 32, status, className, src }: Props) {
   const label = name || '?';
   const [background, color] = pick(label);
+  const [broken, setBroken] = useState<string | null>(null);
+  const photo = src && broken !== src ? src : null;
   return (
     <span className={cn('relative inline-flex shrink-0', className)} style={{ width: size, height: size }}>
-      <span
-        className="flex size-full items-center justify-center rounded-full font-medium select-none"
-        style={{ background, color, fontSize: Math.max(10, Math.round(size * 0.4)) }}
-        aria-hidden
-      >
-        {initials(label)}
-      </span>
+      {photo ? (
+        <img
+          src={photo}
+          alt=""
+          className="size-full rounded-full object-cover"
+          onError={() => setBroken(photo)}
+        />
+      ) : (
+        <span
+          className="flex size-full items-center justify-center rounded-full font-medium select-none"
+          style={{ background, color, fontSize: Math.max(10, Math.round(size * 0.4)) }}
+          aria-hidden
+        >
+          {initials(label)}
+        </span>
+      )}
       {status && (
         <span
           className={cn(

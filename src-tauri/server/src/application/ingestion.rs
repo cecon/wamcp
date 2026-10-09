@@ -9,7 +9,7 @@ use crate::domain::helpdesk::{
 };
 use crate::domain::model::{
     ContactChanges, ContactInbox, Conversation, ConversationChanges as Changes, CsatResponse, Inbox, Message,
-    NewMessage, WaMessage,
+    NewAttachment, NewMessage, WaMessage,
 };
 use serde_json::json;
 
@@ -57,16 +57,20 @@ impl HelpdeskService {
         events: &mut Events,
     ) -> Result<Option<Message>> {
         let repo = &self.core.repo;
-        let content_type = if TEXT_KINDS.contains(&d.kind.as_str()) {
-            "text"
-        } else {
-            d.kind.as_str()
+        let attachment = self.incoming_attachment(conversation.inbox_id, d)?;
+        let content_type = match &attachment {
+            Some(a) => a.file_type.as_str(),
+            None if TEXT_KINDS.contains(&d.kind.as_str()) => "text",
+            None => d.kind.as_str(),
         };
-        let message = repo.insert_message(&NewMessage {
+        let caption_only = attachment.is_some()
+            && (d.body.starts_with('[') && d.body.ends_with(']')
+                || attachment.as_ref().and_then(|a| a.file_name.as_deref()) == Some(d.body.as_str()));
+        let mut message = repo.insert_message(&NewMessage {
             conversation_id: conversation.id,
             inbox_id: conversation.inbox_id,
             message_type: if d.from_me { "outgoing" } else { "incoming" }.into(),
-            content: Some(d.body.clone()),
+            content: (!caption_only).then(|| d.body.clone()),
             content_type: Some(content_type.into()),
             sender_type: Some(if d.from_me { "system" } else { "contact" }.into()),
             sender_id: (!d.from_me).then_some(ci.contact_id),
@@ -90,6 +94,13 @@ impl HelpdeskService {
                     ..Default::default()
                 },
             )?;
+        }
+        if let (Some(stored), Some(attachment)) = (&message, attachment) {
+            repo.insert_attachment(&NewAttachment {
+                message_id: stored.id,
+                ..attachment
+            })?;
+            message = repo.message(stored.id)?;
         }
         if let Some(message) = &message {
             events.push("message.created", message);
@@ -154,16 +165,24 @@ impl HelpdeskService {
         let Some(ci) = self.contact_inbox_for(&inbox, d, events)? else {
             return Ok(None);
         };
+        // Blocked contacts are kept out of the helpdesk (the message stays in the WhatsApp mirror).
+        if !d.from_me && repo.contact(ci.contact_id)?.is_some_and(|c| c.blocked != 0) {
+            return Ok(None);
+        }
         let latest = repo.latest_conversation(ci.id)?;
         if let Some(message) = self.capture_csat(latest.as_ref(), &ci, d, events)? {
             return Ok(message);
         }
+        // Muted conversations keep new contact messages without reopening or alerting anyone.
+        let muted = latest.as_ref().is_some_and(|c| c.muted != 0);
         let route = if d.from_me {
             route_own_message(latest.as_ref())
+        } else if muted {
+            Route::Reuse { reopen: false }
         } else {
             route_incoming(latest.as_ref(), &inbox)
         };
-        let status = initial_status(inbox.agent_bot_enabled != 0);
+        let status = initial_status(inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some());
         let conversation = match (route, latest) {
             (Route::Ignore, _) => return Ok(None),
             (Route::Create, _) | (Route::Reuse { .. }, None) => {
@@ -189,11 +208,11 @@ impl HelpdeskService {
             last_activity_at: Some(conversation.last_activity_at.max(d.ts)),
             ..Default::default()
         };
-        if !d.from_me {
+        if !d.from_me && !muted {
             changes.waiting_since = Some(Some(conversation.waiting_since.unwrap_or(d.ts)));
         }
         let updated = core.update(conversation.id, changes)?;
-        if !d.from_me {
+        if !d.from_me && !muted {
             core.auto_assign(updated, events)?;
         }
         Ok(message)

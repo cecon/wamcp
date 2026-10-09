@@ -1,5 +1,6 @@
 //! Test harness: the full stack over SQLite with in-memory WhatsApp, webhook and callback ports.
 #![allow(dead_code)]
+pub mod filters;
 pub mod http;
 
 use async_trait::async_trait;
@@ -8,6 +9,9 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Arc;
 use wamcp_server::adapters::outbound::clock::ManualClock;
+use wamcp_server::adapters::outbound::crawler::memory::ScriptedCrawler;
+use wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher;
+use wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage;
 use wamcp_server::adapters::outbound::sqlite::SqliteStore;
 use wamcp_server::adapters::outbound::whatsapp::memory::MemoryWhatsApp;
 use wamcp_server::application::event_bus::Envelope;
@@ -20,7 +24,6 @@ use wamcp_server::domain::model::{Message, Session, WaMessage};
 
 pub use http::Agent;
 
-pub const ADMIN_TOKEN: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 pub const PASSWORD: &str = "senha-segura-123";
 pub const START: i64 = 1_800_000_000;
 pub const ORIGIN: &str = "https://wamcp.cappyfy.com";
@@ -110,8 +113,13 @@ pub struct Fixture {
     pub sender: Arc<RecordingSender>,
     pub callback: Arc<RecordingCallback>,
     pub clock: Arc<ManualClock>,
+    pub storage: Arc<MemoryMediaStorage>,
+    pub crawler: Arc<ScriptedCrawler>,
+    pub images: Arc<MemoryImageFetcher>,
     pub events: Arc<Mutex<Vec<Envelope>>>,
     pub dir: Option<tempfile::TempDir>,
+    /// The administrator session used by `admin()` and `bootstrap()`, created on first use.
+    pub admin_agent: Mutex<Option<Agent>>,
 }
 
 /// Options for a live WhatsApp message simulated through the adapter sink.
@@ -163,6 +171,9 @@ impl Fixture {
         let sender = Arc::new(RecordingSender::default());
         let callback = Arc::new(RecordingCallback::default());
         let clock = Arc::new(ManualClock::at(START * 1000));
+        let storage = Arc::new(MemoryMediaStorage::default());
+        let crawler = Arc::new(ScriptedCrawler::default());
+        let images = Arc::new(MemoryImageFetcher::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa.clone(),
@@ -170,10 +181,12 @@ impl Fixture {
             sender: sender.clone(),
             callback: callback.clone(),
             clock: clock.clone(),
+            storage: storage.clone(),
+            crawler: crawler.clone(),
+            images: images.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
-            admin_token: ADMIN_TOKEN.into(),
             version: "test".into(),
             web_dir: Arc::new(move || web.clone()),
         };
@@ -191,8 +204,12 @@ impl Fixture {
             sender,
             callback,
             clock,
+            storage,
+            crawler,
+            images,
             events,
             dir,
+            admin_agent: Mutex::new(None),
         }
     }
 
@@ -238,11 +255,17 @@ impl Fixture {
             .expect("ingest")
     }
 
+    /// The first administrator ("Admin", admin@example.com), created through first-run setup.
     pub async fn bootstrap(&self) -> Agent {
+        if let Some(admin) = self.admin_agent.lock().clone() {
+            return admin;
+        }
         let body = json!({ "name": "Admin", "email": "admin@example.com", "password": PASSWORD });
         let reply = self.admin("POST", "/api/helpdesk/bootstrap", Some(body)).await;
         assert_eq!(reply.status, 201, "bootstrap: {:?}", reply.body);
-        self.login("admin@example.com", PASSWORD).await.expect("admin login")
+        let admin = self.login("admin@example.com", PASSWORD).await.expect("admin login");
+        *self.admin_agent.lock() = Some(admin.clone());
+        admin
     }
 
     /// Creates an agent (optionally in the first inbox) and logs in as them.

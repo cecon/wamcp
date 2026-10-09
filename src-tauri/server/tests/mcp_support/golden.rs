@@ -156,6 +156,14 @@ fn exact(golden: &Value, actual: &Value, errors: &mut Vec<String>) {
     }
 }
 
+/// The `catalog_*` tools were added after the Node capture; tool lists are compared without them.
+fn without_catalog_tools(mut body: Value) -> Value {
+    if let Some(tools) = body.pointer_mut("/result/tools").and_then(Value::as_array_mut) {
+        tools.retain(|t| !t["name"].as_str().unwrap_or_default().starts_with("catalog_"));
+    }
+    body
+}
+
 /// Every difference between the golden `case` and the actual `reply`, prefixed with the case name.
 pub fn compare(case: &Value, reply: &Reply) -> Vec<String> {
     let name = case["name"].as_str().unwrap_or_default();
@@ -184,7 +192,11 @@ pub fn compare(case: &Value, reply: &Reply) -> Vec<String> {
     } else if STRUCTURAL.contains(&name) {
         structural(name, &golden, &normalize(reply.body.clone()), &mut errors);
     } else {
-        exact(&golden, &normalize(reply.body.clone()), &mut errors);
+        exact(
+            &golden,
+            &without_catalog_tools(normalize(reply.body.clone())),
+            &mut errors,
+        );
     }
     errors.into_iter().map(|e| format!("[{name}] {e}")).collect()
 }

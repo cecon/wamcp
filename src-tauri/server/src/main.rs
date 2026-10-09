@@ -10,10 +10,7 @@ async fn main() {
             std::process::exit(1);
         }
     };
-    println!(
-        "WA MCP: admin em {} e público em {}",
-        running.admin_addr, running.public_addr
-    );
+    println!("WA MCP: serviço em http://{}/app/", running.addr);
     let _ = tokio::signal::ctrl_c().await;
     running.stop().await;
 }

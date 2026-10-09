@@ -3,13 +3,14 @@ use super::error::{fail, Result};
 use super::model::{Action, Condition};
 use serde_json::Value;
 
-pub const AUTOMATION_EVENTS: [&str; 4] = [
+pub const AUTOMATION_EVENTS: [&str; 5] = [
     "conversation_created",
+    "conversation_updated",
     "conversation_opened",
     "conversation_resolved",
     "message_created",
 ];
-pub const CONDITION_ATTRIBUTES: [&str; 9] = [
+pub const CONDITION_ATTRIBUTES: [&str; 11] = [
     "content",
     "message_type",
     "status",
@@ -19,16 +20,19 @@ pub const CONDITION_ATTRIBUTES: [&str; 9] = [
     "labels",
     "contact_phone",
     "contact_name",
+    "contact_email",
+    "priority",
 ];
-pub const OPERATORS: [&str; 6] = [
+pub const OPERATORS: [&str; 7] = [
     "equal_to",
     "not_equal_to",
     "contains",
     "does_not_contain",
     "is_present",
     "is_not_present",
+    "starts_with",
 ];
-pub const ACTIONS: [&str; 9] = [
+pub const ACTIONS: [&str; 16] = [
     "assign_agent",
     "assign_team",
     "add_label",
@@ -38,9 +42,24 @@ pub const ACTIONS: [&str; 9] = [
     "resolve_conversation",
     "open_conversation",
     "set_priority",
+    "change_priority",
+    "snooze_conversation",
+    "mute_conversation",
+    "pending_conversation",
+    "remove_assigned_agent",
+    "remove_assigned_team",
+    "add_sla",
 ];
 const TEXT_ACTIONS: [&str; 2] = ["send_message", "add_private_note"];
-const NO_PARAM_ACTIONS: [&str; 2] = ["resolve_conversation", "open_conversation"];
+const NO_PARAM_ACTIONS: [&str; 7] = [
+    "resolve_conversation",
+    "open_conversation",
+    "snooze_conversation",
+    "mute_conversation",
+    "pending_conversation",
+    "remove_assigned_agent",
+    "remove_assigned_team",
+];
 const PRESENCE: [&str; 2] = ["is_present", "is_not_present"];
 
 /// Lowercased text form of a scalar JSON value (`null` reads as empty, like JS `String(v ?? '')`).
@@ -75,6 +94,7 @@ fn test(condition: &Condition, actual: &Value) -> bool {
         "not_equal_to" => !equals,
         "contains" => contains,
         "does_not_contain" => !contains,
+        "starts_with" => wanted.iter().any(|w| list.iter().any(|v| v.starts_with(w.as_str()))),
         _ => false,
     }
 }
@@ -98,12 +118,20 @@ pub fn matches_conditions(conditions: &[Condition], context: &Value) -> bool {
     result
 }
 
+/// Built-in attributes, or `custom_attribute:<key>` of the conversation.
+pub fn is_condition_attribute(key: &str) -> bool {
+    CONDITION_ATTRIBUTES.contains(&key)
+        || key
+            .strip_prefix("custom_attribute:")
+            .is_some_and(|k| !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
+}
+
 pub fn validate_rule(event_name: &str, conditions: &[Condition], actions: &[Action]) -> Result<()> {
     if !AUTOMATION_EVENTS.contains(&event_name) {
         return fail("Evento de automação inválido");
     }
     for c in conditions {
-        if !CONDITION_ATTRIBUTES.contains(&c.attribute_key.as_str()) {
+        if !is_condition_attribute(&c.attribute_key) {
             return fail("Condição inválida");
         }
         if !OPERATORS.contains(&c.filter_operator.as_str()) {
@@ -113,6 +141,11 @@ pub fn validate_rule(event_name: &str, conditions: &[Condition], actions: &[Acti
             return fail("Informe um valor para a condição");
         }
     }
+    validate_actions(actions)
+}
+
+/// Actions shared by automation rules and macros.
+pub fn validate_actions(actions: &[Action]) -> Result<()> {
     if actions.is_empty() {
         return fail("Inclua ao menos uma ação");
     }
@@ -144,6 +177,7 @@ pub fn raw_text(value: &Value) -> String {
 pub fn automation_events_for(event: &str, data: &Value) -> Vec<&'static str> {
     match event {
         "conversation.created" => vec!["conversation_created"],
+        "conversation.updated" => vec!["conversation_updated"],
         "message.created" if data["message_type"] != "activity" && !data["private"].as_bool().unwrap_or(false) => {
             vec!["message_created"]
         }

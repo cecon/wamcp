@@ -4,7 +4,8 @@
 //! Status, routing/auth headers, JSON-RPC errors (code, message, data) and envelopes are compared
 //! exactly; `session-a` is replaced by the real session id and `serverInfo.version` is ignored.
 //! Tool results whose content came from Node stub data are compared structurally (see `STRUCTURAL`).
-//! The golden fixture had the helpdesk configured, so every tool list holds all 13 tools, as in Rust.
+//! The golden fixture had the helpdesk configured, so every tool list holds all 13 tools, as in Rust
+//! (the `catalog_*` tools added later are left out of the comparison).
 mod common;
 mod mcp_support;
 

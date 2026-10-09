@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, Settings } from 'lucide-react';
+import { MessageCircle, Settings, Smartphone } from 'lucide-react';
 import { http } from '../api';
 import type { Catalog, Inbox, User } from '../types';
 import type { Route } from '../route';
@@ -8,6 +8,8 @@ import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
 import { SettingsHeader, SettingsPage, Toggle } from '../ui/Settings';
 import { InboxAutomation } from './InboxAutomation';
+import { InboxLimit } from './InboxLimit';
+import { InboxBotSelect } from './bots/InboxBotSelect';
 import { useAction } from './useAction';
 
 interface Props {
@@ -26,7 +28,14 @@ export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
     <SettingsPage>
       <SettingsHeader
         title="Caixas de entrada"
-        description="Cada sessão do WhatsApp conectada no app desktop é um canal. Novas sessões aparecem aqui automaticamente."
+        description="Cada conexão WhatsApp é um canal. Novas conexões criam a caixa de entrada automaticamente."
+        action={
+          <Button
+            icon={Smartphone}
+            label="Conexões WhatsApp"
+            onClick={() => onNavigate({ page: 'settings', section: 'connections' })}
+          />
+        }
         count={`${catalog.inboxes.length} caixa${catalog.inboxes.length === 1 ? '' : 's'}`}
       />
       <ul className="divide-y divide-n-weak border-t border-n-weak">
@@ -162,6 +171,12 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
               onChange={(v) => void patch({ lock_to_single_conversation: v })}
             />
             <Toggle
+              label="Mostrar o nome do agente"
+              hint="O cliente vê no WhatsApp quem respondeu, em negrito na primeira linha (ex.: *Maria*:)."
+              checked={inbox.show_agent_name !== 0}
+              onChange={(v) => void patch({ show_agent_name: v })}
+            />
+            <Toggle
               label="Ignorar grupos"
               hint="Grupos do WhatsApp não viram conversas."
               checked={Boolean(inbox.ignore_groups)}
@@ -174,6 +189,8 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
               onChange={(v) => void patch({ agent_bot_enabled: v })}
             />
           </div>
+          <InboxBotSelect inbox={inbox} onChange={onChange} />
+          <InboxLimit key={inbox.max_assignment_limit ?? 0} inbox={inbox} busy={busy} onSave={patch} />
         </div>
       )}
       {tab === 'collaborators' && (

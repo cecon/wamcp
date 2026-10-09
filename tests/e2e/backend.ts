@@ -6,13 +6,12 @@ import { createHash, randomBytes } from 'node:crypto';
 
 export const origin = 'https://wamcp.cappyfy.com';
 export const callback = 'https://chatgpt.com/connector/oauth/test-client';
-const adminToken = 'a'.repeat(64);
+const password = 'senha-segura-123';
 
-/** Runs the real Rust backend (without the WhatsApp adapter) on free ports and a throwaway data dir. */
+/** Runs the real Rust backend (without the WhatsApp adapter) on a free port and a throwaway data dir. */
 export async function startBackend() {
   const dir = mkdtempSync(path.join(tmpdir(), 'wamcp-e2e-'));
   const port = 20000 + Math.floor(Math.random() * 20000);
-  const [adminPort, publicPort] = [port, port + 1];
   const child: ChildProcess = spawn(
     'cargo',
     [
@@ -28,15 +27,13 @@ export async function startBackend() {
       env: {
         ...process.env,
         WAMCP_DATA_DIR: dir,
-        WAMCP_ADMIN_TOKEN: adminToken,
-        WAMCP_ADMIN_PORT: String(adminPort),
-        WAMCP_MCP_PORT: String(publicPort),
+        WAMCP_BIND: '127.0.0.1',
+        WAMCP_PORT: String(port),
       },
       stdio: 'ignore',
     },
   );
-  const url = `http://127.0.0.1:${publicPort}`,
-    adminUrl = `http://127.0.0.1:${adminPort}`;
+  const url = `http://127.0.0.1:${port}`;
   for (let attempt = 0; ; attempt++) {
     try {
       if ((await fetch(`${url}/healthz`)).ok) break;
@@ -46,10 +43,26 @@ export async function startBackend() {
     if (attempt > 600) throw new Error('Backend Rust não iniciou');
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+  // The first administrator is created locally (first-run setup), then used like the web app.
+  const json = { 'content-type': 'application/json' };
+  const account = { name: 'Admin', email: 'admin@example.com', password };
+  await fetch(`${url}/api/helpdesk/bootstrap`, {
+    method: 'POST',
+    headers: json,
+    body: JSON.stringify(account),
+  });
+  const login = await fetch(`${url}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: json,
+    body: JSON.stringify({ email: account.email, password }),
+  });
+  const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0];
+  const { csrf } = (await login.json()) as { csrf: string };
+  /** Administrator API calls: `/api/sessions/...` maps to `/api/v1/sessions/...`. */
   const admin = async (route: string, body?: unknown) => {
-    const response = await fetch(`${adminUrl}${route}`, {
+    const response = await fetch(`${url}/api/v1${route.replace(/^\/api/, '')}`, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+      headers: { ...json, cookie, 'x-csrf-token': csrf },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     return response.json();

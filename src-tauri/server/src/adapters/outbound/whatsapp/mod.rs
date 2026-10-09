@@ -5,3 +5,5 @@ pub mod client;
 pub mod describe;
 pub mod events;
 pub mod memory;
+#[cfg(feature = "whatsapp")]
+pub mod signals;

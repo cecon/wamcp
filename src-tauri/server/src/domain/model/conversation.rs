@@ -19,11 +19,15 @@ pub struct Conversation {
     pub first_reply_at: Option<i64>,
     pub agent_last_seen_at: Option<i64>,
     pub last_activity_at: i64,
-    pub custom_attributes: String,
+    pub custom_attributes: Value,
     pub created: String,
     pub csat_requested_at: Option<i64>,
+    #[serde(default)]
+    pub muted: i64,
     pub contact_name: Option<String>,
     pub contact_phone: Option<String>,
+    #[serde(default)]
+    pub contact_avatar_url: Option<String>,
     pub contact_jid: String,
     pub inbox_name: String,
     pub agent_bot_enabled: i64,
@@ -32,6 +36,9 @@ pub struct Conversation {
     pub labels: Vec<String>,
     pub last_message: Option<String>,
     pub unread_count: i64,
+    /// `active`, `hit` or `missed` when an SLA is applied.
+    #[serde(default)]
+    pub sla_status: Option<String>,
 }
 
 /// Lifecycle columns a use case may change; the outer `Option` means "leave untouched".
@@ -47,6 +54,7 @@ pub struct ConversationChanges {
     pub agent_last_seen_at: Option<Option<i64>>,
     pub last_activity_at: Option<i64>,
     pub csat_requested_at: Option<Option<i64>>,
+    pub muted: Option<bool>,
 }
 
 /// List filters shared by the conversation list and the tab counters.
@@ -61,6 +69,12 @@ pub struct ConversationFilters {
     pub page: i64,
     pub user_id: Option<i64>,
     pub visible_inbox_ids: Option<Vec<i64>>,
+    /// One of `domain::helpdesk::SORTS` (default `last_activity_at_desc`).
+    pub sort_by: Option<String>,
+    /// `unattended` (no first reply yet, or waiting), `mentions` or `participating`.
+    pub conversation_type: Option<String>,
+    /// Set for agents whose custom role limits which conversations they see.
+    pub limit: Option<crate::domain::roles::ConversationLimit>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -89,6 +103,8 @@ pub struct Message {
     pub content_attributes: Value,
     pub created_at: i64,
     pub sender_name: Option<String>,
+    #[serde(default)]
+    pub attachments: Vec<super::Attachment>,
 }
 
 /// A message about to be stored.

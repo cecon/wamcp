@@ -6,7 +6,7 @@ use crate::domain::helpdesk::{
     assignment_activity, labels_activity, normalize_label_title, status_activity, team_activity,
     validate_status_change, PRIORITIES,
 };
-use crate::domain::model::{Conversation, ConversationChanges as Changes};
+use crate::domain::model::{Conversation, ConversationChanges as Changes, Label};
 
 impl HelpdeskService {
     pub fn toggle_status(
@@ -120,8 +120,8 @@ impl HelpdeskService {
     }
 
     /// Replaces the conversation labels; every title must be an existing label.
-    pub fn set_labels(&self, actor: &Actor, display_id: i64, titles: &[String]) -> Result<Conversation> {
-        let conversation = self.core.load(Some(actor), display_id)?;
+    /// Existing labels for the given titles (422 naming the ones that do not exist).
+    pub(super) fn resolve_labels(&self, titles: &[String]) -> Result<Vec<Label>> {
         let mut wanted: Vec<String> = Vec::new();
         for title in titles {
             let slug = normalize_label_title(title)?;
@@ -142,6 +142,12 @@ impl HelpdeskService {
         if !missing.is_empty() {
             return fail_with(format!("Etiqueta inexistente: {}", missing.join(", ")), 422);
         }
+        Ok(labels)
+    }
+
+    pub fn set_labels(&self, actor: &Actor, display_id: i64, titles: &[String]) -> Result<Conversation> {
+        let conversation = self.core.load(Some(actor), display_id)?;
+        let labels = self.resolve_labels(titles)?;
         let next: Vec<String> = labels.iter().map(|l| l.title.clone()).collect();
         let added: Vec<String> = next
             .iter()

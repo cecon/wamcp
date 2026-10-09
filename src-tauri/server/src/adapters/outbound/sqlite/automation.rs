@@ -5,6 +5,7 @@ use crate::domain::model::{AutomationRule, Delivery, DueDelivery, RuleFields, We
 use rusqlite::types::Value as Sql;
 use serde_json::Value;
 
+const WEBHOOKS: &str = "SELECT w.*, b.id AS agent_bot_id FROM webhooks w LEFT JOIN agent_bots b ON b.webhook_id=w.id";
 const WEBHOOK: Shape = Shape {
     json: &["subscriptions"],
     bools: &[],
@@ -20,11 +21,11 @@ fn json_text(value: &impl serde::Serialize) -> Result<Sql> {
 
 impl AutomationRepo for SqliteStore {
     fn webhooks(&self) -> Result<Vec<Webhook>> {
-        self.rows("SELECT * FROM webhooks ORDER BY id", vec![], WEBHOOK)
+        self.rows(&format!("{WEBHOOKS} ORDER BY w.id"), vec![], WEBHOOK)
     }
 
     fn webhook(&self, id: i64) -> Result<Option<Webhook>> {
-        self.row("SELECT * FROM webhooks WHERE id=?", vec![int(id)], WEBHOOK)
+        self.row(&format!("{WEBHOOKS} WHERE w.id=?"), vec![int(id)], WEBHOOK)
     }
 
     fn create_webhook(
