@@ -6,6 +6,7 @@ use crate::application::catalog::CatalogService;
 use crate::application::event_bus::EventBus;
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::reports::ReportService;
@@ -23,6 +24,8 @@ pub struct Support {
     pub accounts: AccountService,
     pub helpdesk: HelpdeskService,
     pub catalog: CatalogService,
+    /// The product catalog (menu, `/catalog`).
+    pub menu: MenuService,
     pub notifications: NotificationService,
     pub webhooks: WebhookService,
     pub automations: AutomationService,

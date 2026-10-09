@@ -254,3 +254,64 @@ As respostas em português trazem preços formatados (`R$ 29,90`) e códigos PDV
 
 `message` traz o motivo em português quando `failed` ou a instrução quando `waiting_human` (“Confirme no navegador
 que você é humano”).
+
+## Esclarecimentos da implementação (backend)
+
+Decisões tomadas ao implementar o contrato (adições compatíveis; nada acima foi removido):
+
+- **Fuso horário**: a conta não tem fuso próprio, então `settings` ganhou `timezone` (padrão `America/Sao_Paulo`,
+  editável em `PATCH /catalog/settings`). Turnos (`shifts`) e `available_now` são avaliados nesse fuso.
+  `notes_max_length` aceita 0–500.
+- **Busca**: `GET /catalog/search?q=` devolve itens no mesmo formato completo de `GET /catalog` (até 20, ignorando
+  maiúsculas e acentos; nomes que começam com o termo vêm primeiro). `q` vazio é 400.
+- **Item**: `POST`/`PATCH /catalog/items` recebem `product { name, description, external_code, ean, serving,
+dietary, slices }`, `price_cents`, `original_price_cents`, `status`, `external_code`, `shifts`,
+  `groups: [{ group_id, min, max, position }]`; no `POST` também `category_id` e `type`. `type` é opcional e, se
+  vier, deve ser igual ao `template` da categoria (422). Campos ausentes no `PATCH` são mantidos; enviados, substituem
+  (`groups` enviado substitui todos os vínculos, na ordem da lista). Mover um item para categoria de outro modelo é 422. Pizza exige preço 0 (422). `external_code` é único entre categorias, entre itens e entre grupos (409);
+  em opções e produtos pode repetir.
+- **Grupos**: `options` é a lista completa (com `id` mantém/atualiza, sem `id` cria, ausentes são apagados);
+  a resposta traz as opções com `id` na ordem de `position` (padrão: a ordem enviada). `product_id` numa opção
+  reaproveita um produto existente. Opções de `size` exigem `fractions` (1–4); `size_prices` só em `topping` e
+  apontando para opções de grupos `size`; `item_id` só em `combo_main` e nunca para um item `combo`. Ao salvar um
+  grupo, todos os itens que o usam são revalidados na mesma transação (ex.: tirar o tamanho de 2 sabores de uma
+  pizza que aceita 2 sabores é 422 “‘Pizza’ ficaria inválido: …”).
+- **Combo**: o item `combo` precisa de exatamente um grupo `combo_main` (422). Na cotação, cada opção com `item_id`
+  valida as escolhas aninhadas contra os grupos do item apontado e soma só os acréscimos (o preço base do item
+  apontado já está no combo). Até 3 níveis (combo → item → complementos); além disso: “Complementos aninhados demais”.
+- **Cotação**: item inexistente é 404; demais problemas vão em `errors` (o preço é calculado mesmo assim).
+  `quantity` 1–99. As `lines` somam exatamente `unit_price_cents` (quantidade × preço da linha): a primeira linha é o
+  item; em pizza, cada sabor vira uma linha `“1/2 Calabresa”` com a sua parte da cobrança (o resto do arredondamento
+  vai para o primeiro sabor). Um sabor sem preço para o tamanho usa o seu `price_cents`.
+- **Fotos**: `POST /catalog/products/{id}/image` devolve o Produto atualizado (com `image_url`); o arquivo é validado
+  pelo conteúdo (PNG/JPG/WebP), não pela extensão. `DELETE` ignora o corpo e devolve o Produto. Os arquivos ficam em
+  `<pasta de dados>/catalog/` e o nome não é reaproveitado.
+- **Importação**: `POST /catalog/imports` (201) e `POST /catalog/imports/{id}/apply` devolvem o ImportJob
+  (`apply` → `status: "applied"`). Só uma importação roda por vez (409). `DELETE` também descarta uma prévia `ready`;
+  em importações já terminadas (`applied`/`failed`) é 409. `counts` ganhou `images_failed` (fotos que não puderam ser
+  baixadas ao aplicar; não fazem a importação falhar). O evento `catalog.import.updated` traz o ImportJob (sem o JSON
+  capturado). `replace` também volta `pizza_pricing` para o da prévia (`greater`). Leitura e aplicação de importações
+  são só para administradores. Ao reiniciar o servidor, importações que estavam em andamento ficam `failed`.
+- **Merge**: categorias casam por `ifood_id`, depois `external_code`, depois nome; a única categoria de pizza local
+  recebe a de pizza importada. Itens, grupos e opções casam por `ifood_id` e depois `external_code`. Opções de um
+  grupo importado que não vieram na importação são apagadas; itens e categorias só locais são mantidos.
+- **Conversor**: no formato consumidor, o nome do item vem em `description` e a descrição em `details`; preço 0 usa
+  `unitMinPrice`. Pizza é detectada por heurística: escolha com “tamanho” = tamanho, escolhas com “sabor” = sabores
+  (fundidas num grupo `topping` com máximo = soma dos máximos), “massa” = massa, “borda” = borda; a categoria é de
+  pizza quando um item tem tamanho e sabores, ou quando o nome tem “pizza” e um item tem tamanho (nesse caso cada item
+  vira uma pizza de um sabor só, com o próprio nome; tamanho com preço 0 recebe o preço do item). Grupos com
+  “bebida/refrigerante/suco” viram `offer_unit`, “talher” `cutlery`, escolhas de preço 0 e máximo 1
+  `specification`, o resto `ingredients`. Se vierem várias categorias de pizza, só a primeira fica `pizza`; as outras
+  viram `default`. No Catalog v2, `optionGroupType` define o tipo; em categorias `COMBO` o primeiro grupo vira
+  `combo_main` (as opções não ficam ligadas a itens). Categorias vazias são descartadas, textos são cortados nos
+  limites e nomes repetidos ganham “(2)”.
+- **Crawler**: só aceita `https://ifood.com.br/…` ou `https://www.ifood.com.br/…`. Navegador: `WAMCP_BROWSER`,
+  `CHROME_PATH`, Edge e depois Chrome/Chromium nos caminhos padrão. Detecta verificação pelo título (“Um momento”,
+  “Just a moment”, “Executando verificação”, “Attention Required”…) ou por iframes de desafio e apenas informa
+  `waiting_human`. Guarda respostas JSON cujo endereço contém `catalog`, `menu` ou `site-api`.
+- **MCP**: `catalog_search`, `catalog_item` e `catalog_quote` usam o escopo `whatsapp:read`; `catalog_send_item` exige
+  `whatsapp:send`, envia na conversa (`conversation_id` = número da conversa) da caixa de entrada da sessão, recusa
+  item indisponível e informa falha de envio. Fotos WebP não são anexadas (o WhatsApp as trataria como figurinha);
+  vai só o texto. `catalog_quote` recebe `choices` como `[{ option_id, quantity, choices }]`.
+- **Auditoria**: escritas em categorias, itens, grupos, configurações e a aplicação de importações entram no registro
+  de auditoria (`catalog_category`, `catalog_item`, `catalog_group`, `catalog_settings`, `catalog_import`).

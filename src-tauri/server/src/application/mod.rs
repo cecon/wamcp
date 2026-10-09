@@ -21,6 +21,7 @@ pub mod events;
 pub mod helpdesk;
 mod ingestion;
 pub mod macros;
+pub mod menu;
 mod message_actions;
 pub mod notifications;
 pub mod oauth;

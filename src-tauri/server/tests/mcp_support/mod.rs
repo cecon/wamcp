@@ -85,6 +85,8 @@ impl Mcp {
         let sender = Arc::new(RecordingSender::default());
         let clock = Arc::new(ManualClock::at(START * 1000));
         let storage = Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default());
+        let crawler = Arc::new(wamcp_server::adapters::outbound::crawler::memory::ScriptedCrawler::default());
+        let images = Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa_hooks.clone(),
@@ -93,6 +95,8 @@ impl Mcp {
             callback: callback_hooks.clone(),
             clock: clock.clone(),
             storage: storage.clone(),
+            crawler: crawler.clone(),
+            images: images.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -109,6 +113,8 @@ impl Mcp {
             callback,
             clock,
             storage,
+            crawler,
+            images,
             events,
             dir: None,
             admin_agent: Mutex::new(None),

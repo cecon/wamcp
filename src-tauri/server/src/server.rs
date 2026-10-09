@@ -91,6 +91,19 @@ fn whatsapp_port(
     ))
 }
 
+/// The iFood menu crawler: the installed Edge/Chrome with its own profile in `<data dir>/browser`.
+#[cfg(feature = "crawler")]
+fn crawler_port(dir: &Path) -> Arc<dyn crate::application::ports::MenuCrawler> {
+    Arc::new(crate::adapters::outbound::crawler::chromium::ChromiumCrawler {
+        profile: dir.join("browser"),
+    })
+}
+
+#[cfg(not(feature = "crawler"))]
+fn crawler_port(_dir: &Path) -> Arc<dyn crate::application::ports::MenuCrawler> {
+    Arc::new(crate::adapters::outbound::crawler::UnavailableCrawler)
+}
+
 async fn serve(
     router: axum::Router,
     bind: IpAddr,
@@ -139,6 +152,8 @@ pub async fn run(config: Config) -> Result<Running> {
         storage: Arc::new(crate::adapters::outbound::media_storage::FsMediaStorage::new(
             &config.data_dir,
         )),
+        crawler: crawler_port(&config.data_dir),
+        images: Arc::new(crate::adapters::outbound::image_fetcher::HttpImageFetcher::new()),
     };
     let settings = Settings {
         public_url: config.public_url,

@@ -10,10 +10,11 @@ use crate::application::core::Core;
 use crate::application::event_bus::{EventBus, Worker};
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::ports::{
-    Clock, EventCallback, MediaStorage, PasswordHasher, Repository, WebhookSender, WhatsApp,
+    Clock, EventCallback, ImageFetcher, MediaStorage, MenuCrawler, PasswordHasher, Repository, WebhookSender, WhatsApp,
 };
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
@@ -35,6 +36,10 @@ pub struct Ports {
     pub callback: Arc<dyn EventCallback>,
     pub clock: Arc<dyn Clock>,
     pub storage: Arc<dyn MediaStorage>,
+    /// Opens iFood store pages for the catalog import (a scripted fake in tests).
+    pub crawler: Arc<dyn MenuCrawler>,
+    /// Downloads imported catalog photos.
+    pub images: Arc<dyn ImageFetcher>,
 }
 
 pub struct Settings {
@@ -88,6 +93,12 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         helpdesk: helpdesk.clone(),
     };
     let reports = ReportService { core: core.clone() };
+    let menu = MenuService::new(
+        core.clone(),
+        ports.storage.clone(),
+        ports.crawler.clone(),
+        ports.images.clone(),
+    );
     let auto_replies = AutoReplyService {
         helpdesk: helpdesk.clone(),
     };
@@ -138,6 +149,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         },
         helpdesk: helpdesk.clone(),
         catalog: CatalogService { core: core.clone() },
+        menu: menu.clone(),
         notifications,
         webhooks,
         automations,
@@ -155,6 +167,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         whatsapp: ports.whatsapp.clone(),
         oauth: Some(oauth.clone()),
         helpdesk: Some(helpdesk.clone()),
+        menu: Some(menu),
     };
     let sink = Arc::new(WhatsAppSink {
         repo: ports.repo.clone(),

@@ -53,6 +53,9 @@ pub fn audit_entry(method: &str, path: &str) -> Option<AuditEntry> {
     if segments == ["actions", "contact_merge"] {
         return Some(entry("merge", "contact", None));
     }
+    if let ["catalog", rest @ ..] = segments.as_slice() {
+        return catalog_entry(method, rest);
+    }
     let (resource, rest) = segments.split_first()?;
     let kind = AUDITED.iter().find(|(name, _)| name == resource)?.1;
     let id = rest.first().and_then(|s| s.parse::<i64>().ok());
@@ -73,6 +76,34 @@ pub fn audit_entry(method: &str, path: &str) -> Option<AuditEntry> {
         _ => true,
     };
     configuration.then(|| entry(&action, kind, id))
+}
+
+/// Catalog writes: categories, items, groups and settings (`create`/`update`/`delete` or the named
+/// action, e.g. `reorder`, `duplicate`, `status`) and applying an import. Quotes, searches, photos and
+/// starting/cancelling imports are not recorded.
+fn catalog_entry(method: &str, rest: &[&str]) -> Option<AuditEntry> {
+    let (resource, rest) = rest.split_first()?;
+    let kind = match *resource {
+        "categories" => "catalog_category",
+        "items" => "catalog_item",
+        "groups" => "catalog_group",
+        "settings" => "catalog_settings",
+        "imports" => {
+            let apply = method == "POST" && rest.len() == 2 && rest[1] == "apply";
+            return apply.then(|| entry("apply", "catalog_import", None));
+        }
+        _ => return None,
+    };
+    let id = rest.first().and_then(|s| s.parse::<i64>().ok());
+    let sub = rest.iter().rev().find(|s| s.parse::<i64>().is_err()).copied();
+    let action = match (method, sub) {
+        ("POST", Some(sub)) => sub,
+        ("POST", None) => "create",
+        ("PATCH" | "PUT", None) => "update",
+        ("DELETE", None) => "delete",
+        _ => return None,
+    };
+    Some(entry(action, kind, id))
 }
 
 fn entry(action: &str, kind: &str, id: Option<i64>) -> AuditEntry {

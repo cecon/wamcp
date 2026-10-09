@@ -1,0 +1,104 @@
+{
+  "data": {
+    "menu": [
+      {
+        "code": "cat-pizzas",
+        "name": "Pizzas Salgadas",
+        "itens": [
+          {
+            "id": "it-monte",
+            "code": "MONTE",
+            "description": "Monte sua pizza",
+            "details": "Meio a meio na grande",
+            "unitPrice": 0,
+            "unitMinPrice": 40,
+            "choices": [
+              {
+                "code": "ch-tamanho",
+                "name": "Escolha o tamanho",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-media", "code": "MED", "description": "Média", "unitPrice": 0 },
+                  { "id": "g-grande", "code": "GRA", "description": "Grande", "unitPrice": 10 }
+                ]
+              },
+              {
+                "code": "ch-sabor1",
+                "name": "1º sabor",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-calab", "code": "CAL", "description": "Calabresa", "unitPrice": 45 },
+                  { "id": "g-mussa", "code": "MUS", "description": "Mussarela", "unitPrice": 40 }
+                ]
+              },
+              {
+                "code": "ch-sabor2",
+                "name": "2º sabor",
+                "min": 0,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-calab", "code": "CAL", "description": "Calabresa", "unitPrice": 45 },
+                  { "id": "g-mussa", "code": "MUS", "description": "Mussarela", "unitPrice": 40 }
+                ]
+              },
+              {
+                "code": "ch-massa",
+                "name": "Massa",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [{ "id": "g-trad", "description": "Tradicional", "unitPrice": 0 }]
+              },
+              {
+                "code": "ch-borda",
+                "name": "Borda recheada",
+                "min": 0,
+                "max": 1,
+                "garnishItens": [{ "id": "g-cat", "description": "Catupiry", "unitPrice": 7 }]
+              }
+            ]
+          },
+          {
+            "id": "it-calabresa",
+            "code": "PZCAL",
+            "description": "Calabresa",
+            "unitPrice": 45,
+            "choices": [
+              {
+                "code": "ch-tam-cal",
+                "name": "Tamanho",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  { "id": "g-cal-m", "description": "Média", "unitPrice": 0 },
+                  { "id": "g-cal-g", "description": "Grande", "unitPrice": 55 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "cat-doces",
+        "name": "Pizzas Doces",
+        "itens": [
+          {
+            "id": "it-choco",
+            "description": "Chocolate",
+            "unitPrice": 42,
+            "choices": [
+              {
+                "code": "ch-tam-choco",
+                "name": "Tamanho",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [{ "id": "g-choco-m", "description": "Média", "unitPrice": 0 }]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

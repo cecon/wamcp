@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 use std::path::Path;
 use std::sync::Arc;
 use wamcp_server::adapters::outbound::clock::ManualClock;
+use wamcp_server::adapters::outbound::crawler::memory::ScriptedCrawler;
+use wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher;
 use wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage;
 use wamcp_server::adapters::outbound::sqlite::SqliteStore;
 use wamcp_server::adapters::outbound::whatsapp::memory::MemoryWhatsApp;
@@ -112,6 +114,8 @@ pub struct Fixture {
     pub callback: Arc<RecordingCallback>,
     pub clock: Arc<ManualClock>,
     pub storage: Arc<MemoryMediaStorage>,
+    pub crawler: Arc<ScriptedCrawler>,
+    pub images: Arc<MemoryImageFetcher>,
     pub events: Arc<Mutex<Vec<Envelope>>>,
     pub dir: Option<tempfile::TempDir>,
     /// The administrator session used by `admin()` and `bootstrap()`, created on first use.
@@ -168,6 +172,8 @@ impl Fixture {
         let callback = Arc::new(RecordingCallback::default());
         let clock = Arc::new(ManualClock::at(START * 1000));
         let storage = Arc::new(MemoryMediaStorage::default());
+        let crawler = Arc::new(ScriptedCrawler::default());
+        let images = Arc::new(MemoryImageFetcher::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa.clone(),
@@ -176,6 +182,8 @@ impl Fixture {
             callback: callback.clone(),
             clock: clock.clone(),
             storage: storage.clone(),
+            crawler: crawler.clone(),
+            images: images.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -197,6 +205,8 @@ impl Fixture {
             callback,
             clock,
             storage,
+            crawler,
+            images,
             events,
             dir,
             admin_agent: Mutex::new(None),

@@ -8,9 +8,11 @@ license = "MIT"
 publish = false
 
 [features]
-default = ["whatsapp"]
+default = ["whatsapp", "crawler"]
 # The real WhatsApp adapter (whatsapp-rust). Tests use the in-memory fake port.
 whatsapp = ["dep:whatsapp-rust", "dep:waproto", "dep:buffa"]
+# The iFood menu crawler driving the installed Edge/Chrome (DevTools Protocol). Tests use a scripted fake.
+crawler = ["dep:chromiumoxide"]
 
 [dependencies]
 anyhow = "1"
@@ -43,6 +45,7 @@ tracing = "0.1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
 buffa = { version = "0.9", optional = true }
+chromiumoxide = { version = "0.9", optional = true, default-features = false }
 waproto = { version = "=0.7.0", optional = true }
 whatsapp-rust = { version = "=0.7.0", optional = true, default-features = false, features = ["sqlite-storage", "tokio-transport", "tokio-runtime", "ureq-client", "tokio-native", "signal"] }
 

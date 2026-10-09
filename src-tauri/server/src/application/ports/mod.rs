@@ -1,12 +1,14 @@
 //! Ports: what the use cases need from the outside world. Adapters implement them.
 mod catalog;
 mod external;
+mod menu;
 mod mirror;
 mod people;
 mod support;
 
 pub use catalog::*;
 pub use external::*;
+pub use menu::*;
 pub use mirror::*;
 pub use people::*;
 pub use support::*;
@@ -32,6 +34,8 @@ pub trait Repository:
     + NotificationRepo
     + CustomDataRepo
     + MacroRepo
+    + MenuRepo
+    + MenuImportRepo
     + SecurityRepo
     + AccountRepo
     + SearchRepo
@@ -63,6 +67,8 @@ impl<T> Repository for T where
         + NotificationRepo
         + CustomDataRepo
         + MacroRepo
+        + MenuRepo
+        + MenuImportRepo
         + SecurityRepo
         + AccountRepo
         + SearchRepo

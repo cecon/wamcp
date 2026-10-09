@@ -16,6 +16,9 @@ mod custom_data;
 pub mod error;
 pub mod input;
 mod macros;
+mod menu;
+mod menu_imports;
+mod menu_items;
 mod message_actions;
 mod messages;
 mod notifications;
@@ -61,6 +64,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(messages::routes())
         .merge(message_actions::routes())
         .merge(catalog::routes())
+        .merge(menu::routes())
         .merge(notifications::routes())
         .merge(automation::routes())
         .merge(macros::routes())

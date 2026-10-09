@@ -83,5 +83,47 @@ pub fn steps() -> Vec<String> {
            permissions TEXT NOT NULL DEFAULT '[]',created TEXT NOT NULL);
          ALTER TABLE users ADD COLUMN custom_role_id INTEGER REFERENCES custom_roles(id) ON DELETE SET NULL;"
             .into(),
+        // v20: catálogo de produtos (cardápio): categorias, produtos, itens, grupos de complementos,
+        // opções, preços de sabor por tamanho, configurações e importações do iFood (valores em centavos)
+        "CREATE TABLE menu_settings(id INTEGER PRIMARY KEY CHECK(id=1),
+           pizza_pricing TEXT NOT NULL DEFAULT 'greater' CHECK(pizza_pricing IN ('greater','average')),
+           notes_max_length INTEGER NOT NULL DEFAULT 140,timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo');
+         INSERT INTO menu_settings(id) VALUES(1);
+         CREATE TABLE menu_categories(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,description TEXT,
+           template TEXT NOT NULL DEFAULT 'default' CHECK(template IN ('default','pizza','combo')),external_code TEXT,
+           status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','unavailable')),
+           position INTEGER NOT NULL DEFAULT 0,ifood_id TEXT);
+         CREATE UNIQUE INDEX menu_one_pizza ON menu_categories(template) WHERE template='pizza';
+         CREATE TABLE menu_products(id INTEGER PRIMARY KEY,name TEXT NOT NULL,description TEXT,external_code TEXT,
+           ean TEXT,serving TEXT NOT NULL DEFAULT 'not_applicable',dietary TEXT NOT NULL DEFAULT '[]',image TEXT,
+           slices INTEGER,ifood_id TEXT);
+         CREATE TABLE menu_items(id INTEGER PRIMARY KEY,
+           category_id INTEGER NOT NULL REFERENCES menu_categories(id) ON DELETE RESTRICT,
+           kind TEXT NOT NULL DEFAULT 'default' CHECK(kind IN ('default','pizza','combo')),
+           product_id INTEGER NOT NULL REFERENCES menu_products(id),price_cents INTEGER NOT NULL DEFAULT 0,
+           original_price_cents INTEGER,status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','unavailable')),
+           external_code TEXT,shifts TEXT NOT NULL DEFAULT '[]',position INTEGER NOT NULL DEFAULT 0,ifood_id TEXT);
+         CREATE INDEX menu_items_category ON menu_items(category_id,position);
+         CREATE TABLE menu_groups(id INTEGER PRIMARY KEY,name TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN
+           ('ingredients','specification','offer_unit','cutlery','size','crust','edge','topping','combo_main')),
+           external_code TEXT,status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','unavailable')),
+           ifood_id TEXT);
+         CREATE TABLE menu_item_groups(item_id INTEGER NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+           group_id INTEGER NOT NULL REFERENCES menu_groups(id) ON DELETE RESTRICT,min INTEGER NOT NULL DEFAULT 0,
+           max INTEGER NOT NULL DEFAULT 1,position INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(item_id,group_id));
+         CREATE INDEX menu_item_groups_group ON menu_item_groups(group_id);
+         CREATE TABLE menu_options(id INTEGER PRIMARY KEY,
+           group_id INTEGER NOT NULL REFERENCES menu_groups(id) ON DELETE CASCADE,
+           product_id INTEGER NOT NULL REFERENCES menu_products(id),price_cents INTEGER NOT NULL DEFAULT 0,
+           original_price_cents INTEGER,status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','unavailable')),
+           external_code TEXT,max_quantity INTEGER NOT NULL DEFAULT 1,fractions TEXT,
+           item_id INTEGER REFERENCES menu_items(id) ON DELETE SET NULL,position INTEGER NOT NULL DEFAULT 0,ifood_id TEXT);
+         CREATE INDEX menu_options_group ON menu_options(group_id,position);
+         CREATE TABLE menu_size_prices(option_id INTEGER NOT NULL REFERENCES menu_options(id) ON DELETE CASCADE,
+           size_option_id INTEGER NOT NULL REFERENCES menu_options(id) ON DELETE CASCADE,
+           price_cents INTEGER NOT NULL,PRIMARY KEY(option_id,size_option_id));
+         CREATE TABLE menu_imports(id TEXT PRIMARY KEY,url TEXT NOT NULL,status TEXT NOT NULL,message TEXT,
+           counts TEXT NOT NULL DEFAULT '{}',preview TEXT,payload TEXT,started_at INTEGER NOT NULL,finished_at INTEGER);"
+            .into(),
     ]
 }
