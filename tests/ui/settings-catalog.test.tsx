@@ -190,7 +190,7 @@ describe('automation', () => {
     await user.click(screen.getByRole('button', { name: 'Criar automação' }));
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
+  }, 30_000); // ~4 s alone; many typed fields make it slow when the machine is busy
 });
 
 describe('webhooks', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
 import { Mic, Paperclip } from 'lucide-react';
 import { http, upload } from '../api';
 import type { Conversation, Message, User } from '../types';
@@ -67,13 +67,20 @@ export function ReplyBox({
     const added = Array.from(list || []);
     if (added.length) setFiles((current) => [...current, ...added]);
   };
+  // The caret moves right after React writes the new text (not a frame later), so fast typing
+  // after picking a mention or a canned response lands where the person expects.
+  const pendingCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const position = pendingCaret.current;
+    if (position === null) return;
+    pendingCaret.current = null;
+    area.current?.focus();
+    area.current?.setSelectionRange(position, position);
+  }, [text, caret]);
   function replaceText(next: string, position: number) {
+    pendingCaret.current = position;
     setText(next);
     setCaret(position);
-    requestAnimationFrame(() => {
-      area.current?.focus();
-      area.current?.setSelectionRange(position, position);
-    });
   }
   const suggestions = useSuggestions({ text, caret, note, agents, conversation, user, onText: replaceText });
   function insertAtCaret(snippet: string) {
