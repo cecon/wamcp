@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { http } from '../api';
 import type { Inbox, WorkingDay } from '../types';
+import { Button } from '../ui/Button';
+import { Toggle } from '../ui/Settings';
 import { useAction } from './useAction';
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-const toTime = (minutes: number) =>
-  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+const toTime = (m: number) =>
+  `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
@@ -23,7 +25,7 @@ interface Props {
   onChange: () => Promise<void>;
 }
 
-/** Greeting, out-of-office with weekly business hours, and CSAT survey for one inbox. */
+/** Inbox business hours (Chatwoot "Business Hours" tab) plus greeting, out-of-office and CSAT. */
 export function InboxAutomation({ inbox, onChange }: Props) {
   const [form, setForm] = useState({
     greeting_enabled: Boolean(inbox.greeting_enabled),
@@ -50,7 +52,7 @@ export function InboxAutomation({ inbox, onChange }: Props) {
 
   return (
     <form
-      className="panel"
+      className="flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         setSaved(false);
@@ -68,78 +70,72 @@ export function InboxAutomation({ inbox, onChange }: Props) {
         });
       }}
     >
-      <h2>Mensagens automáticas</h2>
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={form.greeting_enabled}
-          onChange={(e) => setForm({ ...form, greeting_enabled: e.target.checked })}
-        />
-        <span>
-          <strong>Saudação</strong>
-          <small>Enviada quando uma nova conversa começa.</small>
-        </span>
-      </label>
+      <Toggle
+        label="Saudação"
+        hint="Enviada quando uma nova conversa começa."
+        checked={form.greeting_enabled}
+        onChange={(v) => setForm({ ...form, greeting_enabled: v })}
+      />
       <label>
-        Texto da saudação
+        <span className="field-label">Texto da saudação</span>
         <textarea
-          value={form.greeting_message}
-          onChange={(e) => setForm({ ...form, greeting_message: e.target.value })}
+          className="field"
           rows={2}
           maxLength={1000}
+          value={form.greeting_message}
+          onChange={(e) => setForm({ ...form, greeting_message: e.target.value })}
         />
       </label>
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={form.working_hours_enabled}
-          onChange={(e) => setForm({ ...form, working_hours_enabled: e.target.checked })}
-        />
-        <span>
-          <strong>Horário de atendimento</strong>
-          <small>Fora do horário, o contato recebe a mensagem de ausência.</small>
-        </span>
-      </label>
+      <Toggle
+        label="Horário de atendimento"
+        hint="Fora do horário, o contato recebe a mensagem de ausência."
+        checked={form.working_hours_enabled}
+        onChange={(v) => setForm({ ...form, working_hours_enabled: v })}
+      />
       <label>
-        Fuso horário
+        <span className="field-label">Fuso horário</span>
         <input
+          className="field"
+          maxLength={64}
           value={form.timezone}
           onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-          maxLength={64}
         />
       </label>
-      <table className="schedule">
-        <tbody>
+      <table className="my-2 w-full divide-y divide-n-weak text-sm">
+        <tbody className="divide-y divide-n-weak">
           {days.map((d, i) => (
             <tr key={d.day_of_week}>
-              <td>{DAYS[d.day_of_week]}</td>
-              <td>
-                <label className="check">
+              <td className="py-2 pr-4 font-medium text-n-slate-12">{DAYS[d.day_of_week]}</td>
+              <td className="py-2 pr-4">
+                <label className="flex items-center gap-2 text-n-slate-11">
                   <input
                     type="checkbox"
+                    className="size-4 accent-n-brand"
+                    aria-label={`Aberto ${DAYS[d.day_of_week]}`}
                     checked={!d.closed_all_day}
                     onChange={(e) => setDay(i, { closed_all_day: !e.target.checked })}
-                    aria-label={`Aberto ${DAYS[d.day_of_week]}`}
                   />
                   Aberto
                 </label>
               </td>
-              <td>
+              <td className="py-2 pr-2">
                 <input
                   type="time"
+                  className="field !h-8 !w-28 !py-1"
+                  aria-label={`Abre ${DAYS[d.day_of_week]}`}
                   value={toTime(d.open_minutes)}
                   disabled={Boolean(d.closed_all_day)}
                   onChange={(e) => setDay(i, { open_minutes: toMinutes(e.target.value) })}
-                  aria-label={`Abre ${DAYS[d.day_of_week]}`}
                 />
               </td>
-              <td>
+              <td className="py-2">
                 <input
                   type="time"
+                  className="field !h-8 !w-28 !py-1"
+                  aria-label={`Fecha ${DAYS[d.day_of_week]}`}
                   value={toTime(d.close_minutes)}
                   disabled={Boolean(d.closed_all_day)}
                   onChange={(e) => setDay(i, { close_minutes: toMinutes(e.target.value) })}
-                  aria-label={`Fecha ${DAYS[d.day_of_week]}`}
                 />
               </td>
             </tr>
@@ -147,30 +143,24 @@ export function InboxAutomation({ inbox, onChange }: Props) {
         </tbody>
       </table>
       <label>
-        Mensagem de ausência
+        <span className="field-label">Mensagem de ausência</span>
         <textarea
-          value={form.out_of_office_message}
-          onChange={(e) => setForm({ ...form, out_of_office_message: e.target.value })}
+          className="field"
           rows={2}
           maxLength={1000}
+          value={form.out_of_office_message}
+          onChange={(e) => setForm({ ...form, out_of_office_message: e.target.value })}
         />
       </label>
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={form.csat_survey_enabled}
-          onChange={(e) => setForm({ ...form, csat_survey_enabled: e.target.checked })}
-        />
-        <span>
-          <strong>Pesquisa de satisfação (CSAT)</strong>
-          <small>Ao resolver, pede uma nota de 1 a 5 pelo WhatsApp.</small>
-        </span>
-      </label>
-      {error && <p className="form-error">{error}</p>}
-      {saved && <p className="muted">Configurações salvas.</p>}
-      <button className="btn primary" disabled={busy}>
-        Salvar mensagens automáticas
-      </button>
+      <Toggle
+        label="Pesquisa de satisfação (CSAT)"
+        hint="Ao resolver, pede uma nota de 1 a 5 pelo WhatsApp."
+        checked={form.csat_survey_enabled}
+        onChange={(v) => setForm({ ...form, csat_survey_enabled: v })}
+      />
+      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
+      {saved && <p className="text-sm text-n-teal-11">Configurações salvas.</p>}
+      <Button type="submit" disabled={busy} className="self-start" label="Salvar mensagens automáticas" />
     </form>
   );
 }

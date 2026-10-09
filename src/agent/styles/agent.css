@@ -1,272 +1,128 @@
-@import './inbox.css';
-@import './messages.css';
-@import './pages.css';
-@import './settings.css';
-@import './login.css';
-@import './automation.css';
+/*
+ * Agent UI design tokens, mirrored from Chatwoot's dashboard theme (MIT, Copyright (c) 2017-2026
+ * Chatwoot Inc.): app/javascript/dashboard/assets/scss/_next-colors.scss and theme/colors.js.
+ * Utilities follow the same names (bg-n-alpha-2, text-n-slate-11, outline-n-weak, ...).
+ */
+@import 'tailwindcss' source(none);
+@import '@fontsource-variable/inter';
+@source '../';
 
-:root {
-  --green: #198e66;
-  --green-dark: #147751;
-  --green-soft: #e8f5ef;
-  --ink: #203830;
-  --muted: #7d8c83;
-  --line: #e3ebe6;
-  --bg: #f4f7f5;
-  --panel: #ffffff;
-  --note: #fff6dc;
-  --danger: #b0523c;
-  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
-  font-size: 14px;
-  color: var(--ink);
-  background: var(--bg);
-}
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  background: var(--bg);
-}
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-button {
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-:focus-visible {
-  outline: 3px solid #83dabc;
-  outline-offset: 2px;
-}
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-h1 {
-  font-size: 19px;
-  letter-spacing: -0.4px;
-}
-h2 {
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-h3 {
-  font-size: 14px;
-}
-.muted {
-  color: var(--muted);
-  font-size: 12px;
-}
-.pad {
-  padding: 16px;
-}
-.form-error {
-  color: var(--danger);
-  font-size: 12px;
-}
-.splash {
-  display: grid;
-  place-items: center;
-  height: 100vh;
-  color: var(--muted);
-}
+@theme {
+  --font-sans:
+    'Inter Variable', Inter, -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Tahoma, Arial, sans-serif;
+  --text-xxs: 0.625rem;
+  --text-xxs--line-height: 1rem;
 
-.btn {
-  border: 1px solid transparent;
-  border-radius: 7px;
-  padding: 10px 15px;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
-  background: none;
-}
-.btn.small {
-  padding: 7px 10px;
-}
-.btn.full {
-  width: 100%;
-}
-.btn.primary {
-  background: var(--green);
-  color: #fff;
-}
-.btn.primary:hover:not(:disabled) {
-  background: var(--green-dark);
-}
-.btn.ghost {
-  border-color: var(--line);
-  background: #fff;
-  color: #4f6657;
-}
-.btn.ghost:hover {
-  background: var(--green-soft);
-}
-.btn.danger {
-  background: #fff1ee;
-  color: var(--danger);
-}
-.icon-btn {
-  border: 0;
-  background: none;
-  padding: 6px;
-  border-radius: 6px;
-  color: var(--muted);
-  display: inline-grid;
-  place-items: center;
-}
-.icon-btn:hover {
-  background: var(--green-soft);
-  color: var(--ink);
-}
-.link {
-  border: 0;
-  background: none;
-  padding: 4px 0;
-  color: var(--green-dark);
-  text-align: left;
-}
-label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #4f6657;
-}
-input:not([type='checkbox']):not([type='color']),
-select,
-textarea {
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 9px 11px;
-  background: #fff;
-  font-weight: 400;
-  width: 100%;
-}
-input[type='color'] {
-  width: 52px;
-  height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #fff;
-}
-textarea {
-  resize: vertical;
+  --color-n-slate-1: rgb(252 252 253);
+  --color-n-slate-2: rgb(249 249 251);
+  --color-n-slate-3: rgb(240 240 243);
+  --color-n-slate-4: rgb(232 232 236);
+  --color-n-slate-5: rgb(224 225 230);
+  --color-n-slate-6: rgb(217 217 224);
+  --color-n-slate-7: rgb(205 206 214);
+  --color-n-slate-8: rgb(185 187 198);
+  --color-n-slate-9: rgb(139 141 152);
+  --color-n-slate-10: rgb(128 131 141);
+  --color-n-slate-11: rgb(96 100 108);
+  --color-n-slate-12: rgb(28 32 36);
+
+  --color-n-blue-1: rgb(251 253 255);
+  --color-n-blue-2: rgb(245 249 255);
+  --color-n-blue-3: rgb(233 243 255);
+  --color-n-blue-4: rgb(218 236 255);
+  --color-n-blue-5: rgb(201 226 255);
+  --color-n-blue-9: rgb(39 129 246);
+  --color-n-blue-10: rgb(16 115 233);
+  --color-n-blue-11: rgb(8 109 224);
+  --color-n-blue-12: rgb(11 50 101);
+
+  --color-n-ruby-2: rgb(255 247 248);
+  --color-n-ruby-4: rgb(255 220 225);
+  --color-n-ruby-8: rgb(229 146 163);
+  --color-n-ruby-9: rgb(229 70 102);
+  --color-n-ruby-11: rgb(202 36 77);
+  --color-n-ruby-12: rgb(100 23 43);
+
+  --color-n-amber-3: rgb(255 247 194);
+  --color-n-amber-9: rgb(255 197 61);
+  --color-n-amber-10: rgb(255 186 24);
+  --color-n-amber-11: rgb(171 100 0);
+  --color-n-amber-12: rgb(79 52 34);
+
+  --color-n-teal-3: rgb(224 248 243);
+  --color-n-teal-9: rgb(18 165 148);
+  --color-n-teal-10: rgb(13 155 138);
+  --color-n-teal-11: rgb(0 133 115);
+
+  --color-n-iris-9: rgb(91 91 214);
+  --color-n-violet-9: rgb(110 86 207);
+
+  --color-n-brand: rgb(39 129 246);
+  --color-n-background: rgb(247 247 247);
+  --color-n-surface-1: rgb(254 254 254);
+  --color-n-surface-2: rgb(255 255 255);
+  --color-n-solid-1: rgb(255 255 255);
+  --color-n-solid-2: rgb(255 255 255);
+  --color-n-solid-3: rgb(255 255 255);
+  --color-n-solid-blue: rgb(218 236 255);
+  --color-n-solid-amber: rgb(255 228 181);
+  --color-n-solid-iris: rgb(230 231 255);
+  --color-n-solid-red: rgb(254 200 201);
+  --color-n-weak: rgb(234 234 234);
+  --color-n-strong: rgb(226 227 231);
+  --color-n-container: rgb(236 236 236);
+  --color-n-alpha-1: rgba(215 215 215 / 0.22);
+  --color-n-alpha-2: rgba(196 197 198 / 0.22);
+  --color-n-alpha-3: rgba(255 255 255 / 0.96);
+  --color-n-alpha-black1: rgba(0 0 0 / 0.12);
+  --color-n-alpha-black2: rgba(0 0 0 / 0.04);
+  --color-n-button-color: rgb(255 255 255);
+  --color-n-card: rgb(255 255 255);
+  --color-n-label-color: rgb(247 247 247);
+  --color-n-label-border: rgb(226 227 231);
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #dbeee5;
-  color: var(--green-dark);
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 700;
-}
-.avatar.large {
-  width: 64px;
-  height: 64px;
-  font-size: 20px;
-}
-.presence {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-  background: #b9c4bd;
-}
-.presence.online {
-  background: #2bb673;
-}
-.presence.busy {
-  background: #e3a33b;
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-n-background font-sans text-sm text-n-slate-12 antialiased;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
-.agent-app {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  height: 100vh;
-  overflow: hidden;
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
-.agent-main {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-.rail {
-  background: #183229;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 0;
-  position: relative;
-  z-index: 3;
-}
-.rail > button {
-  width: 42px;
-  height: 42px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: #a9c2b6;
-  display: grid;
-  place-items: center;
-  position: relative;
-}
-.rail > button:hover,
-.rail > button.active {
-  background: #24493b;
-  color: #fff;
-}
-.rail-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  background: var(--green);
-  color: #fff;
-  font-weight: 800;
-  font-size: 13px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 10px;
-}
-.bell .count {
-  position: absolute;
-  top: 3px;
-  right: 1px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: #e2574c;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-}
-.rail-bottom {
-  margin-top: auto;
-  display: grid;
-  justify-items: center;
-  gap: 12px;
+
+@layer components {
+  /* Chatwoot `.field-base` inputs. */
+  .field {
+    @apply block h-10 w-full rounded-lg bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak transition-colors placeholder:text-n-slate-10 hover:outline-n-slate-6 focus:outline-n-brand disabled:opacity-50;
+  }
+  textarea.field {
+    @apply h-auto min-h-20 resize-y;
+  }
+  .field-label {
+    @apply mb-1 block text-sm leading-7 font-medium text-n-slate-12;
+  }
+  .text-heading-1 {
+    @apply text-lg leading-6 font-[520];
+  }
+  .text-heading-3 {
+    @apply text-sm leading-[21px] font-medium;
+  }
+  .text-body-main {
+    @apply text-sm leading-[21px] font-[420] tracking-[-0.28px];
+  }
 }

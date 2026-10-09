@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, Bell, BookUser, LogOut, MessagesSquare, Settings2 } from 'lucide-react';
-import { connectRealtime, http, initials, type Realtime } from './api';
+import { useCallback, useEffect, useState } from 'react';
+import { connectRealtime, http, type Realtime } from './api';
 import type { Availability, Catalog, User } from './types';
-import { Inbox } from './inbox/Inbox';
-import { Contacts } from './Contacts';
-import { SettingsPage } from './settings/SettingsPage';
-import { Notifications } from './Notifications';
+import { HOME, type Route } from './route';
+import { Sidebar } from './sidebar/Sidebar';
+import { ConversationsScreen } from './conversations/ConversationsScreen';
+import { NotificationsPage } from './NotificationsPage';
+import { ContactsPage } from './ContactsPage';
 import { Reports } from './Reports';
-
-const AVAILABILITY: Record<Availability, string> = { online: 'Online', busy: 'Ocupado', offline: 'Offline' };
-type Page = 'inbox' | 'contacts' | 'reports' | 'settings';
+import { SettingsRouter } from './settings/SettingsRouter';
 
 interface Props {
   user: User;
@@ -17,13 +15,12 @@ interface Props {
   onLogout: () => void;
 }
 
+/** Chatwoot Dashboard.vue: sidebar + main router view. */
 export function Workspace({ user, onUser, onLogout }: Props) {
-  const [page, setPage] = useState<Page>('inbox'),
+  const [route, setRoute] = useState<Route>(HOME),
     [online, setOnline] = useState(false),
     [catalog, setCatalog] = useState<Catalog>({ inboxes: [], agents: [], teams: [], labels: [] }),
-    [unread, setUnread] = useState(0),
-    [showNotifications, setShowNotifications] = useState(false),
-    [openConversation, setOpenConversation] = useState<number | null>(null);
+    [unread, setUnread] = useState(0);
   const [realtime] = useState<Realtime>(() => connectRealtime(setOnline));
   useEffect(() => () => realtime.close(), [realtime]);
 
@@ -36,15 +33,20 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     ]);
     setCatalog({ inboxes, agents, teams, labels });
   }, []);
+  const reloadUnread = useCallback(
+    () =>
+      http<{ unread: number }>('/notifications/unread_count')
+        .then((r) => setUnread(r.unread))
+        .catch(() => {}),
+    [],
+  );
   useEffect(() => {
     const initial = setTimeout(() => {
       void reloadCatalog().catch(() => {});
-      void http<{ unread: number }>('/notifications/unread_count')
-        .then((r) => setUnread(r.unread))
-        .catch(() => {});
+      void reloadUnread();
     }, 0);
     return () => clearTimeout(initial);
-  }, [reloadCatalog]);
+  }, [reloadCatalog, reloadUnread]);
   useEffect(
     () =>
       realtime.subscribe(({ event }) => {
@@ -54,21 +56,6 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     [realtime, reloadCatalog],
   );
 
-  const isAdmin = user.role === 'administrator';
-  const nav = useMemo(
-    () =>
-      [
-        { id: 'inbox', label: 'Conversas', icon: MessagesSquare },
-        { id: 'contacts', label: 'Contatos', icon: BookUser },
-        ...(isAdmin
-          ? [
-              { id: 'reports', label: 'Relatórios', icon: BarChart3 },
-              { id: 'settings', label: 'Configurações', icon: Settings2 },
-            ]
-          : []),
-      ] as { id: Page; label: string; icon: typeof Bell }[],
-    [isAdmin],
-  );
   function setAvailability(availability: Availability) {
     // Presence is best effort: the menu keeps the previous state if the server rejects the change.
     http<User>('/profile', 'PATCH', { availability })
@@ -80,94 +67,49 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     realtime.close();
     onLogout();
   }
+  const isAdmin = user.role === 'administrator';
 
   return (
-    <div className="agent-app">
-      <aside className="rail">
-        <div className="rail-logo" title="WA MCP · Atendimento">
-          WA
-        </div>
-        {nav.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            className={page === id ? 'active' : ''}
-            title={label}
-            aria-label={label}
-            onClick={() => setPage(id)}
-          >
-            <Icon size={20} />
-          </button>
-        ))}
-        <button
-          className={`bell ${showNotifications ? 'active' : ''}`}
-          title="Notificações"
-          aria-label="Notificações"
-          onClick={() => setShowNotifications((v) => !v)}
-        >
-          <Bell size={20} />
-          {unread > 0 && <span className="count">{unread > 99 ? '99+' : unread}</span>}
-        </button>
-        <div className="rail-bottom">
-          <span
-            className={`live ${online ? 'on' : ''}`}
-            title={online ? 'Tempo real conectado' : 'Reconectando'}
-          />
-          <div className="me" title={`${user.name} · ${AVAILABILITY[user.availability]}`}>
-            <span className="avatar">{initials(user.name)}</span>
-            <i className={`presence ${user.availability}`} />
-            <div className="me-menu">
-              <strong>{user.name}</strong>
-              <small>{user.email}</small>
-              {(Object.keys(AVAILABILITY) as Availability[]).map((a) => (
-                <button
-                  key={a}
-                  className={user.availability === a ? 'active' : ''}
-                  onClick={() => setAvailability(a)}
-                >
-                  <i className={`presence ${a}`} />
-                  {AVAILABILITY[a]}
-                </button>
-              ))}
-              <button onClick={() => void logout()}>
-                <LogOut size={15} /> Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      </aside>
-      {showNotifications && (
-        <Notifications
-          realtime={realtime}
-          onUnread={setUnread}
-          onClose={() => setShowNotifications(false)}
-          onOpen={(displayId) => {
-            setPage('inbox');
-            setOpenConversation(displayId);
-            setShowNotifications(false);
-          }}
-        />
-      )}
-      <main className="agent-main">
-        {page === 'inbox' && (
-          <Inbox
+    <div className="flex h-full overflow-hidden text-n-slate-12">
+      <Sidebar
+        user={user}
+        catalog={catalog}
+        route={route}
+        unread={unread}
+        online={online}
+        onNavigate={setRoute}
+        onAvailability={setAvailability}
+        onLogout={() => void logout()}
+      />
+      <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-n-surface-1">
+        {route.page === 'conversations' && (
+          <ConversationsScreen
+            route={route}
             user={user}
             catalog={catalog}
             realtime={realtime}
-            selected={openConversation}
-            onSelect={setOpenConversation}
+            onNavigate={setRoute}
           />
         )}
-        {page === 'contacts' && (
-          <Contacts
-            onOpenConversation={(displayId) => {
-              setPage('inbox');
-              setOpenConversation(displayId);
-            }}
+        {route.page === 'notifications' && (
+          <NotificationsPage
+            realtime={realtime}
+            onUnread={setUnread}
+            onOpen={(displayId) => setRoute({ page: 'conversations', displayId })}
           />
         )}
-        {page === 'reports' && isAdmin && <Reports inboxes={catalog.inboxes} />}
-        {page === 'settings' && isAdmin && (
-          <SettingsPage user={user} catalog={catalog} onChange={reloadCatalog} />
+        {route.page === 'contacts' && (
+          <ContactsPage onOpenConversation={(displayId) => setRoute({ page: 'conversations', displayId })} />
+        )}
+        {route.page === 'reports' && isAdmin && <Reports catalog={catalog} />}
+        {route.page === 'settings' && isAdmin && (
+          <SettingsRouter
+            route={route}
+            user={user}
+            catalog={catalog}
+            onNavigate={setRoute}
+            onChange={reloadCatalog}
+          />
         )}
       </main>
     </div>
