@@ -22,6 +22,9 @@ pub struct Config {
     pub bind: IpAddr,
     pub port: u16,
     pub public_url: String,
+    /// The iFood menu crawler; `None` uses the installed Edge/Chrome (the desktop app passes its own
+    /// window instead, see `src-tauri/src/ifood.rs`).
+    pub crawler: Option<Arc<dyn crate::application::ports::MenuCrawler>>,
     /// Directories searched (in order) for the built web app (`index.html`).
     pub web_dirs: Vec<PathBuf>,
 }
@@ -55,6 +58,7 @@ impl Config {
                 .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
             port: port("WAMCP_PORT", port("WAMCP_MCP_PORT", 17382)),
             public_url: PUBLIC_URL.into(),
+            crawler: None,
             web_dirs,
         }
     }
@@ -152,7 +156,7 @@ pub async fn run(config: Config) -> Result<Running> {
         storage: Arc::new(crate::adapters::outbound::media_storage::FsMediaStorage::new(
             &config.data_dir,
         )),
-        crawler: crawler_port(&config.data_dir),
+        crawler: config.crawler.clone().unwrap_or_else(|| crawler_port(&config.data_dir)),
         images: Arc::new(crate::adapters::outbound::image_fetcher::HttpImageFetcher::new()),
     };
     let settings = Settings {

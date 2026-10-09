@@ -2,7 +2,7 @@ import { Check, Loader2, MousePointerClick } from 'lucide-react';
 import { cn } from '../../ui/cn';
 import type { ImportJob, ImportStatus } from '../types';
 
-const STEPS = ['Abrindo navegador', 'Aguardando verificação', 'Lendo cardápio', 'Prévia'];
+const STEPS = ['Abrindo o iFood', 'Aguardando verificação', 'Lendo cardápio', 'Prévia'];
 const STEP_OF: Partial<Record<ImportStatus, number>> = {
   starting: 0,
   opening: 0,
@@ -12,7 +12,7 @@ const STEP_OF: Partial<Record<ImportStatus, number>> = {
   applied: 4,
 };
 
-/** Crawler progress: Abrindo navegador → Aguardando verificação → Lendo cardápio → Prévia. */
+/** Crawler progress: Abrindo o iFood → Aguardando verificação → Lendo cardápio → Prévia. */
 export function ImportSteps({ job }: { job: ImportJob }) {
   const current = STEP_OF[job.status] ?? 0;
   return (
@@ -49,7 +49,7 @@ export function ImportSteps({ job }: { job: ImportJob }) {
           <MousePointerClick size={20} className="shrink-0 text-n-amber-11" />
           <div>
             <p className="font-medium">
-              Uma janela do navegador abriu no computador do WA MCP. Se o iFood pedir 'Confirme que é humano',
+              Uma janela do iFood abriu no computador do WA MCP. Se o iFood pedir 'Confirme que é humano',
               clique lá para continuar.
             </p>
             {job.message && <p className="mt-1 text-n-slate-11">{job.message}</p>}
