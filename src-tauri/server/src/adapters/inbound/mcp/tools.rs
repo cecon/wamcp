@@ -22,11 +22,11 @@ pub fn challenge(public_url: &str, id: &str, error: &str, scope: &str) -> String
     format!("Bearer resource_metadata=\"{public_url}/.well-known/oauth-protected-resource/mcp/{encoded}\", scope=\"{scope}\", error=\"{error}\", error_description=\"Autorize esta sessao no WA MCP\"")
 }
 
-fn text(message: &str) -> Value {
+pub(super) fn text(message: &str) -> Value {
     json!({ "type": "text", "text": message })
 }
 
-fn failure(message: &str) -> Value {
+pub(super) fn failure(message: &str) -> Value {
     json!({ "content": [text(message)], "isError": true })
 }
 
@@ -34,18 +34,18 @@ fn output(data: &impl serde::Serialize) -> Value {
     json!({ "content": [text(&serde_json::to_string(data).unwrap_or_default())] })
 }
 
-fn message_of(error: &Error, fallback: &str) -> String {
+pub(super) fn message_of(error: &Error, fallback: &str) -> String {
     match error {
         Error::Helpdesk(e) => e.message.clone(),
         Error::Internal(_) => fallback.into(),
     }
 }
 
-fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
+pub(super) fn arg_str<'a>(args: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
     args.get(key).and_then(Value::as_str)
 }
 
-fn arg_int(args: &Map<String, Value>, key: &str) -> i64 {
+pub(super) fn arg_int(args: &Map<String, Value>, key: &str) -> i64 {
     args.get(key).and_then(Value::as_i64).unwrap_or_default()
 }
 
@@ -78,6 +78,7 @@ impl Call<'_> {
         match tool.name {
             "get_media" => self.media(&token, args).await,
             "send_message" => self.send(&token, args).await,
+            name if name.starts_with("catalog_") => self.menu(tool, &token, args).await,
             _ if tool.helpdesk => self.helpdesk(tool, &token, args).await,
             _ => self.read(tool.name, &token, args),
         }

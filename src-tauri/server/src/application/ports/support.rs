@@ -1,7 +1,8 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    Contact, ContactChanges, ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters,
-    DaySchedule, Inbox, InboxChanges, Message, NewMessage, WorkingHour,
+    Action, AppliedSla, Attachment, AttachmentSource, AttributeDefinition, AttributeFields, Contact, ContactChanges,
+    ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters, CustomFilter,
+    DaySchedule, FilterQuery, Inbox, InboxChanges, Macro, Message, NewAttachment, NewMessage, SlaPolicy, WorkingHour,
 };
 use serde_json::Value;
 
@@ -49,6 +50,8 @@ pub trait ConversationRepo {
     fn due_snoozed(&self, now: i64) -> Result<Vec<i64>>;
     fn add_participant(&self, conversation_id: i64, user_id: i64) -> Result<()>;
     fn participant_ids(&self, conversation_id: i64) -> Result<Vec<i64>>;
+    fn remove_participant(&self, conversation_id: i64, user_id: i64) -> Result<()>;
+    fn delete_conversation(&self, id: i64) -> Result<()>;
     /// Replaces the conversation's labels with the given label ids.
     fn set_conversation_labels(&self, conversation_id: i64, label_ids: &[i64]) -> Result<Conversation>;
 }
@@ -60,6 +63,84 @@ pub trait MessageRepo {
     fn insert_message(&self, message: &NewMessage) -> Result<Option<Message>>;
     fn message_by_source(&self, inbox_id: i64, source_id: &str) -> Result<Option<Message>>;
     fn update_message(&self, id: i64, status: Option<&str>, attributes: Option<&Value>) -> Result<Message>;
+    /// Replaces the text (`None` clears it, e.g. for deleted messages).
+    fn set_message_content(&self, id: i64, content: Option<&str>) -> Result<()>;
     /// Page of messages before a message id (cursor), oldest first.
     fn messages(&self, conversation_id: i64, before: Option<i64>, limit: i64) -> Result<Vec<Message>>;
+}
+
+/// Message attachments and where their bytes come from.
+pub trait AttachmentRepo {
+    fn insert_attachment(&self, attachment: &NewAttachment) -> Result<Attachment>;
+    /// The attachment with its stored path and the WhatsApp message it came from.
+    fn attachment_source(&self, id: i64) -> Result<Option<AttachmentSource>>;
+    fn set_attachment_file(&self, id: i64, path: &str, size: i64) -> Result<()>;
+}
+
+/// Saved views, custom attribute definitions/values and the advanced filter queries.
+pub trait CustomDataRepo {
+    fn custom_filters(&self, user_id: i64, filter_type: Option<&str>) -> Result<Vec<CustomFilter>>;
+    fn custom_filter(&self, id: i64) -> Result<Option<CustomFilter>>;
+    fn create_custom_filter(&self, user_id: i64, name: &str, filter_type: &str, query: &Value) -> Result<CustomFilter>;
+    fn update_custom_filter(&self, id: i64, name: Option<&str>, query: Option<&Value>) -> Result<CustomFilter>;
+    fn delete_custom_filter(&self, id: i64) -> Result<()>;
+
+    fn attribute_definitions(&self, model: Option<&str>) -> Result<Vec<AttributeDefinition>>;
+    fn attribute_definition(&self, id: i64) -> Result<Option<AttributeDefinition>>;
+    fn create_attribute_definition(&self, definition: &AttributeDefinition) -> Result<AttributeDefinition>;
+    fn update_attribute_definition(&self, id: i64, fields: &AttributeFields) -> Result<AttributeDefinition>;
+    fn delete_attribute_definition(&self, id: i64) -> Result<()>;
+
+    fn set_conversation_attributes(&self, id: i64, attributes: &Value) -> Result<()>;
+    fn set_contact_attributes(&self, id: i64, attributes: &Value) -> Result<()>;
+    fn filter_conversations(&self, query: &FilterQuery) -> Result<Vec<Conversation>>;
+    fn filter_contacts(&self, query: &FilterQuery) -> Result<Vec<Contact>>;
+}
+
+/// Macros visible to an agent: global ones plus the agent's personal ones.
+pub trait MacroRepo {
+    fn macros(&self, user_id: i64) -> Result<Vec<Macro>>;
+    fn macro_by_id(&self, id: i64) -> Result<Option<Macro>>;
+    fn create_macro(&self, name: &str, visibility: &str, created_by: i64, actions: &[Action]) -> Result<Macro>;
+    fn update_macro(
+        &self,
+        id: i64,
+        name: Option<&str>,
+        visibility: Option<&str>,
+        actions: Option<&[Action]>,
+    ) -> Result<Macro>;
+    fn delete_macro(&self, id: i64) -> Result<()>;
+}
+
+/// What the searching agent may see: inboxes (`None` = all) and the custom role limit.
+#[derive(Debug, Clone, Default)]
+pub struct SearchScope {
+    pub visible: Option<Vec<i64>>,
+    pub limit: Option<crate::domain::roles::ConversationLimit>,
+}
+
+/// Global search (Chatwoot's search page) over conversations, contacts and messages.
+pub trait SearchRepo {
+    fn search_conversations(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Conversation>>;
+    fn search_contacts(&self, q: &str, limit: i64) -> Result<Vec<Contact>>;
+    /// Matching non-private messages with their conversation's display id and contact name.
+    fn search_messages(&self, q: &str, scope: &SearchScope, limit: i64) -> Result<Vec<Value>>;
+}
+
+/// SLA policies, the SLA applied to each conversation and SLA metrics.
+pub trait SlaRepo {
+    fn sla_policies(&self) -> Result<Vec<SlaPolicy>>;
+    fn sla_policy(&self, id: i64) -> Result<Option<SlaPolicy>>;
+    fn create_sla_policy(&self, policy: &SlaPolicy) -> Result<SlaPolicy>;
+    fn update_sla_policy(&self, policy: &SlaPolicy) -> Result<SlaPolicy>;
+    fn delete_sla_policy(&self, id: i64) -> Result<()>;
+    /// Applies (or replaces) the conversation's SLA, starting the clock at `at`.
+    fn apply_sla(&self, conversation_id: i64, policy_id: i64, at: i64) -> Result<AppliedSla>;
+    fn applied_sla(&self, conversation_id: i64) -> Result<Option<AppliedSla>>;
+    fn active_slas(&self) -> Result<Vec<AppliedSla>>;
+    fn set_sla_status(&self, conversation_id: i64, status: &str, missed_at: Option<i64>) -> Result<()>;
+    /// When the conversation was last resolved (from the reporting events).
+    fn resolved_at(&self, conversation_id: i64) -> Result<Option<i64>>;
+    /// `{ total, hit, missed, active }` for SLAs applied in `[since, until)`.
+    fn sla_counts(&self, since: i64, until: i64) -> Result<Value>;
 }

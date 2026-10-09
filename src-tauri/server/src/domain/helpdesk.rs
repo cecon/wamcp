@@ -9,6 +9,19 @@ pub const ROLES: [&str; 2] = ["administrator", "agent"];
 pub const STATUSES: [&str; 4] = ["open", "pending", "resolved", "snoozed"];
 pub const AVAILABILITY: [&str; 3] = ["online", "busy", "offline"];
 pub const PRIORITIES: [&str; 4] = ["low", "medium", "high", "urgent"];
+/// Chat list orderings (Chatwoot `sort_by`).
+pub const SORTS: [&str; 8] = [
+    "last_activity_at_desc",
+    "last_activity_at_asc",
+    "created_at_desc",
+    "created_at_asc",
+    "priority_desc",
+    "priority_asc",
+    "waiting_since_desc",
+    "waiting_since_asc",
+];
+/// Chat list views beyond the assignee tabs.
+pub const CONVERSATION_TYPES: [&str; 3] = ["unattended", "mentions", "participating"];
 
 pub fn require_admin(actor: &Actor) -> Result<()> {
     if actor.is_admin() {
@@ -28,6 +41,20 @@ pub fn require_inbox_access(actor: &Actor, member_inbox_ids: &[i64], inbox_id: i
         Ok(())
     } else {
         Err(HelpdeskError::not_found("Conversa não encontrada").into())
+    }
+}
+
+/// What the customer reads on WhatsApp: the agent's name in bold on the first line, so they know
+/// who is answering. The helpdesk keeps the message as typed.
+pub fn signed(text: &str, agent: &str) -> String {
+    let agent = agent.trim();
+    if agent.is_empty() {
+        text.to_string()
+    } else {
+        format!(
+            "*{agent}*:
+{text}"
+        )
     }
 }
 

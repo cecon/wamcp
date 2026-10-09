@@ -11,6 +11,11 @@ export interface User {
   availability: Availability;
   active: number;
   inbox_ids?: number[];
+  mfa_enabled?: number;
+  /** Custom role; `null` keeps the default agent access. */
+  custom_role_id?: number | null;
+  /** Permissions of the custom role (empty without one). */
+  permissions?: string[];
 }
 export interface Inbox {
   id: number;
@@ -28,6 +33,12 @@ export interface Inbox {
   out_of_office_message: string | null;
   csat_survey_enabled: number;
   timezone: string;
+  max_assignment_limit?: number | null;
+  csat_survey_message?: string | null;
+  /** Connected agent bot (new conversations start pending while set). */
+  agent_bot_id?: number | null;
+  /** 1: agent replies reach WhatsApp with `*Nome*:` on the first line. */
+  show_agent_name?: number;
 }
 export interface WorkingDay {
   day_of_week: number;
@@ -96,6 +107,8 @@ export interface Conversation {
   contact_id: number;
   contact_name: string | null;
   contact_phone: string | null;
+  /** Saved WhatsApp photo of the contact (`/api/v1/contacts/{id}/photo`). */
+  contact_avatar_url?: string | null;
   contact_jid: string;
   status: ConversationStatus;
   assignee_id: number | null;
@@ -109,7 +122,13 @@ export interface Conversation {
   snoozed_until: number | null;
   agent_bot_enabled: number;
   priority: 'low' | 'medium' | 'high' | 'urgent' | null;
+  muted?: number;
+  waiting_since?: number | null;
+  custom_attributes?: CustomAttributes;
+  /** Status of the SLA applied to the conversation, if any. */
+  sla_status?: SlaStatus | null;
 }
+export type SlaStatus = 'active' | 'hit' | 'missed';
 export interface Message {
   id: number;
   conversation_id: number;
@@ -120,8 +139,38 @@ export interface Message {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   sender_type: 'user' | 'contact' | 'agent_bot' | 'system' | null;
   sender_name: string | null;
-  content_attributes: { external_error?: string; automated?: string };
+  content_attributes: MessageAttributes;
+  attachments?: Attachment[];
   created_at: number;
+}
+export type AttachmentType = 'image' | 'audio' | 'video' | 'file' | 'sticker';
+export interface Attachment {
+  id: number;
+  message_id: number;
+  file_type: AttachmentType;
+  mime_type: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  duration: number | null;
+  voice: boolean;
+  downloaded: boolean;
+  data_url: string;
+}
+export interface Reaction {
+  emoji: string;
+  sender_type: 'contact' | 'user';
+  sender_id: number | null;
+  sender_name: string | null;
+}
+export interface MessageAttributes {
+  external_error?: string;
+  automated?: string;
+  in_reply_to?: number | null;
+  in_reply_to_external_id?: string | null;
+  reactions?: Reaction[];
+  deleted?: boolean;
+  edited?: boolean;
+  previous_content?: string | null;
 }
 export interface HistoryMessage {
   id: string;
@@ -137,6 +186,9 @@ export interface Contact {
   identifier: string | null;
   blocked: number;
   last_activity_at: number | null;
+  avatar_url?: string | null;
+  labels?: string[];
+  custom_attributes?: CustomAttributes;
   conversations?: Conversation[];
 }
 export interface AppNotification {
@@ -147,6 +199,7 @@ export interface AppNotification {
   actor_name: string | null;
   read_at: number | null;
   created_at: number;
+  snoozed_until?: number | null;
 }
 export interface Meta {
   mine: number;
@@ -158,4 +211,52 @@ export interface Catalog {
   agents: User[];
   teams: Team[];
   labels: Label[];
+}
+
+export type ConversationType = 'unattended' | 'mentions' | 'participating';
+export type CustomAttributes = Record<string, string | number | boolean | null>;
+export type FilterValue = string | number | boolean;
+/** One row of the advanced filter; `query_operator` links it to the next row (Chatwoot). */
+export interface FilterCondition {
+  attribute_key: string;
+  filter_operator: string;
+  values: FilterValue[];
+  query_operator: 'and' | 'or';
+}
+export type FilterType = 'conversation' | 'contact';
+export interface CustomFilter {
+  id: number;
+  name: string;
+  filter_type: FilterType;
+  query: { payload?: FilterCondition[] } | null;
+}
+export type AttributeDisplayType =
+  'text' | 'number' | 'currency' | 'percent' | 'link' | 'date' | 'list' | 'checkbox';
+export interface AttributeDefinition {
+  id: number;
+  attribute_display_name: string;
+  attribute_key: string;
+  attribute_model: FilterType;
+  attribute_display_type: AttributeDisplayType;
+  attribute_description: string | null;
+  attribute_values: string[];
+  regex_pattern: string | null;
+  regex_cue: string | null;
+}
+export interface ContactNote {
+  id: number;
+  contact_id: number;
+  user_id: number | null;
+  user_name: string | null;
+  content: string;
+  created_at: number;
+}
+export interface BulkResult {
+  updated: number[];
+  failed: { id: number; error: string }[];
+}
+export interface ImportResult {
+  created: number;
+  updated: number;
+  failed: { line: number; error: string }[];
 }

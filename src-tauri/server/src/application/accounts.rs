@@ -1,6 +1,7 @@
 //! Agents, authentication and profile (Chatwoot's users, sessions and access tokens).
 use super::core::Core;
 use super::ports::PasswordHasher;
+use super::security::LoginOutcome;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::{require_admin, validate_password};
@@ -53,6 +54,8 @@ pub struct AgentChanges {
     pub role: Option<String>,
     pub active: Option<bool>,
     pub password: Option<String>,
+    /// `Some(None)` removes the custom role.
+    pub custom_role_id: Option<Option<i64>>,
 }
 
 impl AccountService {
@@ -83,7 +86,8 @@ impl AccountService {
         Ok(admin)
     }
 
-    pub async fn login(&self, email: &str, password: &str, user_agent: Option<&str>) -> Result<Login> {
+    /// Checks the password; agents with two-factor on get a challenge instead of a session.
+    pub async fn login(&self, email: &str, password: &str, user_agent: Option<&str>) -> Result<LoginOutcome> {
         let repo = &self.core.repo;
         let credentials = repo.credentials(&normalize_email(email))?;
         let stored = credentials.as_ref().map_or(DUMMY_HASH, |c| c.password_hash.as_str());
@@ -91,12 +95,11 @@ impl AccountService {
         let Some(credentials) = credentials.filter(|c| valid && c.active) else {
             return fail_with("E-mail ou senha inválidos", 401);
         };
-        let session = repo.create_web_session(credentials.id, SESSION_TTL_MS, user_agent)?;
-        Ok(Login {
-            cookie: session.cookie,
-            csrf: session.csrf,
-            user: self.find_user(credentials.id)?,
-        })
+        if repo.mfa_state(credentials.id)?.mfa_enabled != 0 {
+            return self.challenge(credentials.id);
+        }
+        self.start_session(credentials.id, user_agent)
+            .map(|login| LoginOutcome::Session(Box::new(login)))
     }
 
     pub fn logout(&self, cookie: &str) -> Result<()> {
@@ -193,11 +196,15 @@ impl AccountService {
         if agent.role == "administrator" && demoting && repo.count_admins()? <= 1 {
             return fail_with("É preciso manter ao menos um administrador ativo", 409);
         }
+        if let Some(Some(role)) = changes.custom_role_id {
+            self.find_role(role)?;
+        }
         let mut fields = UserChanges {
             name: changes.name,
             display_name: changes.display_name,
             role: changes.role,
             active: changes.active,
+            custom_role_id: changes.custom_role_id,
             ..Default::default()
         };
         let reset = changes.password.is_some();

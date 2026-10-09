@@ -1,40 +1,12 @@
-import { test, expect, type Page } from '@playwright/test';
-async function nativeMock(page: Page, fail = false) {
-  await page.addInitScript((failure) => {
-    let updateListener: ((event: { payload: string }) => void) | undefined;
-    Object.assign(window, {
-      isTauri: true,
-      __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener() {} },
-      __TAURI_INTERNALS__: {
-        transformCallback(callback: (event: { payload: string }) => void) {
-          updateListener = callback;
-          return 1;
-        },
-        async invoke(command: string, args?: { enabled?: boolean }) {
-          if (command === 'api_request') return [];
-          if (command === 'runtime_status') return { tunnelConfigured: true, tunnelRunning: true };
-          if (command === 'autostart_status') return localStorage.getItem('autostart') === 'yes';
-          if (command === 'set_autostart') {
-            localStorage.setItem('autostart', args?.enabled ? 'yes' : 'no');
-            return null;
-          }
-          if (command === 'check_update') {
-            updateListener?.({ payload: '26.10.99' });
-            if (failure) throw new Error('Falha ao validar assinatura. A versão atual foi mantida.');
-            return { version: '26.10.99' };
-          }
-          if (command === 'install_update') document.documentElement.dataset.updateInstalled = 'yes';
-          return 1;
-        },
-      },
-    });
-  }, fail);
-}
+import { test, expect } from '@playwright/test';
+import { mockApi, nativeMock, openSettings } from './app-mock';
+
 test('automatically prepares the update and waits for restart before installation', async ({ page }) => {
   await nativeMock(page);
+  await mockApi(page);
   await page.clock.install();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
   await page.clock.fastForward(11000);
   await expect(page.getByText('WA MCP 26.10.99 disponível')).toBeVisible();
   expect(await page.locator('html').getAttribute('data-update-installed')).toBeNull();
@@ -42,25 +14,36 @@ test('automatically prepares the update and waits for restart before installatio
   await expect(page.locator('html')).toHaveAttribute('data-update-installed', 'yes');
   await expect(page.getByRole('button', { name: 'Instalando…' })).toBeDisabled();
 });
+
 test('toggling Windows autostart calls the native command and reflects its state', async ({ page }) => {
   await nativeMock(page);
+  await mockApi(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
-  const toggle = page.getByRole('checkbox', { name: 'Iniciar automaticamente com o Windows' });
+  await openSettings(page, 'Aplicativo');
+  const toggle = page.getByRole('switch', { name: 'Iniciar com o Windows' });
   await expect(toggle).not.toBeChecked();
-  await toggle.check();
+  await page.getByText('Iniciar com o Windows', { exact: true }).click();
   await expect(toggle).toBeChecked();
   await page.reload();
-  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
-  await expect(page.getByRole('checkbox', { name: 'Iniciar automaticamente com o Windows' })).toBeChecked();
+  await openSettings(page, 'Aplicativo');
+  await expect(page.getByRole('switch', { name: 'Iniciar com o Windows' })).toBeChecked();
+  await expect(page.getByLabel('Endereço na rede local')).toHaveValue('http://192.168.0.10:17382/app/');
 });
+
 test('failed signature never offers installation and preserves the application', async ({ page }) => {
   await nativeMock(page, true);
+  await mockApi(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
+  await openSettings(page, 'Aplicativo');
   await page.getByRole('button', { name: 'Verificar atualizações' }).click();
   await expect(page.getByText(/Falha ao validar assinatura/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reiniciar e atualizar' })).not.toBeVisible();
-  await page.getByRole('button', { name: /Minhas sessões/ }).click();
-  await expect(page.getByRole('heading', { name: 'Minhas sessões' })).toBeVisible();
+});
+
+test('browsers on the network never see the desktop page', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Conexões WhatsApp', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Aplicativo', exact: true })).toHaveCount(0);
 });

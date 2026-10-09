@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// An inbox backed by one WhatsApp session (channel), with the session's live status.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -23,6 +24,19 @@ pub struct Inbox {
     pub ignore_groups: i64,
     pub session_status: String,
     pub phone: Option<String>,
+    #[serde(default)]
+    pub max_assignment_limit: Option<i64>,
+    #[serde(default)]
+    pub csat_survey_message: Option<String>,
+    #[serde(default)]
+    pub agent_bot_id: Option<i64>,
+    /// Agent replies reach WhatsApp as `*Nome*:` on the first line (on by default).
+    #[serde(default = "enabled")]
+    pub show_agent_name: i64,
+}
+
+fn enabled() -> i64 {
+    1
 }
 
 /// Inbox settings an administrator may change; `Some(None)` clears a nullable text.
@@ -40,7 +54,12 @@ pub struct InboxChanges {
     #[serde(default, deserialize_with = "super::nullable")]
     pub out_of_office_message: Option<Option<String>>,
     pub csat_survey_enabled: Option<bool>,
+    pub show_agent_name: Option<bool>,
     pub timezone: Option<String>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub max_assignment_limit: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub csat_survey_message: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,10 +89,14 @@ pub struct Contact {
     pub phone_number: Option<String>,
     pub email: Option<String>,
     pub identifier: Option<String>,
-    pub custom_attributes: String,
+    pub custom_attributes: Value,
     pub blocked: i64,
     pub last_activity_at: Option<i64>,
     pub created: String,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub labels: Vec<String>,
 }
 
 /// Editable contact columns; `Some(None)` clears a nullable column.
@@ -85,6 +108,8 @@ pub struct ContactChanges {
     pub email: Option<Option<String>>,
     #[serde(default, deserialize_with = "super::nullable")]
     pub identifier: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::nullable")]
+    pub phone_number: Option<Option<String>>,
     pub blocked: Option<bool>,
     #[serde(skip)]
     pub last_activity_at: Option<i64>,
@@ -97,4 +122,14 @@ pub struct ContactInbox {
     pub contact_id: i64,
     pub inbox_id: i64,
     pub source_id: String,
+}
+
+/// The account (company) and its settings, e.g. `auto_resolve_duration` in days.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Account {
+    pub id: i64,
+    pub name: String,
+    pub locale: String,
+    pub settings: Value,
+    pub created: String,
 }

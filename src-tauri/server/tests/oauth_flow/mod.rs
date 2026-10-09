@@ -1,8 +1,8 @@
 //! OAuth flow helpers shared by the OAuth tests (port of `tests/oauth-fixture.mjs`).
 #![allow(dead_code)]
 pub mod golden;
-use crate::common::http::{request, send, Reply};
-use crate::common::{Fixture, ADMIN_TOKEN, ORIGIN};
+use crate::common::http::{request, Reply};
+use crate::common::{Fixture, ORIGIN};
 use axum::body::Body;
 use axum::http::Request;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -203,13 +203,6 @@ impl Flow {
 
     pub async fn rpc(&self, token: &str, name: &str) -> Reply {
         self.rpc_with(token, name, &self.a, json!({})).await
-    }
-
-    pub async fn admin_with(&self, method: &str, path: &str, headers: &[(&str, &str)]) -> Reply {
-        let auth = format!("Bearer {ADMIN_TOKEN}");
-        let mut all = vec![("authorization", auth.as_str())];
-        all.extend_from_slice(headers);
-        send(&self.f.app.admin_router(), request(method, path, None, &all)).await
     }
 
     /// Runs SQL on the fixture database (expiring rows like the Node tests do).

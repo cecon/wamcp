@@ -119,9 +119,15 @@ async fn update_inbox(
     if let Some(zone) = &body.timezone {
         check(zone.chars().count() <= 64)?;
     }
+    check(
+        body.max_assignment_limit
+            .flatten()
+            .is_none_or(|l| (1..=1000).contains(&l)),
+    )?;
     let changes = InboxChanges {
         name: body.name.as_deref().map(|n| text(n, 1, 80)).transpose()?,
         out_of_office_message: nullable_text(body.out_of_office_message.clone(), 1000)?,
+        csat_survey_message: nullable_text(body.csat_survey_message.clone(), 1000)?,
         ..body
     };
     let id = id(&inbox)?;

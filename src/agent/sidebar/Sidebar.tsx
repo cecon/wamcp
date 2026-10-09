@@ -1,63 +1,78 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
+  AtSign,
   Bolt,
   ChartSpline,
   Contact,
+  Folder,
   Inbox as InboxIcon,
   Mailbox,
   MessageCircle,
-  MessageSquareText,
-  Repeat,
+  MessageCircleDashed,
   Search,
-  SquareUser,
   Tag,
-  Tags,
+  TextSearch,
   Users,
-  Webhook,
+  UsersRound,
 } from 'lucide-react';
-import type { Catalog, User } from '../types';
-import type { Route, SettingsSection } from '../route';
+import type { Catalog, ConversationType, CustomFilter, User } from '../types';
+import { CONVERSATION_TYPE_LABEL } from '../labels';
+import type { Route } from '../route';
 import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
+import { CatalogNav } from './CatalogNav';
+import { REPORTS, SETTINGS } from './navItems';
+import { canManageContacts, canViewReports } from '../permissions';
+import { isDesktop } from '../desktop/tauri';
 
-const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt }[] = [
-  { section: 'agents', label: 'Agentes', icon: SquareUser },
-  { section: 'teams', label: 'Times', icon: Users },
-  { section: 'inboxes', label: 'Caixas de entrada', icon: InboxIcon },
-  { section: 'labels', label: 'Etiquetas', icon: Tags },
-  { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
-  { section: 'automation', label: 'Automação', icon: Repeat },
-  { section: 'webhooks', label: 'Webhooks', icon: Webhook },
+const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
+  { type: 'mentions', icon: AtSign },
+  { type: 'unattended', icon: MessageCircleDashed },
+  { type: 'participating', icon: UsersRound },
 ];
-type Group = 'conversations' | 'settings' | null;
+type Group = 'conversations' | 'catalog' | 'reports' | 'settings' | null;
 
 interface Props {
   user: User;
   catalog: Catalog;
+  views?: CustomFilter[];
   route: Route;
   unread: number;
   online: boolean;
   onNavigate: (route: Route) => void;
   onAvailability: (value: User['availability']) => void;
   onLogout: () => void;
+  /** Notification bell shown next to the account name. */
+  bell?: ReactNode;
+  /** Opens the keyboard shortcuts help (profile menu). */
+  onShortcuts?: () => void;
 }
 
 /** Chatwoot components-next/sidebar: account header, search, accordion nav and profile footer. */
 export function Sidebar({
   user,
   catalog,
+  views = [],
   route,
   unread,
   online,
   onNavigate,
   onAvailability,
   onLogout,
+  bell,
+  onShortcuts,
 }: Props) {
   const isAdmin = user.role === 'administrator';
-  const [expanded, setExpanded] = useState<Group>(route.page === 'settings' ? 'settings' : 'conversations');
+  const [expanded, setExpanded] = useState<Group>(
+    route.page === 'settings' || route.page === 'reports' || route.page === 'catalog'
+      ? route.page
+      : 'conversations',
+  );
   const [q, setQ] = useState('');
   const conv = route.page === 'conversations' ? route : null;
-  const allActive = Boolean(conv && !conv.inboxId && !conv.teamId && !conv.label);
+  const allActive = Boolean(
+    conv && !conv.inboxId && !conv.teamId && !conv.label && !conv.conversationType && !conv.filters,
+  );
   const open = (group: Group, target: Route) => {
     setExpanded(group);
     onNavigate(target);
@@ -75,6 +90,7 @@ export function Sidebar({
           </span>
           <span className="h-3 w-px bg-n-strong" />
           <span className="truncate px-2 text-sm leading-5 font-medium text-n-slate-12">WA MCP</span>
+          {bell}
         </div>
         <form
           className="flex gap-2 px-2"
@@ -93,6 +109,16 @@ export function Sidebar({
               className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-n-slate-10"
             />
           </label>
+          <button
+            type="button"
+            aria-label="Pesquisa global"
+            title="Pesquisa global (Ctrl+K)"
+            aria-current={route.page === 'search' ? 'page' : undefined}
+            onClick={() => open(null, { page: 'search' })}
+            className="grid size-7 shrink-0 place-content-center rounded-lg text-n-slate-11 outline outline-1 -outline-offset-1 outline-n-weak hover:bg-n-alpha-2"
+          >
+            <TextSearch size={16} />
+          </button>
         </form>
       </div>
 
@@ -124,6 +150,26 @@ export function Sidebar({
               active={allActive}
               onClick={() => onNavigate({ page: 'conversations' })}
             />
+            {TYPES.map(({ type, icon: Icon }) => (
+              <SidebarLeaf
+                key={type}
+                label={CONVERSATION_TYPE_LABEL[type]}
+                icon={<Icon size={16} />}
+                active={conv?.conversationType === type}
+                onClick={() => onNavigate({ page: 'conversations', conversationType: type })}
+              />
+            ))}
+            {views.length > 0 && <SidebarSeparator icon={Folder} label="Pastas" />}
+            {views.map((v) => (
+              <SidebarLeaf
+                key={`v${v.id}`}
+                label={v.name}
+                active={conv?.viewId === v.id}
+                onClick={() =>
+                  onNavigate({ page: 'conversations', viewId: v.id, filters: v.query?.payload || [] })
+                }
+              />
+            ))}
             {catalog.teams.length > 0 && <SidebarSeparator icon={Users} label="Times" />}
             {catalog.teams.map((t) => (
               <SidebarLeaf
@@ -154,21 +200,48 @@ export function Sidebar({
               />
             ))}
           </SidebarGroup>
-          <SidebarGroup
-            icon={Contact}
-            label="Contatos"
-            active={route.page === 'contacts'}
-            parentOfActive={false}
-            onClick={() => open(null, { page: 'contacts' })}
+          {canManageContacts(user) && (
+            <SidebarGroup
+              icon={Contact}
+              label="Contatos"
+              active={route.page === 'contacts'}
+              parentOfActive={false}
+              onClick={() => open(null, { page: 'contacts' })}
+            />
+          )}
+          <CatalogNav
+            route={route}
+            isAdmin={isAdmin}
+            expanded={expanded === 'catalog'}
+            onToggle={() =>
+              expanded === 'catalog'
+                ? setExpanded(null)
+                : open('catalog', { page: 'catalog', section: 'menu' })
+            }
+            onNavigate={onNavigate}
           />
-          {isAdmin && (
+          {canViewReports(user) && (
             <SidebarGroup
               icon={ChartSpline}
               label="Relatórios"
-              active={route.page === 'reports'}
-              parentOfActive={false}
-              onClick={() => open(null, { page: 'reports' })}
-            />
+              active={false}
+              parentOfActive={route.page === 'reports'}
+              expanded={expanded === 'reports'}
+              onClick={() =>
+                expanded === 'reports'
+                  ? setExpanded(null)
+                  : open('reports', { page: 'reports', section: 'overview' })
+              }
+            >
+              {REPORTS.map(({ section, label }) => (
+                <SidebarLeaf
+                  key={section}
+                  label={label}
+                  active={route.page === 'reports' && (route.section || 'overview') === section}
+                  onClick={() => onNavigate({ page: 'reports', section })}
+                />
+              ))}
+            </SidebarGroup>
           )}
           {isAdmin && (
             <SidebarGroup
@@ -183,7 +256,7 @@ export function Sidebar({
                   : open('settings', { page: 'settings', section: 'agents' })
               }
             >
-              {SETTINGS.map(({ section, label, icon: Icon }) => (
+              {SETTINGS.filter((s) => !s.desktop || isDesktop()).map(({ section, label, icon: Icon }) => (
                 <SidebarLeaf
                   key={section}
                   label={label}
@@ -198,7 +271,14 @@ export function Sidebar({
       </nav>
 
       <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-t from-n-background" />
-      <ProfileMenu user={user} online={online} onAvailability={onAvailability} onLogout={onLogout} />
+      <ProfileMenu
+        user={user}
+        online={online}
+        onAvailability={onAvailability}
+        onLogout={onLogout}
+        onNavigate={onNavigate}
+        onShortcuts={onShortcuts}
+      />
     </aside>
   );
 }

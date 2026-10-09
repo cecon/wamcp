@@ -111,6 +111,7 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               <button
                 type="button"
                 onClick={toggle}
+                data-shortcut="labels"
                 className="flex h-6 items-center gap-1 rounded-md px-2 text-xs text-n-blue-11 outline outline-1 -outline-offset-1 outline-dashed outline-n-blue-9/40 hover:bg-n-blue-3"
               >
                 <Plus size={12} /> Adicionar etiquetas

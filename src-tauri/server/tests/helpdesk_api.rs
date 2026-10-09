@@ -20,10 +20,13 @@ async fn bootstrap_creates_the_first_admin_once_and_login_issues_a_secure_cookie
     );
     let login = json!({ "email": "ADMIN@example.com", "password": PASSWORD });
     let reply = f.api("POST", "/auth/login", Some(login), &[]).await;
-    assert!(reply
-        .header("set-cookie")
-        .unwrap_or_default()
-        .contains("HttpOnly; Secure; SameSite=Strict"));
+    assert!(
+        reply
+            .header("set-cookie")
+            .unwrap_or_default()
+            .contains("HttpOnly; SameSite=Strict"),
+        "plain HTTP on the local network"
+    );
     assert_eq!(f.login("admin@example.com", "senha-errada-000").await.err(), Some(401));
     assert_eq!(f.login("ninguem@example.com", PASSWORD).await.err(), Some(401));
     assert_eq!(

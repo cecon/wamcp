@@ -8,11 +8,11 @@ use std::path::Path;
 
 const HTML: &str = "<!doctype html><title>Agent</title>";
 const SCRIPT: &str = "console.log('agent');";
-const CSP: &str = "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; \
+const CSP: &str = "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; \
 script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
 
 fn built(dir: &Path) {
-    std::fs::write(dir.join("agent.html"), HTML).expect("page");
+    std::fs::write(dir.join("index.html"), HTML).expect("page");
     std::fs::create_dir_all(dir.join("assets")).expect("assets");
     std::fs::write(dir.join("assets").join("app.js"), SCRIPT).expect("script");
     std::fs::write(dir.join("secret.txt"), "outside assets").expect("secret");
@@ -95,7 +95,7 @@ async fn the_page_is_resolved_per_request_and_missing_ui_answers_503() {
 
     let web = tempfile::tempdir().expect("web");
     let f = Fixture::with_web(web.path()).await;
-    assert_eq!(get(&f, "/app/").await.status, 404, "agent.html not written yet");
+    assert_eq!(get(&f, "/app/").await.status, 404, "index.html not written yet");
     built(web.path());
     assert_eq!(get(&f, "/app/").await.text, HTML);
 }

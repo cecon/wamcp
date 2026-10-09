@@ -2,8 +2,8 @@
 //! permission and durable history (port of `tests/security.test.mjs`).
 mod common;
 
-use common::http::{request, send, Reply};
-use common::{Fixture, ADMIN_TOKEN};
+use common::http::{request, Reply};
+use common::Fixture;
 use serde_json::{json, Value};
 use wamcp_server::adapters::inbound::mcp::catalog::tools;
 use wamcp_server::adapters::outbound::sqlite::SqliteStore;
@@ -93,9 +93,7 @@ async fn public_listener_never_exposes_management_and_requires_authentication() 
     let s = f.session("Private");
     assert_eq!(f.public(request("GET", "/api/sessions", None, &[])).await.status, 404);
     assert_eq!(
-        send(&f.app.admin_router(), request("GET", "/api/sessions", None, &[]))
-            .await
-            .status,
+        f.public(request("GET", "/api/v1/sessions", None, &[])).await.status,
         401
     );
     assert_eq!(
@@ -104,14 +102,10 @@ async fn public_listener_never_exposes_management_and_requires_authentication() 
             .status,
         401
     );
-    let auth = format!("Bearer {ADMIN_TOKEN}");
-    let headers = [("authorization", auth.as_str()), ("origin", "https://evil.example")];
-    assert_eq!(
-        send(&f.app.admin_router(), request("GET", "/api/sessions", None, &headers))
-            .await
-            .status,
-        403
-    );
+    let admin = f.bootstrap().await;
+    let headers = [("cookie", admin.cookie.as_str()), ("origin", "https://evil.example")];
+    let foreign = f.public(request("GET", "/api/v1/sessions", None, &headers)).await;
+    assert_eq!(foreign.status, 403, "other sites cannot use the session");
 }
 
 #[tokio::test]

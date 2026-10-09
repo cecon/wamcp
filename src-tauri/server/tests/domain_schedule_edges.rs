@@ -106,7 +106,7 @@ fn conversation(status: &str, requested_at: Option<i64>) -> Conversation {
         "id": 1, "account_id": 1, "display_id": 1, "inbox_id": 1, "contact_id": 1, "contact_inbox_id": 1,
         "status": status, "priority": null, "assignee_id": null, "team_id": null, "snoozed_until": null,
         "waiting_since": null, "first_reply_at": null, "agent_last_seen_at": null, "last_activity_at": 0,
-        "custom_attributes": "{}", "created": "", "csat_requested_at": requested_at, "contact_name": null,
+        "custom_attributes": {}, "created": "", "csat_requested_at": requested_at, "contact_name": null,
         "contact_phone": null, "contact_jid": "1@s.whatsapp.net", "inbox_name": "S",
         "agent_bot_enabled": 0, "assignee_name": null, "team_name": null, "labels": [],
         "last_message": null, "unread_count": 0
@@ -162,6 +162,8 @@ fn webhook_events_map_every_internal_event() {
         ("contact.created", "contact_created"),
         ("contact.updated", "contact_updated"),
         ("csat.created", "csat_created"),
+        ("conversation.typing_on", "conversation_typing_on"),
+        ("conversation.typing_off", "conversation_typing_off"),
     ];
     for (internal, public) in pairs {
         assert_eq!(webhook_event_for(internal), Some(public), "{internal}");
@@ -171,7 +173,7 @@ fn webhook_events_map_every_internal_event() {
         !is_webhook_event("message.created"),
         "internal names are not subscriptions"
     );
-    assert_eq!(WEBHOOK_EVENTS.len(), 8);
+    assert_eq!(WEBHOOK_EVENTS.len(), 10);
     assert_eq!((retry_delay(0), retry_delay(-1), retry_delay(6)), (None, None, None));
 }
 

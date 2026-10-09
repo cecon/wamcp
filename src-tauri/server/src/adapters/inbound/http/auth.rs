@@ -12,13 +12,6 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
 pub const SESSION_COOKIE: &str = "wamcp_session";
-const ADMIN_ORIGINS: [&str; 5] = [
-    "http://127.0.0.1:1420",
-    "http://localhost:1420",
-    "http://tauri.localhost",
-    "https://tauri.localhost",
-    "tauri://localhost",
-];
 
 pub fn read_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
     let cookies = headers.get(header::COOKIE)?.to_str().ok()?;
@@ -32,10 +25,20 @@ pub fn read_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
     })
 }
 
-pub fn session_cookie(value: &str, max_age_ms: i64) -> HeaderValue {
+/// Requests that reached us over HTTPS (the Cloudflare tunnel or another TLS proxy).
+pub fn is_https(headers: &HeaderMap) -> bool {
+    let value = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default();
+    value("x-forwarded-proto").eq_ignore_ascii_case("https")
+        || value("cf-visitor").contains("https")
+        || headers.contains_key("cf-connecting-ip")
+}
+
+/// The session cookie; `Secure` only over HTTPS, so plain-HTTP access on the local network works.
+pub fn session_cookie(value: &str, max_age_ms: i64, secure: bool) -> HeaderValue {
     let age = (max_age_ms / 1000).max(0);
     let encoded: String = url::form_urlencoded::byte_serialize(value.as_bytes()).collect();
-    let cookie = format!("{SESSION_COOKIE}={encoded}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age={age}");
+    let secure = if secure { "; Secure" } else { "" };
+    let cookie = format!("{SESSION_COOKIE}={encoded}; Path=/; HttpOnly{secure}; SameSite=Strict; Max-Age={age}");
     HeaderValue::from_str(&cookie).unwrap_or(HeaderValue::from_static(""))
 }
 
@@ -95,6 +98,42 @@ impl FromRequestParts<AppState> for CurrentUser {
     }
 }
 
+/// An agent, or an agent bot authenticated by its `api_access_token` (for replies and handoffs).
+pub enum Requester {
+    Agent(Box<CurrentUser>),
+    Bot(i64),
+}
+
+impl Requester {
+    /// The actor for a conversation; bots may only act in the inboxes connected to them.
+    pub fn actor(&self, state: &AppState, display_id: i64) -> Result<Actor, ApiError> {
+        match self {
+            Self::Agent(current) => Ok(current.actor()),
+            Self::Bot(bot) => Ok(state.support().helpdesk.bot_actor(*bot, display_id)?),
+        }
+    }
+}
+
+impl FromRequestParts<AppState> for Requester {
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Response> {
+        if let Some(token) = parts.headers.get("api_access_token").and_then(|v| v.to_str().ok()) {
+            let bot = state
+                .support()
+                .helpdesk
+                .is_agent_bot_token(token)
+                .map_err(|e| ApiError::from(e).into_response())?;
+            if let Some(bot) = bot {
+                return Ok(Self::Bot(bot));
+            }
+        }
+        CurrentUser::from_request_parts(parts, state)
+            .await
+            .map(|current| Self::Agent(Box::new(current)))
+    }
+}
+
 /// Only same-origin browser requests (or the public URL) may reach the helpdesk API.
 pub async fn same_origin(State(state): State<AppState>, request: Request, next: Next) -> Response {
     if let Some(origin) = request.headers().get(header::ORIGIN).and_then(|v| v.to_str().ok()) {
@@ -110,37 +149,12 @@ pub async fn same_origin(State(state): State<AppState>, request: Request, next: 
     next.run(request).await
 }
 
-/// The local admin listener only answers the desktop app (allowed origins + admin bearer token).
-pub async fn admin_guard(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    let origin = request
-        .headers()
-        .get(header::ORIGIN)
-        .and_then(|v| v.to_str().ok())
-        .map(str::to_string);
-    if let Some(origin) = &origin {
-        if !ADMIN_ORIGINS.contains(&origin.as_str()) {
-            return StatusCode::FORBIDDEN.into_response();
-        }
+/// Administrators only (the WhatsApp connections API).
+pub async fn require_admin_user(State(state): State<AppState>, request: Request, next: Next) -> Response {
+    let (mut parts, body) = request.into_parts();
+    match CurrentUser::from_request_parts(&mut parts, &state).await {
+        Ok(current) if current.user.role == "administrator" => next.run(Request::from_parts(parts, body)).await,
+        Ok(_) => error_body(StatusCode::FORBIDDEN, "Somente administradores podem fazer isso"),
+        Err(rejection) => rejection,
     }
-    let mut response = if request.method() == Method::OPTIONS {
-        StatusCode::NO_CONTENT.into_response()
-    } else if !same_secret(&bearer(request.headers()).unwrap_or_default(), &state.admin_token) {
-        StatusCode::UNAUTHORIZED.into_response()
-    } else {
-        next.run(request).await
-    };
-    if let Some(origin) = origin.and_then(|o| HeaderValue::from_str(&o).ok()) {
-        let headers = response.headers_mut();
-        headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
-        headers.insert(header::VARY, HeaderValue::from_static("Origin"));
-        headers.insert(
-            header::ACCESS_CONTROL_ALLOW_HEADERS,
-            HeaderValue::from_static("Authorization,Content-Type"),
-        );
-        headers.insert(
-            header::ACCESS_CONTROL_ALLOW_METHODS,
-            HeaderValue::from_static("GET,POST,DELETE,OPTIONS"),
-        );
-    }
-    response
 }

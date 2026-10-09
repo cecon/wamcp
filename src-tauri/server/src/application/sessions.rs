@@ -104,6 +104,8 @@ pub struct McpService {
     pub oauth: Option<OAuthService>,
     /// Helpdesk use cases executed as this session's inbox bot (absent when the helpdesk is off).
     pub helpdesk: Option<HelpdeskService>,
+    /// The product catalog read by the inbox assistant tools.
+    pub menu: Option<crate::application::menu::MenuService>,
 }
 
 impl McpService {

@@ -1,0 +1,122 @@
+{
+  "categories": [
+    {
+      "id": "cat-pizzas",
+      "name": "Pizzas",
+      "externalCode": "PIZ",
+      "status": "AVAILABLE",
+      "template": "PIZZA",
+      "items": [
+        {
+          "id": "item-pizza",
+          "productId": "prod-pizza",
+          "status": "AVAILABLE",
+          "externalCode": "PZ",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "cat-bebidas",
+      "name": "Bebidas",
+      "status": "AVAILABLE",
+      "template": "DEFAULT",
+      "items": [
+        {
+          "id": "item-refri",
+          "productId": "prod-refri",
+          "status": "AVAILABLE",
+          "price": { "value": 9.0 },
+          "externalCode": "REF2L"
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-pizza",
+      "name": "Pizza",
+      "description": "Monte a sua: até 2 sabores na grande",
+      "optionGroups": [
+        { "id": "grp-size", "min": 1, "max": 1 },
+        { "id": "grp-crust", "min": 1, "max": 1 },
+        { "id": "grp-edge", "min": 0, "max": 1 },
+        { "id": "grp-top", "min": 1, "max": 2 }
+      ]
+    },
+    { "id": "prod-refri", "name": "Refrigerante 2 L", "image": "refri2l.png" },
+    { "id": "prod-broto", "name": "Broto" },
+    { "id": "prod-grande", "name": "Grande" },
+    { "id": "prod-trad", "name": "Tradicional" },
+    { "id": "prod-fina", "name": "Fina" },
+    { "id": "prod-cat", "name": "Catupiry" },
+    { "id": "prod-calab", "name": "Calabresa", "image": "calabresa.jpg" },
+    { "id": "prod-marg", "name": "Margherita" },
+    { "id": "prod-port", "name": "Portuguesa" }
+  ],
+  "optionGroups": [
+    {
+      "id": "grp-size",
+      "name": "Tamanho",
+      "optionGroupType": "SIZE",
+      "optionIds": ["opt-broto", "opt-grande"]
+    },
+    { "id": "grp-crust", "name": "Massa", "optionGroupType": "CRUST", "optionIds": ["opt-trad", "opt-fina"] },
+    { "id": "grp-edge", "name": "Borda", "optionGroupType": "EDGE", "optionIds": ["opt-cat"] },
+    {
+      "id": "grp-top",
+      "name": "Sabores",
+      "optionGroupType": "TOPPING",
+      "options": ["opt-calab", "opt-marg", "opt-port"]
+    }
+  ],
+  "options": [
+    {
+      "id": "opt-broto",
+      "productId": "prod-broto",
+      "price": { "value": 0 },
+      "fractions": [1],
+      "externalCode": "TAM-B"
+    },
+    {
+      "id": "opt-grande",
+      "productId": "prod-grande",
+      "price": { "value": 0 },
+      "fractions": [1, 2],
+      "externalCode": "TAM-G"
+    },
+    { "id": "opt-trad", "productId": "prod-trad", "price": { "value": 0 } },
+    { "id": "opt-fina", "productId": "prod-fina", "price": { "value": 0 } },
+    { "id": "opt-cat", "productId": "prod-cat", "price": { "value": 8 }, "externalCode": "BOR-CAT" },
+    {
+      "id": "opt-calab",
+      "productId": "prod-calab",
+      "price": { "value": 30 },
+      "contextModifiers": [
+        { "catalogContext": "DEFAULT", "externalCode": "SAB-CAL" },
+        { "catalogContext": "DEFAULT", "parentOptionId": "opt-broto", "price": { "value": 30 } },
+        { "catalogContext": "DEFAULT", "parentOptionId": "opt-grande", "price": { "value": 50 } }
+      ]
+    },
+    {
+      "id": "opt-marg",
+      "productId": "prod-marg",
+      "price": { "value": 32 },
+      "externalCode": "SAB-MAR",
+      "contextModifiers": [
+        { "parentOptionId": "opt-broto", "price": { "value": 32 } },
+        { "parentOptionId": "opt-grande", "price": { "value": 54 } }
+      ]
+    },
+    {
+      "id": "opt-port",
+      "productId": "prod-port",
+      "price": { "value": 35 },
+      "externalCode": "SAB-POR",
+      "contextModifiers": [
+        { "parentOptionId": "opt-broto", "price": { "value": 35 } },
+        { "parentOptionId": "opt-grande", "price": { "value": 58.9 } }
+      ]
+    }
+  ]
+}
