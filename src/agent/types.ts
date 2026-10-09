@@ -37,6 +37,8 @@ export interface Inbox {
   csat_survey_message?: string | null;
   /** Connected agent bot (new conversations start pending while set). */
   agent_bot_id?: number | null;
+  /** 1: agent replies reach WhatsApp with `*Nome*:` on the first line. */
+  show_agent_name?: number;
 }
 export interface WorkingDay {
   day_of_week: number;

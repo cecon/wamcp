@@ -69,6 +69,7 @@ impl InboxRepo for SqliteStore {
             ("agent_bot_enabled", changes.agent_bot_enabled),
             ("working_hours_enabled", changes.working_hours_enabled),
             ("csat_survey_enabled", changes.csat_survey_enabled),
+            ("show_agent_name", changes.show_agent_name),
         ];
         if let Some(name) = &changes.name {
             fields.push(("name", text(name.as_str())));

@@ -33,7 +33,11 @@ async fn agents_create_contacts_and_start_whatsapp_conversations() {
     let sent = f.wa.sent();
     assert_eq!(
         (sent[0].session_id.as_str(), sent[0].jid.as_str(), sent[0].text.as_str()),
-        (session.id.as_str(), "5511988880001@s.whatsapp.net", "Olá Ana!")
+        (
+            session.id.as_str(),
+            "5511988880001@s.whatsapp.net",
+            "*maria*:\nOlá Ana!"
+        )
     );
     let again = maria
         .post(

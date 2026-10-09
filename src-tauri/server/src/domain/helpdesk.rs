@@ -44,6 +44,20 @@ pub fn require_inbox_access(actor: &Actor, member_inbox_ids: &[i64], inbox_id: i
     }
 }
 
+/// What the customer reads on WhatsApp: the agent's name in bold on the first line, so they know
+/// who is answering. The helpdesk keeps the message as typed.
+pub fn signed(text: &str, agent: &str) -> String {
+    let agent = agent.trim();
+    if agent.is_empty() {
+        text.to_string()
+    } else {
+        format!(
+            "*{agent}*:
+{text}"
+        )
+    }
+}
+
 /// WhatsApp groups, broadcasts and channels never become support conversations.
 pub fn is_support_jid(jid: &str, ignore_groups: bool) -> bool {
     if jid.is_empty() || jid == "status@broadcast" || jid.ends_with("@newsletter") || jid.ends_with("@broadcast") {

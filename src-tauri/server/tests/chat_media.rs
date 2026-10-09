@@ -41,7 +41,7 @@ async fn agents_send_files_with_caption_and_voice_notes() {
     let media = request.media.unwrap();
     assert_eq!(
         (media.file_type.as_str(), media.caption.as_deref()),
-        ("file", Some("Segue o boleto"))
+        ("file", Some("*Admin*:\nSegue o boleto"))
     );
     assert_eq!(media.bytes, b"%PDF-1");
     let source = reply.body["source_id"].as_str().unwrap();
@@ -119,7 +119,7 @@ async fn uploads_are_validated_and_private_files_stay_local() {
             .collect();
     assert_eq!(
         captions,
-        vec![None, Some("fotos".to_string())],
+        vec![None, Some("*Admin*:\nfotos".to_string())],
         "one WhatsApp message per file, caption on the first"
     );
     f.wa.fail_with(Some("Sessão desconectada"));

@@ -35,6 +35,7 @@ pub mod roles;
 pub mod search;
 pub mod security;
 pub mod sessions;
+mod signature;
 mod sla;
 mod teams;
 pub mod webhooks;

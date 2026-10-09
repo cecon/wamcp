@@ -30,6 +30,13 @@ pub struct Inbox {
     pub csat_survey_message: Option<String>,
     #[serde(default)]
     pub agent_bot_id: Option<i64>,
+    /// Agent replies reach WhatsApp as `*Nome*:` on the first line (on by default).
+    #[serde(default = "enabled")]
+    pub show_agent_name: i64,
+}
+
+fn enabled() -> i64 {
+    1
 }
 
 /// Inbox settings an administrator may change; `Some(None)` clears a nullable text.
@@ -47,6 +54,7 @@ pub struct InboxChanges {
     #[serde(default, deserialize_with = "super::nullable")]
     pub out_of_office_message: Option<Option<String>>,
     pub csat_survey_enabled: Option<bool>,
+    pub show_agent_name: Option<bool>,
     pub timezone: Option<String>,
     #[serde(default, deserialize_with = "super::nullable")]
     pub max_assignment_limit: Option<Option<i64>>,

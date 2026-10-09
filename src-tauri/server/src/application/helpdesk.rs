@@ -73,13 +73,18 @@ impl HelpdeskService {
     pub fn mark_seen(&self, actor: &Actor, display_id: i64) -> Result<Conversation> {
         let conversation = self.core.load(Some(actor), display_id)?;
         let now = self.core.now();
-        self.core.update(
+        let updated = self.core.update(
             conversation.id,
             Changes {
                 agent_last_seen_at: Some(Some(now)),
                 ..Default::default()
             },
-        )
+        )?;
+        // Lists show the unread badge from conversation events; clear it everywhere.
+        if conversation.unread_count != updated.unread_count {
+            self.core.emit("conversation.updated", &updated, Some(actor));
+        }
+        Ok(updated)
     }
 
     pub fn contacts(&self, actor: &Actor, q: &str, page: i64) -> Result<Vec<Contact>> {

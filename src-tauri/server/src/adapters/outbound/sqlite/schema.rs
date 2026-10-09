@@ -125,5 +125,7 @@ pub fn steps() -> Vec<String> {
          CREATE TABLE menu_imports(id TEXT PRIMARY KEY,url TEXT NOT NULL,status TEXT NOT NULL,message TEXT,
            counts TEXT NOT NULL DEFAULT '{}',preview TEXT,payload TEXT,started_at INTEGER NOT NULL,finished_at INTEGER);"
             .into(),
+        // v21: nome do agente na primeira linha das mensagens enviadas pelo WhatsApp
+        "ALTER TABLE inboxes ADD COLUMN show_agent_name INTEGER NOT NULL DEFAULT 1;".into(),
     ]
 }

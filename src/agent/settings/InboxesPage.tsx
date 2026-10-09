@@ -171,6 +171,12 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
               onChange={(v) => void patch({ lock_to_single_conversation: v })}
             />
             <Toggle
+              label="Mostrar o nome do agente"
+              hint="O cliente vê no WhatsApp quem respondeu, em negrito na primeira linha (ex.: *Maria*:)."
+              checked={inbox.show_agent_name !== 0}
+              onChange={(v) => void patch({ show_agent_name: v })}
+            />
+            <Toggle
               label="Ignorar grupos"
               hint="Grupos do WhatsApp não viram conversas."
               checked={Boolean(inbox.ignore_groups)}

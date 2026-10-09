@@ -77,8 +77,22 @@ async fn lists_sort_and_filter_unattended_and_participating() {
 async fn mark_unread_restores_the_badge() {
     let f = Fixture::new().await;
     let (admin, _) = three_conversations(&f).await;
+    let before = f.events.lock().len();
     admin.post("/conversations/1/update_last_seen", json!({})).await;
     assert_eq!(admin.get("/conversations/1").await.body["unread_count"], 0);
+    let seen: Vec<_> = f.events.lock()[before..]
+        .iter()
+        .filter(|e| e.event == "conversation.updated")
+        .map(|e| e.data["unread_count"].clone())
+        .collect();
+    assert_eq!(seen, vec![json!(0)], "lists clear the badge in real time");
+    let quiet = f.events.lock().len();
+    admin.post("/conversations/1/update_last_seen", json!({})).await;
+    let repeated = f.events.lock()[quiet..]
+        .iter()
+        .filter(|e| e.event == "conversation.updated")
+        .count();
+    assert_eq!(repeated, 0, "nothing to announce when it was already read");
     let unread = admin.post("/conversations/1/unread", json!({})).await;
     assert_eq!(unread.status, 200);
     assert_eq!(admin.get("/conversations/1").await.body["unread_count"], 1);
