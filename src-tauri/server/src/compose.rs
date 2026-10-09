@@ -5,6 +5,7 @@ use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support,
 use crate::application::accounts::AccountService;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
+use crate::application::avatars::AvatarService;
 use crate::application::catalog::CatalogService;
 use crate::application::core::Core;
 use crate::application::event_bus::{EventBus, Worker};
@@ -141,8 +142,17 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = media_worker.clone();
     bus.subscribe(move |e| worker.push(e));
+    let avatars = AvatarService::new(helpdesk.clone(), ports.images.clone());
+    let photos = avatars.clone();
+    let avatar_worker = Worker::spawn(Arc::new(move |e| {
+        let photos = photos.clone();
+        Box::pin(async move { photos.on_event(e).await })
+    }));
+    let worker = avatar_worker.clone();
+    bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
+        avatars,
         accounts: AccountService {
             core: core.clone(),
             hasher: ports.hasher.clone(),
@@ -186,7 +196,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     App {
         state,
-        workers: vec![automation_worker, reply_worker, media_worker],
+        workers: vec![automation_worker, reply_worker, media_worker, avatar_worker],
         sink,
     }
 }

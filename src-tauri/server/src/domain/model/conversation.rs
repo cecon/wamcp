@@ -26,6 +26,8 @@ pub struct Conversation {
     pub muted: i64,
     pub contact_name: Option<String>,
     pub contact_phone: Option<String>,
+    #[serde(default)]
+    pub contact_avatar_url: Option<String>,
     pub contact_jid: String,
     pub inbox_name: String,
     pub agent_bot_enabled: i64,

@@ -7,7 +7,7 @@ use crate::domain::roles::ConversationLimit;
 use rusqlite::types::Value as Sql;
 
 pub(super) const SELECT: &str =
-    "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ci.source_id AS contact_jid,
+    "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ct.avatar_url AS contact_avatar_url, ci.source_id AS contact_jid,
   i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, t.name AS team_name,
   (SELECT json_group_array(l.title) FROM (SELECT l.title FROM conversation_labels cl JOIN labels l ON l.id=cl.label_id
      WHERE cl.conversation_id=c.id ORDER BY l.title) l) AS labels,

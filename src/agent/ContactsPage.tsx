@@ -107,7 +107,7 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
           <tr key={c.id} onClick={() => open(c.id)} className="cursor-pointer hover:bg-n-alpha-1">
             <Cell>
               <span className="flex items-center gap-3">
-                <Avatar name={c.name || c.phone_number} size={32} />
+                <Avatar name={c.name || c.phone_number} src={c.avatar_url} size={32} />
                 <span className="font-medium text-n-slate-12">{c.name || 'Sem nome'}</span>
                 {c.blocked ? <span className="text-xs text-n-ruby-11">Bloqueado</span> : null}
               </span>

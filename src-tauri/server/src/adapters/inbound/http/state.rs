@@ -2,6 +2,7 @@
 use super::rate_limit::RateLimiter;
 use crate::application::accounts::AccountService;
 use crate::application::automations::AutomationService;
+use crate::application::avatars::AvatarService;
 use crate::application::catalog::CatalogService;
 use crate::application::event_bus::EventBus;
 use crate::application::events::EventService;
@@ -22,6 +23,8 @@ pub type WebDir = Arc<dyn Fn() -> Option<PathBuf> + Send + Sync>;
 #[derive(Clone)]
 pub struct Support {
     pub accounts: AccountService,
+    /// Contact photos fetched from WhatsApp.
+    pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,
     pub catalog: CatalogService,
     /// The product catalog (menu, `/catalog`).

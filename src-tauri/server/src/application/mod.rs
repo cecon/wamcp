@@ -6,6 +6,7 @@ pub mod agent_bots;
 mod attachments;
 pub mod auto_replies;
 pub mod automations;
+pub mod avatars;
 pub mod bulk;
 pub mod catalog;
 mod contact_channels;

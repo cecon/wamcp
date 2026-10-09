@@ -70,7 +70,7 @@ export function ContactPanel({
         <Button color="slate" variant="ghost" icon={X} aria-label="Fechar painel" onClick={onClose} />
       </div>
       <div className="flex flex-col gap-2 p-4">
-        <Avatar name={name} size={48} />
+        <Avatar name={name} src={contact?.avatar_url ?? c.contact_avatar_url} size={48} />
         <p className="mt-1 text-base font-medium text-n-slate-12">{name}</p>
         {contact?.email && <Row icon={<Mail size={14} />}>{contact.email}</Row>}
         {c.contact_phone && <Row icon={<Phone size={14} />}>{c.contact_phone}</Row>}

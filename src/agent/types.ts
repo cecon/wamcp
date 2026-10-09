@@ -107,6 +107,8 @@ export interface Conversation {
   contact_id: number;
   contact_name: string | null;
   contact_phone: string | null;
+  /** Saved WhatsApp photo of the contact (`/api/v1/contacts/{id}/photo`). */
+  contact_avatar_url?: string | null;
   contact_jid: string;
   status: ConversationStatus;
   assignee_id: number | null;

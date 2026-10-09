@@ -131,11 +131,31 @@ async fn avatar(
     current: CurrentUser,
     Path(contact): Path<String>,
 ) -> ApiResult<Response> {
-    ok(state
+    ok(state.support().avatars.refresh(&current.actor(), id(&contact)?).await?)
+}
+
+/// The contact photo saved from WhatsApp (sniffed type; private cache, it can change).
+async fn photo(State(state): State<AppState>, _user: CurrentUser, Path(contact): Path<String>) -> ApiResult<Response> {
+    let bytes = state
         .support()
-        .helpdesk
-        .refresh_avatar(&current.actor(), id(&contact)?)
-        .await?)
+        .avatars
+        .photo(id(&contact)?)?
+        .ok_or(super::error::ApiError::Status(
+            axum::http::StatusCode::NOT_FOUND,
+            "Contato sem foto",
+        ))?;
+    let kind = if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+        "image/png"
+    } else if bytes.get(8..12) == Some(b"WEBP") {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    };
+    let headers = [
+        (axum::http::header::CONTENT_TYPE, kind),
+        (axum::http::header::CACHE_CONTROL, "private, max-age=86400"),
+    ];
+    Ok(axum::response::IntoResponse::into_response((headers, bytes)))
 }
 
 #[derive(Deserialize)]
@@ -188,6 +208,7 @@ pub fn routes() -> Router<AppState> {
         .route("/contacts/{id}", get(contact).patch(update).delete(remove))
         .route("/contacts/{id}/labels", post(labels))
         .route("/contacts/{id}/avatar", post(avatar))
+        .route("/contacts/{id}/photo", get(photo))
         .route("/actions/contact_merge", post(merge))
         .route("/conversations", post(start))
 }

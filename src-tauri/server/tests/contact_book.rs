@@ -128,8 +128,19 @@ async fn notes_labels_avatar_and_blocking() {
         "5511988887777@s.whatsapp.net".into(),
         "https://pps.whatsapp.net/a.jpg".into(),
     );
+    f.images
+        .images
+        .lock()
+        .insert("https://pps.whatsapp.net/a.jpg".into(), b"\xFF\xD8\xFFfoto".to_vec());
     let avatar = maria.post("/contacts/1/avatar", json!({})).await.body;
-    assert_eq!(avatar["avatar_url"], "https://pps.whatsapp.net/a.jpg");
+    let saved = format!("/api/v1/contacts/1/photo?v={}", f.now());
+    assert_eq!(avatar["avatar_url"], saved, "kept locally: WhatsApp links expire");
+    let photo = maria.get("/contacts/1/photo").await;
+    assert_eq!(
+        (photo.status, photo.header("content-type").as_deref()),
+        (200, Some("image/jpeg"))
+    );
+    assert_eq!(maria.get("/conversations/1").await.body["contact_avatar_url"], saved);
 
     let blocked = maria.patch("/contacts/1", json!({ "blocked": true })).await.body;
     assert_eq!(blocked["blocked"], 1);
@@ -221,4 +232,57 @@ async fn merging_and_deleting_contacts() {
     let left: Value = admin.get("/conversations?status=all").await.body;
     assert!(left.as_array().unwrap().is_empty(), "conversations go with the contact");
     assert_eq!(admin.del("/contacts/1", None).await.status, 404);
+}
+
+#[tokio::test]
+async fn contacts_get_their_whatsapp_photo_when_they_write() {
+    let f = Fixture::new().await;
+    let session = f.session("Suporte");
+    let admin = f.bootstrap().await;
+    let jid = "5511988887777@s.whatsapp.net";
+    f.wa.avatars
+        .lock()
+        .insert(jid.into(), "https://pps.whatsapp.net/edu.jpg".into());
+    f.images
+        .images
+        .lock()
+        .insert("https://pps.whatsapp.net/edu.jpg".into(), b"\x89PNGfoto".to_vec());
+    f.incoming(&session.id, Incoming::default());
+    f.settle().await;
+    let contact = admin.get("/contacts/1").await.body;
+    assert!(contact["avatar_url"]
+        .as_str()
+        .unwrap()
+        .starts_with("/api/v1/contacts/1/photo"));
+    let photo = admin.get("/contacts/1/photo").await;
+    assert_eq!(photo.header("content-type").as_deref(), Some("image/png"));
+    assert!(f.event_names().contains(&"contact.updated".to_string()));
+    let fetched = f.images.requests.lock().len();
+    f.incoming(
+        &session.id,
+        Incoming {
+            id: "IN2",
+            body: "de novo",
+            ..Default::default()
+        },
+    );
+    f.settle().await;
+    assert_eq!(
+        f.images.requests.lock().len(),
+        fetched,
+        "a contact with a photo is not fetched again"
+    );
+
+    let other = Incoming {
+        id: "IN3",
+        jid: "5511900000002@s.whatsapp.net",
+        ..Default::default()
+    };
+    f.incoming(&session.id, other);
+    f.settle().await;
+    assert!(
+        admin.get("/contacts/2").await.body["avatar_url"].is_null(),
+        "no photo on WhatsApp"
+    );
+    assert_eq!(admin.get("/contacts/2/photo").await.status, 404);
 }

@@ -52,7 +52,7 @@ export function ConversationHeader({
           onClick={onBack}
           className="mr-1 md:hidden"
         />
-        <Avatar name={name} size={32} />
+        <Avatar name={name} src={c.contact_avatar_url} size={32} />
         <div className="ms-2 min-w-0">
           <p className="flex items-center gap-1 truncate text-sm leading-tight font-medium text-n-slate-12">
             {name}

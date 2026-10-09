@@ -69,7 +69,7 @@ export function ConversationCard({
           selected ? 'bg-n-slate-2' : 'hover:bg-n-alpha-1',
         )}
       >
-        <Avatar name={name} size={32} className="mt-8" />
+        <Avatar name={name} src={c.contact_avatar_url} size={32} className="mt-8" />
         <span className="min-w-0 flex-1 py-3">
           <span className="ml-2 flex items-center gap-1 pr-16 text-n-slate-11">
             <MessageCircle size={14} className="shrink-0 text-n-teal-10" />
