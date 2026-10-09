@@ -85,6 +85,17 @@ export const message = (id: number, fields: Partial<Message> = {}): Message => (
   ...fields,
 });
 
+export const contact = {
+  id: 50,
+  name: 'João Cliente',
+  phone_number: '+5511988887777',
+  email: 'joao@example.com',
+  identifier: null,
+  blocked: 0,
+  last_activity_at: 1,
+  conversations: [conversation, { ...conversation, id: 99, display_id: 3, status: 'resolved' as const }],
+};
+
 /** Default API for a logged-in workspace; tests override individual routes. */
 export function workspaceRoutes(user: User = admin): Record<string, Route> {
   return {
@@ -99,5 +110,6 @@ export function workspaceRoutes(user: User = admin): Record<string, Route> {
     'GET /conversations/7': conversation,
     'GET /conversations/7/messages': [message(1), message(2, { content: 'Alguém aí?' })],
     'POST /conversations/7/update_last_seen': { ...conversation, unread_count: 0 },
+    'GET /contacts/50': contact,
   };
 }

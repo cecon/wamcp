@@ -1,0 +1,204 @@
+import { useState } from 'react';
+import {
+  Bolt,
+  ChartSpline,
+  Contact,
+  Inbox as InboxIcon,
+  Mailbox,
+  MessageCircle,
+  MessageSquareText,
+  Repeat,
+  Search,
+  SquareUser,
+  Tag,
+  Tags,
+  Users,
+  Webhook,
+} from 'lucide-react';
+import type { Catalog, User } from '../types';
+import type { Route, SettingsSection } from '../route';
+import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
+import { ProfileMenu } from './ProfileMenu';
+
+const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt }[] = [
+  { section: 'agents', label: 'Agentes', icon: SquareUser },
+  { section: 'teams', label: 'Times', icon: Users },
+  { section: 'inboxes', label: 'Caixas de entrada', icon: InboxIcon },
+  { section: 'labels', label: 'Etiquetas', icon: Tags },
+  { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
+  { section: 'automation', label: 'Automação', icon: Repeat },
+  { section: 'webhooks', label: 'Webhooks', icon: Webhook },
+];
+type Group = 'conversations' | 'settings' | null;
+
+interface Props {
+  user: User;
+  catalog: Catalog;
+  route: Route;
+  unread: number;
+  online: boolean;
+  onNavigate: (route: Route) => void;
+  onAvailability: (value: User['availability']) => void;
+  onLogout: () => void;
+}
+
+/** Chatwoot components-next/sidebar: account header, search, accordion nav and profile footer. */
+export function Sidebar({
+  user,
+  catalog,
+  route,
+  unread,
+  online,
+  onNavigate,
+  onAvailability,
+  onLogout,
+}: Props) {
+  const isAdmin = user.role === 'administrator';
+  const [expanded, setExpanded] = useState<Group>(route.page === 'settings' ? 'settings' : 'conversations');
+  const [q, setQ] = useState('');
+  const conv = route.page === 'conversations' ? route : null;
+  const allActive = Boolean(conv && !conv.inboxId && !conv.teamId && !conv.label);
+  const open = (group: Group, target: Route) => {
+    setExpanded(group);
+    onNavigate(target);
+  };
+  const dot = (color: string) => (
+    <span className="size-2 shrink-0 rounded-sm" style={{ background: color }} />
+  );
+
+  return (
+    <aside className="flex h-full w-[200px] shrink-0 flex-col border-r border-n-weak bg-n-background text-sm">
+      <div className="mt-1 mb-4 grid gap-2 pt-2">
+        <div className="flex items-center gap-2 px-2">
+          <span className="flex size-6 items-center justify-center rounded-md bg-n-brand text-white">
+            <MessageCircle size={14} />
+          </span>
+          <span className="h-3 w-px bg-n-strong" />
+          <span className="truncate px-2 text-sm leading-5 font-medium text-n-slate-12">WA MCP</span>
+        </div>
+        <form
+          className="flex gap-2 px-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            open('conversations', { page: 'conversations', q: q.trim() || undefined });
+          }}
+        >
+          <label className="flex h-7 w-full items-center gap-2 rounded-lg bg-n-button-color px-2 py-1 outline outline-1 -outline-offset-1 outline-n-weak">
+            <Search size={16} className="shrink-0 text-n-slate-10" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Pesquisar…"
+              aria-label="Pesquisar conversas"
+              className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-n-slate-10"
+            />
+          </label>
+        </form>
+      </div>
+
+      <nav className="no-scrollbar grid min-h-0 flex-grow content-start gap-2 overflow-x-hidden overflow-y-auto px-2 pb-5">
+        <ul className="flex flex-col gap-1">
+          <SidebarGroup
+            icon={InboxIcon}
+            label="Caixa de entrada"
+            count={unread}
+            active={route.page === 'notifications'}
+            parentOfActive={false}
+            onClick={() => open(null, { page: 'notifications' })}
+          />
+          <SidebarGroup
+            icon={MessageCircle}
+            label="Conversas"
+            active={false}
+            parentOfActive={route.page === 'conversations'}
+            expanded={expanded === 'conversations'}
+            onClick={() =>
+              expanded === 'conversations'
+                ? setExpanded(null)
+                : open('conversations', { page: 'conversations' })
+            }
+          >
+            <SidebarLeaf
+              label="Todas as conversas"
+              icon={<InboxIcon size={16} />}
+              active={allActive}
+              onClick={() => onNavigate({ page: 'conversations' })}
+            />
+            {catalog.teams.length > 0 && <SidebarSeparator icon={Users} label="Times" />}
+            {catalog.teams.map((t) => (
+              <SidebarLeaf
+                key={`t${t.id}`}
+                label={t.name}
+                active={conv?.teamId === t.id}
+                onClick={() => onNavigate({ page: 'conversations', teamId: t.id })}
+              />
+            ))}
+            {catalog.inboxes.length > 0 && <SidebarSeparator icon={Mailbox} label="Canais" />}
+            {catalog.inboxes.map((i) => (
+              <SidebarLeaf
+                key={`i${i.id}`}
+                label={i.name}
+                icon={<MessageCircle size={16} className="text-n-teal-10" />}
+                active={conv?.inboxId === i.id}
+                onClick={() => onNavigate({ page: 'conversations', inboxId: i.id })}
+              />
+            ))}
+            {catalog.labels.length > 0 && <SidebarSeparator icon={Tag} label="Etiquetas" />}
+            {catalog.labels.map((l) => (
+              <SidebarLeaf
+                key={`l${l.id}`}
+                label={l.title}
+                icon={dot(l.color)}
+                active={conv?.label === l.title}
+                onClick={() => onNavigate({ page: 'conversations', label: l.title })}
+              />
+            ))}
+          </SidebarGroup>
+          <SidebarGroup
+            icon={Contact}
+            label="Contatos"
+            active={route.page === 'contacts'}
+            parentOfActive={false}
+            onClick={() => open(null, { page: 'contacts' })}
+          />
+          {isAdmin && (
+            <SidebarGroup
+              icon={ChartSpline}
+              label="Relatórios"
+              active={route.page === 'reports'}
+              parentOfActive={false}
+              onClick={() => open(null, { page: 'reports' })}
+            />
+          )}
+          {isAdmin && (
+            <SidebarGroup
+              icon={Bolt}
+              label="Configurações"
+              active={false}
+              parentOfActive={route.page === 'settings'}
+              expanded={expanded === 'settings'}
+              onClick={() =>
+                expanded === 'settings'
+                  ? setExpanded(null)
+                  : open('settings', { page: 'settings', section: 'agents' })
+              }
+            >
+              {SETTINGS.map(({ section, label, icon: Icon }) => (
+                <SidebarLeaf
+                  key={section}
+                  label={label}
+                  icon={<Icon size={16} />}
+                  active={route.page === 'settings' && route.section === section}
+                  onClick={() => onNavigate({ page: 'settings', section })}
+                />
+              ))}
+            </SidebarGroup>
+          )}
+        </ul>
+      </nav>
+
+      <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-t from-n-background" />
+      <ProfileMenu user={user} online={online} onAvailability={onAvailability} onLogout={onLogout} />
+    </aside>
+  );
+}
