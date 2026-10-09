@@ -2,7 +2,7 @@
 use super::error::{fail, Result};
 
 /// Chatwoot webhook event names and the internal events that produce them.
-pub const WEBHOOK_EVENTS: [(&str, &[&str]); 8] = [
+pub const WEBHOOK_EVENTS: [(&str, &[&str]); 10] = [
     ("conversation_created", &["conversation.created"]),
     ("conversation_status_changed", &["conversation.status_changed"]),
     (
@@ -14,6 +14,8 @@ pub const WEBHOOK_EVENTS: [(&str, &[&str]); 8] = [
     ("contact_created", &["contact.created"]),
     ("contact_updated", &["contact.updated"]),
     ("csat_created", &["csat.created"]),
+    ("conversation_typing_on", &["conversation.typing_on"]),
+    ("conversation_typing_off", &["conversation.typing_off"]),
 ];
 
 pub fn is_webhook_event(name: &str) -> bool {

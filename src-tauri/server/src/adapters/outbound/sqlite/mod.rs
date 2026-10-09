@@ -1,13 +1,31 @@
 //! SQLite implementation of every repository port (same schema as the Node version).
+mod account;
+mod agent_bots;
+mod attachments;
 mod automation;
 mod catalog;
+mod contact_book;
+mod contacts;
 mod conversations;
+mod custom;
 mod db;
 mod events;
+mod filters;
 mod inboxes;
 mod insights;
+mod macros;
+mod menu;
+mod menu_imports;
+mod messages;
 mod migrations;
 mod mirror;
+mod notifications;
+mod reports;
+mod roles;
+mod schema;
+mod search;
+mod security;
+mod sla;
 mod teams;
 mod users;
 

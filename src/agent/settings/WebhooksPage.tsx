@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Copy, Plus } from 'lucide-react';
-import { formatTime, http } from '../api';
+import { Plus } from 'lucide-react';
+import { http } from '../api';
 import type { Catalog, Delivery, Webhook } from '../types';
 import { WEBHOOK_EVENTS } from '../labels';
 import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
-import { Modal, SidePanel } from '../ui/Overlay';
+import { Modal } from '../ui/Overlay';
+import { SecretField as Secret } from '../ui/SecretField';
 import { Cell, ModalFooter, RowActions, SettingsHeader, SettingsPage, Table, Toggle } from '../ui/Settings';
+import { DeliveriesPanel } from './DeliveriesPanel';
 import { useAction } from './useAction';
 
-const STATUS: Record<Delivery['status'], [string, string]> = {
-  pending: ['pendente', 'text-n-amber-11'],
-  sent: ['entregue', 'text-n-teal-11'],
-  failed: ['falhou', 'text-n-ruby-11'],
-};
+const SecretField = ({ secret }: { secret: string }) => (
+  <Secret label="Segredo de assinatura" copyLabel="Copiar segredo" secret={secret} />
+);
 
 /** Chatwoot Webhooks: "Webhook endpoint | Actions" table and the add/edit modal with event checkboxes. */
 export function WebhooksPage({ catalog }: { catalog: Catalog }) {
@@ -103,23 +102,11 @@ export function WebhooksPage({ catalog }: { catalog: Catalog }) {
         />
       )}
       {deliveries && (
-        <SidePanel title="Entregas recentes" onClose={() => setDeliveries(null)}>
-          <p className="mb-4 text-sm break-all text-n-slate-11">{deliveries.hook.url}</p>
-          {deliveries.list.length === 0 && <p className="text-sm text-n-slate-11">Nenhuma entrega ainda.</p>}
-          <ul className="divide-y divide-n-weak">
-            {deliveries.list.map((d) => (
-              <li key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span>
-                  <span className="font-medium text-n-slate-12">{WEBHOOK_EVENTS[d.event] || d.event}</span>
-                  <span className="text-n-slate-11"> · {formatTime(d.created_at)}</span>
-                </span>
-                <span className={cn('text-right', STATUS[d.status][1])}>
-                  {STATUS[d.status][0]} ({d.attempts}x){d.last_error ? ` · ${d.last_error}` : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </SidePanel>
+        <DeliveriesPanel
+          target={deliveries.hook.url}
+          list={deliveries.list}
+          onClose={() => setDeliveries(null)}
+        />
       )}
     </SettingsPage>
   );
@@ -231,25 +218,6 @@ function WebhookModal({ webhook, catalog, onClose, onSaved }: ModalProps) {
         </form>
       )}
     </Modal>
-  );
-}
-
-function SecretField({ secret }: { secret: string }) {
-  return (
-    <label>
-      <span className="field-label">Segredo de assinatura</span>
-      <span className="flex gap-2">
-        <input className="field font-mono" readOnly value={secret} aria-label="Segredo de assinatura" />
-        <Button
-          color="slate"
-          variant="faded"
-          size="md"
-          icon={Copy}
-          aria-label="Copiar segredo"
-          onClick={() => void navigator.clipboard?.writeText(secret)}
-        />
-      </span>
-    </label>
   );
 }
 

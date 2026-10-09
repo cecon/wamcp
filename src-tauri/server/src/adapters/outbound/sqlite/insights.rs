@@ -58,14 +58,16 @@ impl InsightsRepo for SqliteStore {
             .ok_or_else(|| Error::internal("csat vanished"))
     }
 
-    fn csat_responses(&self, p: &Period) -> Result<Vec<CsatEntry>> {
+    fn csat_responses(&self, p: &Period, limit: i64) -> Result<Vec<CsatEntry>> {
         let sql = format!(
             "SELECT r.*, c.display_id, ct.name AS contact_name, u.name AS assignee_name FROM csat_responses r
              JOIN conversations c ON c.id=r.conversation_id JOIN contacts ct ON ct.id=r.contact_id
-             LEFT JOIN users u ON u.id=r.assignee_id WHERE r.{RANGE}{} ORDER BY r.created_at DESC LIMIT 200",
+             LEFT JOIN users u ON u.id=r.assignee_id WHERE r.{RANGE}{} ORDER BY r.created_at DESC LIMIT ?",
             inbox_filter(p, "r.")
         );
-        self.rows(&sql, args(p), PLAIN)
+        let mut params = args(p);
+        params.push(int(limit));
+        self.rows(&sql, params, PLAIN)
     }
 
     fn record_event(&self, e: &ReportingEvent) -> Result<()> {

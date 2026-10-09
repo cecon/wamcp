@@ -70,7 +70,7 @@ fn problem(schema: &Value, value: &Value) -> Option<String> {
         }
         ("number", Value::Number(n)) => check_number(schema, n.as_f64().unwrap_or(f64::NAN), false),
         ("integer", Value::Number(n)) => check_number(schema, n.as_f64().unwrap_or(f64::NAN), true),
-        ("boolean", Value::Bool(_)) | ("null", Value::Null) | ("any", _) => None,
+        ("boolean", Value::Bool(_)) | ("null", Value::Null) | ("object", Value::Object(_)) | ("any", _) => None,
         ("array", Value::Array(items)) => {
             if let Some(max) = number(schema, "maxItems").filter(|m| items.len() as f64 > *m) {
                 return Some(format!("Too big: expected array to have <={max} items"));

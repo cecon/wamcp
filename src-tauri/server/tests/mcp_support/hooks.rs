@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use serde_json::Value;
 use std::sync::Arc;
 use wamcp_server::adapters::outbound::whatsapp::memory::MemoryWhatsApp;
-use wamcp_server::application::ports::{CallbackError, CallbackResponse, EventCallback, WhatsApp};
+use wamcp_server::application::ports::{CallbackError, CallbackResponse, EventCallback, SendRequest, WhatsApp};
 use wamcp_server::domain::error::Result;
 use wamcp_server::domain::model::ConnectionDetail;
 
@@ -40,6 +40,9 @@ impl WhatsApp for HookedWhatsApp {
     }
     async fn send(&self, session_id: &str, jid: &str, text: &str, id: Option<&str>) -> Result<String> {
         self.inner.send(session_id, jid, text, id).await
+    }
+    async fn send_message(&self, session_id: &str, request: &SendRequest) -> Result<String> {
+        self.inner.send_message(session_id, request).await
     }
 }
 

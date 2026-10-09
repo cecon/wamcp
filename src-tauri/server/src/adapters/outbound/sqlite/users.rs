@@ -1,11 +1,17 @@
-use super::db::{flag, int, iso, now_ms, opt_text, text, SqliteStore, PLAIN};
+use super::db::{flag, int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteStore};
 use crate::application::crypto::{random_secret, sha256_hex};
 use crate::application::ports::UsersRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{Credentials, TokenOwner, User, UserChanges, WebSession};
 use rusqlite::types::Value as Sql;
 
-const USER_COLUMNS: &str = "id,account_id,email,name,display_name,role,availability,active,created,last_login";
+const USER_COLUMNS: &str = "id,account_id,email,name,display_name,role,availability,active,created,last_login,
+  mfa_enabled,custom_role_id,
+  COALESCE((SELECT r.permissions FROM custom_roles r WHERE r.id=users.custom_role_id),'[]') AS permissions";
+const USER: Shape = Shape {
+    json: &["permissions"],
+    bools: &[],
+};
 
 impl SqliteStore {
     fn require_user(&self, id: i64) -> Result<User> {
@@ -22,7 +28,7 @@ impl UsersRepo for SqliteStore {
         self.row(
             &format!("SELECT {USER_COLUMNS} FROM users WHERE id=?"),
             vec![int(id)],
-            PLAIN,
+            USER,
         )
     }
 
@@ -30,7 +36,7 @@ impl UsersRepo for SqliteStore {
         self.rows(
             &format!("SELECT {USER_COLUMNS} FROM users ORDER BY name COLLATE NOCASE"),
             vec![],
-            PLAIN,
+            USER,
         )
     }
 
@@ -99,6 +105,9 @@ impl UsersRepo for SqliteStore {
         }
         if let Some(hash) = &changes.password_hash {
             fields.push(("password_hash", text(hash.as_str())));
+        }
+        if let Some(role) = changes.custom_role_id {
+            fields.push(("custom_role_id", opt_int(role)));
         }
         self.update_fields("users", int(id), fields)?;
         self.require_user(id)

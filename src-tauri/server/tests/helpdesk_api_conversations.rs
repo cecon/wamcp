@@ -27,7 +27,7 @@ async fn replies_go_to_whatsapp_notes_do_not_and_failures_are_recorded() {
     );
     assert_eq!(
         (sent[0].text.as_str(), sent[0].message_id.as_deref()),
-        ("Oi, como posso ajudar?", Some("OUT1"))
+        ("*maria*:\nOi, como posso ajudar?", Some("OUT1"))
     );
     // WhatsApp echoes our own message back; it must not be duplicated.
     f.incoming(
@@ -173,5 +173,53 @@ async fn status_changes_write_activities_and_resolved_conversations_reopen() {
     assert_eq!(
         activities,
         vec!["Admin resolveu a conversa", "Admin resolveu a conversa"]
+    );
+}
+
+#[tokio::test]
+async fn whatsapp_shows_who_answered_unless_the_inbox_turns_it_off() {
+    let f = Fixture::new().await;
+    let s = f.session("Suporte");
+    let admin = f.bootstrap().await;
+    admin
+        .patch("/profile", json!({ "display_name": "Ana do Suporte" }))
+        .await;
+    f.incoming(&s.id, Incoming::default());
+    admin
+        .post("/conversations/1/messages", json!({ "content": "Bom dia!" }))
+        .await;
+    admin
+        .post(
+            "/conversations/1/messages",
+            json!({ "content": "nota", "private": true }),
+        )
+        .await;
+    let inbox = admin.get("/inboxes").await.body[0]["id"].as_i64().unwrap();
+    assert_eq!(
+        admin.get("/inboxes").await.body[0]["show_agent_name"],
+        1,
+        "on by default"
+    );
+    let off = admin
+        .patch(&format!("/inboxes/{inbox}"), json!({ "show_agent_name": false }))
+        .await;
+    assert_eq!(off.body["show_agent_name"], 0);
+    admin
+        .post("/conversations/1/messages", json!({ "content": "Sem assinatura" }))
+        .await;
+    let texts: Vec<String> = f.wa.sent().iter().map(|m| m.text.clone()).collect();
+    assert_eq!(texts, vec!["*Ana do Suporte*:\nBom dia!", "Sem assinatura"]);
+    let stored = admin.get("/conversations/1/messages").await.body;
+    let contents: Vec<&str> = stored
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["message_type"] == "outgoing" && m["private"] == false)
+        .filter_map(|m| m["content"].as_str())
+        .collect();
+    assert_eq!(
+        contents,
+        vec!["Bom dia!", "Sem assinatura"],
+        "the helpdesk keeps the text as typed"
     );
 }

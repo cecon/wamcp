@@ -1,4 +1,5 @@
-import { AlarmClockMinus, ArrowLeft, ChevronDown, CircleDotDashed, PanelRight } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { AlarmClockMinus, ArrowLeft, BellOff, ChevronDown, CircleDotDashed, PanelRight } from 'lucide-react';
 import type { Conversation, ConversationStatus } from '../types';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
@@ -16,10 +17,19 @@ interface Props {
   onBack: () => void;
   onTogglePanel: () => void;
   onStatus: (status: ConversationStatus, snoozedUntil?: number) => void;
+  /** Extra header actions (the conversation "more" menu). */
+  menu?: ReactNode;
 }
 
 /** Chatwoot ConversationHeader + ResolveAction split button (snooze / pending menu). */
-export function ConversationHeader({ conversation: c, panelOpen, onBack, onTogglePanel, onStatus }: Props) {
+export function ConversationHeader({
+  conversation: c,
+  panelOpen,
+  onBack,
+  onTogglePanel,
+  onStatus,
+  menu,
+}: Props) {
   const name = c.contact_name || c.contact_phone || 'Contato';
   const main =
     c.status === 'open'
@@ -42,9 +52,14 @@ export function ConversationHeader({ conversation: c, panelOpen, onBack, onToggl
           onClick={onBack}
           className="mr-1 md:hidden"
         />
-        <Avatar name={name} size={32} />
+        <Avatar name={name} src={c.contact_avatar_url} size={32} />
         <div className="ms-2 min-w-0">
-          <p className="truncate text-sm leading-tight font-medium text-n-slate-12">{name}</p>
+          <p className="flex items-center gap-1 truncate text-sm leading-tight font-medium text-n-slate-12">
+            {name}
+            {c.muted ? (
+              <BellOff size={12} className="text-n-slate-10" aria-label="Conversa silenciada" />
+            ) : null}
+          </p>
           <p className="truncate text-xs text-n-slate-11">
             #{c.display_id} • {c.inbox_name}
             {c.status === 'pending' && <span className="text-n-iris-9"> • com a IA</span>}
@@ -99,6 +114,7 @@ export function ConversationHeader({ conversation: c, panelOpen, onBack, onToggl
             )}
           </Dropdown>
         </div>
+        {menu}
         <Button
           color="slate"
           variant="ghost"

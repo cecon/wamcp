@@ -33,6 +33,7 @@ export function InboxAutomation({ inbox, onChange }: Props) {
     working_hours_enabled: Boolean(inbox.working_hours_enabled),
     out_of_office_message: inbox.out_of_office_message || '',
     csat_survey_enabled: Boolean(inbox.csat_survey_enabled),
+    csat_survey_message: inbox.csat_survey_message || '',
     timezone: inbox.timezone,
   });
   const [days, setDays] = useState<WorkingDay[]>(defaults);
@@ -61,6 +62,7 @@ export function InboxAutomation({ inbox, onChange }: Props) {
             ...form,
             greeting_message: form.greeting_message.trim() || null,
             out_of_office_message: form.out_of_office_message.trim() || null,
+            csat_survey_message: form.csat_survey_message.trim() || null,
           });
           await http(`/inboxes/${inbox.id}/working_hours`, 'PUT', {
             working_hours: days.map((d) => ({ ...d, closed_all_day: Boolean(d.closed_all_day) })),
@@ -158,6 +160,17 @@ export function InboxAutomation({ inbox, onChange }: Props) {
         checked={form.csat_survey_enabled}
         onChange={(v) => setForm({ ...form, csat_survey_enabled: v })}
       />
+      <label>
+        <span className="field-label">Mensagem da pesquisa CSAT</span>
+        <textarea
+          className="field"
+          rows={2}
+          maxLength={1000}
+          placeholder="Texto enviado com o pedido de nota (vazio usa a mensagem padrão)."
+          value={form.csat_survey_message}
+          onChange={(e) => setForm({ ...form, csat_survey_message: e.target.value })}
+        />
+      </label>
       {error && <p className="text-sm text-n-ruby-11">{error}</p>}
       {saved && <p className="text-sm text-n-teal-11">Configurações salvas.</p>}
       <Button type="submit" disabled={busy} className="self-start" label="Salvar mensagens automáticas" />

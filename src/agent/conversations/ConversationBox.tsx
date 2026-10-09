@@ -4,9 +4,12 @@ import { http, query, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
 import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
-import { MessageItem } from './MessageItem';
+import { ConversationMenu } from './ConversationMenu';
+import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
+import { TypingIndicator } from './TypingIndicator';
+import { useConversationShortcuts } from './useConversationShortcuts';
 
 interface Props {
   displayId: number;
@@ -15,6 +18,7 @@ interface Props {
   realtime: Realtime;
   onBack: () => void;
   onOpen: (displayId: number) => void;
+  onDeleted?: () => void;
 }
 
 const upsert = (list: Message[], message: Message) =>
@@ -23,16 +27,26 @@ const upsert = (list: Message[], message: Message) =>
     : [...list, message].sort((a, b) => a.id - b.id);
 
 /** Chatwoot ConversationBox (header, messages, reply box) plus the contact panel on the right. */
-export function ConversationBox({ displayId, user, catalog, realtime, onBack, onOpen }: Props) {
+export function ConversationBox({
+  displayId,
+  user,
+  catalog,
+  realtime,
+  onBack,
+  onOpen,
+  onDeleted = onBack,
+}: Props) {
   const [conversation, setConversation] = useState<Conversation | null>(null),
     [messages, setMessages] = useState<Message[]>([]),
     [older, setOlder] = useState(false),
     [history, setHistory] = useState<HistoryMessage[] | null>(null),
     [panel, setPanel] = useState(true),
+    [replyTo, setReplyTo] = useState<Message | null>(null),
     [error, setError] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
   const path = `/conversations/${displayId}`;
 
+  const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
   const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
   useEffect(() => {
     Promise.all([http<Conversation>(path), http<Message[]>(`${path}/messages`)])
@@ -87,6 +101,15 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
       );
       setHistory((current) => [...list, ...(current || [])]);
     });
+  useConversationShortcuts({
+    conversation,
+    onStatus: (status) => void setStatus(status),
+    onAssignToMe: () =>
+      void act(async () =>
+        setConversation(await http<Conversation>(`${path}/assignments`, 'POST', { assignee_id: user.id })),
+      ),
+    onShowPanel: () => setPanel(true),
+  });
 
   if (!conversation)
     return (
@@ -106,6 +129,16 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
           onBack={onBack}
           onTogglePanel={() => setPanel((v) => !v)}
           onStatus={(status, until) => void setStatus(status, until)}
+          menu={
+            <ConversationMenu
+              conversation={conversation}
+              isAdmin={user.role === 'administrator'}
+              onChange={setConversation}
+              onError={setError}
+              onLeave={onBack}
+              onDeleted={onDeleted}
+            />
+          }
         />
         {error && <p className="px-4 pt-2 text-sm text-n-ruby-11">{error}</p>}
         <div className="flex-1 overflow-y-auto pb-4">
@@ -144,17 +177,26 @@ export function ConversationBox({ displayId, user, catalog, realtime, onBack, on
               ))}
             </div>
           )}
-          <ul className="px-4">
-            {messages.map((m) => (
-              <MessageItem key={m.id} message={m} />
-            ))}
-          </ul>
+          <MessageList
+            messages={messages}
+            path={path}
+            currentUserId={user.id}
+            onUpsert={upsertOne}
+            onReply={setReplyTo}
+            onError={setError}
+          />
           <div ref={bottom} />
         </div>
+        <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
         <ReplyBox
           path={path}
           disabled={conversation.status === 'resolved'}
-          onSent={(m) => setMessages((list) => upsert(list, m))}
+          conversation={conversation}
+          user={user}
+          agents={catalog.agents}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onSent={upsertOne}
         />
       </section>
       {panel && (

@@ -1,0 +1,104 @@
+[
+  {
+    "id": "cat-acai",
+    "name": "Açaí",
+    "externalCode": "ACAI",
+    "status": "AVAILABLE",
+    "template": "DEFAULT",
+    "index": 0,
+    "items": [
+      {
+        "id": "item-acai500",
+        "productId": "prod-acai500",
+        "status": "AVAILABLE",
+        "price": { "value": 22.0, "originalValue": 25.0 },
+        "index": 0,
+        "contextModifiers": [
+          {
+            "catalogContext": "DEFAULT",
+            "externalCode": "AC500",
+            "status": "AVAILABLE",
+            "price": { "value": 22.0 }
+          }
+        ],
+        "shifts": [
+          {
+            "startTime": "14:00:00",
+            "endTime": "23:00:00",
+            "monday": true,
+            "tuesday": true,
+            "wednesday": true,
+            "thursday": true,
+            "friday": true,
+            "saturday": true,
+            "sunday": false
+          }
+        ]
+      },
+      {
+        "id": "item-acai300",
+        "productId": "prod-acai300",
+        "status": "UNAVAILABLE",
+        "price": { "value": 16.0 },
+        "index": 1
+      }
+    ],
+    "products": [
+      {
+        "id": "prod-acai500",
+        "name": "Açaí 500 ml",
+        "description": "Açaí batido na hora",
+        "externalCode": "P-AC500",
+        "image": "https://static-images.ifood.com.br/image/upload/t_high/pratos/acai500.jpg",
+        "serving": "SERVES_1",
+        "dietaryRestrictions": ["VEGAN"],
+        "ean": "7891234567895",
+        "optionGroups": [{ "id": "grp-acomp", "min": 1, "max": 2 }]
+      },
+      {
+        "id": "prod-acai300",
+        "name": "Açaí 300 ml",
+        "imagePath": "acai300.jpg",
+        "optionGroups": [{ "id": "grp-acomp", "min": 1, "max": 2 }]
+      },
+      { "id": "prod-granola", "name": "Granola", "externalCode": "P-GRA" },
+      { "id": "prod-leite", "name": "Leite em pó" },
+      { "id": "prod-morango", "name": "Morango" }
+    ],
+    "optionGroups": [
+      {
+        "id": "grp-acomp",
+        "name": "Acompanhamentos",
+        "externalCode": "G-ACOMP",
+        "status": "AVAILABLE",
+        "optionGroupType": "INGREDIENTS",
+        "optionIds": ["opt-granola", "opt-leite", "opt-morango"]
+      }
+    ],
+    "options": [
+      {
+        "id": "opt-granola",
+        "productId": "prod-granola",
+        "status": "AVAILABLE",
+        "price": { "value": 0 },
+        "index": 0
+      },
+      {
+        "id": "opt-leite",
+        "productId": "prod-leite",
+        "status": "AVAILABLE",
+        "price": { "value": 2.0 },
+        "contextModifiers": [
+          { "catalogContext": "DEFAULT", "externalCode": "O-LEI", "price": { "value": 2.0 } }
+        ]
+      },
+      {
+        "id": "opt-morango",
+        "productId": "prod-morango",
+        "status": "UNAVAILABLE",
+        "price": { "value": 3.5 },
+        "externalCode": "O-MOR"
+      }
+    ]
+  }
+]

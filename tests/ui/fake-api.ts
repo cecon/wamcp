@@ -18,7 +18,8 @@ export function fakeApi(routes: Record<string, Route>) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = new URL(String(input), 'http://localhost');
     const method = init.method || 'GET';
-    const body = init.body ? JSON.parse(String(init.body)) : undefined;
+    const body =
+      init.body instanceof FormData ? init.body : init.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({
       method,
       path: url.pathname,

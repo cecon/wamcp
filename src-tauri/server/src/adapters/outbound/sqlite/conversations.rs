@@ -1,25 +1,41 @@
-use super::db::{int, iso, now_ms, opt_int, opt_text, placeholders, text, Shape, SqliteStore};
+use super::db::{int, iso, opt_int, opt_text, placeholders, text, Shape, SqliteStore};
 use super::inboxes::PAGE;
 use crate::application::ports::ConversationRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{ContactInbox, Conversation, ConversationChanges, ConversationCounts, ConversationFilters};
+use crate::domain::roles::ConversationLimit;
 use rusqlite::types::Value as Sql;
 
-const SELECT: &str =
-    "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ci.source_id AS contact_jid,
+pub(super) const SELECT: &str =
+    "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ct.avatar_url AS contact_avatar_url, ci.source_id AS contact_jid,
   i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, t.name AS team_name,
   (SELECT json_group_array(l.title) FROM (SELECT l.title FROM conversation_labels cl JOIN labels l ON l.id=cl.label_id
      WHERE cl.conversation_id=c.id ORDER BY l.title) l) AS labels,
   (SELECT content FROM conversation_messages m WHERE m.conversation_id=c.id AND m.message_type<>'activity'
      ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message,
   (SELECT COUNT(*) FROM conversation_messages m WHERE m.conversation_id=c.id AND m.message_type='incoming'
-     AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count
+     AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count,
+  (SELECT a.status FROM applied_slas a WHERE a.conversation_id=c.id) AS sla_status
   FROM conversations c JOIN contacts ct ON ct.id=c.contact_id JOIN contact_inboxes ci ON ci.id=c.contact_inbox_id
   JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id LEFT JOIN teams t ON t.id=c.team_id";
-const SHAPE: Shape = Shape {
-    json: &["labels"],
+pub(super) const SHAPE: Shape = Shape {
+    json: &["labels", "custom_attributes"],
     bools: &[],
 };
+
+/// `(assigned to me OR unassigned OR participating)` for agents limited by a custom role.
+pub(super) fn limit_clause(limit: &ConversationLimit, args: &mut Vec<Sql>) -> String {
+    let mut parts = vec!["c.assignee_id=?"];
+    args.push(int(limit.user_id));
+    if limit.unassigned {
+        parts.push("c.assignee_id IS NULL");
+    }
+    if limit.participating {
+        parts.push("EXISTS(SELECT 1 FROM conversation_participants p WHERE p.conversation_id=c.id AND p.user_id=?)");
+        args.push(int(limit.user_id));
+    }
+    format!("({})", parts.join(" OR "))
+}
 
 /// WHERE clauses shared by the list and the tab counters.
 fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
@@ -27,6 +43,20 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
     if let Some(status) = f.status.as_deref().filter(|s| *s != "all") {
         wheres.push("c.status=?".to_string());
         args.push(text(status));
+    }
+    match f.conversation_type.as_deref() {
+        Some("unattended") => wheres.push("(c.first_reply_at IS NULL OR c.waiting_since IS NOT NULL)".into()),
+        Some("participating") => {
+            wheres.push(
+                "EXISTS(SELECT 1 FROM conversation_participants p WHERE p.conversation_id=c.id AND p.user_id=?)".into(),
+            );
+            args.push(opt_int(f.user_id));
+        }
+        Some("mentions") => {
+            wheres.push("EXISTS(SELECT 1 FROM mentions x WHERE x.conversation_id=c.id AND x.user_id=?)".into());
+            args.push(opt_int(f.user_id));
+        }
+        _ => {}
     }
     if let Some(inbox) = f.inbox_id {
         wheres.push("c.inbox_id=?".into());
@@ -44,12 +74,30 @@ fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
         wheres.push(format!("c.inbox_id IN ({})", placeholders(ids.len())));
         args.extend(ids.iter().map(|id| int(*id)));
     }
+    if let Some(limit) = &f.limit {
+        let clause = limit_clause(limit, &mut args);
+        wheres.push(clause);
+    }
     if let Some(q) = f.q.as_deref().filter(|q| !q.is_empty()) {
         wheres.push("(ct.name LIKE ? OR ct.phone_number LIKE ?)".into());
         args.push(text(format!("%{q}%")));
         args.push(text(format!("%{q}%")));
     }
     (wheres, args)
+}
+
+/// ORDER BY for a chat list sort (unknown values fall back to the latest activity).
+pub(super) fn order(sort: Option<&str>) -> &'static str {
+    match sort.unwrap_or_default() {
+        "last_activity_at_asc" => "c.last_activity_at ASC, c.id ASC",
+        "created_at_desc" => "c.id DESC",
+        "created_at_asc" => "c.id ASC",
+        "priority_desc" => "CASE c.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END DESC, c.last_activity_at DESC",
+        "priority_asc" => "CASE c.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END ASC, c.last_activity_at DESC",
+        "waiting_since_desc" => "c.waiting_since IS NULL, c.waiting_since DESC, c.id DESC",
+        "waiting_since_asc" => "c.waiting_since IS NULL, c.waiting_since ASC, c.id ASC",
+        _ => "c.last_activity_at DESC, c.id DESC",
+    }
 }
 
 fn clause(wheres: &[String], joiner: &str) -> String {
@@ -78,6 +126,9 @@ fn changes_to_fields(c: &ConversationChanges) -> Vec<(&'static str, Sql)> {
         ("csat_requested_at", c.csat_requested_at),
     ];
     fields.extend(optional.into_iter().filter_map(|(k, v)| v.map(|v| (k, opt_int(v)))));
+    if let Some(muted) = c.muted {
+        fields.push(("muted", int(i64::from(muted))));
+    }
     if let Some(at) = c.last_activity_at {
         fields.push(("last_activity_at", int(at)));
     }
@@ -120,7 +171,7 @@ impl ConversationRepo for SqliteStore {
         let id = self.insert(
             "INSERT INTO conversations(display_id,inbox_id,contact_id,contact_inbox_id,status,waiting_since,last_activity_at,created)
              VALUES(?,?,?,?,?,?,?,?)",
-            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(now_ms()))],
+            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(ts * 1000))],
         )?;
         self.conversation_by_id(id)?
             .ok_or_else(|| Error::internal("conversation vanished"))
@@ -147,8 +198,9 @@ impl ConversationRepo for SqliteStore {
         args.push(int(PAGE));
         args.push(int((page - 1) * PAGE));
         let sql = format!(
-            "{SELECT} {} ORDER BY c.last_activity_at DESC, c.id DESC LIMIT ? OFFSET ?",
-            clause(&wheres, "WHERE")
+            "{SELECT} {} ORDER BY {} LIMIT ? OFFSET ?",
+            clause(&wheres, "WHERE"),
+            order(filters.sort_by.as_deref())
         );
         self.rows(&sql, args, SHAPE)
     }
@@ -213,5 +265,15 @@ impl ConversationRepo for SqliteStore {
         }
         self.conversation_by_id(conversation_id)?
             .ok_or_else(|| Error::internal("conversation vanished"))
+    }
+
+    fn remove_participant(&self, conversation_id: i64, user_id: i64) -> Result<()> {
+        let sql = "DELETE FROM conversation_participants WHERE conversation_id=? AND user_id=?";
+        self.exec(sql, vec![int(conversation_id), int(user_id)]).map(drop)
+    }
+
+    fn delete_conversation(&self, id: i64) -> Result<()> {
+        self.exec("DELETE FROM conversations WHERE id=?", vec![int(id)])
+            .map(drop)
     }
 }
