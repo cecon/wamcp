@@ -1,0 +1,54 @@
+{
+  "code": "00",
+  "data": {
+    "menu": [
+      {
+        "code": "",
+        "name": "",
+        "itens": [
+          {
+            "id": "it-beirute",
+            "code": "it-beirute",
+            "description": "(8001) Beirute médio + suco",
+            "details": "Pão sírio, rosbife, queijo e salada",
+            "logoUrl": "loja-1/201902091309__beirute.jpg",
+            "needChoices": true,
+            "unitPrice": 51,
+            "unitMinPrice": 51,
+            "unitOriginalPrice": 0,
+            "externalCode": "8001",
+            "type": "DEFAULT",
+            "availability": "AVAILABLE",
+            "enabled": true,
+            "choices": [
+              {
+                "code": "ch-sabor",
+                "name": "Escolha o sabor do suco",
+                "min": 1,
+                "max": 1,
+                "garnishItens": [
+                  {
+                    "id": "op-laranja",
+                    "code": "op-laranja",
+                    "description": "Laranja",
+                    "details": "",
+                    "logoUrl": "",
+                    "unitPrice": 0
+                  },
+                  {
+                    "id": "op-acai",
+                    "code": "op-acai",
+                    "description": "Açaí",
+                    "details": "",
+                    "logoUrl": "",
+                    "unitPrice": 6.9
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
