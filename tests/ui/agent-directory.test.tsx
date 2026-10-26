@@ -55,6 +55,7 @@ describe('agent roster', () => {
     ];
     const api = fakeApi({
       'GET /agent_directory': () => agents,
+      'GET /custom_roles': [],
       'GET /skills': [skill(7, 'Pedidos'), skill(8, 'Entregas')],
       'POST /agent_directory': (body) => {
         agents = [...agents, roster(3, body as Partial<RosterAgent>)];
@@ -65,15 +66,16 @@ describe('agent roster', () => {
         return agents[2];
       },
     });
-    const user = renderSettings('agent_directory');
+    const user = renderSettings('agents');
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(screen.getByText('+5511988887777')).toBeInTheDocument();
-    expect(screen.getByText('Coordenador')).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Humanos' }));
     expect(screen.queryByText('Coordenadora')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Todos' }));
+    await user.click(screen.getByRole('tab', { name: 'IA' }));
+    expect(await screen.findByText('Coordenadora')).toBeInTheDocument();
+    expect(screen.getByText('Coordenador')).toBeInTheDocument();
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Agente de IA' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
     await user.type(within(dialog).getByLabelText('Nome'), 'Operador de pedidos');
     await user.selectOptions(within(dialog).getByLabelText('Função'), 'coordinator');
@@ -98,6 +100,7 @@ describe('agent roster', () => {
     let credentials: AgentCredential[] = [];
     const api = fakeApi({
       'GET /agent_directory': [roster(4, { name: 'Operador' })],
+      'GET /custom_roles': [],
       'GET /skills': [],
       'GET /agent_directory/4/credentials': () => credentials,
       'POST /agent_directory/4/credentials': (body) => {
@@ -106,7 +109,8 @@ describe('agent roster', () => {
         return credentials[0];
       },
     });
-    const user = renderSettings('agent_directory');
+    const user = renderSettings('agents');
+    await user.click(await screen.findByRole('tab', { name: 'IA' }));
     await user.click(await screen.findByRole('button', { name: 'Editar Operador' }));
     const panel = await screen.findByRole('region', { name: 'Credenciais' });
     await user.type(within(panel).getByLabelText('Nome da credencial'), 'erp_api');
@@ -127,13 +131,15 @@ describe('linking skills from the agent form', () => {
   it('creates a skill inline and links it to the new agent', async () => {
     const api = fakeApi({
       'GET /agent_directory': [],
+      'GET /custom_roles': [],
       'GET /skills': [],
       'POST /skills': (body) => ({ ...skill(9, (body as Skill).name), tools: (body as Skill).tools }),
       'POST /agent_directory': (body) => roster(5, body as Partial<RosterAgent>),
       'PUT /agent_directory/5/skills': (body) => roster(5, body as Partial<RosterAgent>),
     });
-    const user = renderSettings('agent_directory');
-    await user.click(await screen.findByRole('button', { name: 'Agente de IA' }));
+    const user = renderSettings('agents');
+    await user.click(await screen.findByRole('tab', { name: 'IA' }));
+    await user.click(await screen.findByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
     expect(within(dialog).getByText(/Nenhuma skill ainda/)).toBeInTheDocument();
     expect(within(dialog).queryByRole('option', { name: /OpenRouter (API)/ })).not.toBeInTheDocument();
@@ -161,6 +167,7 @@ describe('skills', () => {
   it('imports a SKILL.md file', async () => {
     let skills: Skill[] = [];
     const api = fakeApi({
+      'GET /custom_roles': [],
       'GET /skills': () => skills,
       'POST /skills/import': () => {
         skills = [{ ...skill(1, 'Entregas'), tools: ['http_request'] }];

@@ -11,7 +11,6 @@ export type SettingsSection =
   | 'canned'
   | 'automation'
   | 'agent_bots'
-  | 'agent_directory'
   | 'skills'
   | 'macros'
   | 'sla'

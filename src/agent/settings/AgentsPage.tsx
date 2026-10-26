@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Bot, Plus, UserRound } from 'lucide-react';
 import type { CustomRole } from '../adminTypes';
 import type { Catalog, Role, User } from '../types';
 import { Avatar } from '../ui/Avatar';
@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { SettingsHeader, SettingsPage } from '../ui/Settings';
 import { AgentModal } from './AgentModal';
 import { useCustomRoles } from './roles/useCustomRoles';
+import { RosterSection } from './directory/RosterSection';
 
 const ROLE: Record<Role, string> = { administrator: 'Administrador', agent: 'Agente' };
 const Divider = () => <span className="h-3 w-px bg-n-strong" />;
@@ -24,8 +25,44 @@ interface Props {
   onChange: () => Promise<void>;
 }
 
-/** Chatwoot Agents: divided list (avatar, name, email | role | status) and the add agent modal. */
+const TABS = [
+  { value: 'human', label: 'Humanos', icon: UserRound },
+  { value: 'ai', label: 'IA', icon: Bot },
+] as const;
+
+/** Agents: the people of the team (logins, plus people consulted on WhatsApp) and the AI agents. */
 export function AgentsPage({ user, catalog, onChange }: Props) {
+  const [tab, setTab] = useState<'human' | 'ai'>('human');
+  return (
+    <SettingsPage>
+      <div role="tablist" aria-label="Tipo de agente" className="flex gap-1 border-b border-n-weak">
+        {TABS.map((t) => (
+          <Button
+            key={t.value}
+            role="tab"
+            aria-selected={tab === t.value}
+            icon={t.icon}
+            color={tab === t.value ? 'blue' : 'slate'}
+            variant="ghost"
+            label={t.label}
+            onClick={() => setTab(t.value)}
+          />
+        ))}
+      </div>
+      {tab === 'human' ? (
+        <>
+          <LoginAgents user={user} catalog={catalog} onChange={onChange} />
+          <RosterSection kind="human" catalog={catalog} />
+        </>
+      ) : (
+        <RosterSection kind="ai" catalog={catalog} />
+      )}
+    </SettingsPage>
+  );
+}
+
+/** Chatwoot Agents: divided list (avatar, name, email | role | status) and the add agent modal. */
+function LoginAgents({ user, catalog, onChange }: Props) {
   const [q, setQ] = useState(''),
     [adding, setAdding] = useState(false),
     [editing, setEditing] = useState<User | null>(null);
@@ -34,7 +71,7 @@ export function AgentsPage({ user, catalog, onChange }: Props) {
     `${a.name} ${a.email}`.toLowerCase().includes(q.toLowerCase()),
   );
   return (
-    <SettingsPage>
+    <section className="flex flex-col gap-4" aria-label="Pessoas com login">
       <SettingsHeader
         title="Agentes"
         description="Agentes são as pessoas da equipe que respondem as conversas. Administradores também gerenciam as configurações."
@@ -94,6 +131,6 @@ export function AgentsPage({ user, catalog, onChange }: Props) {
           onSaved={onChange}
         />
       )}
-    </SettingsPage>
+    </section>
   );
 }
