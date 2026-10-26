@@ -23,7 +23,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 chrono-tz = { version = "0.10", features = ["case-insensitive"] }
 futures = "0.3"
 hex = "0.4"
-hmac = "0.12"
+hmac = "0.13"
 parking_lot = "0.12"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 rand = "0.9"
