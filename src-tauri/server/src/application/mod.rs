@@ -21,6 +21,7 @@ pub mod event_bus;
 pub mod events;
 pub mod helpdesk;
 mod ingestion;
+pub mod llm_bots;
 pub mod macros;
 pub mod menu;
 mod message_actions;

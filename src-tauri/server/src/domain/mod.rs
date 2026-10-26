@@ -9,6 +9,7 @@ pub mod error;
 pub mod events;
 pub mod filters;
 pub mod helpdesk;
+pub mod llm;
 pub mod media;
 pub mod menu;
 pub mod model;

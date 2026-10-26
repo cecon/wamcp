@@ -1,25 +1,40 @@
 //! Agent bots (Chatwoot's webhook bots): administrators register a bot URL, connect inboxes to it,
 //! and the bot receives their events and answers through the API with its access token. New
 //! conversations in a bot inbox start `pending` until the bot hands them off (status `open`).
+//! An `llm` bot has no URL nor token: the server answers for it with an LLM provider (see `llm_bots`).
 use super::helpdesk::HelpdeskService;
+use super::ports::{LlmChanges, NewAgentBot};
 use super::webhooks::WebhookService;
 use crate::domain::actor::Actor;
-use crate::domain::error::{fail_with, HelpdeskError, Result};
+use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
-use crate::domain::model::{AgentBot, Delivery, Inbox};
+use crate::domain::llm::LLM_PROVIDERS;
+use crate::domain::model::{AgentBot, Delivery, Inbox, BOT_LLM, BOT_WEBHOOK};
 use crate::domain::webhooks::validate_webhook;
 use serde_json::{json, Value};
 
-/// Fields of a bot; `None` keeps the current value on update.
+/// Fields of a bot; `None` keeps the current value on update (`kind` is only read on creation).
 #[derive(Debug, Clone, Default)]
 pub struct BotFields {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
     pub outgoing_url: Option<String>,
+    pub kind: Option<String>,
+    pub provider: Option<String>,
+    pub model: Option<Option<String>>,
+    pub instructions: Option<Option<String>>,
 }
 
 fn check_url(url: &str) -> Result<()> {
     validate_webhook(url, &["message_created".to_string()])
+}
+
+fn check_provider(provider: &str) -> Result<()> {
+    if LLM_PROVIDERS.contains(&provider) {
+        Ok(())
+    } else {
+        fail("Provedor de LLM não suportado")
+    }
 }
 
 impl WebhookService {
@@ -35,31 +50,71 @@ impl WebhookService {
         self.core.repo.agent_bots()
     }
 
-    /// Creates the bot and returns it with its access token (shown only now).
+    /// Creates the bot and returns it with its access token (shown only now; `null` for Claude bots).
     pub fn create_agent_bot(&self, actor: &Actor, fields: &BotFields) -> Result<Value> {
         require_admin(actor)?;
-        let url = fields.outgoing_url.clone().unwrap_or_default();
-        check_url(&url)?;
-        let name = fields.name.clone().unwrap_or_default();
-        let description = fields.description.clone().flatten();
-        let bot = self
-            .core
-            .repo
-            .create_agent_bot(&name, description.as_deref(), &url, &self.sender.secret())?;
-        let token = self.core.repo.issue_api_token("agent_bot", bot.id)?;
+        let kind = fields.kind.clone().unwrap_or_else(|| BOT_WEBHOOK.into());
+        let url = match kind.as_str() {
+            BOT_WEBHOOK => fields.outgoing_url.clone().unwrap_or_default(),
+            BOT_LLM => String::new(),
+            _ => return fail("Tipo de robô inválido"),
+        };
+        let provider = match kind.as_str() {
+            BOT_WEBHOOK => {
+                check_url(&url)?;
+                None
+            }
+            _ => {
+                let provider = fields.provider.clone().unwrap_or_default();
+                check_provider(&provider)?;
+                Some(provider)
+            }
+        };
+        let bot = self.core.repo.create_agent_bot(&NewAgentBot {
+            name: fields.name.clone().unwrap_or_default(),
+            description: fields.description.clone().flatten(),
+            url,
+            secret: self.sender.secret(),
+            kind,
+            provider,
+            model: fields.model.clone().flatten(),
+            instructions: fields.instructions.clone().flatten(),
+        })?;
+        let token = match bot.kind.as_str() {
+            BOT_WEBHOOK => Some(self.core.repo.issue_api_token("agent_bot", bot.id)?),
+            _ => None,
+        };
         Ok(json!({ "agent_bot": bot, "access_token": token }))
     }
 
     pub fn update_agent_bot(&self, actor: &Actor, id: i64, fields: &BotFields) -> Result<AgentBot> {
         require_admin(actor)?;
-        self.find_bot(id)?;
+        let bot = self.find_bot(id)?;
         if let Some(url) = &fields.outgoing_url {
+            if bot.kind != BOT_WEBHOOK {
+                return fail("Robô de LLM não usa URL");
+            }
             check_url(url)?;
         }
         let description = fields.description.as_ref().map(Option::as_deref);
-        self.core
-            .repo
-            .update_agent_bot(id, fields.name.as_deref(), description, fields.outgoing_url.as_deref())
+        if let Some(provider) = &fields.provider {
+            if bot.kind != BOT_LLM {
+                return fail("Somente robôs de LLM têm provedor");
+            }
+            check_provider(provider)?;
+        }
+        let llm = LlmChanges {
+            provider: fields.provider.clone().map(Some),
+            model: fields.model.clone(),
+            instructions: fields.instructions.clone(),
+        };
+        self.core.repo.update_agent_bot(
+            id,
+            fields.name.as_deref(),
+            description,
+            fields.outgoing_url.as_deref(),
+            &llm,
+        )
     }
 
     pub fn delete_agent_bot(&self, actor: &Actor, id: i64) -> Result<()> {
@@ -71,7 +126,9 @@ impl WebhookService {
     /// Replaces the bot's access token (the old one stops working).
     pub fn reset_bot_token(&self, actor: &Actor, id: i64) -> Result<Value> {
         require_admin(actor)?;
-        self.find_bot(id)?;
+        if self.find_bot(id)?.kind != BOT_WEBHOOK {
+            return fail("Robô de LLM não usa token de acesso");
+        }
         Ok(json!({ "access_token": self.core.repo.issue_api_token("agent_bot", id)? }))
     }
 

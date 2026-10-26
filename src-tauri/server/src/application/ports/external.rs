@@ -146,3 +146,21 @@ pub trait EventCallback: Send + Sync {
         event: &Value,
     ) -> std::result::Result<CallbackResponse, CallbackError>;
 }
+
+/// One call to a language model: free text in, JSON matching `schema` out.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LlmRequest {
+    /// Which provider answers (`claude_cli`, …); adapters route on it.
+    pub provider: String,
+    /// Provider-specific model name; `None` uses the provider's default.
+    pub model: Option<String>,
+    pub system: String,
+    pub prompt: String,
+    pub schema: Value,
+}
+
+/// A language model provider (a local CLI such as Claude Code, or an HTTP API).
+#[async_trait]
+pub trait Llm: Send + Sync {
+    async fn complete(&self, request: &LlmRequest) -> Result<Value>;
+}

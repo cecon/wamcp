@@ -127,5 +127,11 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v21: nome do agente na primeira linha das mensagens enviadas pelo WhatsApp
         "ALTER TABLE inboxes ADD COLUMN show_agent_name INTEGER NOT NULL DEFAULT 1;".into(),
+        // v22: robôs respondidos pelo próprio servidor com uma LLM (Claude Code, Codex, OpenRouter…), sem webhook
+        "ALTER TABLE agent_bots ADD COLUMN kind TEXT NOT NULL DEFAULT 'webhook' CHECK(kind IN ('webhook','llm'));
+         ALTER TABLE agent_bots ADD COLUMN provider TEXT;
+         ALTER TABLE agent_bots ADD COLUMN model TEXT;
+         ALTER TABLE agent_bots ADD COLUMN instructions TEXT;"
+            .into(),
     ]
 }

@@ -4,6 +4,7 @@ pub mod clock;
 pub mod crawler;
 pub mod event_callback;
 pub mod image_fetcher;
+pub mod llm;
 pub mod media_storage;
 pub mod password;
 pub mod sqlite;

@@ -16,6 +16,12 @@ struct Fields {
     #[serde(default, deserialize_with = "crate::domain::model::nullable")]
     description: Option<Option<String>>,
     outgoing_url: Option<String>,
+    kind: Option<String>,
+    provider: Option<String>,
+    #[serde(default, deserialize_with = "crate::domain::model::nullable")]
+    model: Option<Option<String>>,
+    #[serde(default, deserialize_with = "crate::domain::model::nullable")]
+    instructions: Option<Option<String>>,
 }
 
 fn fields(body: Fields) -> ApiResult<BotFields> {
@@ -23,6 +29,10 @@ fn fields(body: Fields) -> ApiResult<BotFields> {
         name: optional_text(body.name.as_deref(), 1, 80)?,
         description: nullable_text(body.description, 500)?,
         outgoing_url: body.outgoing_url,
+        kind: body.kind,
+        provider: body.provider,
+        model: nullable_text(body.model, 80)?,
+        instructions: nullable_text(body.instructions, 4000)?,
     })
 }
 

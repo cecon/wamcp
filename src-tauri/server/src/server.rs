@@ -160,7 +160,11 @@ pub async fn run(config: Config) -> Result<Running> {
         version: env!("CARGO_PKG_VERSION").into(),
         web_dir: Arc::new(move || web_dirs.iter().find(|d| d.join("index.html").exists()).cloned()),
     };
-    let app = Arc::new(compose(ports, settings));
+    let mut app = compose(ports, settings);
+    // LLM bots: providers on this computer (Claude Code CLI), scratch files in <data dir>/llm.
+    let providers = crate::adapters::outbound::llm::LlmRouter::local(&config.data_dir.join("llm"));
+    app.attach_llm(Arc::new(providers), std::time::Duration::from_secs(4));
+    let app = Arc::new(app);
     #[cfg(feature = "whatsapp")]
     clients.attach(app.sink.clone());
     let (stop, receiver) = watch::channel(false);

@@ -5,11 +5,16 @@ export interface AgentBot {
   description: string | null;
   outgoing_url: string;
   inbox_ids: number[];
+  /** `webhook`: external system with URL and token; `llm`: answered by the app with an LLM provider. */
+  kind: 'webhook' | 'llm';
+  provider: string | null;
+  model: string | null;
+  instructions: string | null;
 }
-/** POST /agent_bots: the access token is returned only once. */
+/** POST /agent_bots: the access token is returned only once (`null` for LLM bots, which have none). */
 export interface CreatedAgentBot {
   agent_bot: AgentBot;
-  access_token: string;
+  access_token: string | null;
 }
 
 export type Permission =

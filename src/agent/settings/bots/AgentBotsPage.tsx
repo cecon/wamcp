@@ -11,6 +11,7 @@ import { DeliveriesPanel } from '../DeliveriesPanel';
 import { useAction } from '../useAction';
 import { AgentBotModal } from './AgentBotModal';
 import { TokenModal } from './TokenNotice';
+import { llmLabel } from './llmProviders';
 
 type Dialog =
   | { kind: 'edit'; bot: AgentBot | null }
@@ -41,7 +42,7 @@ export function AgentBotsPage({ catalog, onChange }: Props) {
     <SettingsPage>
       <SettingsHeader
         title="Robôs"
-        description="Robôs de atendimento recebem os eventos das caixas conectadas na URL de saída e respondem pela API com o próprio token. Enquanto um robô estiver conectado, as conversas novas começam pendentes até ele transferir para a equipe."
+        description="Robôs de atendimento respondem as conversas das caixas conectadas: por webhook (um sistema externo recebe os eventos e responde pela API com o próprio token) ou por LLM (o próprio app gera as respostas). Enquanto um robô estiver conectado, as conversas novas começam pendentes até ele transferir para a equipe."
         count={`${bots.length} robô${bots.length === 1 ? '' : 's'}`}
         action={
           <Button icon={Plus} label="Adicionar robô" onClick={() => setDialog({ kind: 'edit', bot: null })} />
@@ -49,7 +50,7 @@ export function AgentBotsPage({ catalog, onChange }: Props) {
       />
       {(error || loadError) && <p className="text-sm text-n-ruby-11">{error || loadError}</p>}
       <Table
-        headers={['Robô', 'URL de saída', 'Caixas conectadas', '']}
+        headers={['Robô', 'Destino', 'Caixas conectadas', '']}
         rows={bots.length}
         empty="Nenhum robô ainda."
       >
@@ -59,34 +60,38 @@ export function AgentBotsPage({ catalog, onChange }: Props) {
               <span className="block font-medium text-n-slate-12">{bot.name}</span>
               {bot.description && <span className="text-sm">{bot.description}</span>}
             </Cell>
-            <Cell className="break-all">{bot.outgoing_url}</Cell>
+            <Cell className="break-all">{bot.kind === 'llm' ? llmLabel(bot) : bot.outgoing_url}</Cell>
             <Cell>{inboxNames(bot)}</Cell>
             <Cell className="w-56">
               <div className="flex justify-end gap-1">
-                <Button
-                  color="slate"
-                  variant="faded"
-                  label="Entregas"
-                  aria-label={`Entregas ${bot.name}`}
-                  onClick={() =>
-                    void run(async () =>
-                      setDialog({
-                        kind: 'deliveries',
-                        bot,
-                        list: await http(`/agent_bots/${bot.id}/deliveries`),
-                      }),
-                    )
-                  }
-                />
-                <Button
-                  color="slate"
-                  variant="faded"
-                  size="sm"
-                  icon={KeyRound}
-                  aria-label={`Gerar novo token ${bot.name}`}
-                  title="Gerar novo token"
-                  onClick={() => setDialog({ kind: 'reset', bot })}
-                />
+                {bot.kind === 'webhook' && (
+                  <>
+                    <Button
+                      color="slate"
+                      variant="faded"
+                      label="Entregas"
+                      aria-label={`Entregas ${bot.name}`}
+                      onClick={() =>
+                        void run(async () =>
+                          setDialog({
+                            kind: 'deliveries',
+                            bot,
+                            list: await http(`/agent_bots/${bot.id}/deliveries`),
+                          }),
+                        )
+                      }
+                    />
+                    <Button
+                      color="slate"
+                      variant="faded"
+                      size="sm"
+                      icon={KeyRound}
+                      aria-label={`Gerar novo token ${bot.name}`}
+                      title="Gerar novo token"
+                      onClick={() => setDialog({ kind: 'reset', bot })}
+                    />
+                  </>
+                )}
                 <RowActions
                   labelFor={bot.name}
                   onEdit={() => setDialog({ kind: 'edit', bot })}

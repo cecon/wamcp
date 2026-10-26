@@ -15,6 +15,10 @@ const bot = (id: number, fields: Partial<AgentBot> = {}): AgentBot => ({
   description: null,
   outgoing_url: `https://bot${id}.example/hook`,
   inbox_ids: [],
+  kind: 'webhook',
+  provider: null,
+  model: null,
+  instructions: null,
   ...fields,
 });
 
@@ -66,12 +70,44 @@ describe('agent bots settings', () => {
       name: 'Novo',
       description: 'Atende à noite',
       outgoing_url: 'https://novo.example/bot',
+      kind: 'webhook',
     });
     await user.click(within(dialog).getByRole('button', { name: 'Copiar token' }));
     expect(await navigator.clipboard.readText()).toBe('tok-123');
     await user.click(within(dialog).getByRole('button', { name: 'Concluir' }));
     expect(await screen.findByText('Novo')).toBeInTheDocument();
     expect(screen.getByText('3 robôs')).toBeInTheDocument();
+  });
+
+  it('creates an LLM bot answered by the app, without URL nor token', async () => {
+    let bots: AgentBot[] = [];
+    const api = fakeApi({
+      'GET /agent_bots': () => bots,
+      'POST /agent_bots': (body) => {
+        bots = [bot(5, { ...(body as Partial<AgentBot>), outgoing_url: '' })];
+        return { agent_bot: bots[0], access_token: null };
+      },
+    });
+    const { user } = renderSettings('agent_bots');
+    await user.click(await screen.findByRole('button', { name: 'Adicionar robô' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar robô' });
+    await user.selectOptions(within(dialog).getByLabelText('Tipo'), 'llm');
+    expect(within(dialog).queryByLabelText('URL de saída')).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Nome do robô'), 'Atendente IA');
+    await user.type(within(dialog).getByLabelText('Modelo (opcional)'), 'haiku');
+    await user.type(within(dialog).getByLabelText('Instruções para a IA'), 'Somos a Padaria Sol.');
+    await user.click(within(dialog).getByRole('button', { name: 'Criar robô' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.called('POST', '/agent_bots')[0].body).toEqual({
+      name: 'Atendente IA',
+      description: null,
+      provider: 'claude_cli',
+      model: 'haiku',
+      instructions: 'Somos a Padaria Sol.',
+      kind: 'llm',
+    });
+    expect(await screen.findByText('Claude Code (neste computador) · haiku')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Entregas Atendente IA' })).not.toBeInTheDocument();
   });
 
   it('edits, resets the token, shows deliveries and deletes a bot', async () => {
