@@ -4,12 +4,13 @@ use crate::domain::error::{fail, Result};
 use crate::domain::menu::rules::fold;
 
 pub const WAITING_HUMAN: &str = "Confirme no navegador que você é humano";
-pub const STATUSES: [&str; 8] = [
+pub const STATUSES: [&str; 9] = [
     "starting",
     "opening",
     "waiting_human",
     "loading",
     "ready",
+    "applying",
     "applied",
     "failed",
     "cancelled",

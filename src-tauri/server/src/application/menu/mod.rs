@@ -14,6 +14,7 @@ use super::ports::{ImageFetcher, MediaStorage, MenuCrawler};
 use crate::domain::actor::Actor;
 use crate::domain::error::{HelpdeskError, Result};
 use crate::domain::menu::assemble::Assembler;
+use crate::domain::menu::import::ImportProgress;
 use crate::domain::menu::{Category, GroupView, ItemView, Menu, MenuRows, MenuSettings};
 use parking_lot::Mutex;
 use serde_json::json;
@@ -30,6 +31,8 @@ pub struct MenuService {
     pub images: Arc<dyn ImageFetcher>,
     /// Cancel flags of the imports being crawled, by import id.
     pub running: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
+    /// Photo download progress of the imports being applied, by import id.
+    pub progress: Arc<Mutex<HashMap<String, ImportProgress>>>,
     /// How long a crawl may take before it is given up (5 minutes).
     pub crawl_limit: Duration,
 }
@@ -61,6 +64,7 @@ impl MenuService {
             crawler,
             images,
             running: Arc::default(),
+            progress: Arc::default(),
             crawl_limit: Duration::from_secs(300),
         }
     }

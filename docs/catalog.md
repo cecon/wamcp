@@ -188,10 +188,13 @@ Eventos: `catalog.updated` (qualquer alteração) e `catalog.import.updated` (an
 5. O conteúdo é convertido para o modelo acima (categorias, itens, preços de/por, códigos, complementos com mín/máx,
    pizzas com tamanhos/massas/bordas/sabores e preços por tamanho, combos, fotos) e mostrado como **prévia**.
 6. Ao aplicar: `merge` atualiza o que já veio do iFood (pelo `ifood_id`, depois `external_code`) e cria o resto;
-   `replace` substitui todo o cardápio. Fotos são baixadas para a pasta de dados (`catalog/`).
+   `replace` substitui todo o cardápio. Fotos são baixadas para a pasta de dados (`catalog/`), seis por vez; enquanto
+   isso a importação fica `applying` com `progress: { done, total }` (no `GET` e no evento), e a tela mostra uma barra
+   "Baixando fotos: X de N" e depois "Gravando o cardápio…". Um segundo `apply` é recusado (409); sair da página não
+   interrompe; se o app fechar no meio, a importação volta para `ready` (nada foi gravado).
 
-Estados: `starting` → `opening` → `waiting_human` → `loading` → `ready` (prévia) → `applied`, ou `failed`
-(com mensagem) / `cancelled`. A prévia traz contagens (`categories`, `items`, `groups`, `options`, `images`) e a
+Estados: `starting` → `opening` → `waiting_human` → `loading` → `ready` (prévia) → `applying` → `applied`, ou
+`failed` (com mensagem) / `cancelled`. A prévia traz contagens (`categories`, `items`, `groups`, `options`, `images`) e a
 árvore convertida.
 
 Formatos aceitos pelo conversor (cada um com teste):

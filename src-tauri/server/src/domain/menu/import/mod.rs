@@ -111,8 +111,16 @@ pub struct ImportCounts {
     pub images_failed: i64,
 }
 
-/// An import run: `starting` → `opening` → `waiting_human` → `loading` → `ready` → `applied`, or
-/// `failed` (with `message`) / `cancelled`. `payload` keeps the captured JSON (never exposed).
+/// Photos downloaded so far while an import is applied.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportProgress {
+    pub done: i64,
+    pub total: i64,
+}
+
+/// An import run: `starting` → `opening` → `waiting_human` → `loading` → `ready` → `applying` →
+/// `applied`, or `failed` (with `message`) / `cancelled`. `payload` keeps the captured JSON (never
+/// exposed).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MenuImport {
     pub id: String,
@@ -126,6 +134,9 @@ pub struct MenuImport {
     pub preview: Option<ImportTree>,
     #[serde(skip_serializing, default)]
     pub payload: Value,
+    /// While `applying`: the photo download progress (kept in memory, never stored).
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub progress: Option<ImportProgress>,
 }
 
 pub fn counts(tree: &ImportTree) -> ImportCounts {
