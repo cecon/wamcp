@@ -48,7 +48,7 @@ export function ImportPage({ realtime, onOpenMenu, pollMs }: Props) {
     <SettingsPage>
       <SettingsHeader
         title="Importar do iFood"
-        description="Abrimos a página da sua loja no iFood em um navegador do computador do WA MCP, lemos o cardápio completo (categorias, itens, preços, complementos, pizzas e fotos) e mostramos uma prévia antes de gravar."
+        description="Abrimos a página da sua loja no iFood em uma janela do WA MCP neste computador, lemos o cardápio completo (categorias, itens, preços, complementos, pizzas e fotos) e mostramos uma prévia antes de gravar."
       />
       {(error || invalid) && (
         <p role="alert" className="text-sm text-n-ruby-11">
@@ -110,7 +110,7 @@ export function ImportPage({ realtime, onOpenMenu, pollMs }: Props) {
           <p role="alert" className="rounded-xl bg-n-ruby-2 p-4 text-sm text-n-ruby-11">
             {job.status === 'failed'
               ? job.message || 'Não foi possível importar o cardápio.'
-              : 'Importação cancelada. O navegador foi fechado.'}
+              : 'Importação cancelada. A janela do iFood foi fechada.'}
           </p>
           <Button
             label={job.status === 'failed' ? 'Tentar novamente' : 'Nova importação'}

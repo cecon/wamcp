@@ -1,6 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use std::sync::Arc;
 use std::{
     fs,
     path::PathBuf,
@@ -8,6 +9,7 @@ use std::{
     sync::Mutex,
 };
 use tauri::Manager;
+use wamcp_server::application::ports::MenuCrawler;
 use wamcp_server::server::{run, Config, Running, PUBLIC_URL};
 
 /// The backend port: the desktop window, the local network and the tunnel all use it.
@@ -28,7 +30,7 @@ fn hidden(command: &mut Command) -> &mut Command {
     command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
 }
 impl Runtime {
-    pub fn start(app: &tauri::AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn start(app: &tauri::AppHandle, crawler: Arc<dyn MenuCrawler>) -> Result<Self, Box<dyn std::error::Error>> {
         let dir = app.path().app_local_data_dir()?;
         fs::create_dir_all(&dir)?;
         let resources = if cfg!(debug_assertions) {
@@ -46,6 +48,7 @@ impl Runtime {
             bind: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             port: PORT,
             public_url: PUBLIC_URL.into(),
+            crawler: Some(crawler),
             web_dirs,
         };
         let backend = tauri::async_runtime::block_on(run(config)).map_err(|e| e.to_string())?;
