@@ -10,6 +10,7 @@ mod contacts;
 mod conversations;
 mod custom;
 mod db;
+mod default_skills;
 mod events;
 mod filters;
 mod inboxes;

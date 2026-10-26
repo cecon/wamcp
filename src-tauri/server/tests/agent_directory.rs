@@ -252,3 +252,40 @@ fn skill_md_front_matter_forms() {
     let windows = parse_skill_md("\u{feff}---\r\nname: Win\r\n---\r\nTexto\r\n").unwrap();
     assert_eq!((windows.name.as_str(), windows.instructions.as_str()), ("Win", "Texto"));
 }
+
+#[tokio::test]
+async fn default_skills_ship_with_real_mcp_tools() {
+    let f = Fixture::new().await;
+    let admin = f.bootstrap().await;
+    let skills = admin.get("/skills").await.body;
+    let names: Vec<&str> = skills
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["name"].as_str().unwrap())
+        .collect();
+    for expected in [
+        "Atender pelo cardápio",
+        "Montar e fechar pedido",
+        "Transferir para a equipe",
+    ] {
+        assert!(names.contains(&expected), "{expected} in {names:?}");
+    }
+    let real: Vec<&str> = wamcp_server::adapters::inbound::mcp::catalog::tools()
+        .iter()
+        .map(|t| t.name)
+        .collect();
+    for skill in skills.as_array().unwrap() {
+        assert!(!skill["instructions"].as_str().unwrap().is_empty());
+        for tool in skill["tools"].as_array().unwrap() {
+            assert!(real.contains(&tool.as_str().unwrap()), "{tool} is not an MCP tool");
+        }
+    }
+    let catalog = skills
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["name"] == "Atender pelo cardápio")
+        .unwrap();
+    assert!(catalog["tools"].as_array().unwrap().contains(&json!("catalog_search")));
+}

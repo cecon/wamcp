@@ -146,5 +146,7 @@ pub fn steps() -> Vec<String> {
            name TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('api_key','bearer','basic','secret')),secret TEXT NOT NULL,
            created TEXT NOT NULL,last_used TEXT,UNIQUE(agent_id,name));"
             .into(),
+        // v24: skills padrão (atender pelo cardápio, montar e fechar pedido, transferir para a equipe)
+        super::default_skills::DEFAULT_SKILLS.into(),
     ]
 }
