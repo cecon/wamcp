@@ -7,6 +7,7 @@ pub mod image_fetcher;
 pub mod llm;
 pub mod media_storage;
 pub mod password;
+pub mod secret_box;
 pub mod sqlite;
 pub mod webhook_sender;
 pub mod whatsapp;

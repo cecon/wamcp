@@ -30,3 +30,39 @@ export interface CustomRole {
   description: string | null;
   permissions: Permission[];
 }
+
+/** Agent roster (`/agent_directory`): human agents consulted on WhatsApp and AI agents run by a runtime. */
+export type RosterKind = 'human' | 'ai';
+export type RosterRole = 'coordinator' | 'operator' | 'dev_support' | 'qa';
+export interface RosterAgent {
+  id: number;
+  name: string;
+  kind: RosterKind;
+  role: RosterRole;
+  description: string | null;
+  user_id: number | null;
+  user_name: string | null;
+  whatsapp_jid: string | null;
+  runtime: string | null;
+  model: string | null;
+  instructions: string | null;
+  active: boolean;
+  skill_ids: number[];
+  credential_count: number;
+}
+export interface Skill {
+  id: number;
+  name: string;
+  description: string | null;
+  instructions: string;
+  tools: string[];
+}
+/** A credential of an AI agent; the secret is write-only. */
+export interface AgentCredential {
+  id: number;
+  agent_id: number;
+  name: string;
+  kind: 'api_key' | 'bearer' | 'basic' | 'secret';
+  created: string;
+  last_used: string | null;
+}

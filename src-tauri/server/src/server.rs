@@ -158,6 +158,10 @@ pub async fn run(config: Config) -> Result<Running> {
         )),
         crawler: config.crawler.clone().unwrap_or_else(|| crawler_port(&config.data_dir)),
         images: Arc::new(crate::adapters::outbound::image_fetcher::HttpImageFetcher::new()),
+        secrets: Arc::new(
+            crate::adapters::outbound::secret_box::AesSecretBox::from_file(&config.data_dir.join("agents.key"))
+                .map_err(Error::internal)?,
+        ),
     };
     let settings = Settings {
         public_url: config.public_url,

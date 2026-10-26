@@ -3,6 +3,7 @@
 use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
 use crate::application::accounts::AccountService;
+use crate::application::agents::AgentDirectory;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
 use crate::application::avatars::AvatarService;
@@ -16,8 +17,8 @@ use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::ports::{
-    Clock, EventCallback, ImageFetcher, Llm, MediaStorage, MenuCrawler, PasswordHasher, Repository, WebhookSender,
-    WhatsApp,
+    Clock, EventCallback, ImageFetcher, Llm, MediaStorage, MenuCrawler, PasswordHasher, Repository, SecretBox,
+    WebhookSender, WhatsApp,
 };
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
@@ -43,6 +44,8 @@ pub struct Ports {
     pub crawler: Arc<dyn MenuCrawler>,
     /// Downloads imported catalog photos.
     pub images: Arc<dyn ImageFetcher>,
+    /// Encrypts agent credentials at rest.
+    pub secrets: Arc<dyn SecretBox>,
 }
 
 pub struct Settings {
@@ -156,6 +159,10 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
+        agents: AgentDirectory {
+            core: core.clone(),
+            secrets: ports.secrets.clone(),
+        },
         avatars,
         accounts: AccountService {
             core: core.clone(),

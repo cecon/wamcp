@@ -1,6 +1,7 @@
 //! SQLite implementation of every repository port (same schema as the Node version).
 mod account;
 mod agent_bots;
+mod agents;
 mod attachments;
 mod automation;
 mod catalog;

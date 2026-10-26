@@ -3,6 +3,7 @@ pub mod account_settings;
 pub mod accounts;
 mod action_runner;
 pub mod agent_bots;
+pub mod agents;
 mod attachments;
 pub mod auto_replies;
 pub mod automations;

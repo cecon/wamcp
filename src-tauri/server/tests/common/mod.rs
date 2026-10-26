@@ -184,6 +184,7 @@ impl Fixture {
             storage: storage.clone(),
             crawler: crawler.clone(),
             images: images.clone(),
+            secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),

@@ -164,3 +164,9 @@ pub struct LlmRequest {
 pub trait Llm: Send + Sync {
     async fn complete(&self, request: &LlmRequest) -> Result<Value>;
 }
+
+/// Encrypts secrets at rest (agent credentials); the key never lives in the database.
+pub trait SecretBox: Send + Sync {
+    fn seal(&self, plain: &str) -> Result<String>;
+    fn open(&self, sealed: &str) -> Result<String>;
+}
