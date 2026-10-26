@@ -52,7 +52,9 @@ export function SidebarGroup({
         )}
       >
         <Icon size={16} className="shrink-0" />
-        <span className="flex-1 truncate">{label}</span>
+        <span className="min-w-0 flex-1 truncate" title={label}>
+          {label}
+        </span>
         {count ? <CountPill value={count} /> : null}
         {expandable && (expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
       </button>
@@ -85,7 +87,9 @@ export function SidebarLeaf({ label, active, onClick, icon, count }: LeafProps) 
         )}
       >
         {icon}
-        <span className="flex-1 truncate">{label}</span>
+        <span className="min-w-0 flex-1 truncate" title={label}>
+          {label}
+        </span>
         {count ? <CountPill value={count} /> : null}
       </button>
     </li>

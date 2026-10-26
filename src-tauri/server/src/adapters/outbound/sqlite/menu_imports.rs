@@ -35,6 +35,8 @@ impl MenuImportRepo for SqliteStore {
     }
 
     fn fail_stale_imports(&self, message: &str) -> Result<()> {
+        // Nothing was written by an apply that never finished: its preview can be applied again.
+        self.exec("UPDATE menu_imports SET status='ready' WHERE status='applying'", vec![])?;
         self.exec(
             "UPDATE menu_imports SET status='failed',message=?
              WHERE status IN ('starting','opening','waiting_human','loading')",

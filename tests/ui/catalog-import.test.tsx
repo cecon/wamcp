@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { connectRealtime } from '../../src/agent/api';
 import { ImportPage } from '../../src/agent/catalog/importer/ImportPage';
@@ -102,6 +102,59 @@ describe('iFood import', () => {
       expect(api.called('POST', '/catalog/imports/7f3c/apply')[0].body).toEqual({ mode: 'replace' }),
     );
     expect(await screen.findByText('Cardápio importado com sucesso.')).toBeInTheDocument();
+  });
+
+  it('shows the photo download progress while applying and the preview again when it fails', async () => {
+    localStorage.setItem(KEY, '7f3c');
+    let finish: (job: unknown) => void = () => {};
+    let broken = false;
+    const api = fakeApi({
+      'GET /catalog/imports/7f3c': readyJob,
+      'POST /catalog/imports/7f3c/apply': () => {
+        if (broken) throw status(500, 'Falha ao gravar o cardápio');
+        return new Promise((resolve) => (finish = resolve));
+      },
+    });
+    const { ui } = renderImport(60000);
+    await screen.findByLabelText('Prévia do cardápio');
+    await ui.click(screen.getByRole('button', { name: 'Aplicar importação' }));
+    expect(await screen.findByText('Preparando a importação…')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aplicar importação' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelar importação' })).not.toBeInTheDocument();
+    const update = (done: number) =>
+      FakeEventSource.emit('catalog.import.updated', {
+        id: '7f3c',
+        status: 'applying',
+        progress: { done, total: 166 },
+      });
+    update(34);
+    expect(await screen.findByText('Baixando fotos: 34 de 166')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: 'Progresso da importação' });
+    expect(bar).toHaveAttribute('aria-valuenow', '20');
+    update(166);
+    expect(await screen.findByText('Gravando o cardápio…')).toBeInTheDocument();
+    expect(bar).toHaveAttribute('aria-valuenow', '100');
+    finish({ ...readyJob, status: 'applied' });
+    expect(await screen.findByText('Cardápio importado com sucesso.')).toBeInTheDocument();
+
+    await ui.click(screen.getByRole('button', { name: 'Nova importação' }));
+    localStorage.setItem(KEY, '7f3c');
+    broken = true;
+    cleanup();
+    const again = renderImport(60000);
+    await screen.findByLabelText('Prévia do cardápio');
+    await again.ui.click(screen.getByRole('button', { name: 'Aplicar importação' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha ao gravar o cardápio');
+    expect(screen.getByRole('button', { name: 'Aplicar importação' })).toBeEnabled();
+
+    // Already applied elsewhere: the refusal shows the import as done.
+    api.route('POST /catalog/imports/7f3c/apply', () => {
+      throw status(409, 'A importação não está pronta para ser aplicada');
+    });
+    api.route('GET /catalog/imports/7f3c', { ...readyJob, status: 'applied' });
+    await again.ui.click(screen.getByRole('button', { name: 'Aplicar importação' }));
+    expect(await screen.findByText('Cardápio importado com sucesso.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('cancels a running import, shows failures and start errors', async () => {

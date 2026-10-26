@@ -5,12 +5,14 @@ import type { ImportJob, ImportStatus } from '../types';
 
 /** Statuses during which the crawler is still working (polled). */
 export const RUNNING: ImportStatus[] = ['starting', 'opening', 'waiting_human', 'loading'];
+/** Statuses followed by polling: the crawl, then applying the preview (photo download progress). */
+const POLLED: ImportStatus[] = [...RUNNING, 'applying'];
 const FINISHED: ImportStatus[] = ['applied', 'failed', 'cancelled'];
 const KEY = 'wamcp.catalog.import';
 
 function remember(job: ImportJob | null) {
   try {
-    if (job && (RUNNING.includes(job.status) || job.status === 'ready')) localStorage.setItem(KEY, job.id);
+    if (job && (POLLED.includes(job.status) || job.status === 'ready')) localStorage.setItem(KEY, job.id);
     else localStorage.removeItem(KEY);
   } catch {
     // Storage blocked: resuming an import after leaving the page is a convenience only.
@@ -26,7 +28,7 @@ function remembered() {
 
 /**
  * Current iFood import: resumes the one left running, polls GET /catalog/imports/{id} every `pollMs`
- * while the crawler works and applies `catalog.import.updated` events as they arrive.
+ * while the crawler works or the preview is being applied, and applies `catalog.import.updated` events as they arrive.
  */
 export function useImportJob(realtime?: Realtime, pollMs = 2000) {
   const [job, setJobState] = useState<ImportJob | null>(null);
@@ -39,6 +41,8 @@ export function useImportJob(realtime?: Realtime, pollMs = 2000) {
       setJobState((current) => {
         // A late poll or event must not reopen an import that already finished here.
         if (!current || current.id !== update.id || FINISHED.includes(current.status)) return current;
+        // Nor a poll answered just before the server started applying (a failed apply resets it).
+        if (current.status === 'applying' && update.status === 'ready') return current;
         const next = { ...current, ...update };
         remember(next);
         return next;
@@ -54,9 +58,9 @@ export function useImportJob(realtime?: Realtime, pollMs = 2000) {
         .catch(() => setJob(null));
   }, [setJob]);
   const id = job?.id;
-  const running = Boolean(job && RUNNING.includes(job.status));
+  const polled = Boolean(job && POLLED.includes(job.status));
   useEffect(() => {
-    if (!id || !running) return;
+    if (!id || !polled) return;
     const timer = setInterval(() => {
       catalogApi
         .importJob(id)
@@ -64,7 +68,7 @@ export function useImportJob(realtime?: Realtime, pollMs = 2000) {
         .catch(() => {});
     }, pollMs);
     return () => clearInterval(timer);
-  }, [id, running, pollMs, merge]);
+  }, [id, polled, pollMs, merge]);
   useEffect(
     () =>
       realtime?.subscribe(({ event, data }) => {

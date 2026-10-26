@@ -137,7 +137,15 @@ export interface Quote {
 }
 
 export type ImportStatus =
-  'starting' | 'opening' | 'waiting_human' | 'loading' | 'ready' | 'applied' | 'failed' | 'cancelled';
+  | 'starting'
+  | 'opening'
+  | 'waiting_human'
+  | 'loading'
+  | 'ready'
+  | 'applying'
+  | 'applied'
+  | 'failed'
+  | 'cancelled';
 
 export interface PreviewGroup {
   name: string;
@@ -167,6 +175,8 @@ export interface ImportJob {
   started_at: number;
   counts: { categories: number; items: number; groups: number; options: number; images: number } | null;
   preview: { pizza_pricing: PizzaPricing; categories: PreviewCategory[] } | null;
+  /** While `applying`: photos downloaded so far. */
+  progress?: { done: number; total: number } | null;
 }
 
 /* Write payloads (POST/PATCH bodies). */

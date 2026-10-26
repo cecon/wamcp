@@ -82,7 +82,7 @@ export function Sidebar({
   );
 
   return (
-    <aside className="flex h-full w-[200px] shrink-0 flex-col border-r border-n-weak bg-n-background text-sm">
+    <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-n-weak bg-n-background text-sm">
       <div className="mt-1 mb-4 grid gap-2 pt-2">
         <div className="flex items-center gap-2 px-2">
           <span className="flex size-6 items-center justify-center rounded-md bg-n-brand text-white">

@@ -6,6 +6,7 @@ import { SettingsHeader, SettingsPage } from '../../ui/Settings';
 import { useAction } from '../../settings/useAction';
 import { catalogApi } from '../catalogApi';
 import { ApplyControls } from './ApplyControls';
+import { ApplyProgress } from './ApplyProgress';
 import { ImportSteps } from './ImportSteps';
 import { ImportCounts, PreviewTree } from './PreviewTree';
 import { RUNNING, useImportJob } from './useImportJob';
@@ -40,6 +41,21 @@ export function ImportPage({ realtime, onOpenMenu, pollMs }: Props) {
       await catalogApi.cancelImport(job!.id);
       setJob({ ...job!, status: 'cancelled' });
     });
+  // The bar shows at once; the server's progress arrives by events and polling until the reply.
+  const apply = (mode: 'merge' | 'replace') => {
+    const ready = job!;
+    setJob({ ...ready, status: 'applying', progress: null });
+    void run(async () => {
+      try {
+        setJob(await catalogApi.applyImport(ready.id, mode));
+      } catch (e) {
+        // Refused because it was applied meanwhile (another tab, an earlier click): show that instead.
+        const current = await catalogApi.importJob(ready.id).catch(() => ready);
+        setJob(current.status === 'applying' ? ready : current);
+        if (current.status !== 'applied') throw e;
+      }
+    });
+  };
   const cancelButton = (
     <Button color="slate" variant="faded" label="Cancelar importação" disabled={busy} onClick={cancel} />
   );
@@ -81,16 +97,19 @@ export function ImportPage({ realtime, onOpenMenu, pollMs }: Props) {
           {cancelButton}
         </section>
       )}
-      {job?.status === 'ready' && (
+      {(job?.status === 'ready' || job?.status === 'applying') && (
         <section aria-label="Prévia da importação" className="flex flex-col gap-4">
           <ImportSteps job={job} />
           <ImportCounts counts={job.counts} />
           {job.preview && <PreviewTree preview={job.preview} />}
-          <ApplyControls
-            busy={busy}
-            onApply={(mode) => void run(async () => setJob(await catalogApi.applyImport(job.id, mode)))}
-          />
-          {cancelButton}
+          {job.status === 'applying' ? (
+            <ApplyProgress progress={job.progress} />
+          ) : (
+            <>
+              <ApplyControls busy={busy} onApply={apply} />
+              {cancelButton}
+            </>
+          )}
         </section>
       )}
       {job?.status === 'applied' && (

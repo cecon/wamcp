@@ -38,7 +38,7 @@ pub trait MenuRepo {
 pub trait MenuImportRepo {
     fn save_menu_import(&self, import: &MenuImport) -> Result<()>;
     fn menu_import(&self, id: &str) -> Result<Option<MenuImport>>;
-    /// Marks imports left running by a previous process as failed.
+    /// Marks imports left running by a previous process as failed; ones left applying are ready again.
     fn fail_stale_imports(&self, message: &str) -> Result<()>;
 }
 

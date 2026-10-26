@@ -9,6 +9,7 @@ const STEP_OF: Partial<Record<ImportStatus, number>> = {
   waiting_human: 1,
   loading: 2,
   ready: 3,
+  applying: 3,
   applied: 4,
 };
 

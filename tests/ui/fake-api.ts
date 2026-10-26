@@ -12,7 +12,10 @@ export interface Call {
   headers: Record<string, string>;
 }
 
-/** Routes `fetch` to in-memory handlers keyed by "METHOD /path"; a handler may throw `status(...)`. */
+/**
+ * Routes `fetch` to in-memory handlers keyed by "METHOD /path"; a handler may throw `status(...)` or
+ * return a promise (a request still in flight).
+ */
 export function fakeApi(routes: Record<string, Route>) {
   const calls: Call[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
@@ -31,7 +34,7 @@ export function fakeApi(routes: Record<string, Route>) {
     if (!(key in routes)) return json({ error: `sem rota ${key}` }, 404);
     const route = routes[key];
     try {
-      return json(typeof route === 'function' ? (route as Handler)(body, url) : route, 200);
+      return json(await (typeof route === 'function' ? (route as Handler)(body, url) : route), 200);
     } catch (error) {
       if (error instanceof HttpStatus) return json({ error: error.message }, error.status);
       throw error;

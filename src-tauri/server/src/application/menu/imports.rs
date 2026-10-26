@@ -77,7 +77,9 @@ impl MenuService {
 
     pub fn import(&self, actor: &Actor, id: &str) -> Result<MenuImport> {
         require_admin(actor)?;
-        self.load_import(id)
+        let mut import = self.load_import(id)?;
+        import.progress = self.progress.lock().get(id).copied();
+        Ok(import)
     }
 
     /// Starts importing the store at `url` (https on ifood.com.br) in the background.
