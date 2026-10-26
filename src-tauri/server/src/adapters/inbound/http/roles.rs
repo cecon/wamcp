@@ -17,6 +17,8 @@ struct Role {
     description: Option<Option<String>>,
     #[serde(default)]
     permissions: Vec<String>,
+    /// The AI role agents with this profile play (`null` for none).
+    agent_role: Option<String>,
 }
 
 fn role(id: i64, body: Role) -> ApiResult<CustomRole> {
@@ -25,6 +27,8 @@ fn role(id: i64, body: Role) -> ApiResult<CustomRole> {
         name: text(body.name.as_deref().unwrap_or_default(), 1, 60)?,
         description: nullable_text(body.description, 300)?.flatten(),
         permissions: body.permissions,
+        agent_role: body.agent_role.filter(|r| !r.is_empty()),
+        builtin: false,
         created: String::new(),
     })
 }

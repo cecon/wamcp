@@ -65,7 +65,8 @@ impl UsersRepo for SqliteStore {
 
     fn create_user(&self, name: &str, email: &str, role: &str, password_hash: &str) -> Result<User> {
         let id = self.insert(
-            "INSERT INTO users(email,name,password_hash,role,created) VALUES(?,?,?,?,?)",
+            "INSERT INTO users(email,name,password_hash,role,created,custom_role_id)
+             VALUES(?,?,?,?,?,(SELECT id FROM custom_roles WHERE builtin=1))",
             vec![
                 text(email),
                 text(name),

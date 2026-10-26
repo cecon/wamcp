@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsRouter } from '../../src/agent/settings/SettingsRouter';
-import type { AgentCredential, RosterAgent, Skill } from '../../src/agent/adminTypes';
+import type { AgentCredential, CustomRole, RosterAgent, Skill } from '../../src/agent/adminTypes';
 import type { Catalog } from '../../src/agent/types';
 import type { SettingsSection } from '../../src/agent/route';
 import { fakeApi } from './fake-api';
@@ -16,11 +16,31 @@ const skill = (id: number, name: string): Skill => ({
   instructions: '',
   tools: [],
 });
+const profile = (
+  id: number,
+  name: string,
+  agent_role: CustomRole['agent_role'],
+  builtin = false,
+): CustomRole => ({
+  id,
+  name,
+  description: null,
+  permissions: ['conversation_manage'],
+  agent_role,
+  builtin,
+});
+const PROFILES = [
+  profile(1, 'Padrão', null, true),
+  profile(20, 'Coordenador de IA', 'coordinator'),
+  profile(21, 'Operador', 'operator'),
+];
 const roster = (id: number, fields: Partial<RosterAgent>): RosterAgent => ({
   id,
   name: `Agente ${id}`,
   kind: 'ai',
   role: 'operator',
+  profile_id: 21,
+  profile_name: 'Operador',
   description: null,
   user_id: null,
   user_name: null,
@@ -55,7 +75,7 @@ describe('agent roster', () => {
     ];
     const api = fakeApi({
       'GET /agent_directory': () => agents,
-      'GET /custom_roles': [],
+      'GET /custom_roles': PROFILES,
       'GET /skills': [skill(7, 'Pedidos'), skill(8, 'Entregas')],
       'POST /agent_directory': (body) => {
         agents = [...agents, roster(3, body as Partial<RosterAgent>)];
@@ -78,9 +98,10 @@ describe('agent roster', () => {
     await user.click(screen.getByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
     await user.type(within(dialog).getByLabelText('Nome'), 'Operador de pedidos');
-    await user.selectOptions(within(dialog).getByLabelText('Função'), 'coordinator');
+    expect(within(dialog).queryByRole('option', { name: 'Padrão' })).not.toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText('Perfil'), '20');
     expect(within(dialog).queryByText('Skills')).not.toBeInTheDocument();
-    await user.selectOptions(within(dialog).getByLabelText('Função'), 'operator');
+    await user.selectOptions(within(dialog).getByLabelText('Perfil'), '21');
     await user.click(within(dialog).getByLabelText('Pedidos'));
     await user.type(within(dialog).getByLabelText('Modelo (opcional)'), 'sonnet');
     await user.click(within(dialog).getByRole('button', { name: 'Criar agente' }));
@@ -88,7 +109,7 @@ describe('agent roster', () => {
     expect(api.called('POST', '/agent_directory')[0].body).toMatchObject({
       name: 'Operador de pedidos',
       kind: 'ai',
-      role: 'operator',
+      profile_id: 21,
       runtime: 'claude_cli',
       model: 'sonnet',
     });
@@ -100,7 +121,7 @@ describe('agent roster', () => {
     let credentials: AgentCredential[] = [];
     const api = fakeApi({
       'GET /agent_directory': [roster(4, { name: 'Operador' })],
-      'GET /custom_roles': [],
+      'GET /custom_roles': PROFILES,
       'GET /skills': [],
       'GET /agent_directory/4/credentials': () => credentials,
       'POST /agent_directory/4/credentials': (body) => {
@@ -131,7 +152,7 @@ describe('linking skills from the agent form', () => {
   it('creates a skill inline and links it to the new agent', async () => {
     const api = fakeApi({
       'GET /agent_directory': [],
-      'GET /custom_roles': [],
+      'GET /custom_roles': PROFILES,
       'GET /skills': [],
       'POST /skills': (body) => ({ ...skill(9, (body as Skill).name), tools: (body as Skill).tools }),
       'POST /agent_directory': (body) => roster(5, body as Partial<RosterAgent>),
@@ -167,7 +188,7 @@ describe('skills', () => {
   it('imports a SKILL.md file', async () => {
     let skills: Skill[] = [];
     const api = fakeApi({
-      'GET /custom_roles': [],
+      'GET /custom_roles': PROFILES,
       'GET /skills': () => skills,
       'POST /skills/import': () => {
         skills = [{ ...skill(1, 'Entregas'), tools: ['http_request'] }];

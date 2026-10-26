@@ -90,12 +90,17 @@ pub struct TokenOwner {
     pub owner_id: i64,
 }
 
-/// A named set of permissions assigned to agents.
+/// A profile every agent has: its permissions and, for AI work, the AI role it plays
+/// (`coordinator`, `operator`, `dev_support` or `qa`). The built-in "Padrão" cannot be deleted.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CustomRole {
     pub id: i64,
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<String>,
+    #[serde(default)]
+    pub agent_role: Option<String>,
+    #[serde(default)]
+    pub builtin: bool,
     pub created: String,
 }

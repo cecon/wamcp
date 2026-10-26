@@ -1,22 +1,4 @@
-/** Types of the agent bots and custom roles APIs (Chatwoot parity). */
-export interface AgentBot {
-  id: number;
-  name: string;
-  description: string | null;
-  outgoing_url: string;
-  inbox_ids: number[];
-  /** `webhook`: external system with URL and token; `llm`: answered by the app with an LLM provider. */
-  kind: 'webhook' | 'llm';
-  provider: string | null;
-  model: string | null;
-  instructions: string | null;
-}
-/** POST /agent_bots: the access token is returned only once (`null` for LLM bots, which have none). */
-export interface CreatedAgentBot {
-  agent_bot: AgentBot;
-  access_token: string | null;
-}
-
+/** Types of the profiles (custom roles), agent roster and skills APIs. */
 export type Permission =
   | 'conversation_manage'
   | 'conversation_unassigned_manage'
@@ -29,6 +11,10 @@ export interface CustomRole {
   name: string;
   description: string | null;
   permissions: Permission[];
+  /** The AI role agents with this profile play (coordinator, operator…), or none. */
+  agent_role: RosterRole | null;
+  /** The built-in "Padrão" profile: every agent has a profile and it cannot be deleted. */
+  builtin: boolean;
 }
 
 /** Agent roster (`/agent_directory`): human agents consulted on WhatsApp and AI agents run by a runtime. */
@@ -38,7 +24,10 @@ export interface RosterAgent {
   id: number;
   name: string;
   kind: RosterKind;
+  /** From the profile. */
   role: RosterRole;
+  profile_id: number | null;
+  profile_name: string | null;
   description: string | null;
   user_id: number | null;
   user_name: string | null;

@@ -8,6 +8,7 @@ import { Button } from '../../ui/Button';
 import { ConfirmModal } from '../../ui/Confirm';
 import { Cell, RowActions, SettingsHeader, Table } from '../../ui/Settings';
 import { AgentRosterModal } from './AgentRosterModal';
+import { useCustomRoles } from '../roles/useCustomRoles';
 import { phone, roleLabel, runtimeLabel } from './labels';
 
 const TEXT = {
@@ -36,6 +37,7 @@ interface Props {
 export function RosterSection({ kind, catalog }: Props) {
   const { data, error, reload } = useFetch<RosterAgent[]>('/agent_directory');
   const { data: skills, reload: reloadSkills } = useFetch<Skill[]>('/skills');
+  const { roles: profiles } = useCustomRoles();
   const [editing, setEditing] = useState<RosterAgent | 'new' | null>(null),
     [removing, setRemoving] = useState<RosterAgent | null>(null);
   const agents = (data || []).filter((a) => a.kind === kind);
@@ -60,8 +62,8 @@ export function RosterSection({ kind, catalog }: Props) {
       <Table
         headers={
           kind === 'ai'
-            ? ['Agente', 'Função', text.contact, 'Skills', '']
-            : ['Pessoa', 'Função', text.contact, '']
+            ? ['Agente', 'Perfil', text.contact, 'Skills', '']
+            : ['Pessoa', 'Perfil', text.contact, '']
         }
         rows={agents.length}
         empty={kind === 'ai' ? 'Nenhum agente de IA.' : 'Ninguém cadastrado para consulta.'}
@@ -72,7 +74,10 @@ export function RosterSection({ kind, catalog }: Props) {
               <span className="block font-medium text-n-slate-12">{agent.name}</span>
               {agent.description && <span className="text-sm">{agent.description}</span>}
             </Cell>
-            <Cell>{roleLabel(agent.role)}</Cell>
+            <Cell>
+              {agent.profile_name ?? '—'}
+              {agent.kind === 'ai' && <span className="block text-xs">{roleLabel(agent.role)}</span>}
+            </Cell>
             <Cell>
               {agent.kind === 'human'
                 ? [phone(agent.whatsapp_jid), agent.user_name].filter(Boolean).join(' · ')
@@ -103,6 +108,7 @@ export function RosterSection({ kind, catalog }: Props) {
           agent={editing === 'new' ? null : editing}
           kind={kind}
           skills={skills || []}
+          profiles={profiles}
           logins={catalog.agents}
           onClose={() => setEditing(null)}
           onSaved={reload}

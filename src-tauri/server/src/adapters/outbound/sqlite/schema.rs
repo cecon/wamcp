@@ -148,5 +148,8 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v24: skills padrão (atender pelo cardápio, montar e fechar pedido, transferir para a equipe)
         super::default_skills::DEFAULT_SKILLS.into(),
+        // v25: todo agente (login, consultado pelo WhatsApp ou IA) tem um perfil; a função de IA vem do perfil.
+        // O perfil "Padrão" reproduz o acesso de quem não tinha perfil (tudo menos relatórios).
+        super::default_skills::PROFILES.into(),
     ]
 }

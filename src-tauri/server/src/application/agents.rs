@@ -41,6 +41,9 @@ impl AgentDirectory {
     /// Creates (`id` 0) or replaces an agent; its kind never changes after creation.
     pub fn save_agent(&self, actor: &Actor, draft: &RosterAgentDraft) -> Result<RosterAgent> {
         require_admin(actor)?;
+        let mut draft = draft.clone();
+        draft.role = self.role_from_profile(&draft)?;
+        let draft = &draft;
         validate_agent(draft)?;
         if draft.id != 0 {
             let current = self.find_agent(draft.id)?;
@@ -55,6 +58,21 @@ impl AgentDirectory {
             }
         }
         self.core.repo.save_agent(draft)
+    }
+
+    /// The AI role comes from the mandatory profile; AI agents need a profile with an AI role.
+    fn role_from_profile(&self, draft: &RosterAgentDraft) -> Result<String> {
+        let Some(id) = draft.profile_id else {
+            return fail("Escolha o perfil do agente");
+        };
+        let Some(profile) = self.core.repo.custom_role(id)? else {
+            return fail_with("Perfil não encontrado", 422);
+        };
+        match (draft.kind.as_str(), profile.agent_role) {
+            ("ai", None) => fail("Agentes de IA precisam de um perfil com função de IA (coordenador, operador…)"),
+            (_, Some(role)) => Ok(role),
+            (_, None) => Ok("operator".into()),
+        }
     }
 
     pub fn delete_agent(&self, actor: &Actor, id: i64) -> Result<()> {

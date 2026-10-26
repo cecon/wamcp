@@ -12,7 +12,6 @@ import { MacrosPage } from './MacrosPage';
 import { AuditLogPage } from './AuditLogPage';
 import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
-import { AgentBotsPage } from './bots/AgentBotsPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
@@ -45,8 +44,6 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <CannedPage />;
     case 'automation':
       return <AutomationPage catalog={catalog} />;
-    case 'agent_bots':
-      return <AgentBotsPage catalog={catalog} onChange={onChange} />;
     case 'skills':
       return <SkillsPage />;
     case 'macros':

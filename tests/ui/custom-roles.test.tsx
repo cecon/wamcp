@@ -13,8 +13,25 @@ const supervisor: CustomRole = {
   name: 'Supervisor',
   description: 'Vê tudo',
   permissions: ['conversation_manage', 'report_manage'],
+  agent_role: null,
+  builtin: false,
 };
-const empty: CustomRole = { id: 5, name: 'Restrito', description: null, permissions: [] };
+const empty: CustomRole = {
+  id: 5,
+  name: 'Restrito',
+  description: null,
+  permissions: [],
+  agent_role: null,
+  builtin: false,
+};
+const padrao: CustomRole = {
+  id: 1,
+  name: 'Padrão',
+  description: null,
+  permissions: ['conversation_manage'],
+  agent_role: null,
+  builtin: true,
+};
 const catalog: Catalog = { inboxes: [inbox], agents: [admin, maria], teams: [team], labels };
 
 function renderSettings(section: SettingsSection, current = catalog) {
@@ -71,6 +88,7 @@ describe('custom roles settings', () => {
       name: 'Contatos',
       description: 'Só contatos',
       permissions: ['contact_manage', 'conversation_participating_manage'],
+      agent_role: null,
     });
     expect(await screen.findByText('3 perfis')).toBeInTheDocument();
 
@@ -84,6 +102,7 @@ describe('custom roles settings', () => {
         name: 'Supervisor',
         description: 'Vê tudo',
         permissions: ['conversation_manage'],
+        agent_role: null,
       }),
     );
 
@@ -92,6 +111,25 @@ describe('custom roles settings', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Excluir' }));
     await waitFor(() => expect(screen.queryByText('Restrito')).not.toBeInTheDocument());
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it('sets the AI role of a profile and keeps Padrão undeletable', async () => {
+    const api = fakeApi({
+      'GET /custom_roles': [padrao, supervisor],
+      'POST /custom_roles': (body) => ({ ...(body as CustomRole), id: 8, builtin: false }),
+    });
+    const { user } = renderSettings('custom_roles');
+    expect(await screen.findByText('Padrão')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir Padrão' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir Supervisor' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar perfil' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar perfil' });
+    await user.type(within(dialog).getByLabelText('Nome do perfil'), 'Coordenação');
+    await user.selectOptions(within(dialog).getByLabelText('Função de agente de IA'), 'coordinator');
+    await user.click(within(dialog).getByLabelText('Gerenciar contatos'));
+    await user.click(within(dialog).getByRole('button', { name: 'Criar perfil' }));
+    await waitFor(() => expect(api.called('POST', '/custom_roles')).toHaveLength(1));
+    expect(api.called('POST', '/custom_roles')[0].body).toMatchObject({ agent_role: 'coordinator' });
   });
 
   it('shows the error when roles cannot be loaded', async () => {
@@ -113,7 +151,7 @@ describe('agent profile', () => {
 
   it('shows each agent role and changes it with the Perfil selector', async () => {
     const api = fakeApi({
-      'GET /custom_roles': [supervisor, empty],
+      'GET /custom_roles': [padrao, supervisor, empty],
       'PATCH /agents/2': {},
       'PATCH /agents/3': {},
     });
@@ -125,7 +163,7 @@ describe('agent profile', () => {
 
     await user.click(screen.getByRole('button', { name: 'Editar Maria Souza' }));
     const edit = screen.getByRole('dialog', { name: 'Editar Maria Souza' });
-    expect(within(edit).getByLabelText('Perfil')).toHaveValue('');
+    expect(within(edit).getByLabelText('Perfil')).toHaveValue('1');
     await user.selectOptions(within(edit).getByLabelText('Perfil'), 'Restrito');
     await user.click(within(edit).getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
@@ -139,18 +177,19 @@ describe('agent profile', () => {
     await user.click(screen.getByRole('button', { name: 'Editar Ana' }));
     const back = screen.getByRole('dialog', { name: 'Editar Ana' });
     expect(within(back).getByLabelText('Perfil')).toHaveValue('4');
-    await user.selectOptions(within(back).getByLabelText('Perfil'), 'Agente padrão');
+    expect(within(back).queryByRole('option', { name: 'Agente padrão' })).not.toBeInTheDocument();
+    await user.selectOptions(within(back).getByLabelText('Perfil'), 'Padrão');
     await user.click(within(back).getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
       expect(api.called('PATCH', '/agents/3')[0].body).toEqual({
         name: 'Ana',
         role: 'agent',
-        custom_role_id: null,
+        custom_role_id: 1,
       }),
     );
   });
 
-  it('assigns a role to a new agent and hides it for administrators', async () => {
+  it('assigns a mandatory profile to a new agent, administrators included', async () => {
     const api = fakeApi({
       'GET /custom_roles': [supervisor],
       'POST /agents': { ...maria, id: 9 },
@@ -161,7 +200,7 @@ describe('agent profile', () => {
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente' });
     await user.selectOptions(await within(dialog).findByLabelText('Perfil'), 'Supervisor');
     await user.selectOptions(within(dialog).getByLabelText('Função'), 'administrator');
-    expect(within(dialog).queryByLabelText('Perfil')).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Perfil')).toHaveValue('4');
     await user.selectOptions(within(dialog).getByLabelText('Função'), 'agent');
     await user.type(within(dialog).getByLabelText('Nome do agente'), 'Caio');
     await user.type(within(dialog).getByLabelText('E-mail'), 'caio@example.com');

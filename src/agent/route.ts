@@ -10,7 +10,6 @@ export type SettingsSection =
   | 'attributes'
   | 'canned'
   | 'automation'
-  | 'agent_bots'
   | 'skills'
   | 'macros'
   | 'sla'

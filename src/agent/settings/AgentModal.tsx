@@ -15,7 +15,7 @@ interface Props {
   onSaved: () => Promise<void>;
 }
 
-/** Add / edit agent: name, role, custom role ("Perfil"); new agents also get e-mail, password and inboxes. */
+/** Add / edit agent: name, role, mandatory profile ("Perfil"); new agents also get e-mail, password and inboxes. */
 export function AgentModal({ agent, catalog, roles, onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     name: agent?.name || '',
@@ -23,18 +23,19 @@ export function AgentModal({ agent, catalog, roles, onClose, onSaved }: Props) {
     password: '',
     role: agent?.role || ('agent' as Role),
   });
+  const fallback = roles.find((r) => r.builtin)?.id ?? null;
   const current = agent?.custom_role_id ?? null;
-  const [profile, setProfile] = useState<number | null>(current);
+  const [profile, setProfile] = useState<number | null>(current ?? fallback);
   const [inboxIds, setInboxIds] = useState<number[]>([]);
   const { error, busy, run } = useAction();
-  const roleChange = form.role === 'agent' && profile !== current ? { custom_role_id: profile } : {};
+  const roleChange = profile !== null && profile !== current ? { custom_role_id: profile } : {};
 
   async function save() {
     if (agent) {
       await http(`/agents/${agent.id}`, 'PATCH', { name: form.name, role: form.role, ...roleChange });
     } else {
       const created = await http<User>('/agents', 'POST', { ...form, inbox_ids: inboxIds });
-      if (profile !== null && form.role === 'agent')
+      if (profile !== null && profile !== created.custom_role_id)
         await http(`/agents/${created.id}`, 'PATCH', { custom_role_id: profile });
     }
     await onSaved();
@@ -81,15 +82,15 @@ export function AgentModal({ agent, catalog, roles, onClose, onSaved }: Props) {
             <option value="administrator">Administrador</option>
           </select>
         </label>
-        {form.role === 'agent' && roles.length > 0 && (
+        {roles.length > 0 && (
           <label>
             <span className="field-label">Perfil</span>
             <select
               className="field"
+              required
               value={profile ?? ''}
-              onChange={(e) => setProfile(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => setProfile(Number(e.target.value))}
             >
-              <option value="">Agente padrão</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}

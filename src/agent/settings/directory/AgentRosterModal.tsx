@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { http } from '../../api';
-import type { RosterAgent, RosterKind, Skill } from '../../adminTypes';
+import type { CustomRole, RosterAgent, RosterKind, Skill } from '../../adminTypes';
 import type { User } from '../../types';
 import { Modal } from '../../ui/Overlay';
 import { ModalFooter } from '../../ui/Settings';
 import { useAction } from '../useAction';
 import { CredentialsPanel } from './CredentialsPanel';
 import { SkillPicker } from './SkillPicker';
-import { executes, phone, ROLES, RUNTIMES } from './labels';
+import { executes, phone, roleLabel, RUNTIMES } from './labels';
 
 interface Props {
   agent: RosterAgent | null;
   /** Kind of a new agent (an existing agent keeps its kind). */
   kind: RosterKind;
   skills: Skill[];
+  /** Profiles: AI agents pick one with an AI role, people any. */
+  profiles: CustomRole[];
   logins: User[];
   onClose: () => void;
   onSaved: () => void;
@@ -22,11 +24,17 @@ interface Props {
 }
 
 /** Human or AI agent form: role, contact (humans) or runtime and instructions (AI), skills and credentials. */
-export function AgentRosterModal({ agent, kind, skills, logins, onClose, onSaved, onSkillsChanged }: Props) {
+export function AgentRosterModal(props: Props) {
+  const { agent, kind, skills, profiles, logins, onClose, onSaved, onSkillsChanged } = props;
   const human = (agent?.kind ?? kind) === 'human';
+  // AI agents need a profile with an AI role; people may have any profile (Padrão by default).
+  const choices = human ? profiles : profiles.filter((p) => p.agent_role);
+  const initial = human
+    ? profiles.find((p) => p.builtin)
+    : (choices.find((p) => p.agent_role === 'operator') ?? choices[0]);
   const [form, setForm] = useState({
     name: agent?.name || '',
-    role: agent?.role || 'operator',
+    profile_id: String(agent?.profile_id ?? initial?.id ?? ''),
     description: agent?.description || '',
     whatsapp: phone(agent?.whatsapp_jid ?? null),
     user_id: agent?.user_id ? String(agent.user_id) : '',
@@ -39,12 +47,14 @@ export function AgentRosterModal({ agent, kind, skills, logins, onClose, onSaved
   const [library, setLibrary] = useState(skills);
   const { error, busy, run } = useAction();
   const field = (
-    key: 'name' | 'role' | 'description' | 'whatsapp' | 'user_id' | 'runtime' | 'model' | 'instructions',
+    key:
+      'name' | 'profile_id' | 'description' | 'whatsapp' | 'user_id' | 'runtime' | 'model' | 'instructions',
   ) => ({
     value: form[key],
     onChange: (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value }),
   });
-  const withSkills = executes({ kind: human ? 'human' : 'ai', role: form.role });
+  const chosen = profiles.find((p) => String(p.id) === form.profile_id);
+  const withSkills = !human && executes({ kind: 'ai', role: chosen?.agent_role ?? 'coordinator' });
   const toggle = (id: number) =>
     setSkillIds((list) => (list.includes(id) ? list.filter((s) => s !== id) : [...list, id]));
 
@@ -52,7 +62,7 @@ export function AgentRosterModal({ agent, kind, skills, logins, onClose, onSaved
     const common = {
       name: form.name.trim(),
       kind: human ? 'human' : 'ai',
-      role: form.role,
+      profile_id: Number(form.profile_id) || null,
       description: form.description.trim() || null,
       active: form.active,
     };
@@ -101,11 +111,11 @@ export function AgentRosterModal({ agent, kind, skills, logins, onClose, onSaved
           <input className="field" required maxLength={80} {...field('name')} />
         </label>
         <label>
-          <span className="field-label">Função</span>
-          <select className="field" {...field('role')}>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label} — {r.hint}
+          <span className="field-label">Perfil</span>
+          <select className="field" required {...field('profile_id')}>
+            {choices.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.agent_role ? `${p.name} — ${roleLabel(p.agent_role)}` : p.name}
               </option>
             ))}
           </select>

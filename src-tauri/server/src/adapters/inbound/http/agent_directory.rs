@@ -16,7 +16,7 @@ use serde::Deserialize;
 struct AgentBody {
     name: Option<String>,
     kind: Option<String>,
-    role: Option<String>,
+    profile_id: Option<i64>,
     description: Option<String>,
     user_id: Option<i64>,
     whatsapp: Option<String>,
@@ -42,7 +42,8 @@ fn draft(id: i64, body: AgentBody) -> ApiResult<RosterAgentDraft> {
         id,
         name: text(body.name.as_deref().unwrap_or_default(), 1, 80)?,
         kind: body.kind.unwrap_or_default(),
-        role: body.role.unwrap_or_default(),
+        role: String::new(),
+        profile_id: body.profile_id,
         description: optional(body.description, 500)?,
         user_id: body.user_id,
         whatsapp_jid: whatsapp,

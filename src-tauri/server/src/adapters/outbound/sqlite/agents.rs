@@ -3,10 +3,12 @@ use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, Skill};
 
-const AGENT: &str = "SELECT a.*, u.name AS user_name,
+const AGENT: &str =
+    "SELECT a.id,a.name,a.kind,COALESCE(p.agent_role,a.role) AS role,a.profile_id,p.name AS profile_name,
+  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created, u.name AS user_name,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
   (SELECT COUNT(*) FROM agent_credentials c WHERE c.agent_id=a.id) AS credential_count
-  FROM agents a LEFT JOIN users u ON u.id=a.user_id";
+  FROM agents a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN custom_roles p ON p.id=a.profile_id";
 const AGENT_SHAPE: Shape = Shape {
     json: &["skill_ids"],
     bools: &["active"],
@@ -35,6 +37,7 @@ impl AgentsRepo for SqliteStore {
             text(&agent.name),
             text(&agent.kind),
             text(&agent.role),
+            opt_int(agent.profile_id),
             opt_text(agent.description.as_deref()),
             opt_int(agent.user_id),
             opt_text(agent.whatsapp_jid.as_deref()),
@@ -46,14 +49,14 @@ impl AgentsRepo for SqliteStore {
         let id = if agent.id == 0 {
             values.push(text(iso(now_ms())));
             self.insert(
-                "INSERT INTO agents(name,kind,role,description,user_id,whatsapp_jid,runtime,model,instructions,active,created)
-                 VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO agents(name,kind,role,profile_id,description,user_id,whatsapp_jid,runtime,model,instructions,active,created)
+                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                 values,
             )?
         } else {
             values.push(int(agent.id));
             self.exec(
-                "UPDATE agents SET name=?,kind=?,role=?,description=?,user_id=?,whatsapp_jid=?,runtime=?,model=?,
+                "UPDATE agents SET name=?,kind=?,role=?,profile_id=?,description=?,user_id=?,whatsapp_jid=?,runtime=?,model=?,
                  instructions=?,active=? WHERE id=?",
                 values,
             )?;

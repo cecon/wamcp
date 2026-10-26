@@ -121,6 +121,12 @@ As ferramentas chegam ao runtime pelo **próprio endpoint MCP do app**, com um t
 
 Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, WhatsApp), testes de integração em `src-tauri/server/tests` e testes de UI.
 
+## Decisões tomadas (2026-10-26)
+
+- **Um só "Agentes"**, com as abas Humanos (logins e pessoas consultadas pelo WhatsApp) e IA.
+- **Perfil obrigatório para todo agente** (login, WhatsApp ou IA). O perfil define as permissões e a função de IA (coordenador, operador, suporte dev, QA); o agente herda a função do perfil. O perfil "Padrão" reproduz o acesso de quem não tinha perfil e não pode ser excluído.
+- **Robôs saem da interface**: os agentes de IA, com a função vinda do perfil, assumem esse papel. A API de robôs por webhook continua no backend por compatibilidade.
+
 ## Decisões em aberto
 
 1. **Agente humano sem login:** basta o WhatsApp para ser consultado, ou todo humano precisa ser um `user`?

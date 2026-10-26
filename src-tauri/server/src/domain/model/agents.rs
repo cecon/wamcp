@@ -7,8 +7,11 @@ pub struct RosterAgent {
     pub name: String,
     /// `human` or `ai`.
     pub kind: String,
-    /// `coordinator`, `operator`, `dev_support` or `qa`.
+    /// `coordinator`, `operator`, `dev_support` or `qa`, from the profile.
     pub role: String,
+    /// The mandatory profile: permissions and the AI role.
+    pub profile_id: Option<i64>,
+    pub profile_name: Option<String>,
     pub description: Option<String>,
     /// Humans: optional helpdesk login and the WhatsApp the agents ask questions on.
     pub user_id: Option<i64>,
@@ -30,7 +33,9 @@ pub struct RosterAgentDraft {
     pub id: i64,
     pub name: String,
     pub kind: String,
+    /// Filled from the profile by the use case.
     pub role: String,
+    pub profile_id: Option<i64>,
     pub description: Option<String>,
     pub user_id: Option<i64>,
     pub whatsapp_jid: Option<String>,
