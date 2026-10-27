@@ -127,5 +127,31 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v21: nome do agente na primeira linha das mensagens enviadas pelo WhatsApp
         "ALTER TABLE inboxes ADD COLUMN show_agent_name INTEGER NOT NULL DEFAULT 1;".into(),
+        // v22: robôs respondidos pelo próprio servidor com uma LLM (Claude Code, Codex, OpenRouter…), sem webhook
+        "ALTER TABLE agent_bots ADD COLUMN kind TEXT NOT NULL DEFAULT 'webhook' CHECK(kind IN ('webhook','llm'));
+         ALTER TABLE agent_bots ADD COLUMN provider TEXT;
+         ALTER TABLE agent_bots ADD COLUMN model TEXT;
+         ALTER TABLE agent_bots ADD COLUMN instructions TEXT;"
+            .into(),
+        // v23: cadastro unificado de agentes humanos e de IA, com funções, skills e credenciais cifradas
+        "CREATE TABLE agents(id INTEGER PRIMARY KEY,name TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('human','ai')),
+           role TEXT NOT NULL CHECK(role IN ('coordinator','operator','dev_support','qa')),description TEXT,
+           user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,whatsapp_jid TEXT,
+           runtime TEXT,model TEXT,instructions TEXT,active INTEGER NOT NULL DEFAULT 1,created TEXT NOT NULL);
+         CREATE TABLE skills(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,description TEXT,
+           instructions TEXT NOT NULL DEFAULT '',tools TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(tools)),created TEXT NOT NULL);
+         CREATE TABLE agent_skills(agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+           skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,PRIMARY KEY(agent_id,skill_id));
+         CREATE TABLE agent_credentials(id INTEGER PRIMARY KEY,agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+           name TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN ('api_key','bearer','basic','secret')),secret TEXT NOT NULL,
+           created TEXT NOT NULL,last_used TEXT,UNIQUE(agent_id,name));"
+            .into(),
+        // v24: skills padrão (atender pelo cardápio, montar e fechar pedido, transferir para a equipe)
+        super::default_skills::DEFAULT_SKILLS.into(),
+        // v25: todo agente (login, consultado pelo WhatsApp ou IA) tem um perfil; a função de IA vem do perfil.
+        // O perfil "Padrão" reproduz o acesso de quem não tinha perfil (tudo menos relatórios).
+        super::default_skills::PROFILES.into(),
+        // v26: uma lista só de agentes: todo login vira uma pessoa da lista, ligada pelo user_id
+        super::default_skills::ROSTER_LOGINS.into(),
     ]
 }

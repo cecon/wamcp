@@ -5,6 +5,7 @@ import { PERMISSIONS } from '../../permissions';
 import { Modal } from '../../ui/Overlay';
 import { ModalFooter } from '../../ui/Settings';
 import { useAction } from '../useAction';
+import { ROLES } from '../directory/labels';
 
 interface Props {
   role: CustomRole | null;
@@ -16,7 +17,8 @@ interface Props {
 export function CustomRoleModal({ role, onClose, onSaved }: Props) {
   const [name, setName] = useState(role?.name || ''),
     [description, setDescription] = useState(role?.description || ''),
-    [permissions, setPermissions] = useState<Permission[]>(role?.permissions || []);
+    [permissions, setPermissions] = useState<Permission[]>(role?.permissions || []),
+    [agentRole, setAgentRole] = useState<string>(role?.agent_role || '');
   const { error, busy, run } = useAction();
   const toggle = (key: Permission) =>
     setPermissions((list) => (list.includes(key) ? list.filter((p) => p !== key) : [...list, key]));
@@ -24,7 +26,7 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
   return (
     <Modal
       title={role ? 'Editar perfil' : 'Adicionar perfil'}
-      description="Agentes com este perfil têm exatamente as permissões marcadas. Sem permissão de conversas, veem só as atribuídas a eles."
+      description="Todo agente, pessoa ou IA, tem um perfil. Ele define as permissões e a função: coordenador, operador, suporte dev ou QA. Agentes de IA precisam de um perfil com função."
       onClose={onClose}
     >
       <form
@@ -32,7 +34,12 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
-            const body = { name: name.trim(), description: description.trim() || null, permissions };
+            const body = {
+              name: name.trim(),
+              description: description.trim() || null,
+              permissions,
+              agent_role: agentRole || null,
+            };
             await http(role ? `/custom_roles/${role.id}` : '/custom_roles', role ? 'PUT' : 'POST', body);
             onSaved();
             onClose();
@@ -58,6 +65,17 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </label>
+        <label>
+          <span className="field-label">Função</span>
+          <select className="field" value={agentRole} onChange={(e) => setAgentRole(e.target.value)}>
+            <option value="">Nenhuma</option>
+            {ROLES.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label} — {r.hint}
+              </option>
+            ))}
+          </select>
         </label>
         <fieldset>
           <legend className="field-label">Permissões</legend>

@@ -1,6 +1,8 @@
-//! Custom roles: administrators define permission sets and assign them to agents.
+//! Profiles (Chatwoot custom roles): every agent has one. A profile sets the permissions and, for AI
+//! agents, the AI role they play; the built-in "Padrão" keeps the default access and cannot be deleted.
 use super::accounts::AccountService;
 use crate::domain::actor::Actor;
+use crate::domain::agents::{executes, holds_credentials, ROLES};
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::CustomRole;
@@ -19,27 +21,72 @@ impl AccountService {
             .ok_or_else(|| HelpdeskError::not_found("Perfil não encontrado").into())
     }
 
-    /// Creates (`id` 0) or replaces a role after checking the name and permissions.
+    /// Creates (`id` 0) or replaces a profile after checking the name, permissions and AI role.
     pub fn save_custom_role(&self, actor: &Actor, role: &CustomRole) -> Result<CustomRole> {
         require_admin(actor)?;
-        if role.id != 0 {
-            self.find_role(role.id)?;
-        }
         if role.permissions.is_empty() || role.permissions.iter().any(|p| !PERMISSIONS.contains(&p.as_str())) {
             return fail("Escolha permissões válidas");
+        }
+        if role.agent_role.as_deref().is_some_and(|r| !ROLES.contains(&r)) {
+            return fail("Função de IA inválida");
+        }
+        let mut role = role.clone();
+        if role.id != 0 {
+            let current = self.find_role(role.id)?;
+            role.builtin = current.builtin;
+            if current.agent_role != role.agent_role {
+                self.check_ai_agents(&role)?;
+            }
         }
         if self.core.repo.role_name_taken(&role.name, role.id)? {
             return fail_with("Já existe um perfil com este nome", 422);
         }
-        let mut role = role.clone();
         role.permissions.dedup();
         self.core.repo.save_custom_role(&role)
     }
 
-    /// Agents with the role go back to the default agent access.
+    /// The agents of a profile must stay valid: AI agents keep a role, agents with skills keep a role
+    /// that executes, and AI agents with credentials too (coordinators never execute).
+    fn check_ai_agents(&self, role: &CustomRole) -> Result<()> {
+        let next = role.agent_role.as_deref().unwrap_or_default();
+        for agent in self.core.repo.agents()? {
+            if agent.profile_id != Some(role.id) {
+                continue;
+            }
+            if agent.kind == "ai" && next.is_empty() {
+                return fail(format!(
+                    "O agente de IA {} usa este perfil: mantenha uma função",
+                    agent.name
+                ));
+            }
+            let skills = !agent.skill_ids.is_empty() && !executes(next);
+            let credentials = agent.credential_count > 0 && !holds_credentials(&agent.kind, next);
+            if skills || credentials {
+                return fail(format!(
+                    "O agente {} tem skills ou credenciais e esta função não executa tarefas",
+                    agent.name
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Users and people of a deleted profile move to "Padrão"; AI agents must be moved first.
     pub fn delete_custom_role(&self, actor: &Actor, id: i64) -> Result<()> {
         require_admin(actor)?;
-        self.find_role(id)?;
+        if self.find_role(id)?.builtin {
+            return fail_with("O perfil Padrão não pode ser excluído", 409);
+        }
+        let ai = self.core.repo.agents()?;
+        if let Some(agent) = ai.iter().find(|a| a.kind == "ai" && a.profile_id == Some(id)) {
+            return fail_with(
+                format!(
+                    "O agente de IA {} usa este perfil: troque o perfil dele antes",
+                    agent.name
+                ),
+                409,
+            );
+        }
         self.core.repo.delete_custom_role(id)
     }
 }

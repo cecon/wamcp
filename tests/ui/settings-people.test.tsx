@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsRouter } from '../../src/agent/settings/SettingsRouter';
 import type { SettingsSection } from '../../src/agent/route';
+import type { CustomRole, RosterAgent } from '../../src/agent/adminTypes';
 import { fakeApi, status } from './fake-api';
 import { admin, inbox, labels, maria, team } from './fixtures';
 
@@ -29,59 +30,115 @@ function renderSettings(section: SettingsSection, id?: number, current = catalog
 }
 
 describe('agents', () => {
-  it('lists, searches, adds and edits agents', async () => {
+  const profile = (
+    id: number,
+    name: string,
+    agent_role: CustomRole['agent_role'],
+    builtin = false,
+  ): CustomRole => ({
+    id,
+    name,
+    description: null,
+    permissions: ['conversation_manage'],
+    agent_role,
+    builtin,
+  });
+  const person = (
+    id: number,
+    name: string,
+    userId: number | null,
+    fields: Partial<RosterAgent> = {},
+  ): RosterAgent => ({
+    id,
+    name,
+    kind: 'human',
+    role: null,
+    profile_id: 1,
+    profile_name: 'Padrão',
+    description: null,
+    user_id: userId,
+    user_name: userId ? name : null,
+    user_email: userId ? `${name.split(' ')[0].toLowerCase()}@example.com` : null,
+    whatsapp_jid: null,
+    runtime: null,
+    model: null,
+    instructions: null,
+    active: true,
+    skill_ids: [],
+    credential_count: 0,
+    ...fields,
+  });
+
+  it('lists people and AI in one list, adds a person with helpdesk access and manages a login', async () => {
+    let roster = [
+      person(1, 'Admin', 1),
+      person(2, 'Maria Souza', 2),
+      person(3, 'Inativo', 3, { active: false }),
+    ];
     const api = fakeApi({
+      'GET /agent_directory': () => roster,
+      'GET /skills': [],
+      'GET /custom_roles': [profile(1, 'Padrão', null, true), profile(21, 'Operador', 'operator')],
       'POST /agents': (body) => {
         if ((body as { email: string }).email === 'dup@example.com')
           throw status(409, 'E-mail já cadastrado');
         return { id: 9 };
       },
+      'POST /agent_directory': (body) => {
+        roster = [...roster, person(4, 'Ana', 9, body as Partial<RosterAgent>)];
+        return roster[3];
+      },
       'PATCH /agents/2': {},
     });
     const { user, onChange } = renderSettings('agents');
-    expect(screen.getByText('3 agentes')).toBeInTheDocument();
-    expect(screen.getByText(/\(você\)/)).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Pesquisar agentes…'), 'maria');
-    expect(screen.queryByText('Admin')).not.toBeInTheDocument();
-    await user.clear(screen.getByLabelText('Pesquisar agentes…'));
+    expect(await screen.findByText('3 agentes')).toBeInTheDocument();
+    expect(screen.getByText(/(você)/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir Admin' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Adicionar agente' }));
-    const dialog = screen.getByRole('dialog', { name: 'Adicionar agente' });
-    await user.type(within(dialog).getByLabelText('Nome do agente'), 'Ana');
+    await user.click(screen.getByRole('button', { name: 'Adicionar pessoa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar pessoa' });
+    await user.type(within(dialog).getByLabelText('Nome'), 'Ana');
+    await user.type(within(dialog).getByLabelText('WhatsApp'), '+55 11 98888-7777');
+    await user.click(within(dialog).getByLabelText(/Dar acesso ao helpdesk/));
     await user.type(within(dialog).getByLabelText('E-mail'), 'dup@example.com');
     await user.type(within(dialog).getByLabelText(/Senha inicial/), 'senha-segura-123');
-    await user.selectOptions(within(dialog).getByLabelText('Função'), 'administrator');
-    await user.click(within(dialog).getByLabelText('Suporte'));
-    await user.click(within(dialog).getByRole('button', { name: 'Adicionar agente' }));
+    await user.selectOptions(within(dialog).getByLabelText('Tipo de acesso'), 'administrator');
+    await user.click(within(dialog).getByRole('button', { name: 'Criar agente' }));
     expect(await within(dialog).findByText('E-mail já cadastrado')).toBeInTheDocument();
     await user.clear(within(dialog).getByLabelText('E-mail'));
     await user.type(within(dialog).getByLabelText('E-mail'), 'ana@example.com');
-    await user.click(within(dialog).getByLabelText('Suporte'));
-    await user.click(within(dialog).getByLabelText('Suporte'));
-    await user.click(within(dialog).getByRole('button', { name: 'Adicionar agente' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Criar agente' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(api.called('POST', '/agents')[1].body).toMatchObject({
+    expect(api.called('POST', '/agents')[1].body).toEqual({
+      name: 'Ana',
       email: 'ana@example.com',
+      password: 'senha-segura-123',
       role: 'administrator',
-      inbox_ids: [10],
+      inbox_ids: [],
     });
+    expect(api.called('POST', '/agent_directory')[0].body).toMatchObject({
+      name: 'Ana',
+      kind: 'human',
+      profile_id: 1,
+      user_id: 9,
+      whatsapp: '+55 11 98888-7777',
+    });
+    expect(await screen.findByText('4 agentes')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Editar Maria Souza' }));
     const edit = screen.getByRole('dialog', { name: 'Editar Maria Souza' });
-    await user.selectOptions(within(edit).getByLabelText('Função'), 'administrator');
-    await user.click(within(edit).getByRole('button', { name: 'Salvar' }));
+    expect(within(edit).getByText('maria@example.com')).toBeInTheDocument();
+    await user.click(within(edit).getByRole('button', { name: 'Gerenciar acesso' }));
+    const login = await screen.findByRole('dialog', { name: 'Editar Maria Souza' });
+    expect(within(login).getByRole('button', { name: 'Desativar acesso' })).toBeInTheDocument();
+    await user.selectOptions(within(login).getByLabelText('Função'), 'administrator');
+    await user.click(within(login).getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
-      expect(api.called('PATCH', '/agents/2')[0].body).toEqual({
+      expect(api.called('PATCH', '/agents/2')[0].body).toMatchObject({
         name: 'Maria Souza',
         role: 'administrator',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'Editar Maria Souza' }));
-    await user.click(screen.getByRole('button', { name: 'Desativar acesso' }));
-    await waitFor(() => expect(api.called('PATCH', '/agents/2')[1].body).toEqual({ active: false }));
-    await user.click(screen.getByRole('button', { name: 'Editar Inativo' }));
-    expect(screen.getByRole('button', { name: 'Reativar acesso' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(onChange).toHaveBeenCalled();
   });
 });

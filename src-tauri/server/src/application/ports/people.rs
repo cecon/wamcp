@@ -104,4 +104,6 @@ pub trait RoleRepo {
     fn role_name_taken(&self, name: &str, except_id: i64) -> Result<bool>;
     fn save_custom_role(&self, role: &CustomRole) -> Result<CustomRole>;
     fn delete_custom_role(&self, id: i64) -> Result<()>;
+    /// The built-in "Padrão" profile new agents get by default.
+    fn builtin_role(&self) -> Result<Option<CustomRole>>;
 }

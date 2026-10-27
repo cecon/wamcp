@@ -5,7 +5,7 @@ use crate::domain::model::CustomRole;
 
 const ROLE: Shape = Shape {
     json: &["permissions"],
-    bools: &[],
+    bools: &["builtin"],
 };
 
 impl RoleRepo for SqliteStore {
@@ -27,20 +27,22 @@ impl RoleRepo for SqliteStore {
         let permissions = text(serde_json::to_string(&role.permissions)?);
         let id = if role.id == 0 {
             self.insert(
-                "INSERT INTO custom_roles(name,description,permissions,created) VALUES(?,?,?,?)",
+                "INSERT INTO custom_roles(name,description,permissions,agent_role,created) VALUES(?,?,?,?,?)",
                 vec![
                     text(role.name.as_str()),
                     opt_text(role.description.as_deref()),
                     permissions,
+                    opt_text(role.agent_role.as_deref()),
                     text(iso(now_ms())),
                 ],
             )?
         } else {
-            let sql = "UPDATE custom_roles SET name=?,description=?,permissions=? WHERE id=?";
+            let sql = "UPDATE custom_roles SET name=?,description=?,permissions=?,agent_role=? WHERE id=?";
             let params = vec![
                 text(role.name.as_str()),
                 opt_text(role.description.as_deref()),
                 permissions,
+                opt_text(role.agent_role.as_deref()),
                 int(role.id),
             ];
             self.exec(sql, params)?;
@@ -49,8 +51,24 @@ impl RoleRepo for SqliteStore {
         self.custom_role(id)?.ok_or_else(|| Error::internal("role vanished"))
     }
 
+    /// Moves the users and roster agents of a deleted profile to the built-in one, then deletes it.
     fn delete_custom_role(&self, id: i64) -> Result<()> {
-        self.exec("DELETE FROM custom_roles WHERE id=?", vec![int(id)])
-            .map(drop)
+        self.transaction(&mut || {
+            let builtin = "(SELECT id FROM custom_roles WHERE builtin=1)";
+            self.exec(
+                &format!("UPDATE users SET custom_role_id={builtin} WHERE custom_role_id=?"),
+                vec![int(id)],
+            )?;
+            self.exec(
+                &format!("UPDATE agents SET profile_id={builtin} WHERE profile_id=?"),
+                vec![int(id)],
+            )?;
+            self.exec("DELETE FROM custom_roles WHERE id=? AND builtin=0", vec![int(id)])
+                .map(drop)
+        })
+    }
+
+    fn builtin_role(&self) -> Result<Option<CustomRole>> {
+        self.row("SELECT * FROM custom_roles WHERE builtin=1", vec![], ROLE)
     }
 }

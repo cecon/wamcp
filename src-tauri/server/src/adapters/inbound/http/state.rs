@@ -23,6 +23,8 @@ pub type WebDir = Arc<dyn Fn() -> Option<PathBuf> + Send + Sync>;
 #[derive(Clone)]
 pub struct Support {
     pub accounts: AccountService,
+    /// The roster of human and AI agents, skills and credentials.
+    pub agents: crate::application::agents::AgentDirectory,
     /// Contact photos fetched from WhatsApp.
     pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,

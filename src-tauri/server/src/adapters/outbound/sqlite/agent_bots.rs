@@ -1,10 +1,10 @@
 use super::db::{int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteStore};
-use crate::application::ports::AgentBotRepo;
+use crate::application::ports::{AgentBotRepo, LlmChanges, NewAgentBot};
 use crate::domain::error::{Error, Result};
-use crate::domain::model::AgentBot;
+use crate::domain::model::{AgentBot, BOT_WEBHOOK};
 
 const BOT: &str = "SELECT b.id, b.name, b.description, w.url AS outgoing_url, b.webhook_id, b.created,
-  (SELECT json_group_array(i.id) FROM inboxes i WHERE i.agent_bot_id=b.id) AS inbox_ids
+  (SELECT json_group_array(i.id) FROM inboxes i WHERE i.agent_bot_id=b.id) AS inbox_ids, b.kind, b.provider, b.model, b.instructions
   FROM agent_bots b JOIN webhooks w ON w.id=b.webhook_id";
 const SHAPE: Shape = Shape {
     json: &["inbox_ids"],
@@ -22,15 +22,31 @@ impl AgentBotRepo for SqliteStore {
         self.row(&format!("{BOT} WHERE b.id=?"), vec![int(id)], SHAPE)
     }
 
-    fn create_agent_bot(&self, name: &str, description: Option<&str>, url: &str, secret: &str) -> Result<AgentBot> {
+    fn create_agent_bot(&self, bot: &NewAgentBot) -> Result<AgentBot> {
         let created = text(iso(now_ms()));
+        let active = int(i64::from(bot.kind == BOT_WEBHOOK));
         let webhook = self.insert(
-            "INSERT INTO webhooks(url,subscriptions,secret,kind,created) VALUES(?,?,?,'agent_bot',?)",
-            vec![text(url), text(BOT_EVENTS), text(secret), created.clone()],
+            "INSERT INTO webhooks(url,subscriptions,secret,kind,active,created) VALUES(?,?,?,'agent_bot',?,?)",
+            vec![
+                text(&bot.url),
+                text(BOT_EVENTS),
+                text(&bot.secret),
+                active,
+                created.clone(),
+            ],
         )?;
         let id = self.insert(
-            "INSERT INTO agent_bots(name,description,webhook_id,created) VALUES(?,?,?,?)",
-            vec![text(name), opt_text(description), int(webhook), created],
+            "INSERT INTO agent_bots(name,description,webhook_id,kind,provider,model,instructions,created) VALUES(?,?,?,?,?,?,?,?)",
+            vec![
+                text(&bot.name),
+                opt_text(bot.description.as_deref()),
+                int(webhook),
+                text(&bot.kind),
+                opt_text(bot.provider.as_deref()),
+                opt_text(bot.model.as_deref()),
+                opt_text(bot.instructions.as_deref()),
+                created,
+            ],
         )?;
         self.agent_bot(id)?.ok_or_else(|| Error::internal("agent bot vanished"))
     }
@@ -41,6 +57,7 @@ impl AgentBotRepo for SqliteStore {
         name: Option<&str>,
         description: Option<Option<&str>>,
         url: Option<&str>,
+        llm: &LlmChanges,
     ) -> Result<AgentBot> {
         let mut fields = Vec::new();
         if let Some(name) = name {
@@ -48,6 +65,15 @@ impl AgentBotRepo for SqliteStore {
         }
         if let Some(description) = description {
             fields.push(("description", opt_text(description)));
+        }
+        for (column, value) in [
+            ("provider", &llm.provider),
+            ("model", &llm.model),
+            ("instructions", &llm.instructions),
+        ] {
+            if let Some(value) = value {
+                fields.push((column, opt_text(value.as_deref())));
+            }
         }
         self.update_fields("agent_bots", int(id), fields)?;
         if let Some(url) = url {

@@ -1,4 +1,5 @@
 //! Entities exchanged between layers. Field names mirror the SQLite columns and the public JSON API.
+mod agents;
 mod attachment;
 mod catalog;
 mod contact_book;
@@ -9,6 +10,7 @@ mod mirror;
 mod people;
 mod security;
 
+pub use agents::*;
 pub use attachment::*;
 pub use catalog::*;
 pub use contact_book::*;

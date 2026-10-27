@@ -135,17 +135,40 @@ pub trait ReportsRepo {
     fn bot_metrics(&self, period: &Period) -> Result<Value>;
 }
 
+/// A bot about to be stored (`kind` is `webhook` or `llm`).
+#[derive(Debug, Clone, Default)]
+pub struct NewAgentBot {
+    pub name: String,
+    pub description: Option<String>,
+    pub url: String,
+    pub secret: String,
+    pub kind: String,
+    pub provider: Option<String>,
+    pub model: Option<String>,
+    pub instructions: Option<String>,
+}
+
+/// LLM settings of a bot to change; `None` keeps the stored value, `Some(None)` clears it.
+#[derive(Debug, Clone, Default)]
+pub struct LlmChanges {
+    pub provider: Option<Option<String>>,
+    pub model: Option<Option<String>>,
+    pub instructions: Option<Option<String>>,
+}
+
 /// Agent bots: each owns a webhook (kind `agent_bot`) and serves the inboxes pointing to it.
 pub trait AgentBotRepo {
     fn agent_bots(&self) -> Result<Vec<AgentBot>>;
     fn agent_bot(&self, id: i64) -> Result<Option<AgentBot>>;
-    fn create_agent_bot(&self, name: &str, description: Option<&str>, url: &str, secret: &str) -> Result<AgentBot>;
+    /// An `llm` bot still owns a webhook row, kept inactive so nothing is ever delivered to it.
+    fn create_agent_bot(&self, bot: &NewAgentBot) -> Result<AgentBot>;
     fn update_agent_bot(
         &self,
         id: i64,
         name: Option<&str>,
         description: Option<Option<&str>>,
         url: Option<&str>,
+        llm: &LlmChanges,
     ) -> Result<AgentBot>;
     fn delete_agent_bot(&self, id: i64) -> Result<()>;
     fn set_inbox_agent_bot(&self, inbox_id: i64, agent_bot_id: Option<i64>) -> Result<()>;

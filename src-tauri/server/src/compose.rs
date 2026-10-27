@@ -3,6 +3,7 @@
 use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
 use crate::application::accounts::AccountService;
+use crate::application::agents::AgentDirectory;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
 use crate::application::avatars::AvatarService;
@@ -11,11 +12,13 @@ use crate::application::core::Core;
 use crate::application::event_bus::{EventBus, Worker};
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::llm_bots::LlmBotService;
 use crate::application::menu::MenuService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::ports::{
-    Clock, EventCallback, ImageFetcher, MediaStorage, MenuCrawler, PasswordHasher, Repository, WebhookSender, WhatsApp,
+    Clock, EventCallback, ImageFetcher, Llm, MediaStorage, MenuCrawler, PasswordHasher, Repository, SecretBox,
+    WebhookSender, WhatsApp,
 };
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
@@ -41,6 +44,8 @@ pub struct Ports {
     pub crawler: Arc<dyn MenuCrawler>,
     /// Downloads imported catalog photos.
     pub images: Arc<dyn ImageFetcher>,
+    /// Encrypts agent credentials at rest.
+    pub secrets: Arc<dyn SecretBox>,
 }
 
 pub struct Settings {
@@ -54,6 +59,8 @@ pub struct App {
     pub state: AppState,
     pub workers: Vec<Worker>,
     pub sink: Arc<WhatsAppSink>,
+    /// Answers conversations of `llm` bots once `attach_llm` gave it a provider.
+    pub llm_bots: Option<LlmBotService>,
 }
 
 fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&EventOwner) -> bool + Send + Sync> {
@@ -152,6 +159,10 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     bus.subscribe(move |e| worker.push(e));
 
     let support = Support {
+        agents: AgentDirectory {
+            core: core.clone(),
+            secrets: ports.secrets.clone(),
+        },
         avatars,
         accounts: AccountService {
             core: core.clone(),
@@ -198,12 +209,22 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         state,
         workers: vec![automation_worker, reply_worker, media_worker, avatar_worker],
         sink,
+        llm_bots: None,
     }
 }
 
 impl App {
     pub fn public_router(&self) -> Router {
         public_router(self.state.clone())
+    }
+
+    /// Lets `llm` bots answer their conversations with `llm` (debounce groups a burst of messages).
+    pub fn attach_llm(&mut self, llm: Arc<dyn Llm>, debounce: Duration) {
+        let support = self.state.support();
+        let bots = LlmBotService::new(support.helpdesk.clone(), llm, debounce, 2);
+        let listener = bots.clone();
+        support.bus.subscribe(move |e| listener.on_event(e));
+        self.llm_bots = Some(bots);
     }
 
     /// Waits until automations and auto-replies have processed every queued event.
@@ -213,6 +234,12 @@ impl App {
                 worker.settle().await;
             }
             tokio::task::yield_now().await;
+        }
+        if let Some(bots) = &self.llm_bots {
+            bots.settle().await;
+            for worker in &self.workers {
+                worker.settle().await;
+            }
         }
     }
 

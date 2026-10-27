@@ -105,7 +105,8 @@ async fn roles_limit_what_agents_can_reach() {
     admin.patch(&path, json!({ "custom_role_id": supervisor["id"] })).await;
     assert_eq!(visible(&maria).await, vec![1, 2, 3, 4]);
     assert_eq!(maria.get("/contacts").await.status, 403, "only the listed permissions");
-    assert_eq!(admin.get("/custom_roles").await.body.as_array().unwrap().len(), 2);
+    // Two created here plus the seeded ones: Padrão and one per AI role.
+    assert_eq!(admin.get("/custom_roles").await.body.as_array().unwrap().len(), 7);
     assert_eq!(
         admin
             .del(&format!("/custom_roles/{}", supervisor["id"]), None)

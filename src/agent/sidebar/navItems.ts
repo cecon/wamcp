@@ -1,6 +1,5 @@
 import {
   Bolt,
-  Bot,
   Braces,
   Briefcase,
   Inbox as InboxIcon,
@@ -8,6 +7,7 @@ import {
   MonitorCog,
   Repeat,
   ScrollText,
+  Sparkles,
   ShieldCheck,
   Smartphone,
   SquareUser,
@@ -30,12 +30,12 @@ export const SETTINGS: { section: SettingsSection; label: string; icon: typeof B
   { section: 'attributes', label: 'Atributos personalizados', icon: Braces },
   { section: 'canned', label: 'Respostas prontas', icon: MessageSquareText },
   { section: 'automation', label: 'Automação', icon: Repeat },
-  { section: 'agent_bots', label: 'Robôs', icon: Bot },
+  { section: 'skills', label: 'Skills', icon: Sparkles },
   { section: 'macros', label: 'Macros', icon: Workflow },
   { section: 'sla', label: 'SLA', icon: Timer },
   { section: 'webhooks', label: 'Webhooks', icon: Webhook },
   { section: 'audit', label: 'Registro de auditoria', icon: ScrollText },
-  { section: 'custom_roles', label: 'Perfis personalizados', icon: ShieldCheck },
+  { section: 'custom_roles', label: 'Perfis', icon: ShieldCheck },
   { section: 'app', label: 'Aplicativo', icon: MonitorCog, desktop: true },
 ];
 

@@ -171,8 +171,9 @@ pub struct ReportingEvent {
     pub created_at: i64,
 }
 
-/// An external bot (Chatwoot "agent bot"): receives the events of its inboxes on `outgoing_url`
-/// and answers through the API with its access token.
+/// A bot serving inboxes. `webhook` bots (Chatwoot "agent bots") receive the events of their inboxes
+/// on `outgoing_url` and answer through the API with their access token; `llm` bots are answered by
+/// the server itself, which asks an LLM `provider` (the local Claude Code, …) for each reply.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentBot {
     pub id: i64,
@@ -182,4 +183,12 @@ pub struct AgentBot {
     pub webhook_id: i64,
     pub inbox_ids: Vec<i64>,
     pub created: String,
+    pub kind: String,
+    /// `llm` bots only: which LLM answers, an optional model name and what it must know about the business.
+    pub provider: Option<String>,
+    pub model: Option<String>,
+    pub instructions: Option<String>,
 }
+
+pub const BOT_WEBHOOK: &str = "webhook";
+pub const BOT_LLM: &str = "llm";

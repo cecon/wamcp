@@ -3,7 +3,7 @@ use super::core::Core;
 use super::ports::PasswordHasher;
 use super::security::LoginOutcome;
 use crate::domain::actor::Actor;
-use crate::domain::error::{fail_with, HelpdeskError, Result};
+use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::{require_admin, validate_password};
 use crate::domain::model::{Agent, User, UserChanges};
 use serde_json::json;
@@ -196,8 +196,10 @@ impl AccountService {
         if agent.role == "administrator" && demoting && repo.count_admins()? <= 1 {
             return fail_with("É preciso manter ao menos um administrador ativo", 409);
         }
-        if let Some(Some(role)) = changes.custom_role_id {
-            self.find_role(role)?;
+        match changes.custom_role_id {
+            Some(Some(role)) => drop(self.find_role(role)?),
+            Some(None) => return fail("Todo agente precisa de um perfil"),
+            None => {}
         }
         let mut fields = UserChanges {
             name: changes.name,
