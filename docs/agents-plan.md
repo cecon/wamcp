@@ -123,7 +123,8 @@ Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, W
 
 ## Decisões tomadas (2026-10-26)
 
-- **Um só "Agentes"**, com as abas Humanos (logins e pessoas consultadas pelo WhatsApp) e IA.
+- **Uma lista só, "Agentes"**: pessoas e agentes de IA juntos. Todo login é uma pessoa da lista; a pessoa pode ter WhatsApp (para ser consultada) e, opcionalmente, acesso ao helpdesk.
+- **Pessoas e IA têm as mesmas funções** (coordenador, operador, suporte dev, QA), vindas do perfil. Quem executa pode ter skills; credenciais são só de agentes de IA, porque são usadas pelas ferramentas no servidor.
 - **Perfil obrigatório para todo agente** (login, WhatsApp ou IA). O perfil define as permissões e a função de IA (coordenador, operador, suporte dev, QA); o agente herda a função do perfil. O perfil "Padrão" reproduz o acesso de quem não tinha perfil e não pode ser excluído.
 - **Robôs saem da interface**: os agentes de IA, com a função vinda do perfil, assumem esse papel. A API de robôs por webhook continua no backend por compatibilidade.
 

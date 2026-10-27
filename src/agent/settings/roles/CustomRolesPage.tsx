@@ -24,13 +24,13 @@ export function CustomRolesPage({ onChange }: Props) {
     <SettingsPage>
       <SettingsHeader
         title="Perfis"
-        description="Todo agente, humano ou de IA, tem um perfil: ele define quais conversas atende, se gerencia contatos e se vê relatórios e, para agentes de IA, a função (coordenador, operador…). O perfil Padrão mantém o acesso padrão e não pode ser excluído."
+        description="Todo agente, humano ou de IA, tem um perfil: ele define quais conversas atende, se gerencia contatos e se vê relatórios e a função (coordenador, operador…), igual para pessoas e IA. O perfil Padrão mantém o acesso padrão e não pode ser excluído."
         count={`${roles.length} perfi${roles.length === 1 ? 'l' : 's'}`}
         action={<Button icon={Plus} label="Adicionar perfil" onClick={() => setEditing('new')} />}
       />
       {error && <p className="text-sm text-n-ruby-11">{error}</p>}
       <Table
-        headers={['Perfil', 'Função de IA', 'Permissões', '']}
+        headers={['Perfil', 'Função', 'Permissões', '']}
         rows={roles.length}
         empty="Nenhum perfil personalizado."
       >

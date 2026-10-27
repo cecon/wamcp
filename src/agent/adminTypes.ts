@@ -24,13 +24,14 @@ export interface RosterAgent {
   id: number;
   name: string;
   kind: RosterKind;
-  /** From the profile. */
-  role: RosterRole;
+  /** From the profile (people may have none). */
+  role: RosterRole | null;
   profile_id: number | null;
   profile_name: string | null;
   description: string | null;
   user_id: number | null;
   user_name: string | null;
+  user_email: string | null;
   whatsapp_jid: string | null;
   runtime: string | null;
   model: string | null;

@@ -1,6 +1,6 @@
-//! RosterAgent roster rules: human and AI agents, their roles, skills and credentials.
-//! Coordinators never execute (they only delegate), so they hold no skills nor credentials;
-//! humans are consulted on their WhatsApp and are never run by a runtime.
+//! Agent roster rules: people and AI agents share the same roles (from their profile). Coordinators
+//! never execute (they only delegate), so they hold no skills; credentials are for AI agents that
+//! execute, whose tools use them on the server. People are never run by a runtime.
 use super::error::{fail, Result};
 use super::model::{RosterAgentDraft, Skill};
 
@@ -11,9 +11,14 @@ pub const ROLES: [&str; 4] = ["coordinator", "operator", "dev_support", "qa"];
 pub const RUNTIMES: [&str; 3] = ["claude_cli", "codex_cli", "openclaude"];
 pub const CREDENTIAL_KINDS: [&str; 4] = ["api_key", "bearer", "basic", "secret"];
 
-/// Whether the agent executes tasks (and so may hold skills and credentials).
-pub fn executes(kind: &str, role: &str) -> bool {
-    kind == "ai" && role != "coordinator"
+/// Whether an agent with this role executes tasks (and so may hold skills); "" means no role.
+pub fn executes(role: &str) -> bool {
+    ROLES.contains(&role) && role != "coordinator"
+}
+
+/// Credentials are used by an AI agent's tools on the server, so only AI agents that execute hold them.
+pub fn holds_credentials(kind: &str, role: &str) -> bool {
+    kind == "ai" && executes(role)
 }
 
 /// A WhatsApp number or JID as a user JID (`5511999999999@s.whatsapp.net`).
@@ -30,7 +35,8 @@ pub fn validate_agent(agent: &RosterAgentDraft) -> Result<()> {
     if !KINDS.contains(&agent.kind.as_str()) {
         return fail("Tipo de agente inválido");
     }
-    if !ROLES.contains(&agent.role.as_str()) {
+    let role_ok = ROLES.contains(&agent.role.as_str()) || (agent.kind == "human" && agent.role.is_empty());
+    if !role_ok {
         return fail("Função inválida");
     }
     if agent.kind == "human" {
@@ -51,16 +57,17 @@ pub fn validate_agent(agent: &RosterAgentDraft) -> Result<()> {
     }
 }
 
-/// Skills and credentials belong to agents that execute.
+/// Skills belong to agents that execute; credentials to AI agents that execute.
 pub fn check_capabilities(agent: &RosterAgentDraft, skills: usize, credentials: i64) -> Result<()> {
-    if executes(&agent.kind, &agent.role) || (skills == 0 && credentials == 0) {
-        return Ok(());
+    if skills > 0 && !executes(&agent.role) {
+        return fail(
+            "Coordenadores e agentes sem função não executam tarefas: remova as skills ou escolha outra função",
+        );
     }
-    if agent.role == "coordinator" {
-        fail("Coordenadores não executam tarefas: remova as skills e credenciais ou escolha outra função")
-    } else {
-        fail("Agentes humanos não têm skills nem credenciais")
+    if credentials > 0 && !holds_credentials(&agent.kind, &agent.role) {
+        return fail("Credenciais são só para agentes de IA que executam: remova-as ou escolha outra função");
     }
+    Ok(())
 }
 
 pub fn validate_credential_name(name: &str) -> Result<()> {

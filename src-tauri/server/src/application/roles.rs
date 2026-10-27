@@ -2,7 +2,7 @@
 //! agents, the AI role they play; the built-in "Padrão" keeps the default access and cannot be deleted.
 use super::accounts::AccountService;
 use crate::domain::actor::Actor;
-use crate::domain::agents::{executes, ROLES};
+use crate::domain::agents::{executes, holds_credentials, ROLES};
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::CustomRole;
@@ -45,22 +45,25 @@ impl AccountService {
         self.core.repo.save_custom_role(&role)
     }
 
-    /// The AI agents of a profile must keep a valid AI role (coordinators hold no skills nor credentials).
+    /// The agents of a profile must stay valid: AI agents keep a role, agents with skills keep a role
+    /// that executes, and AI agents with credentials too (coordinators never execute).
     fn check_ai_agents(&self, role: &CustomRole) -> Result<()> {
+        let next = role.agent_role.as_deref().unwrap_or_default();
         for agent in self.core.repo.agents()? {
-            if agent.profile_id != Some(role.id) || agent.kind != "ai" {
+            if agent.profile_id != Some(role.id) {
                 continue;
             }
-            let Some(next) = role.agent_role.as_deref() else {
+            if agent.kind == "ai" && next.is_empty() {
                 return fail(format!(
-                    "O agente de IA {} usa este perfil: mantenha uma função de IA",
+                    "O agente de IA {} usa este perfil: mantenha uma função",
                     agent.name
                 ));
-            };
-            let holds = !agent.skill_ids.is_empty() || agent.credential_count > 0;
-            if holds && !executes("ai", next) {
+            }
+            let skills = !agent.skill_ids.is_empty() && !executes(next);
+            let credentials = agent.credential_count > 0 && !holds_credentials(&agent.kind, next);
+            if skills || credentials {
                 return fail(format!(
-                    "O agente {} tem skills ou credenciais e coordenadores não executam",
+                    "O agente {} tem skills ou credenciais e esta função não executa tarefas",
                     agent.name
                 ));
             }

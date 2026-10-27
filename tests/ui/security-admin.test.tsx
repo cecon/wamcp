@@ -91,7 +91,31 @@ describe('audit log', () => {
 
 describe('agent two-factor reset', () => {
   it('lets administrators reset an agent two-factor authentication', async () => {
-    const api = fakeApi({ 'DELETE /agents/2/mfa': { ok: true } });
+    const maria2 = {
+      id: 2,
+      name: 'Maria Souza',
+      kind: 'human',
+      role: null,
+      profile_id: 1,
+      profile_name: 'Padrão',
+      description: null,
+      user_id: 2,
+      user_name: 'Maria Souza',
+      user_email: 'maria@example.com',
+      whatsapp_jid: null,
+      runtime: null,
+      model: null,
+      instructions: null,
+      active: true,
+      skill_ids: [],
+      credential_count: 0,
+    };
+    const api = fakeApi({
+      'DELETE /agents/2/mfa': { ok: true },
+      'GET /agent_directory': [maria2],
+      'GET /skills': [],
+      'GET /custom_roles': [],
+    });
     const onChange = vi.fn(async () => {});
     const catalog = {
       inboxes: [inbox],
@@ -109,8 +133,8 @@ describe('agent two-factor reset', () => {
       />,
     );
     const user = userEvent.setup();
-    expect(screen.getByText(/Ativo.*Verificação em duas etapas$/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Editar Maria Souza' }));
+    await user.click(await screen.findByRole('button', { name: 'Editar Maria Souza' }));
+    await user.click(screen.getByRole('button', { name: 'Gerenciar acesso' }));
     await user.click(screen.getByRole('button', { name: 'Redefinir verificação em duas etapas' }));
     await waitFor(() => expect(api.called('DELETE', '/agents/2/mfa')).toHaveLength(1));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

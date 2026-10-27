@@ -1,11 +1,12 @@
-//! The agent roster (administrators): human and AI agents with their roles, the skill library
-//! (including `SKILL.md` import) and encrypted credentials. Nothing here runs an agent yet.
+//! The agent list (administrators): people and AI agents with the same roles from their profile,
+//! the skill library (including `SKILL.md` import) and encrypted credentials. Every login is a
+//! person of the list. Nothing here runs an agent yet.
 use super::core::Core;
 use super::ports::SecretBox;
 use crate::domain::actor::Actor;
 use crate::domain::agents::{
-    check_capabilities, executes, parse_skill_md, validate_agent, validate_credential_name, validate_tools,
-    CREDENTIAL_KINDS,
+    check_capabilities, executes, holds_credentials, parse_skill_md, validate_agent, validate_credential_name,
+    validate_tools, CREDENTIAL_KINDS,
 };
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
@@ -38,10 +39,20 @@ impl AgentDirectory {
         self.core.repo.agents()
     }
 
-    /// Creates (`id` 0) or replaces an agent; its kind never changes after creation.
+    /// Creates (`id` 0) or replaces an agent; its kind never changes after creation. Every login is
+    /// already a person in the list, so creating one for a login updates that person instead.
     pub fn save_agent(&self, actor: &Actor, draft: &RosterAgentDraft) -> Result<RosterAgent> {
         require_admin(actor)?;
         let mut draft = draft.clone();
+        if draft.id == 0 && draft.user_id.is_some() {
+            let linked = self
+                .core
+                .repo
+                .agents()?
+                .into_iter()
+                .find(|a| a.user_id == draft.user_id);
+            draft.id = linked.map_or(0, |a| a.id);
+        }
         draft.role = self.role_from_profile(&draft)?;
         let draft = &draft;
         validate_agent(draft)?;
@@ -60,7 +71,7 @@ impl AgentDirectory {
         self.core.repo.save_agent(draft)
     }
 
-    /// The AI role comes from the mandatory profile; AI agents need a profile with an AI role.
+    /// The role comes from the mandatory profile (same roles for people and AI); AI agents need one.
     fn role_from_profile(&self, draft: &RosterAgentDraft) -> Result<String> {
         let Some(id) = draft.profile_id else {
             return fail("Escolha o perfil do agente");
@@ -69,15 +80,26 @@ impl AgentDirectory {
             return fail_with("Perfil não encontrado", 422);
         };
         match (draft.kind.as_str(), profile.agent_role) {
-            ("ai", None) => fail("Agentes de IA precisam de um perfil com função de IA (coordenador, operador…)"),
-            (_, Some(role)) => Ok(role),
-            (_, None) => Ok("operator".into()),
+            ("ai", None) => fail("Agentes de IA precisam de um perfil com função (coordenador, operador…)"),
+            (_, role) => Ok(role.unwrap_or_default()),
         }
     }
 
+    /// Removes the agent; a person with a login loses the login too (never the last administrator nor
+    /// the administrator doing it).
     pub fn delete_agent(&self, actor: &Actor, id: i64) -> Result<()> {
         require_admin(actor)?;
-        self.find_agent(id)?;
+        let agent = self.find_agent(id)?;
+        if let Some(user_id) = agent.user_id {
+            if actor.user_id() == Some(user_id) {
+                return fail_with("Você não pode excluir a própria conta", 409);
+            }
+            let admin = self.core.repo.user(user_id)?.is_some_and(|u| u.role == "administrator");
+            if admin && self.core.repo.count_admins()? <= 1 {
+                return fail_with("É preciso manter ao menos um administrador ativo", 409);
+            }
+            self.core.repo.delete_user(user_id)?;
+        }
         self.core.repo.delete_agent(id)
     }
 
@@ -85,8 +107,8 @@ impl AgentDirectory {
     pub fn set_agent_skills(&self, actor: &Actor, id: i64, skill_ids: &[i64]) -> Result<RosterAgent> {
         require_admin(actor)?;
         let agent = self.find_agent(id)?;
-        if !skill_ids.is_empty() && !executes(&agent.kind, &agent.role) {
-            return fail("Somente agentes de IA que executam (não coordenadores) têm skills");
+        if !skill_ids.is_empty() && !executes(agent.role.as_deref().unwrap_or_default()) {
+            return fail("Somente agentes com função que executa (não coordenadores) têm skills");
         }
         for skill in skill_ids {
             self.find_skill(*skill)?;
@@ -147,7 +169,7 @@ impl AgentDirectory {
     ) -> Result<AgentCredential> {
         require_admin(actor)?;
         let agent = self.find_agent(agent_id)?;
-        if !executes(&agent.kind, &agent.role) {
+        if !holds_credentials(&agent.kind, agent.role.as_deref().unwrap_or_default()) {
             return fail("Somente agentes de IA que executam (não coordenadores) têm credenciais");
         }
         validate_credential_name(name)?;

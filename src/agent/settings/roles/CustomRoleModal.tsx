@@ -26,7 +26,7 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
   return (
     <Modal
       title={role ? 'Editar perfil' : 'Adicionar perfil'}
-      description="Todo agente tem um perfil. Ele define as permissões e, para agentes de IA, a função: coordenador, operador, suporte dev ou QA."
+      description="Todo agente, pessoa ou IA, tem um perfil. Ele define as permissões e a função: coordenador, operador, suporte dev ou QA. Agentes de IA precisam de um perfil com função."
       onClose={onClose}
     >
       <form
@@ -67,9 +67,9 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
           />
         </label>
         <label>
-          <span className="field-label">Função de agente de IA</span>
+          <span className="field-label">Função</span>
           <select className="field" value={agentRole} onChange={(e) => setAgentRole(e.target.value)}>
-            <option value="">Nenhuma (só pessoas)</option>
+            <option value="">Nenhuma</option>
             {ROLES.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label} — {r.hint}

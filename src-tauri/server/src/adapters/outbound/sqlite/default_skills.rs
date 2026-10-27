@@ -1,4 +1,4 @@
-//! Seed data: the default skills (migration v24) and the mandatory profiles (migration v25).
+//! Seed data: default skills (v24), mandatory profiles (v25) and logins in the agent list (v26).
 //! Skills only use MCP tools that exist today; a skill with the same name is kept, and a deleted
 //! default skill does not come back.
 
@@ -62,3 +62,12 @@ INSERT OR IGNORE INTO custom_roles(name,description,permissions,agent_role,creat
 ALTER TABLE agents ADD COLUMN profile_id INTEGER REFERENCES custom_roles(id);
 UPDATE agents SET profile_id=(SELECT r.id FROM custom_roles r WHERE r.agent_role=agents.role ORDER BY r.id LIMIT 1);
 UPDATE agents SET profile_id=(SELECT id FROM custom_roles WHERE builtin=1) WHERE profile_id IS NULL;"#;
+
+/// One list of agents (migration v26): every login becomes a person in the roster, linked by
+/// `user_id` (one roster row per login at most).
+pub const ROSTER_LOGINS: &str = r#"UPDATE agents SET user_id=NULL WHERE user_id IS NOT NULL
+  AND id NOT IN (SELECT MIN(id) FROM agents WHERE user_id IS NOT NULL GROUP BY user_id);
+INSERT INTO agents(name,kind,role,profile_id,user_id,active,created)
+  SELECT u.name,'human','operator',u.custom_role_id,u.id,u.active,strftime('%Y-%m-%dT%H:%M:%fZ','now')
+  FROM users u WHERE NOT EXISTS(SELECT 1 FROM agents a WHERE a.user_id=u.id);
+CREATE UNIQUE INDEX agents_user ON agents(user_id) WHERE user_id IS NOT NULL;"#;

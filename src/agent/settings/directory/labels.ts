@@ -25,7 +25,9 @@ export const CREDENTIAL_KINDS: { value: AgentCredential['kind']; label: string }
 export const roleLabel = (role: string) => ROLES.find((r) => r.value === role)?.label ?? role;
 export const runtimeLabel = (runtime: string | null) =>
   RUNTIMES.find((r) => r.value === runtime)?.label ?? runtime ?? '';
-/** Coordinators delegate and humans answer on WhatsApp: only the other AI agents hold skills and credentials. */
-export const executes = (agent: Pick<RosterAgent, 'kind' | 'role'>) =>
-  agent.kind === 'ai' && agent.role !== 'coordinator';
+/** People and AI share the roles: coordinators delegate, the other roles execute (and hold skills). */
+export const executes = (role: string | null) => Boolean(role) && role !== 'coordinator';
+/** Credentials are used by an AI agent's tools on the server: only AI agents that execute hold them. */
+export const holdsCredentials = (agent: Pick<RosterAgent, 'kind' | 'role'>) =>
+  agent.kind === 'ai' && executes(agent.role);
 export const phone = (jid: string | null) => (jid ? `+${jid.split('@')[0]}` : '');

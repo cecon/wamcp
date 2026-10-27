@@ -44,6 +44,7 @@ const roster = (id: number, fields: Partial<RosterAgent>): RosterAgent => ({
   description: null,
   user_id: null,
   user_name: null,
+  user_email: null,
   whatsapp_jid: null,
   runtime: 'claude_cli',
   model: null,
@@ -89,11 +90,11 @@ describe('agent roster', () => {
     const user = renderSettings('agents');
     expect(await screen.findByText('Ana')).toBeInTheDocument();
     expect(screen.getByText('+5511988887777')).toBeInTheDocument();
-    expect(screen.queryByText('Coordenadora')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'IA' }));
-    expect(await screen.findByText('Coordenadora')).toBeInTheDocument();
+    // One list: people and AI agents side by side, each with its kind and role.
+    expect(screen.getByText('Coordenadora')).toBeInTheDocument();
     expect(screen.getByText('Coordenador')).toBeInTheDocument();
-    expect(screen.queryByText('Ana')).not.toBeInTheDocument();
+    expect(screen.getByText('Pessoa')).toBeInTheDocument();
+    expect(screen.getAllByText('IA')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
@@ -131,7 +132,6 @@ describe('agent roster', () => {
       },
     });
     const user = renderSettings('agents');
-    await user.click(await screen.findByRole('tab', { name: 'IA' }));
     await user.click(await screen.findByRole('button', { name: 'Editar Operador' }));
     const panel = await screen.findByRole('region', { name: 'Credenciais' });
     await user.type(within(panel).getByLabelText('Nome da credencial'), 'erp_api');
@@ -159,7 +159,6 @@ describe('linking skills from the agent form', () => {
       'PUT /agent_directory/5/skills': (body) => roster(5, body as Partial<RosterAgent>),
     });
     const user = renderSettings('agents');
-    await user.click(await screen.findByRole('tab', { name: 'IA' }));
     await user.click(await screen.findByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
     expect(within(dialog).getByText(/Nenhuma skill ainda/)).toBeInTheDocument();
@@ -181,6 +180,26 @@ describe('linking skills from the agent form', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Criar agente' }));
     await waitFor(() => expect(api.called('PUT', '/agent_directory/5/skills')).toHaveLength(1));
     expect(api.called('PUT', '/agent_directory/5/skills')[0].body).toEqual({ skill_ids: [9] });
+  });
+});
+
+describe('people share the roles of AI agents', () => {
+  it('offers skills to a person whose profile role executes', async () => {
+    fakeApi({
+      'GET /agent_directory': [],
+      'GET /skills': [skill(7, 'Aprovar descontos')],
+      'GET /custom_roles': PROFILES,
+    });
+    const user = renderSettings('agents');
+    await user.click(await screen.findByRole('button', { name: 'Adicionar pessoa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar pessoa' });
+    expect(within(dialog).getByLabelText('Perfil')).toHaveValue('1');
+    expect(within(dialog).queryByLabelText('Aprovar descontos')).not.toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText('Perfil'), '21');
+    expect(within(dialog).getByLabelText('Aprovar descontos')).toBeInTheDocument();
+    await user.selectOptions(within(dialog).getByLabelText('Perfil'), '20');
+    expect(within(dialog).queryByLabelText('Aprovar descontos')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('region', { name: 'Credenciais' })).not.toBeInTheDocument();
   });
 });
 

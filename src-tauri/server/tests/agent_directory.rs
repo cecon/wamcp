@@ -53,12 +53,40 @@ async fn admins_register_human_and_ai_agents_with_role_rules() {
     for (body, why) in cases {
         assert_eq!(admin.post("/agent_directory", body).await.status, 400, "{why}");
     }
-    let login = json!({ "name": "Maria", "kind": "human", "profile_id": p.of("qa"), "user_id": maria.user["id"] });
-    let linked = admin.post("/agent_directory", login).await.body;
+    // Every login is already a person of the list; linking it updates that person and the login.
+    let roster = admin.get("/agent_directory").await.body;
+    let maria_row = roster
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["user_id"] == maria.user["id"])
+        .unwrap()
+        .clone();
     assert_eq!(
-        (linked["user_name"].as_str(), linked["role"].as_str()),
-        (Some("maria"), Some("qa"))
+        (maria_row["kind"].as_str(), maria_row["role"].as_str()),
+        (Some("human"), None),
+        "Padrão has no role"
     );
+    let login = json!({ "name": "Maria", "kind": "human", "profile_id": p.of("qa"), "user_id": maria.user["id"],
+                        "whatsapp": "5511977776666" });
+    let linked = admin.post("/agent_directory", login).await.body;
+    assert_eq!(linked["id"], maria_row["id"], "no duplicate person for a login");
+    assert_eq!(
+        (
+            linked["user_name"].as_str(),
+            linked["role"].as_str(),
+            linked["user_email"].as_str()
+        ),
+        (Some("Maria"), Some("qa"), Some("maria@example.com"))
+    );
+    let users = admin.get("/agents").await.body;
+    let maria_user = users
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|u| u["id"] == maria.user["id"])
+        .unwrap();
+    assert_eq!(maria_user["custom_role_id"], p.of("qa"), "the login takes the profile");
     let missing = json!({ "name": "X", "kind": "human", "profile_id": 999, "whatsapp": "5511988887777" });
     assert_eq!(admin.post("/agent_directory", missing).await.status, 422);
 
@@ -75,7 +103,11 @@ async fn admins_register_human_and_ai_agents_with_role_rules() {
         (Some("claude_cli"), Some(true))
     );
     let list = admin.get("/agent_directory").await.body;
-    assert_eq!(list.as_array().unwrap().len(), 4);
+    assert_eq!(
+        list.as_array().unwrap().len(),
+        5,
+        "admin and Maria logins, Ana and two AI agents"
+    );
 
     let id = &operator["id"];
     let to_human = json!({ "name": "X", "kind": "human", "profile_id": p.builtin, "whatsapp": "5511988887777" });
@@ -199,7 +231,14 @@ async fn credentials_are_encrypted_and_never_returned() {
     assert_eq!(listed.body[0]["name"], "erp_api");
     assert!(!listed.text.contains(secret), "listings never carry the secret");
     let roster = admin.get("/agent_directory").await;
-    assert_eq!(roster.body[0]["credential_count"], 1);
+    let row = roster
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["id"] == operator["id"])
+        .unwrap();
+    assert_eq!(row["credential_count"], 1);
     assert!(!roster.text.contains(secret));
 
     let stored = f

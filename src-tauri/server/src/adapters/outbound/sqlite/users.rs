@@ -75,6 +75,12 @@ impl UsersRepo for SqliteStore {
                 text(iso(now_ms())),
             ],
         )?;
+        // Every login is also a person in the agent list.
+        self.exec(
+            "INSERT INTO agents(name,kind,role,profile_id,user_id,active,created)
+             SELECT name,'human','operator',custom_role_id,id,active,created FROM users WHERE id=?",
+            vec![int(id)],
+        )?;
         self.require_user(id)
     }
 
@@ -111,10 +117,19 @@ impl UsersRepo for SqliteStore {
             fields.push(("custom_role_id", opt_int(role)));
         }
         self.update_fields("users", int(id), fields)?;
+        // The person in the agent list follows the login's name and active flag.
+        self.exec(
+            "UPDATE agents SET name=(SELECT name FROM users WHERE id=?),active=(SELECT active FROM users WHERE id=?)
+             WHERE user_id=?",
+            vec![int(id), int(id), int(id)],
+        )?;
         self.require_user(id)
     }
 
+    /// The person stays in the agent list (without login) only when it has a WhatsApp.
     fn delete_user(&self, id: i64) -> Result<()> {
+        let roster = "DELETE FROM agents WHERE user_id=? AND whatsapp_jid IS NULL";
+        self.exec(roster, vec![int(id)])?;
         self.exec("DELETE FROM users WHERE id=?", vec![int(id)]).map(drop)
     }
 

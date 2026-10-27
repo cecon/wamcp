@@ -151,5 +151,7 @@ pub fn steps() -> Vec<String> {
         // v25: todo agente (login, consultado pelo WhatsApp ou IA) tem um perfil; a função de IA vem do perfil.
         // O perfil "Padrão" reproduz o acesso de quem não tinha perfil (tudo menos relatórios).
         super::default_skills::PROFILES.into(),
+        // v26: uma lista só de agentes: todo login vira uma pessoa da lista, ligada pelo user_id
+        super::default_skills::ROSTER_LOGINS.into(),
     ]
 }

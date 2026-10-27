@@ -3,12 +3,14 @@ use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, Skill};
 
-const AGENT: &str =
-    "SELECT a.id,a.name,a.kind,COALESCE(p.agent_role,a.role) AS role,a.profile_id,p.name AS profile_name,
-  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created, u.name AS user_name,
+/// The role and profile come from the profile; a person with a login uses the login's profile.
+const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS profile_id,p.name AS profile_name,
+  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created,
+  u.name AS user_name, u.email AS user_email,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
   (SELECT COUNT(*) FROM agent_credentials c WHERE c.agent_id=a.id) AS credential_count
-  FROM agents a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN custom_roles p ON p.id=a.profile_id";
+  FROM agents a LEFT JOIN users u ON u.id=a.user_id
+  LEFT JOIN custom_roles p ON p.id=COALESCE(u.custom_role_id,a.profile_id)";
 const AGENT_SHAPE: Shape = Shape {
     json: &["skill_ids"],
     bools: &["active"],
@@ -36,7 +38,8 @@ impl AgentsRepo for SqliteStore {
         let mut values = vec![
             text(&agent.name),
             text(&agent.kind),
-            text(&agent.role),
+            // Legacy NOT NULL column; the role shown always comes from the profile.
+            text(if agent.role.is_empty() { "operator" } else { &agent.role }),
             opt_int(agent.profile_id),
             opt_text(agent.description.as_deref()),
             opt_int(agent.user_id),
@@ -62,6 +65,13 @@ impl AgentsRepo for SqliteStore {
             )?;
             agent.id
         };
+        // A person with a login: the login keeps the same name and profile (it gives the permissions).
+        if let Some(user_id) = agent.user_id {
+            self.exec(
+                "UPDATE users SET name=?,custom_role_id=? WHERE id=?",
+                vec![text(&agent.name), opt_int(agent.profile_id), int(user_id)],
+            )?;
+        }
         self.agent(id)?.ok_or_else(|| Error::internal("agent vanished"))
     }
 

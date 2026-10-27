@@ -142,7 +142,13 @@ async fn every_agent_has_a_profile_that_carries_the_ai_role() {
         200
     );
     let roster = admin.get("/agent_directory").await.body;
-    assert_eq!(roster[0]["role"], "dev_support");
+    let row = roster
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["id"] == operator["id"])
+        .unwrap();
+    assert_eq!(row["role"], "dev_support");
     assert_eq!(
         admin.del(&operator_profile, None).await.status,
         409,
@@ -175,4 +181,84 @@ async fn every_agent_has_a_profile_that_carries_the_ai_role() {
         .find(|u| u["id"] == maria_id)
         .unwrap();
     assert_eq!(maria_now["custom_role_id"], p.builtin);
+}
+
+#[tokio::test]
+async fn people_and_ai_share_roles_and_logins_live_in_the_same_list() {
+    let f = Fixture::new().await;
+    let admin = f.bootstrap().await;
+    let p = profiles(&admin).await;
+    let maria = f.agent(&admin, "maria@example.com", "agent", false).await;
+    let roster = admin.get("/agent_directory").await.body;
+    let person = |name: &str| {
+        roster
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|a| a["name"] == name)
+            .cloned()
+            .unwrap()
+    };
+    let (admin_row, maria_row) = (person("Admin"), person("maria"));
+    assert_eq!(admin_row["user_email"], "admin@example.com");
+
+    // A person with an executing role holds skills, like an AI operator; credentials stay AI-only.
+    let skill = admin.post("/skills", json!({ "name": "Aprovar descontos" })).await.body;
+    let skills = format!("/agent_directory/{}/skills", maria_row["id"]);
+    assert_eq!(
+        admin.put(&skills, json!({ "skill_ids": [skill["id"]] })).await.status,
+        400,
+        "Padrão has no role"
+    );
+    let as_operator =
+        json!({ "name": "Maria", "kind": "human", "profile_id": p.of("operator"), "user_id": maria.user["id"] });
+    admin
+        .put(&format!("/agent_directory/{}", maria_row["id"]), as_operator)
+        .await;
+    assert_eq!(
+        admin.put(&skills, json!({ "skill_ids": [skill["id"]] })).await.status,
+        200
+    );
+    let credential = json!({ "name": "token", "kind": "bearer", "secret": "x" });
+    let credentials = format!("/agent_directory/{}/credentials", maria_row["id"]);
+    assert_eq!(admin.post(&credentials, credential).await.status, 400);
+
+    // Removing a person with a login removes the login, but never your own nor the last admin.
+    let own = admin.del(&format!("/agent_directory/{}", admin_row["id"]), None).await;
+    assert_eq!(own.status, 409);
+    assert_eq!(
+        admin
+            .del(&format!("/agent_directory/{}", maria_row["id"]), None)
+            .await
+            .status,
+        200
+    );
+    let users = admin.get("/agents").await.body;
+    assert!(users
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|u| u["email"] != "maria@example.com"));
+    assert!(f.login("maria@example.com", common::PASSWORD).await.is_err());
+
+    // Deleting only the login keeps a person who has a WhatsApp.
+    let jose = f.agent(&admin, "jose@example.com", "agent", false).await;
+    let with_phone = json!({ "name": "José", "kind": "human", "profile_id": p.builtin, "user_id": jose.user["id"],
+                             "whatsapp": "5511955554444" });
+    let jose_row = admin.post("/agent_directory", with_phone).await.body;
+    assert_eq!(
+        admin.del(&format!("/agents/{}", jose.user["id"]), None).await.status,
+        200
+    );
+    let after = admin.get("/agent_directory").await.body;
+    let kept = after
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["id"] == jose_row["id"])
+        .unwrap();
+    assert_eq!(
+        (kept["user_id"].is_null(), kept["whatsapp_jid"].as_str()),
+        (true, Some("5511955554444@s.whatsapp.net"))
+    );
 }

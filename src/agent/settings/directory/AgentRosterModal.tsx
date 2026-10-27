@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { http } from '../../api';
 import type { CustomRole, RosterAgent, RosterKind, Skill } from '../../adminTypes';
-import type { User } from '../../types';
 import { Modal } from '../../ui/Overlay';
 import { ModalFooter } from '../../ui/Settings';
 import { useAction } from '../useAction';
 import { CredentialsPanel } from './CredentialsPanel';
 import { SkillPicker } from './SkillPicker';
-import { executes, phone, roleLabel, RUNTIMES } from './labels';
+import { AccessSection } from './AccessSection';
+import { noAccess } from './access';
+import { executes, holdsCredentials, phone, roleLabel, RUNTIMES } from './labels';
 
 interface Props {
   agent: RosterAgent | null;
@@ -16,7 +17,8 @@ interface Props {
   skills: Skill[];
   /** Profiles: AI agents pick one with an AI role, people any. */
   profiles: CustomRole[];
-  logins: User[];
+  /** Opens the login settings of a person with helpdesk access. */
+  onManageAccess: (userId: number) => void;
   onClose: () => void;
   onSaved: () => void;
   /** A skill was created from this form (the page reloads its library). */
@@ -25,9 +27,9 @@ interface Props {
 
 /** Human or AI agent form: role, contact (humans) or runtime and instructions (AI), skills and credentials. */
 export function AgentRosterModal(props: Props) {
-  const { agent, kind, skills, profiles, logins, onClose, onSaved, onSkillsChanged } = props;
+  const { agent, kind, skills, profiles, onManageAccess, onClose, onSaved, onSkillsChanged } = props;
   const human = (agent?.kind ?? kind) === 'human';
-  // AI agents need a profile with an AI role; people may have any profile (Padrão by default).
+  // People and AI share the roles of the profiles; AI agents need one with a role.
   const choices = human ? profiles : profiles.filter((p) => p.agent_role);
   const initial = human
     ? profiles.find((p) => p.builtin)
@@ -37,7 +39,6 @@ export function AgentRosterModal(props: Props) {
     profile_id: String(agent?.profile_id ?? initial?.id ?? ''),
     description: agent?.description || '',
     whatsapp: phone(agent?.whatsapp_jid ?? null),
-    user_id: agent?.user_id ? String(agent.user_id) : '',
     runtime: agent?.runtime || RUNTIMES[0].value,
     model: agent?.model || '',
     instructions: agent?.instructions || '',
@@ -45,20 +46,20 @@ export function AgentRosterModal(props: Props) {
   });
   const [skillIds, setSkillIds] = useState<number[]>(agent?.skill_ids || []);
   const [library, setLibrary] = useState(skills);
+  const [access, setAccess] = useState(noAccess);
   const { error, busy, run } = useAction();
   const field = (
-    key:
-      'name' | 'profile_id' | 'description' | 'whatsapp' | 'user_id' | 'runtime' | 'model' | 'instructions',
+    key: 'name' | 'profile_id' | 'description' | 'whatsapp' | 'runtime' | 'model' | 'instructions',
   ) => ({
     value: form[key],
     onChange: (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value }),
   });
   const chosen = profiles.find((p) => String(p.id) === form.profile_id);
-  const withSkills = !human && executes({ kind: 'ai', role: chosen?.agent_role ?? 'coordinator' });
+  const withSkills = executes(chosen?.agent_role ?? null);
   const toggle = (id: number) =>
     setSkillIds((list) => (list.includes(id) ? list.filter((s) => s !== id) : [...list, id]));
 
-  const body = () => {
+  const body = (userId: number | null) => {
     const common = {
       name: form.name.trim(),
       kind: human ? 'human' : 'ai',
@@ -66,8 +67,7 @@ export function AgentRosterModal(props: Props) {
       description: form.description.trim() || null,
       active: form.active,
     };
-    if (human)
-      return { ...common, whatsapp: form.whatsapp.trim() || null, user_id: Number(form.user_id) || null };
+    if (human) return { ...common, whatsapp: form.whatsapp.trim() || null, user_id: userId };
     return {
       ...common,
       runtime: form.runtime,
@@ -78,10 +78,10 @@ export function AgentRosterModal(props: Props) {
 
   return (
     <Modal
-      title={`${agent ? 'Editar' : 'Adicionar'} agente ${human ? 'humano' : 'de IA'}`}
+      title={agent ? `Editar ${agent.name}` : human ? 'Adicionar pessoa' : 'Adicionar agente de IA'}
       description={
         human
-          ? 'Pessoas da equipe que os agentes de IA podem consultar pelo WhatsApp quando precisarem de ajuda.'
+          ? 'Uma pessoa da equipe: com WhatsApp, os agentes de IA podem consultá-la; com acesso ao helpdesk, ela entra e atende conversas.'
           : 'Agentes de IA executados por um runtime agêntico. Coordenadores só delegam; os demais executam com as suas skills.'
       }
       onClose={onClose}
@@ -91,10 +91,21 @@ export function AgentRosterModal(props: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
+            // A new login first: every login is already a person, which this save then completes.
+            let userId = agent?.user_id ?? null;
+            if (human && !userId && access.enabled) {
+              const login = { name: form.name.trim(), email: access.email, password: access.password };
+              const created = await http<{ id: number }>('/agents', 'POST', {
+                ...login,
+                role: access.role,
+                inbox_ids: [],
+              });
+              userId = created.id;
+            }
             const saved = await http<RosterAgent>(
               agent ? `/agent_directory/${agent.id}` : '/agent_directory',
               agent ? 'PUT' : 'POST',
-              body(),
+              body(userId),
             );
             const same = [...skillIds].sort().join() === [...saved.skill_ids].sort().join();
             if (!same)
@@ -135,17 +146,7 @@ export function AgentRosterModal(props: Props) {
                 {...field('whatsapp')}
               />
             </label>
-            <label>
-              <span className="field-label">Login no helpdesk (opcional)</span>
-              <select className="field" {...field('user_id')}>
-                <option value="">Sem login</option>
-                {logins.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <AccessSection agent={agent} access={access} onChange={setAccess} onManage={onManageAccess} />
           </>
         ) : (
           <>
@@ -206,7 +207,7 @@ export function AgentRosterModal(props: Props) {
           error={error}
         />
       </form>
-      {agent && executes(agent) && <CredentialsPanel agentId={agent.id} onChange={onSaved} />}
+      {agent && holdsCredentials(agent) && <CredentialsPanel agentId={agent.id} onChange={onSaved} />}
     </Modal>
   );
 }
