@@ -145,6 +145,30 @@ async fn the_connected_ai_agent_answers_through_its_runtime_with_its_skills() {
 }
 
 #[tokio::test]
+async fn open_conversations_stay_with_people_until_handed_to_the_agent() {
+    let s = setup().await;
+    let p = profiles(&s.admin).await;
+    s.write("IN1", "Oi").await;
+    let ana = s.agent(ai(&p, "Ana", "operator")).await;
+    assert_eq!(s.connect(Some(ana)).await.status, 200);
+
+    // Already open before the agent was connected: a person keeps it.
+    s.write("IN2", "Tem pão?").await;
+    assert_eq!(s.admin.get("/conversations/1").await.body["status"], "open");
+    assert!(s.claude.calls.lock().is_empty());
+
+    // Handed to the agent ("pending"), it answers the waiting message right away.
+    let pending = json!({ "status": "pending" });
+    let handed = s.admin.post("/conversations/1/toggle_status", pending).await;
+    assert_eq!(handed.status, 200, "{:?}", handed.body);
+    s.f.settle().await;
+    let calls = s.claude.calls.lock().clone();
+    assert_eq!(calls.len(), 1);
+    assert!(calls[0].prompt.contains("Cliente: Tem pão?"));
+    assert_eq!(s.f.wa.sent().last().unwrap().text, "Olá! Sou a Ana, da Padaria Sol.");
+}
+
+#[tokio::test]
 async fn openclaude_agents_send_their_openrouter_key_and_only_executors_connect() {
     let s = setup().await;
     let p = profiles(&s.admin).await;

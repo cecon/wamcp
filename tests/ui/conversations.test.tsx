@@ -143,7 +143,7 @@ describe('conversation box', () => {
     expect(await within(box).findByText(/adiada até/)).toBeInTheDocument();
     await user.click(within(box).getByRole('button', { name: 'Reabrir' }));
     await user.click(within(box).getByRole('button', { name: 'Mais ações de status' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Marcar como pendente' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Passar para a IA' }));
     expect(await within(box).findByText(/com a IA/)).toBeInTheDocument();
     await user.click(within(box).getByRole('button', { name: 'Abrir' }));
     await user.click(await within(box).findByRole('button', { name: 'Resolver' }));

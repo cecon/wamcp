@@ -53,18 +53,25 @@ impl LlmBotService {
         }
     }
 
-    /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves.
+    /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves,
+    /// or when a person hands an open conversation back to it (status `pending`).
     pub fn on_event(&self, envelope: &Envelope) {
-        if envelope.event != "message.created" {
-            return;
-        }
-        let Ok(message) = serde_json::from_value::<Message>(envelope.data.clone()) else {
-            return;
+        let conversation_id = match envelope.event.as_str() {
+            "message.created" => match serde_json::from_value::<Message>(envelope.data.clone()) {
+                Ok(m) if m.message_type == "incoming" && !m.private => m.conversation_id,
+                _ => return,
+            },
+            "conversation.status_changed" if envelope.data["status"] == "pending" => {
+                match envelope.data["id"].as_i64() {
+                    Some(id) => id,
+                    None => return,
+                }
+            }
+            _ => return,
         };
-        if message.message_type != "incoming" || message.private || !self.serves(message.conversation_id) {
-            return;
+        if self.serves(conversation_id) {
+            self.schedule(conversation_id);
         }
-        self.schedule(message.conversation_id);
     }
 
     fn serves(&self, conversation_id: i64) -> bool {

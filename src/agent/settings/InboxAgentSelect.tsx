@@ -28,7 +28,9 @@ export function InboxAgentSelect({ inbox, onChange }: Props) {
       <span className="text-heading-3 block text-n-slate-12">Agente de IA</span>
       <span className="mb-2 block text-sm text-n-slate-11">
         O agente responde as conversas novas pelo runtime e modelo do seu cadastro, com as suas instruções e
-        skills. Elas ficam “Pendente” até ele transferir para a equipe. Coordenadores não atendem: só delegam.
+        skills. Elas ficam “Pendente” até ele transferir para a equipe. Conversas que já estão abertas
+        continuam com quem as assumiu: para entregar uma ao agente, use “Passar para a IA” no menu de status
+        da conversa. Coordenadores não atendem: só delegam.
       </span>
       <select
         className="field"
