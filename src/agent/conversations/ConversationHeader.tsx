@@ -103,7 +103,7 @@ export function ConversationHeader({
                 {c.status !== 'pending' && (
                   <MenuItem
                     icon={CircleDotDashed}
-                    label="Marcar como pendente"
+                    label="Passar para a IA"
                     onClick={() => {
                       onStatus('pending');
                       close();

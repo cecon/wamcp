@@ -24,6 +24,9 @@ pub struct RosterAgent {
     pub instructions: Option<String>,
     pub active: bool,
     pub skill_ids: Vec<i64>,
+    /// Skills inherited from the profile (on top of the agent's own).
+    #[serde(default)]
+    pub profile_skill_ids: Vec<i64>,
     pub credential_count: i64,
     pub created: String,
 }
@@ -55,6 +58,14 @@ pub struct Skill {
     pub instructions: String,
     pub tools: Vec<String>,
     pub created: String,
+}
+
+/// A credential with its encrypted secret, read only by the server when it runs the agent.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SealedCredential {
+    pub name: String,
+    pub kind: String,
+    pub secret: String,
 }
 
 /// A secret an AI agent's tools use on the server side; the secret itself is never returned.

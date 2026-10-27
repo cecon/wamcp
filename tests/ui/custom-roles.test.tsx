@@ -89,6 +89,7 @@ describe('custom roles settings', () => {
       description: 'Só contatos',
       permissions: ['contact_manage', 'conversation_participating_manage'],
       agent_role: null,
+      skill_ids: [],
     });
     expect(await screen.findByText('3 perfis')).toBeInTheDocument();
 
@@ -103,6 +104,7 @@ describe('custom roles settings', () => {
         description: 'Vê tudo',
         permissions: ['conversation_manage'],
         agent_role: null,
+        skill_ids: [],
       }),
     );
 

@@ -15,10 +15,18 @@ export interface CustomRole {
   agent_role: RosterRole | null;
   /** The built-in "Padrão" profile: every agent has a profile and it cannot be deleted. */
   builtin: boolean;
+  /** Skills every agent of the profile inherits (only roles that execute). */
+  skill_ids?: number[];
 }
 
 /** Agent roster (`/agent_directory`): human agents consulted on WhatsApp and AI agents run by a runtime. */
 export type RosterKind = 'human' | 'ai';
+/** An AI agent runtime and whether it is installed on this computer (`detail`: where, or why not). */
+export interface RuntimeStatus {
+  id: string;
+  available: boolean;
+  detail: string;
+}
 export type RosterRole = 'coordinator' | 'operator' | 'dev_support' | 'qa';
 export interface RosterAgent {
   id: number;
@@ -38,6 +46,8 @@ export interface RosterAgent {
   instructions: string | null;
   active: boolean;
   skill_ids: number[];
+  /** Skills inherited from the profile. */
+  profile_skill_ids?: number[];
   credential_count: number;
 }
 export interface Skill {

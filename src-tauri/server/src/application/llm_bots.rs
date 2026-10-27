@@ -1,14 +1,18 @@
-//! Answers `pending` conversations of inboxes served by an `llm` bot: when the contact writes, the
-//! conversation is sent to the bot's LLM provider and its reply goes out as the bot (handing off to
-//! humans when the model asks to). Bursts are debounced and runs are limited; one run per
+//! Answers `pending` conversations of inboxes served by an AI agent of the roster (or a legacy `llm`
+//! bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
+//! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
+//! model asks to). Bursts are debounced and runs are limited; one run per
 //! conversation at a time, with another one afterwards if the contact wrote meanwhile.
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
-use super::ports::{Llm, LlmRequest};
+use super::ports::{Llm, LlmRequest, SecretBox};
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
-use crate::domain::llm::{answer_schema, build_prompt, parse_answer, SYSTEM, TRANSCRIPT_LIMIT};
-use crate::domain::model::{Message, BOT_LLM};
+use crate::domain::llm::{
+    agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
+    TRANSCRIPT_LIMIT,
+};
+use crate::domain::model::{Inbox, Message, BOT_LLM};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -20,6 +24,7 @@ use tokio::sync::{Notify, Semaphore};
 pub struct LlmBotService {
     helpdesk: HelpdeskService,
     llm: Arc<dyn Llm>,
+    secrets: Arc<dyn SecretBox>,
     debounce: Duration,
     slots: Arc<Semaphore>,
     /// Conversations with a scheduled or running answer; `true` = the contact wrote again meanwhile.
@@ -29,10 +34,17 @@ pub struct LlmBotService {
 }
 
 impl LlmBotService {
-    pub fn new(helpdesk: HelpdeskService, llm: Arc<dyn Llm>, debounce: Duration, concurrency: usize) -> Self {
+    pub fn new(
+        helpdesk: HelpdeskService,
+        llm: Arc<dyn Llm>,
+        secrets: Arc<dyn SecretBox>,
+        debounce: Duration,
+        concurrency: usize,
+    ) -> Self {
         Self {
             helpdesk,
             llm,
+            secrets,
             debounce,
             slots: Arc::new(Semaphore::new(concurrency.max(1))),
             queued: Arc::default(),
@@ -41,18 +53,25 @@ impl LlmBotService {
         }
     }
 
-    /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves.
+    /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves,
+    /// or when a person hands an open conversation back to it (status `pending`).
     pub fn on_event(&self, envelope: &Envelope) {
-        if envelope.event != "message.created" {
-            return;
-        }
-        let Ok(message) = serde_json::from_value::<Message>(envelope.data.clone()) else {
-            return;
+        let conversation_id = match envelope.event.as_str() {
+            "message.created" => match serde_json::from_value::<Message>(envelope.data.clone()) {
+                Ok(m) if m.message_type == "incoming" && !m.private => m.conversation_id,
+                _ => return,
+            },
+            "conversation.status_changed" if envelope.data["status"] == "pending" => {
+                match envelope.data["id"].as_i64() {
+                    Some(id) => id,
+                    None => return,
+                }
+            }
+            _ => return,
         };
-        if message.message_type != "incoming" || message.private || !self.serves(message.conversation_id) {
-            return;
+        if self.serves(conversation_id) {
+            self.schedule(conversation_id);
         }
-        self.schedule(message.conversation_id);
     }
 
     fn serves(&self, conversation_id: i64) -> bool {
@@ -60,9 +79,40 @@ impl LlmBotService {
         let Ok(Some(conversation)) = core.repo.conversation_by_id(conversation_id) else {
             return false;
         };
-        let bot_id = core.inbox(conversation.inbox_id).ok().and_then(|i| i.agent_bot_id);
-        let bot = bot_id.and_then(|id| core.repo.agent_bot(id).ok().flatten());
-        conversation.status == "pending" && bot.is_some_and(|b| b.kind == BOT_LLM)
+        let inbox = core.inbox(conversation.inbox_id);
+        conversation.status == "pending" && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
+    }
+
+    /// Who answers the inbox: its AI agent (when it may answer customers), else its `llm` bot. The
+    /// request carries the instructions as its prompt until the conversation is added.
+    fn responder(&self, inbox: &Inbox) -> Result<Option<LlmRequest>> {
+        let repo = &self.helpdesk.core.repo;
+        let agent = match inbox.ai_agent_id {
+            Some(id) => repo.agent(id)?.filter(answers_customers),
+            None => None,
+        };
+        let request = |provider: Option<String>, model, instructions: String, api_key| LlmRequest {
+            provider: provider.unwrap_or_default(),
+            model,
+            system: SYSTEM.into(),
+            prompt: instructions,
+            schema: answer_schema(),
+            api_key,
+        };
+        if let Some(agent) = agent {
+            let credentials = repo.agent_sealed_credentials(agent.id)?;
+            let api_key = match openrouter_key(&credentials) {
+                Some(credential) => Some(self.secrets.open(&credential.secret)?),
+                None => None,
+            };
+            let instructions = agent_instructions(&agent, &repo.skills()?);
+            return Ok(Some(request(agent.runtime, agent.model, instructions, api_key)));
+        }
+        let bot = match inbox.agent_bot_id {
+            Some(id) => repo.agent_bot(id)?.filter(|b| b.kind == BOT_LLM),
+            None => None,
+        };
+        Ok(bot.map(|bot| request(bot.provider, bot.model, bot.instructions.unwrap_or_default(), None)))
     }
 
     fn schedule(&self, conversation_id: i64) {
@@ -97,18 +147,14 @@ impl LlmBotService {
         });
     }
 
-    /// Asks the bot's provider for the next reply and sends it (or hands off) as the bot.
+    /// Asks the agent's runtime for the next reply and sends it (or hands off) as the inbox bot.
     async fn answer(&self, conversation_id: i64) -> Result<()> {
         let core = &self.helpdesk.core;
         let Some(conversation) = core.repo.conversation_by_id(conversation_id)? else {
             return Ok(());
         };
         let inbox = core.inbox(conversation.inbox_id)?;
-        let bot = match inbox.agent_bot_id {
-            Some(id) => core.repo.agent_bot(id)?,
-            None => None,
-        };
-        let Some(bot) = bot.filter(|b| b.kind == BOT_LLM && conversation.status == "pending") else {
+        let Some(mut request) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
             return Ok(());
         };
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
@@ -120,13 +166,7 @@ impl LlmBotService {
         if last.is_none_or(|m| m.message_type != "incoming") {
             return Ok(());
         }
-        let request = LlmRequest {
-            provider: bot.provider.clone().unwrap_or_default(),
-            model: bot.model.clone(),
-            system: SYSTEM.into(),
-            prompt: build_prompt(&inbox.name, bot.instructions.as_deref(), &messages),
-            schema: answer_schema(),
-        };
+        request.prompt = build_prompt(&inbox.name, Some(&request.prompt), &messages);
         let value = self.llm.complete(&request).await?;
         let Some(answer) = parse_answer(&value) else {
             return fail("Resposta da LLM fora do formato esperado");

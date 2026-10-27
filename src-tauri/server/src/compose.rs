@@ -162,6 +162,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         agents: AgentDirectory {
             core: core.clone(),
             secrets: ports.secrets.clone(),
+            llm: Arc::default(),
         },
         avatars,
         accounts: AccountService {
@@ -218,10 +219,13 @@ impl App {
         public_router(self.state.clone())
     }
 
-    /// Lets `llm` bots answer their conversations with `llm` (debounce groups a burst of messages).
+    /// Lets AI agents (and `llm` bots) answer their inboxes with `llm`, which also tells which runtimes
+    /// are installed (debounce groups a burst of messages).
     pub fn attach_llm(&mut self, llm: Arc<dyn Llm>, debounce: Duration) {
         let support = self.state.support();
-        let bots = LlmBotService::new(support.helpdesk.clone(), llm, debounce, 2);
+        support.agents.attach_llm(llm.clone());
+        let secrets = support.agents.secrets.clone();
+        let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2);
         let listener = bots.clone();
         support.bus.subscribe(move |e| listener.on_event(e));
         self.llm_bots = Some(bots);

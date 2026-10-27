@@ -128,6 +128,18 @@ Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, W
 - **Perfil obrigatório para todo agente** (login, WhatsApp ou IA). O perfil define as permissões e a função de IA (coordenador, operador, suporte dev, QA); o agente herda a função do perfil. O perfil "Padrão" reproduz o acesso de quem não tinha perfil e não pode ser excluído.
 - **Robôs saem da interface**: os agentes de IA, com a função vinda do perfil, assumem esse papel. A API de robôs por webhook continua no backend por compatibilidade.
 
+## Adiantado da fase 5 (2026-10-27): agente de IA atendendo pela runtime
+
+- Cada caixa de entrada pode ter um **Agente de IA** (`inboxes.ai_agent_id`, migração v27). Ele responde as conversas pendentes pela runtime e pelo modelo do cadastro, com as suas instruções e as instruções das suas skills. Só atende um agente de IA ativo cuja função executa: coordenadores não atendem.
+- Por enquanto é a mesma chamada "LLM" dos robôs: sem ferramentas e com resposta estruturada `{reply, handoff}`. O laço agêntico com MCP continua na fase 2.
+- **Runtimes:**
+  - `claude_cli` usa o login do Claude Code.
+  - `codex_cli` roda `codex exec` em sandbox somente leitura, com o login do Codex. Ainda não foi testado com o binário real.
+  - `openclaude` roda o OpenClaude apontado para o OpenRouter, com o modelo do cadastro e a credencial `OPENROUTER_API_KEY` do agente (ou a única chave de API dele).
+- **Skills nos perfis** (migração v28, `custom_role_skills`): todo agente do perfil herda essas skills, somadas às dele. Só perfis cuja função executa têm skills.
+- O app traz a skill padrão **"Atendente de delivery"** (atender, consultar e apresentar o cardápio, montar o pedido, fechar a venda e transferir) e um perfil de operador com o mesmo nome que já vem com ela. As ferramentas da skill (`catalog_search`, `catalog_quote`, …) só são chamadas quando o laço agêntico da fase 2 existir; até lá, o agente recebe só as instruções.
+- `GET /agent_runtimes` diz quais runtimes estão instalados. A detecção procura `WAMCP_*_BIN`, depois o executável no PATH e no `~/.local/bin`, e por fim a instalação global do npm, rodada com o Node. O cadastro desabilita as runtimes ausentes.
+
 ## Decisões em aberto
 
 1. **Agente humano sem login:** basta o WhatsApp para ser consultado, ou todo humano precisa ser um `user`?

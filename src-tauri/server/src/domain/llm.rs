@@ -1,11 +1,15 @@
 //! LLM bots: the server asks a language model for the next reply of a `pending` conversation.
 //! Providers (local CLIs, HTTP APIs) only turn a system text, a prompt and a JSON Schema into JSON;
-//! everything about the conversation is decided here.
-use super::model::Message;
+//! everything about the conversation is decided here. Inboxes are answered by an AI agent of the
+//! roster (its runtime, model, instructions and skills) or by a legacy `llm` bot.
+use super::agents::{executes, RUNTIMES};
+use super::model::{Message, RosterAgent, SealedCredential, Skill};
 use serde_json::{json, Value};
 
-/// Providers the server can drive. Adding one means a new adapter behind the `Llm` port.
-pub const LLM_PROVIDERS: &[&str] = &["claude_cli"];
+/// Providers the server can drive: the AI agent runtimes, each an adapter behind the `Llm` port.
+pub const LLM_PROVIDERS: &[&str] = &RUNTIMES;
+/// The credential OpenClaude sends to OpenRouter when an agent has more than one API key.
+pub const OPENROUTER_KEY: &str = "OPENROUTER_API_KEY";
 /// How many recent messages of the conversation the model sees.
 pub const TRANSCRIPT_LIMIT: i64 = 40;
 
@@ -75,4 +79,45 @@ pub fn build_prompt(inbox_name: &str, instructions: Option<&str>, messages: &[Me
     }
     prompt.push_str("\nEscreva a próxima resposta para o cliente.");
     prompt
+}
+
+/// Whether an AI agent answers the customers of the inboxes it serves: active, with a role that
+/// executes (coordinators only delegate) and a runtime.
+pub fn answers_customers(agent: &RosterAgent) -> bool {
+    agent.kind == "ai" && agent.active && executes(agent.role.as_deref().unwrap_or_default()) && agent.runtime.is_some()
+}
+
+/// The agent's own instructions followed by the instructions of its skills and its profile's.
+pub fn agent_instructions(agent: &RosterAgent, skills: &[Skill]) -> String {
+    let mut text = agent
+        .instructions
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_string();
+    let has = |id: &i64| agent.skill_ids.contains(id) || agent.profile_skill_ids.contains(id);
+    for skill in skills.iter().filter(|s| has(&s.id)) {
+        let body = skill.instructions.trim();
+        if body.is_empty() {
+            continue;
+        }
+        if !text.is_empty() {
+            text.push_str("\n\n");
+        }
+        text.push_str(&format!("Skill \"{}\":\n{body}", skill.name));
+    }
+    text
+}
+
+/// The API key OpenClaude uses for OpenRouter: the credential named `OPENROUTER_API_KEY`, else the
+/// agent's only `api_key` or `bearer` credential.
+pub fn openrouter_key(credentials: &[SealedCredential]) -> Option<&SealedCredential> {
+    if let Some(named) = credentials.iter().find(|c| c.name.eq_ignore_ascii_case(OPENROUTER_KEY)) {
+        return Some(named);
+    }
+    let mut keys = credentials.iter().filter(|c| c.kind == "api_key" || c.kind == "bearer");
+    match (keys.next(), keys.next()) {
+        (Some(only), None) => Some(only),
+        _ => None,
+    }
 }
