@@ -24,6 +24,9 @@ pub struct RosterAgent {
     pub instructions: Option<String>,
     pub active: bool,
     pub skill_ids: Vec<i64>,
+    /// Skills inherited from the profile (on top of the agent's own).
+    #[serde(default)]
+    pub profile_skill_ids: Vec<i64>,
     pub credential_count: i64,
     pub created: String,
 }

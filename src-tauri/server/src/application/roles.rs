@@ -21,8 +21,9 @@ impl AccountService {
             .ok_or_else(|| HelpdeskError::not_found("Perfil não encontrado").into())
     }
 
-    /// Creates (`id` 0) or replaces a profile after checking the name, permissions and AI role.
-    pub fn save_custom_role(&self, actor: &Actor, role: &CustomRole) -> Result<CustomRole> {
+    /// Creates (`id` 0) or replaces a profile after checking the name, permissions, AI role and
+    /// skills (`None` keeps the current ones). Only roles that execute carry skills.
+    pub fn save_custom_role(&self, actor: &Actor, role: &CustomRole, skills: Option<&[i64]>) -> Result<CustomRole> {
         require_admin(actor)?;
         if role.permissions.is_empty() || role.permissions.iter().any(|p| !PERMISSIONS.contains(&p.as_str())) {
             return fail("Escolha permissões válidas");
@@ -31,9 +32,13 @@ impl AccountService {
             return fail("Função de IA inválida");
         }
         let mut role = role.clone();
+        role.skill_ids = skills.map(<[i64]>::to_vec).unwrap_or_default();
         if role.id != 0 {
             let current = self.find_role(role.id)?;
             role.builtin = current.builtin;
+            if skills.is_none() {
+                role.skill_ids = current.skill_ids.clone();
+            }
             if current.agent_role != role.agent_role {
                 self.check_ai_agents(&role)?;
             }
@@ -41,7 +46,17 @@ impl AccountService {
         if self.core.repo.role_name_taken(&role.name, role.id)? {
             return fail_with("Já existe um perfil com este nome", 422);
         }
+        if !role.skill_ids.is_empty() && !executes(role.agent_role.as_deref().unwrap_or_default()) {
+            return fail("Só perfis com função que executa (não coordenador) têm skills");
+        }
+        for skill in &role.skill_ids {
+            if self.core.repo.skill(*skill)?.is_none() {
+                return fail_with("Skill não encontrada", 422);
+            }
+        }
         role.permissions.dedup();
+        role.skill_ids.sort_unstable();
+        role.skill_ids.dedup();
         self.core.repo.save_custom_role(&role)
     }
 

@@ -87,7 +87,7 @@ pub fn answers_customers(agent: &RosterAgent) -> bool {
     agent.kind == "ai" && agent.active && executes(agent.role.as_deref().unwrap_or_default()) && agent.runtime.is_some()
 }
 
-/// The agent's own instructions followed by the instructions of its skills.
+/// The agent's own instructions followed by the instructions of its skills and its profile's.
 pub fn agent_instructions(agent: &RosterAgent, skills: &[Skill]) -> String {
     let mut text = agent
         .instructions
@@ -95,7 +95,8 @@ pub fn agent_instructions(agent: &RosterAgent, skills: &[Skill]) -> String {
         .map(str::trim)
         .unwrap_or_default()
         .to_string();
-    for skill in skills.iter().filter(|s| agent.skill_ids.contains(&s.id)) {
+    let has = |id: &i64| agent.skill_ids.contains(id) || agent.profile_skill_ids.contains(id);
+    for skill in skills.iter().filter(|s| has(&s.id)) {
         let body = skill.instructions.trim();
         if body.is_empty() {
             continue;

@@ -58,6 +58,9 @@ export function AgentRosterModal(props: Props) {
   const setRuntime = useCallback((runtime: string) => setForm((f) => ({ ...f, runtime })), []);
   const chosen = profiles.find((p) => String(p.id) === form.profile_id);
   const withSkills = executes(chosen?.agent_role ?? null);
+  const inherited = (chosen?.skill_ids || [])
+    .map((id) => library.find((s) => s.id === id)?.name)
+    .filter((name): name is string => Boolean(name));
   const toggle = (id: number) =>
     setSkillIds((list) => (list.includes(id) ? list.filter((s) => s !== id) : [...list, id]));
 
@@ -186,6 +189,11 @@ export function AgentRosterModal(props: Props) {
               onSkillsChanged();
             }}
           />
+        )}
+        {withSkills && inherited.length > 0 && (
+          <p className="text-sm text-n-slate-11">
+            Herdadas do perfil {chosen?.name}: {inherited.join(', ')}.
+          </p>
         )}
         <label className="flex items-center gap-2 text-sm text-n-slate-12">
           <input

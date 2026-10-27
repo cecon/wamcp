@@ -33,7 +33,7 @@ export function RosterSection({ user, catalog, onChange }: Props) {
     await onChange();
   };
   const skillNames = (agent: RosterAgent) =>
-    agent.skill_ids
+    [...new Set([...(agent.profile_skill_ids || []), ...agent.skill_ids])]
       .map((id) => skills?.find((s) => s.id === id)?.name)
       .filter(Boolean)
       .join(', ');

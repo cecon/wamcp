@@ -155,5 +155,7 @@ pub fn steps() -> Vec<String> {
         super::default_skills::ROSTER_LOGINS.into(),
         // v27: o agente de IA que atende uma caixa de entrada (pelo runtime e modelo do cadastro)
         "ALTER TABLE inboxes ADD COLUMN ai_agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL;".into(),
+        // v28: perfis com skills (herdadas pelos agentes) e a skill e o perfil padrão "Atendente de delivery"
+        super::default_skills::PROFILE_SKILLS.into(),
     ]
 }

@@ -102,5 +102,8 @@ pub struct CustomRole {
     pub agent_role: Option<String>,
     #[serde(default)]
     pub builtin: bool,
+    /// Skills every agent of the profile inherits (only for roles that execute).
+    #[serde(default)]
+    pub skill_ids: Vec<i64>,
     pub created: String,
 }

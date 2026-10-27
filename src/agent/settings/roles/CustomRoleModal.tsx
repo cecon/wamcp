@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { http } from '../../api';
-import type { CustomRole, Permission } from '../../adminTypes';
+import type { CustomRole, Permission, Skill } from '../../adminTypes';
 import { PERMISSIONS } from '../../permissions';
+import { useFetch } from '../../useFetch';
 import { Modal } from '../../ui/Overlay';
 import { ModalFooter } from '../../ui/Settings';
 import { useAction } from '../useAction';
-import { ROLES } from '../directory/labels';
+import { executes, ROLES } from '../directory/labels';
+import { SkillPicker } from '../directory/SkillPicker';
 
 interface Props {
   role: CustomRole | null;
@@ -13,12 +15,17 @@ interface Props {
   onSaved: () => void;
 }
 
-/** Chatwoot custom role form: name, description and the permission checkboxes. */
+/** Profile form: name, description, role, the skills its agents inherit and the permission checkboxes. */
 export function CustomRoleModal({ role, onClose, onSaved }: Props) {
   const [name, setName] = useState(role?.name || ''),
     [description, setDescription] = useState(role?.description || ''),
     [permissions, setPermissions] = useState<Permission[]>(role?.permissions || []),
-    [agentRole, setAgentRole] = useState<string>(role?.agent_role || '');
+    [agentRole, setAgentRole] = useState<string>(role?.agent_role || ''),
+    [skillIds, setSkillIds] = useState<number[]>(role?.skill_ids || []),
+    [created, setCreated] = useState<Skill[]>([]);
+  const { data: skills } = useFetch<Skill[]>('/skills');
+  const library = [...(skills || []), ...created.filter((c) => !skills?.some((s) => s.id === c.id))];
+  const withSkills = executes(agentRole || null);
   const { error, busy, run } = useAction();
   const toggle = (key: Permission) =>
     setPermissions((list) => (list.includes(key) ? list.filter((p) => p !== key) : [...list, key]));
@@ -39,6 +46,7 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
               description: description.trim() || null,
               permissions,
               agent_role: agentRole || null,
+              skill_ids: withSkills ? skillIds : [],
             };
             await http(role ? `/custom_roles/${role.id}` : '/custom_roles', role ? 'PUT' : 'POST', body);
             onSaved();
@@ -77,6 +85,24 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
             ))}
           </select>
         </label>
+        {withSkills && (
+          <div className="flex flex-col gap-1">
+            <SkillPicker
+              library={library}
+              selected={skillIds}
+              onToggle={(id) =>
+                setSkillIds((list) => (list.includes(id) ? list.filter((s) => s !== id) : [...list, id]))
+              }
+              onCreated={(skill) => {
+                setCreated((list) => [...list, skill]);
+                setSkillIds((list) => [...list, skill.id]);
+              }}
+            />
+            <p className="text-xs text-n-slate-11">
+              Todo agente deste perfil, pessoa ou IA, herda estas skills, somadas às dele.
+            </p>
+          </div>
+        )}
         <fieldset>
           <legend className="field-label">Permissões</legend>
           <div className="flex flex-col gap-2.5">

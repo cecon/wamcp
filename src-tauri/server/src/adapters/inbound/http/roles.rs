@@ -19,18 +19,23 @@ struct Role {
     permissions: Vec<String>,
     /// The AI role agents with this profile play (`null` for none).
     agent_role: Option<String>,
+    /// Skills every agent of the profile inherits (omitted: unchanged).
+    skill_ids: Option<Vec<i64>>,
 }
 
-fn role(id: i64, body: Role) -> ApiResult<CustomRole> {
-    Ok(CustomRole {
+fn role(id: i64, body: Role) -> ApiResult<(CustomRole, Option<Vec<i64>>)> {
+    let skills = body.skill_ids;
+    let role = CustomRole {
         id,
         name: text(body.name.as_deref().unwrap_or_default(), 1, 60)?,
         description: nullable_text(body.description, 300)?.flatten(),
         permissions: body.permissions,
         agent_role: body.agent_role.filter(|r| !r.is_empty()),
         builtin: false,
+        skill_ids: Vec::new(),
         created: String::new(),
-    })
+    };
+    Ok((role, skills))
 }
 
 async fn list(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
@@ -38,12 +43,9 @@ async fn list(State(state): State<AppState>, current: CurrentUser) -> ApiResult<
 }
 
 async fn create(State(state): State<AppState>, current: CurrentUser, Body(body): Body<Role>) -> ApiResult<Response> {
-    created(
-        state
-            .support()
-            .accounts
-            .save_custom_role(&current.actor(), &role(0, body)?)?,
-    )
+    let (role, skills) = role(0, body)?;
+    let accounts = &state.support().accounts;
+    created(accounts.save_custom_role(&current.actor(), &role, skills.as_deref())?)
 }
 
 /// Replaces the role (name, description and the full permission list).
@@ -53,8 +55,9 @@ async fn update(
     Path(r): Path<String>,
     Body(body): Body<Role>,
 ) -> ApiResult<Response> {
-    let role = role(id(&r)?, body)?;
-    ok(state.support().accounts.save_custom_role(&current.actor(), &role)?)
+    let (role, skills) = role(id(&r)?, body)?;
+    let accounts = &state.support().accounts;
+    ok(accounts.save_custom_role(&current.actor(), &role, skills.as_deref())?)
 }
 
 async fn remove(State(state): State<AppState>, current: CurrentUser, Path(r): Path<String>) -> ApiResult<Response> {

@@ -1,4 +1,5 @@
-//! Seed data: default skills (v24), mandatory profiles (v25) and logins in the agent list (v26).
+//! Seed data: default skills (v24), mandatory profiles (v25), logins in the agent list (v26) and
+//! profile skills with the default delivery attendant (v28).
 //! Skills only use MCP tools that exist today; a skill with the same name is kept, and a deleted
 //! default skill does not come back.
 
@@ -71,3 +72,46 @@ INSERT INTO agents(name,kind,role,profile_id,user_id,active,created)
   SELECT u.name,'human','operator',u.custom_role_id,u.id,u.active,strftime('%Y-%m-%dT%H:%M:%fZ','now')
   FROM users u WHERE NOT EXISTS(SELECT 1 FROM agents a WHERE a.user_id=u.id);
 CREATE UNIQUE INDEX agents_user ON agents(user_id) WHERE user_id IS NOT NULL;"#;
+
+/// Profiles carry skills that every agent of the profile inherits (migration v28), plus the default
+/// "Atendente de delivery" skill and a profile of the same name that comes with it.
+pub const PROFILE_SKILLS: &str = r#"CREATE TABLE custom_role_skills(
+   role_id INTEGER NOT NULL REFERENCES custom_roles(id) ON DELETE CASCADE,
+   skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,PRIMARY KEY(role_id,skill_id));
+INSERT OR IGNORE INTO skills(name,description,instructions,tools,created) VALUES
+('Atendente de delivery',
+ 'Atende o cliente do delivery do início ao fim: cardápio, montagem do pedido e fechamento da venda.',
+ '# Atendente de delivery
+
+Você atende os clientes do delivery pelo WhatsApp, como uma pessoa da equipe: mensagens curtas, cordiais e em português do Brasil.
+
+## Atender
+1. Leia a conversa com get_conversation (e get_messages, se precisar de mais histórico) antes de responder.
+2. Cumprimente na primeira mensagem e pergunte o que o cliente deseja. Responda com reply_conversation.
+
+## Consultar e apresentar o cardápio
+3. Busque com catalog_search pelo nome, por um termo da descrição ou pelo código PDV. Ela só traz itens disponíveis agora.
+4. Abra os itens com catalog_item para ver complementos (mínimo e máximo), tamanhos e sabores de pizza com o preço por tamanho.
+5. Apresente de 3 a 5 opções por mensagem, com nome, preço em reais e o que precisa ser escolhido. Para mostrar um item, envie foto, descrição e preço com catalog_send_item.
+6. Nunca invente itens, preços, promoções ou prazos. Se não encontrar, diga isso e sugira itens parecidos da busca.
+
+## Montar o pedido
+7. Para cada item, pergunte o que faltar dos complementos obrigatórios (tamanho, sabores, borda, acompanhamentos) e anote as observações.
+8. Calcule cada item com catalog_quote (item_id, quantidade, escolhas por option_id e notes). Se ele apontar problemas, explique ao cliente e corrija.
+9. Ofereça uma bebida ou sobremesa uma única vez, sem insistir.
+
+## Fechar a venda
+10. Envie o resumo: cada item com escolhas, quantidade e valor, e o total. Use somente os valores calculados por catalog_quote.
+11. Peça o endereço de entrega (rua, número, bairro e referência), a forma de pagamento (Pix, cartão na entrega ou dinheiro, e o troco) e o nome de quem recebe.
+12. Peça a confirmação final do cliente. Confirmado, agradeça, marque a conversa com a etiqueta do pedido (set_conversation_labels), se existir, e passe para a equipe preparar e entregar: assign_conversation, se souber o time, e set_conversation_status com status open.
+
+## Transferir para a equipe
+13. Transfira na hora em reclamação, problema com pagamento, troca ou cancelamento, pedido para falar com uma pessoa ou dúvida que o cardápio e as instruções não respondem. Avise o cliente em uma frase e mude o status para open. Depois disso, não responda mais nessa conversa.',
+ '["get_conversation","get_messages","reply_conversation","catalog_search","catalog_item","catalog_send_item","catalog_quote","set_conversation_labels","assign_conversation","set_conversation_status"]',
+ strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+INSERT OR IGNORE INTO custom_roles(name,description,permissions,agent_role,created) VALUES
+ ('Atendente de delivery','Atende os clientes do delivery: cardápio, pedido e fechamento da venda.',
+  '["conversation_manage","contact_manage"]','operator',strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+INSERT OR IGNORE INTO custom_role_skills(role_id,skill_id)
+  SELECT r.id,s.id FROM custom_roles r JOIN skills s ON s.name='Atendente de delivery'
+  WHERE r.name='Atendente de delivery' AND r.agent_role='operator';"#;

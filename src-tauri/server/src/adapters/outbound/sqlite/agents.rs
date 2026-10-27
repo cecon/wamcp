@@ -8,11 +8,12 @@ const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS prof
   a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created,
   u.name AS user_name, u.email AS user_email,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
+  (SELECT json_group_array(r.skill_id) FROM custom_role_skills r WHERE r.role_id=p.id) AS profile_skill_ids,
   (SELECT COUNT(*) FROM agent_credentials c WHERE c.agent_id=a.id) AS credential_count
   FROM agents a LEFT JOIN users u ON u.id=a.user_id
   LEFT JOIN custom_roles p ON p.id=COALESCE(u.custom_role_id,a.profile_id)";
 const AGENT_SHAPE: Shape = Shape {
-    json: &["skill_ids"],
+    json: &["skill_ids", "profile_skill_ids"],
     bools: &["active"],
 };
 const SKILL_SHAPE: Shape = Shape {
