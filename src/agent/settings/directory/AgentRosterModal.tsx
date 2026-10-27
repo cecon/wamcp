@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { http } from '../../api';
 import type { CustomRole, RosterAgent, RosterKind, Skill } from '../../adminTypes';
 import { Modal } from '../../ui/Overlay';
@@ -9,6 +9,7 @@ import { SkillPicker } from './SkillPicker';
 import { AccessSection } from './AccessSection';
 import { noAccess } from './access';
 import { executes, holdsCredentials, phone, roleLabel, RUNTIMES } from './labels';
+import { RuntimeSelect } from './RuntimeSelect';
 
 interface Props {
   agent: RosterAgent | null;
@@ -54,6 +55,7 @@ export function AgentRosterModal(props: Props) {
     value: form[key],
     onChange: (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value }),
   });
+  const setRuntime = useCallback((runtime: string) => setForm((f) => ({ ...f, runtime })), []);
   const chosen = profiles.find((p) => String(p.id) === form.profile_id);
   const withSkills = executes(chosen?.agent_role ?? null);
   const toggle = (id: number) =>
@@ -150,21 +152,15 @@ export function AgentRosterModal(props: Props) {
           </>
         ) : (
           <>
+            <RuntimeSelect value={form.runtime} onChange={setRuntime} pickInstalled={!agent} />
             <label>
-              <span className="field-label">Runtime</span>
-              <select className="field" {...field('runtime')}>
-                {RUNTIMES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="field-label">Modelo (opcional)</span>
+              <span className="field-label">
+                {form.runtime === 'openclaude' ? 'Modelo do OpenRouter' : 'Modelo (opcional)'}
+              </span>
               <input
                 className="field"
                 maxLength={80}
+                required={form.runtime === 'openclaude'}
                 placeholder={
                   form.runtime === 'openclaude'
                     ? 'Modelo do OpenRouter (ex.: openai/gpt-5)'

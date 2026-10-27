@@ -1,5 +1,5 @@
 use crate::domain::error::Result;
-use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, Skill};
+use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, SealedCredential, Skill};
 
 /// The agent roster: human and AI agents, skills and encrypted credentials.
 pub trait AgentsRepo {
@@ -23,4 +23,8 @@ pub trait AgentsRepo {
     fn add_agent_credential(&self, agent_id: i64, name: &str, kind: &str, sealed: &str) -> Result<AgentCredential>;
     /// Returns whether a credential of that agent was removed.
     fn delete_agent_credential(&self, agent_id: i64, id: i64) -> Result<bool>;
+    /// The encrypted secrets, only for running the agent.
+    fn agent_sealed_credentials(&self, agent_id: i64) -> Result<Vec<SealedCredential>>;
+    /// Which AI agent answers the inbox (`None` disconnects it).
+    fn set_inbox_ai_agent(&self, inbox_id: i64, agent_id: Option<i64>) -> Result<()>;
 }

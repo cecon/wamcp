@@ -30,6 +30,9 @@ pub struct Inbox {
     pub csat_survey_message: Option<String>,
     #[serde(default)]
     pub agent_bot_id: Option<i64>,
+    /// The AI agent of the roster that answers new conversations (they start `pending`).
+    #[serde(default)]
+    pub ai_agent_id: Option<i64>,
     /// Agent replies reach WhatsApp as `*Nome*:` on the first line (on by default).
     #[serde(default = "enabled")]
     pub show_agent_name: i64,

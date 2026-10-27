@@ -157,12 +157,32 @@ pub struct LlmRequest {
     pub system: String,
     pub prompt: String,
     pub schema: Value,
+    /// Key for providers that call a paid API on the agent's behalf (OpenClaude with OpenRouter).
+    pub api_key: Option<String>,
+}
+
+/// Whether a provider can run on this computer: the program found, or why it cannot run.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct LlmProviderStatus {
+    pub id: String,
+    pub available: bool,
+    pub detail: String,
 }
 
 /// A language model provider (a local CLI such as Claude Code, or an HTTP API).
 #[async_trait]
 pub trait Llm: Send + Sync {
     async fn complete(&self, request: &LlmRequest) -> Result<Value>;
+
+    /// Where this provider runs from (`None`: not installed on this computer).
+    fn location(&self) -> Option<String> {
+        None
+    }
+
+    /// The providers a router dispatches to, with their status (empty for a single provider).
+    fn providers(&self) -> Vec<LlmProviderStatus> {
+        Vec::new()
+    }
 }
 
 /// Encrypts secrets at rest (agent credentials); the key never lives in the database.

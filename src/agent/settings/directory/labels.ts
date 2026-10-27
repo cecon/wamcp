@@ -7,12 +7,12 @@ export const ROLES: { value: RosterRole; label: string; hint: string }[] = [
   { value: 'qa', label: 'QA', hint: 'Revisa o trabalho dos operadores.' },
 ];
 
-/** Agentic runtimes (keep in sync with RUNTIMES in the backend). OpenRouter only serves LLMs: agentic work over
+/** Agentic runtimes (keep in sync with RUNTIMES in the backend; /agent_runtimes says which are installed). OpenRouter only serves LLMs: agentic work over
  * OpenRouter models runs in OpenClaude. */
 export const RUNTIMES = [
-  { value: 'claude_cli', label: 'Claude Code (neste computador)' },
-  { value: 'codex_cli', label: 'Codex CLI (neste computador)' },
-  { value: 'openclaude', label: 'OpenClaude com OpenRouter (instalado por você)' },
+  { value: 'claude_cli', label: 'Claude Code' },
+  { value: 'codex_cli', label: 'Codex CLI' },
+  { value: 'openclaude', label: 'OpenClaude com OpenRouter' },
 ];
 
 export const CREDENTIAL_KINDS: { value: AgentCredential['kind']; label: string }[] = [

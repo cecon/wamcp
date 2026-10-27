@@ -1,7 +1,7 @@
 use super::db::{flag, int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteStore, PLAIN};
 use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
-use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, Skill};
+use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, SealedCredential, Skill};
 
 /// The role and profile come from the profile; a person with a login uses the login's profile.
 const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS profile_id,p.name AS profile_name,
@@ -155,5 +155,15 @@ impl AgentsRepo for SqliteStore {
     fn delete_agent_credential(&self, agent_id: i64, id: i64) -> Result<bool> {
         let sql = "DELETE FROM agent_credentials WHERE agent_id=? AND id=?";
         Ok(self.exec(sql, vec![int(agent_id), int(id)])? > 0)
+    }
+
+    fn agent_sealed_credentials(&self, agent_id: i64) -> Result<Vec<SealedCredential>> {
+        let sql = "SELECT name,kind,secret FROM agent_credentials WHERE agent_id=? ORDER BY name";
+        self.rows(sql, vec![int(agent_id)], PLAIN)
+    }
+
+    fn set_inbox_ai_agent(&self, inbox_id: i64, agent_id: Option<i64>) -> Result<()> {
+        let sql = "UPDATE inboxes SET ai_agent_id=? WHERE id=?";
+        self.exec(sql, vec![opt_int(agent_id), int(inbox_id)]).map(drop)
     }
 }

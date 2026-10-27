@@ -57,6 +57,14 @@ pub struct Skill {
     pub created: String,
 }
 
+/// A credential with its encrypted secret, read only by the server when it runs the agent.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SealedCredential {
+    pub name: String,
+    pub kind: String,
+    pub secret: String,
+}
+
 /// A secret an AI agent's tools use on the server side; the secret itself is never returned.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentCredential {

@@ -19,6 +19,12 @@ export interface CustomRole {
 
 /** Agent roster (`/agent_directory`): human agents consulted on WhatsApp and AI agents run by a runtime. */
 export type RosterKind = 'human' | 'ai';
+/** An AI agent runtime and whether it is installed on this computer (`detail`: where, or why not). */
+export interface RuntimeStatus {
+  id: string;
+  available: boolean;
+  detail: string;
+}
 export type RosterRole = 'coordinator' | 'operator' | 'dev_support' | 'qa';
 export interface RosterAgent {
   id: number;

@@ -1,25 +1,70 @@
 //! The agent list (administrators): people and AI agents with the same roles from their profile,
 //! the skill library (including `SKILL.md` import) and encrypted credentials. Every login is a
-//! person of the list. Nothing here runs an agent yet.
+//! person of the list. AI agents answer the inboxes connected to them (see `llm_bots`) through
+//! their runtime; which runtimes are installed comes from the attached `Llm`.
 use super::core::Core;
-use super::ports::SecretBox;
+use super::ports::{Llm, LlmProviderStatus, SecretBox};
 use crate::domain::actor::Actor;
 use crate::domain::agents::{
     check_capabilities, executes, holds_credentials, parse_skill_md, validate_agent, validate_credential_name,
-    validate_tools, CREDENTIAL_KINDS,
+    validate_tools, CREDENTIAL_KINDS, RUNTIMES,
 };
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
-use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, Skill};
-use std::sync::Arc;
+use crate::domain::llm::answers_customers;
+use crate::domain::model::{AgentCredential, Inbox, RosterAgent, RosterAgentDraft, Skill};
+use std::sync::{Arc, OnceLock};
 
 #[derive(Clone)]
 pub struct AgentDirectory {
     pub core: Core,
     pub secrets: Arc<dyn SecretBox>,
+    /// The runtimes, once the server attached them (none in most tests).
+    pub llm: Arc<OnceLock<Arc<dyn Llm>>>,
 }
 
 impl AgentDirectory {
+    pub fn attach_llm(&self, llm: Arc<dyn Llm>) {
+        let _ = self.llm.set(llm);
+    }
+
+    /// Every runtime an AI agent may use and whether it is installed on this computer.
+    pub fn runtimes(&self, actor: &Actor) -> Result<Vec<LlmProviderStatus>> {
+        require_admin(actor)?;
+        let found = self.llm.get().map(|llm| llm.providers()).unwrap_or_default();
+        Ok(RUNTIMES
+            .iter()
+            .map(|id| {
+                found
+                    .iter()
+                    .find(|p| p.id == *id)
+                    .cloned()
+                    .unwrap_or_else(|| LlmProviderStatus {
+                        id: (*id).into(),
+                        available: false,
+                        detail: "Não instalado neste computador".into(),
+                    })
+            })
+            .collect())
+    }
+
+    /// Connects the AI agent that answers the inbox's new conversations (`None` disconnects it).
+    pub fn connect_inbox(&self, actor: &Actor, inbox_id: i64, agent_id: Option<i64>) -> Result<Inbox> {
+        require_admin(actor)?;
+        self.core.inbox(inbox_id)?;
+        if let Some(id) = agent_id {
+            let agent = self.find_agent(id)?;
+            if agent.kind != "ai" {
+                return fail("Somente agentes de IA atendem uma caixa de entrada");
+            }
+            if !answers_customers(&agent) {
+                return fail("O agente precisa estar ativo e ter uma função que executa (não coordenador)");
+            }
+        }
+        self.core.repo.set_inbox_ai_agent(inbox_id, agent_id)?;
+        self.core.inbox(inbox_id)
+    }
+
     fn find_agent(&self, id: i64) -> Result<RosterAgent> {
         self.core
             .repo
