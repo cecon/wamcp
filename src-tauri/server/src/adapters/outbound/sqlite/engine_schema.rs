@@ -9,7 +9,8 @@ UPDATE agents SET runtime='opencode',
 UPDATE agent_bots SET provider='opencode',
   model=CASE WHEN model IS NULL OR trim(model)='' THEN NULL ELSE 'openrouter/'||trim(model) END
   WHERE provider='openclaude';
-ALTER TABLE agents ADD COLUMN account_id INTEGER NOT NULL DEFAULT 1 REFERENCES accounts(id);
+-- SQLite cannot add a REFERENCES column with a default; the engine checks the organization itself.
+ALTER TABLE agents ADD COLUMN account_id INTEGER NOT NULL DEFAULT 1;
 CREATE INDEX agents_account ON agents(account_id);
 CREATE TABLE engine_agent_policies(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
   account_id INTEGER NOT NULL REFERENCES accounts(id),enabled INTEGER NOT NULL DEFAULT 1,
