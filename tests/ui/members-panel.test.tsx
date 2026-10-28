@@ -177,6 +177,20 @@ describe('Funcionários', () => {
   });
 });
 
+describe('Funcionários without salaries', () => {
+  it('still lists the members when the salary sheet is not available', async () => {
+    fakeApi({
+      'GET /agent_directory': [JOAO, LU],
+      'GET /agent_directory/salaries': [],
+      'GET /custom_roles': [],
+      'GET /skills': [],
+    });
+    renderSettings('agents');
+    expect(await screen.findByRole('article', { name: 'Lu' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Folha do mês')).not.toBeInTheDocument();
+  });
+});
+
 describe('Organização', () => {
   it('draws who answers to whom, where each inbox goes and what is off', async () => {
     let agents = [JOAO, ANNY, { ...LU, supervisor_id: 2 }, roster(4, { name: 'Julio', role: 'qa' })];

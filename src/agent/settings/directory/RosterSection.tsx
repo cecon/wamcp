@@ -35,7 +35,9 @@ const FILTERS: { value: Filter; label: string }[] = [
 export function RosterSection({ user, catalog, onChange }: Props) {
   const { data, error, reload } = useFetch<RosterAgent[]>('/agent_directory');
   const { data: skills, reload: reloadSkills } = useFetch<Skill[]>('/skills');
-  const { data: sheet, reload: reloadSheet } = useFetch<SalarySheet>('/agent_directory/salaries');
+  const { data: fetched, reload: reloadSheet } = useFetch<SalarySheet>('/agent_directory/salaries');
+  // Salaries are extra information: anything but a sheet (an older server) just hides them.
+  const sheet = Array.isArray(fetched?.salaries) ? fetched : null;
   const { roles: profiles } = useCustomRoles();
   const [editing, setEditing] = useState<{ agent: RosterAgent | null; kind: RosterKind } | null>(null),
     [access, setAccess] = useState<User | null>(null),
