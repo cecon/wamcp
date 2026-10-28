@@ -80,7 +80,7 @@ pub fn validate_credential_name(name: &str) -> Result<()> {
     }
 }
 
-/// Tool names: MCP-style identifiers, optionally with a `*` suffix (`catalog_*`).
+/// Tool names: MCP-style identifiers, optionally with a `*` suffix (`conversation_*`).
 pub fn validate_tools(tools: &[String]) -> Result<()> {
     let valid = |t: &String| {
         !t.is_empty()
@@ -92,7 +92,7 @@ pub fn validate_tools(tools: &[String]) -> Result<()> {
     if tools.iter().all(valid) {
         Ok(())
     } else {
-        fail("Ferramentas: use nomes como reply_conversation ou catalog_*")
+        fail("Ferramentas: use nomes como reply_conversation ou conversation_*")
     }
 }
 

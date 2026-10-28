@@ -1,5 +1,4 @@
-//! Profiles carry skills that every agent of the profile inherits; the app ships the
-//! "Atendente de delivery" skill and a profile of the same name with it.
+//! Profiles carry skills that every agent of the profile inherits, on top of the agent's own.
 mod agents_support;
 mod common;
 
@@ -12,38 +11,34 @@ fn by_name<'a>(list: &'a Value, name: &str) -> &'a Value {
 }
 
 #[tokio::test]
-async fn the_delivery_profile_ships_with_the_delivery_skill() {
+async fn agents_inherit_the_skills_of_their_profile() {
     let f = Fixture::new().await;
     let admin = f.bootstrap().await;
     let p = profiles(&admin).await;
-    let skills = admin.get("/skills").await.body;
-    let delivery = by_name(&skills, "Atendente de delivery");
-    let tools = delivery["tools"].as_array().unwrap();
-    for tool in [
-        "reply_conversation",
-        "catalog_search",
-        "catalog_item",
-        "catalog_quote",
-        "set_conversation_status",
-    ] {
-        assert!(tools.contains(&json!(tool)), "{tool}");
-    }
-    let instructions = delivery["instructions"].as_str().unwrap();
-    assert!(instructions.contains("## Fechar a venda") && instructions.contains("forma de pagamento"));
-
+    // No catalog or sales seeds: no delivery profile and no sales skills.
     let roles = admin.get("/custom_roles").await.body;
-    let profile = by_name(&roles, "Atendente de delivery");
-    assert_eq!(profile["id"], p.delivery);
-    assert_eq!(profile["agent_role"], "operator");
-    assert_eq!(profile["skill_ids"], json!([delivery["id"]]));
+    assert!(roles
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|r| r["name"] != "Atendente de delivery"));
+    for role in roles.as_array().unwrap() {
+        assert_eq!(role["skill_ids"], json!([]), "{}", role["name"]);
+    }
+
+    let skill = json!({ "name": "Cobranças", "instructions": "Cobre com educação.", "tools": ["reply_conversation"] });
+    let billing = admin.post("/skills", skill).await.body["id"].clone();
+    let profile = json!({ "name": "Financeiro", "permissions": ["conversation_manage"], "agent_role": "operator",
+                          "skill_ids": [billing] });
+    let finance = admin.post("/custom_roles", profile).await.body["id"].clone();
 
     // An AI agent of the profile inherits the skill, on top of its own (none here).
-    let mut body = ai(&p, "Ana", "operator");
-    body["profile_id"] = json!(p.delivery);
+    let mut body = ai(&p, "Anny", "operator");
+    body["profile_id"] = finance;
     let agent = admin.post("/agent_directory", body).await.body;
     assert_eq!(
         (agent["skill_ids"].clone(), agent["profile_skill_ids"].clone()),
-        (json!([]), json!([delivery["id"]]))
+        (json!([]), json!([billing]))
     );
     assert_eq!(agent["role"], "operator");
 }
@@ -52,18 +47,17 @@ async fn the_delivery_profile_ships_with_the_delivery_skill() {
 async fn only_profiles_that_execute_carry_skills() {
     let f = Fixture::new().await;
     let admin = f.bootstrap().await;
-    let p = profiles(&admin).await;
-    let skills = admin.get("/skills").await.body;
-    let catalog = by_name(&skills, "Atender pelo cardápio")["id"].clone();
-    let handoff = by_name(&skills, "Transferir para a equipe")["id"].clone();
+    let new_skill = |name: &str| json!({ "name": name, "instructions": "Faça." });
+    let billing = admin.post("/skills", new_skill("Cobranças")).await.body["id"].clone();
+    let reports = admin.post("/skills", new_skill("Relatórios")).await.body["id"].clone();
     let base = json!({ "name": "Vendas", "permissions": ["conversation_manage"], "agent_role": "operator" });
 
     let mut body = base.clone();
-    body["skill_ids"] = json!([catalog, handoff, catalog]);
+    body["skill_ids"] = json!([reports, billing, reports]);
     let created = admin.post("/custom_roles", body).await;
     assert_eq!(created.status, 201, "{:?}", created.body);
     let id = created.body["id"].clone();
-    let mut sorted = vec![catalog.as_i64().unwrap(), handoff.as_i64().unwrap()];
+    let mut sorted = vec![billing.as_i64().unwrap(), reports.as_i64().unwrap()];
     sorted.sort_unstable();
     assert_eq!(created.body["skill_ids"], json!(sorted));
 
@@ -81,22 +75,20 @@ async fn only_profiles_that_execute_carry_skills() {
     assert_eq!(cleared.status, 200, "{:?}", cleared.body);
     assert_eq!(cleared.body["skill_ids"], json!([]));
 
-    let mut unknown = base;
+    let mut unknown = base.clone();
     unknown["name"] = json!("Outro");
     unknown["skill_ids"] = json!([9999]);
     assert_eq!(admin.post("/custom_roles", unknown).await.status, 422);
 
     // Deleting a skill unlinks it from the profiles.
-    let delivery = by_name(&skills, "Atendente de delivery")["id"].clone();
-    assert_eq!(admin.del(&format!("/skills/{delivery}"), None).await.status, 200);
+    let mut linked = base;
+    linked["name"] = json!("Financeiro");
+    linked["skill_ids"] = json!([billing]);
+    let finance = admin.post("/custom_roles", linked).await.body["id"].clone();
+    assert_eq!(admin.del(&format!("/skills/{billing}"), None).await.status, 200);
     let roles = admin.get("/custom_roles").await.body;
-    let profile = roles
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|r| r["id"] == p.delivery)
-        .unwrap();
-    assert_eq!(profile["skill_ids"], json!([]));
+    assert_eq!(by_name(&roles, "Financeiro")["id"], finance);
+    assert_eq!(by_name(&roles, "Financeiro")["skill_ids"], json!([]));
 }
 
 #[test]

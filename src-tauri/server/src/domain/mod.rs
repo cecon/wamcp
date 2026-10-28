@@ -12,7 +12,6 @@ pub mod filters;
 pub mod helpdesk;
 pub mod llm;
 pub mod media;
-pub mod menu;
 pub mod model;
 pub mod notifications;
 pub mod oauth;

@@ -11,7 +11,6 @@ import { ConversationActions } from './ConversationActions';
 import { ParticipantsSection } from './ParticipantsSection';
 import { MacroRunner } from '../macros/MacroRunner';
 import { SlaSection } from '../sla/SlaSection';
-import { CatalogLookup } from '../catalog/CatalogLookup';
 
 const Row = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
   <p className="flex min-w-0 items-center gap-2 text-sm text-n-slate-11">
@@ -92,9 +91,6 @@ export function ContactPanel({
         </Accordion>
         <Accordion title="Macros">
           <MacroRunner conversation={c} onChange={onChange} />
-        </Accordion>
-        <Accordion title="Catálogo">
-          <CatalogLookup path={`/conversations/${c.display_id}`} />
         </Accordion>
         <Accordion title="Participantes da conversa">
           <ParticipantsSection conversation={c} user={user} catalog={catalog} onError={onError} />
