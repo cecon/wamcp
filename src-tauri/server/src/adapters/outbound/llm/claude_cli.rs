@@ -1,14 +1,15 @@
-//! The local Claude Code CLI as an LLM: `claude -p` with no tools, no MCP servers and none of the
-//! operator's own setup (hooks, plugins, CLAUDE.md), returning the JSON Schema's structured output.
+//! The local Claude Code CLI as an LLM: `claude -p` with no built-in tools, none of the operator's own
+//! setup (hooks, plugins, CLAUDE.md) and no MCP server but the run's own (the system agent calls the
+//! app's tools through it), returning the JSON Schema's structured output.
 //! OpenClaude (a Claude Code fork for other providers) takes the same flags and runs OpenRouter
 //! models with the agent's key. The prompt (which carries the contact's words) goes through stdin,
 //! never the command line.
 use super::launcher::{find, Cli, Launcher};
-use crate::application::ports::{Completion, Llm, LlmRequest, TokenUsage};
+use crate::application::ports::{Completion, Llm, LlmMcp, LlmRequest, TokenUsage};
 use crate::domain::error::{fail, Error, HelpdeskError, Result};
 use async_trait::async_trait;
-use serde_json::Value;
-use std::path::PathBuf;
+use serde_json::{json, Value};
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
@@ -24,6 +25,8 @@ const OPENCLAUDE: Cli = Cli {
     npm_script: Some("@gitlawb/openclaude/bin/openclaude"),
 };
 const OPENROUTER_URL: &str = "https://openrouter.ai/api/v1";
+/// Runs that call MCP tools take several model turns.
+const TOOLS_TIMEOUT: Duration = Duration::from_secs(600);
 
 pub struct ClaudeCli {
     launcher: Option<Launcher>,
@@ -101,6 +104,29 @@ pub fn arguments(request: &LlmRequest) -> Vec<String> {
     args
 }
 
+/// The `--mcp-config` file of a run: one Streamable HTTP server with its bearer token (a file, so the
+/// token never shows on the command line).
+pub fn mcp_config(mcp: &LlmMcp) -> Value {
+    json!({ "mcpServers": { mcp.name.as_str(): {
+        "type": "http",
+        "url": mcp.url,
+        "headers": { "Authorization": format!("Bearer {}", mcp.token) },
+        // Connected (and its tools listed) before the model starts, not in the background.
+        "alwaysLoad": true
+    } } })
+}
+
+/// Extra arguments of a run with an MCP server: only that server is loaded and all of its tools are
+/// allowed (built-in tools stay off).
+pub fn mcp_arguments(mcp: &LlmMcp, config: &Path) -> Vec<String> {
+    vec![
+        "--mcp-config".into(),
+        config.to_string_lossy().into_owned(),
+        "--allowedTools".into(),
+        format!("mcp__{}", mcp.name),
+    ]
+}
+
 /// `--output-format json` prints one result object; the schema's answer is in `structured_output`
 /// (or, for models without structured output, a JSON object as the result text).
 pub fn parse_output(stdout: &[u8], stderr: &[u8]) -> Result<Value> {
@@ -161,6 +187,15 @@ pub fn parse_usage(stdout: &[u8]) -> TokenUsage {
     }
 }
 
+/// Removed when the run ends, whatever the outcome (it holds the run's MCP token).
+struct TempFile(PathBuf);
+
+impl Drop for TempFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
 #[async_trait]
 impl Llm for ClaudeCli {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
@@ -179,6 +214,19 @@ impl Llm for ClaudeCli {
             }
         }
         std::fs::create_dir_all(&self.work_dir).map_err(Error::internal)?;
+        let config = match &request.mcp {
+            Some(_) if self.openrouter => return fail("Ferramentas MCP só rodam no Claude Code (claude_cli)"),
+            Some(mcp) => {
+                let path = self
+                    .work_dir
+                    .join(format!("mcp-{}.json", uuid::Uuid::new_v4().simple()));
+                std::fs::write(&path, mcp_config(mcp).to_string()).map_err(Error::internal)?;
+                args.extend(mcp_arguments(mcp, &path));
+                Some(TempFile(path))
+            }
+            None => None,
+        };
+        let timeout = if config.is_some() { TOOLS_TIMEOUT } else { self.timeout };
         let mut command = launcher.command();
         command
             .args(args)
@@ -191,6 +239,10 @@ impl Llm for ClaudeCli {
             command.env_remove(secret);
         }
         command.envs(ISOLATION_ENV.iter().copied());
+        if config.is_some() {
+            // Wait for the run's server instead of starting the model before its tools exist.
+            command.env("MCP_CONNECTION_NONBLOCKING", "false");
+        }
         if self.openrouter {
             let Some(model) = request.model.as_deref().map(str::trim).filter(|m| !m.is_empty()) else {
                 return fail("Informe no agente o modelo do OpenRouter (ex.: openai/gpt-4o-mini)");
@@ -211,7 +263,7 @@ impl Llm for ClaudeCli {
                 .await
                 .map_err(Error::internal)?;
         }
-        let output = tokio::time::timeout(self.timeout, child.wait_with_output())
+        let output = tokio::time::timeout(timeout, child.wait_with_output())
             .await
             .map_err(|_| Error::from(HelpdeskError::new(format!("{} excedeu o tempo limite", self.label()))))?
             .map_err(Error::internal)?;

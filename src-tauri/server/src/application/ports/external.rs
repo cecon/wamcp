@@ -165,6 +165,18 @@ pub struct LlmRequest {
     pub schema: Value,
     /// Key for providers that call a paid API on the agent's behalf (OpenClaude with OpenRouter).
     pub api_key: Option<String>,
+    /// An MCP server the runtime may call while it works (only Claude Code uses tools today).
+    pub mcp: Option<LlmMcp>,
+}
+
+/// A Streamable HTTP MCP server for one run: its tools are allowed without asking and `token` is
+/// sent as the bearer credential. Runs with tools may take longer than a plain answer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LlmMcp {
+    /// Server name in the runtime (tools show up as `mcp__<name>__<tool>`).
+    pub name: String,
+    pub url: String,
+    pub token: String,
 }
 
 /// Tokens one call spent, as the runtime reported them (zeros when it reports nothing).

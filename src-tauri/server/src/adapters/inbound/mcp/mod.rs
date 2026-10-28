@@ -5,6 +5,7 @@ pub mod catalog;
 mod dispatch;
 pub mod envelope;
 mod events;
+pub mod system;
 pub mod tools;
 
 use super::http::auth::bearer;

@@ -119,7 +119,7 @@ export function RosterSection({ user, catalog, onChange }: Props) {
               selected={agent.id === selected}
               onOpen={() => setSelected(agent.id)}
               onEdit={() => setEditing({ agent, kind: agent.kind })}
-              onDelete={agent.user_id === user.id ? undefined : () => setRemoving(agent)}
+              onDelete={agent.user_id === user.id || agent.system ? undefined : () => setRemoving(agent)}
             />
           ))}
         </div>

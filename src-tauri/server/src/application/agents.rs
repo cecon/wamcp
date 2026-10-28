@@ -61,6 +61,9 @@ impl AgentDirectory {
             if agent.kind != "ai" {
                 return fail("Somente agentes de IA atendem uma caixa de entrada");
             }
+            if agent.system {
+                return fail("O funcionário do sistema conversa só com os administradores, não atende clientes");
+            }
             if !answers_customers(&agent) {
                 return fail("O agente precisa estar ativo e ter uma função que executa (não coordenador)");
             }
@@ -109,6 +112,11 @@ impl AgentDirectory {
             let current = self.find_agent(draft.id)?;
             if current.kind != draft.kind {
                 return fail("O tipo do agente não pode mudar; crie outro agente");
+            }
+            if current.system && draft.runtime.as_deref() != Some("claude_cli") {
+                return fail(
+                    "O funcionário do sistema roda no Claude Code (claude_cli), que usa as ferramentas do app",
+                );
             }
             check_capabilities(draft, current.skill_ids.len(), current.credential_count)?;
         }
@@ -177,6 +185,9 @@ impl AgentDirectory {
     pub fn delete_agent(&self, actor: &Actor, id: i64) -> Result<()> {
         require_admin(actor)?;
         let agent = self.find_agent(id)?;
+        if agent.system {
+            return fail_with("O funcionário do sistema faz parte do app e não pode ser excluído", 409);
+        }
         if let Some(user_id) = agent.user_id {
             if actor.user_id() == Some(user_id) {
                 return fail_with("Você não pode excluir a própria conta", 409);

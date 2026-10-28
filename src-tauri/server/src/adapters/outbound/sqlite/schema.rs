@@ -171,5 +171,7 @@ pub fn steps() -> Vec<String> {
          ALTER TABLE agents ADD COLUMN supervisor_id INTEGER REFERENCES agents(id) ON DELETE SET NULL;
          ALTER TABLE agents ADD COLUMN avatar TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(avatar));"
             .into(),
+        // v31: o funcionário do sistema (agente de IA do próprio app) e as propostas que ele faz
+        super::default_skills::SYSTEM_AGENT.into(),
     ]
 }

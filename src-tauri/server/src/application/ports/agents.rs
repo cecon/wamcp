@@ -1,6 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, UsageDay, UsageTotal,
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, UsageDay,
+    UsageTotal,
 };
 use serde_json::Value;
 
@@ -38,4 +39,19 @@ pub trait AgentsRepo {
     fn usage_totals(&self, from: &str, to: &str) -> Result<Vec<UsageTotal>>;
     /// The agent's usage per day since `from` (ISO instant), oldest first; days without calls are absent.
     fn usage_days(&self, agent_id: i64, from: &str) -> Result<Vec<UsageDay>>;
+
+    /// The app's own agent, when it exists.
+    fn system_agent(&self) -> Result<Option<RosterAgent>>;
+    /// `after_message_id`: the newest message of the conversation when it was proposed (approvals come later).
+    fn add_proposal(
+        &self,
+        conversation_id: i64,
+        after_message_id: i64,
+        action: &str,
+        args: &serde_json::Value,
+        summary: &str,
+    ) -> Result<SystemProposal>;
+    fn proposal(&self, id: i64) -> Result<Option<SystemProposal>>;
+    /// Marks a pending proposal `done`, `failed` or `discarded`; returns whether it was still pending.
+    fn decide_proposal(&self, id: i64, status: &str, result: Option<&str>) -> Result<bool>;
 }

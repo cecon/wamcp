@@ -21,12 +21,13 @@ use crate::application::ports::{
 };
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
+use crate::application::system_agent::SystemAgent;
 use crate::application::webhooks::WebhookService;
 use crate::application::whatsapp_sink::WhatsAppSink;
 use crate::domain::events::EventOwner;
 use axum::Router;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::task::JoinHandle;
 
@@ -58,6 +59,8 @@ pub struct App {
     pub sink: Arc<WhatsAppSink>,
     /// Answers conversations of `llm` bots once `attach_llm` gave it a provider.
     pub llm_bots: Option<LlmBotService>,
+    /// The system agent's MCP endpoint on this computer, set once the server listens.
+    pub mcp_url: Arc<OnceLock<String>>,
 }
 
 fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&EventOwner) -> bool + Send + Sync> {
@@ -149,12 +152,14 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let worker = avatar_worker.clone();
     bus.subscribe(move |e| worker.push(e));
 
+    let agents = AgentDirectory {
+        core: core.clone(),
+        secrets: ports.secrets.clone(),
+        llm: Arc::default(),
+    };
     let support = Support {
-        agents: AgentDirectory {
-            core: core.clone(),
-            secrets: ports.secrets.clone(),
-            llm: Arc::default(),
-        },
+        system: SystemAgent::new(agents.clone()),
+        agents,
         avatars,
         accounts: AccountService {
             core: core.clone(),
@@ -200,6 +205,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         workers: vec![automation_worker, reply_worker, media_worker, avatar_worker],
         sink,
         llm_bots: None,
+        mcp_url: Arc::default(),
     }
 }
 
@@ -214,7 +220,8 @@ impl App {
         let support = self.state.support();
         support.agents.attach_llm(llm.clone());
         let secrets = support.agents.secrets.clone();
-        let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2);
+        let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2)
+            .with_system(support.system.clone(), self.mcp_url.clone());
         let listener = bots.clone();
         support.bus.subscribe(move |e| listener.on_event(e));
         self.llm_bots = Some(bots);

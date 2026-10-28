@@ -24,6 +24,8 @@ pub struct Support {
     pub accounts: AccountService,
     /// The roster of human and AI agents, skills and credentials.
     pub agents: crate::application::agents::AgentDirectory,
+    /// The app's own agent: its runs and tools (`/mcp-system`).
+    pub system: crate::application::system_agent::SystemAgent,
     /// Contact photos fetched from WhatsApp.
     pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,

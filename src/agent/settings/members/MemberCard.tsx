@@ -26,8 +26,9 @@ export function MemberCard({ agent, skills, salary, you, selected, onOpen, onEdi
     .map((id) => skills.find((s) => s.id === id))
     .filter((s): s is Skill => Boolean(s));
   const tools = new Set(own.flatMap((s) => s.tools)).size;
-  const contact =
-    agent.kind === 'human'
+  const contact = agent.system
+    ? 'Fale com ele pelo WhatsApp do seu cadastro'
+    : agent.kind === 'human'
       ? [agent.user_email, phone(agent.whatsapp_jid)].filter(Boolean).join(' · ')
       : [runtimeLabel(agent.runtime), agent.model].filter(Boolean).join(' · ');
   return (
@@ -66,7 +67,7 @@ export function MemberCard({ agent, skills, salary, you, selected, onOpen, onEdi
           )}
         >
           {agent.kind === 'ai' ? <Bot size={12} /> : <UserRound size={12} />}
-          {agent.kind === 'ai' ? 'IA' : 'Pessoa'}
+          {agent.system ? 'Sistema' : agent.kind === 'ai' ? 'IA' : 'Pessoa'}
         </span>
         <span className="inline-flex items-center gap-1 text-n-slate-11">
           <span className={cn('size-2 rounded-full', TONE[status.tone])} aria-hidden />

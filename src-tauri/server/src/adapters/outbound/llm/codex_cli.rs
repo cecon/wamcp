@@ -99,6 +99,9 @@ impl Llm for CodexCli {
                 "Codex CLI não encontrado. Instale com npm install -g @openai/codex ou defina WAMCP_CODEX_BIN.",
             );
         };
+        if request.mcp.is_some() {
+            return fail("Ferramentas MCP só rodam no Claude Code (claude_cli)");
+        }
         std::fs::create_dir_all(&self.work_dir).map_err(Error::internal)?;
         let call = uuid::Uuid::new_v4().simple().to_string();
         let schema = self.work_dir.join(format!("{call}.schema.json"));

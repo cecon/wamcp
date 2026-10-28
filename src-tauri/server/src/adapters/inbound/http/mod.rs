@@ -88,6 +88,7 @@ pub fn public_router(state: AppState) -> Router {
     }
     if state.support.is_some() {
         router = router
+            .route("/mcp-system", any(super::mcp::system::endpoint))
             .nest("/api/v1", helpdesk_api(&state))
             .merge(accounts::bootstrap_routes())
             .merge(web_app::routes());
