@@ -27,6 +27,7 @@ As fontes primárias foram conferidas em 2026-10-28: o repositório `anomalyco/o
 2. **As tools nunca são do runtime.** Toda tool, inclusive `delegar` e `financeiro.consultar_pagamento`, é servida pelo app num endpoint MCP do motor (`/engine/mcp/{run_token}`). O token vale para um agente, uma atividade e uma execução. A autorização, a aprovação, a idempotência e a auditoria acontecem no app, negando por padrão. No OpenCode, todas as tools internas ficam `deny`, e só o servidor MCP do motor fica ligado.
 3. **Adapter `OpenCodeRuntime`**, testado ao vivo com a 1.18.25 instalada aqui (a última é a 1.19.5):
    - um processo `opencode serve` **por execução**, em `127.0.0.1` numa porta livre, com senha aleatória (o token MCP é por execução, então um servidor compartilhado não serviria);
+   - ambiente limpo: só PATH e as variáveis de sistema passam; nenhuma chave do operador nem `OPENCODE_*` herdado; `HOME` e `USERPROFILE` apontam para a pasta da execução; `ENABLE_CLAUDEAI_MCP_SERVERS=false` (conectores do claude.ai);
    - pasta própria por execução, apagada no fim, com `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_STATE_HOME` e `XDG_CACHE_HOME` próprios. No teste ao vivo, sem isso, o OpenCode carregou a configuração global do usuário, inclusive um agente com `edit` e `bash` liberados;
    - `OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_MODELS_FETCH` e a descoberta de `.claude` desligados;
    - configuração inline sem nenhuma permissão `ask`, para nada travar: as 17 tools internas ficam `deny`, também pelo mapa `tools`;

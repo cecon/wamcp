@@ -11,7 +11,7 @@ use crate::domain::error::{fail, Error, Result};
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use serde_json::{json, Value};
-use setup::{config, find_program, free_port};
+use setup::{config, find_program, free_port, serve_command};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -87,28 +87,15 @@ impl AgentRuntime for OpenCodeRuntime {
             return fail("Defina o modelo do agente no formato provedor/modelo (ex.: openrouter/openai/gpt-5)");
         };
         let dir = self.work_dir.join(format!("run-{}", spec.run_id));
-        let xdg = |name: &str| dir.join("xdg").join(name);
-        std::fs::create_dir_all(xdg("config")).map_err(Error::internal)?;
+        std::fs::create_dir_all(dir.join("xdg").join("config")).map_err(Error::internal)?;
         let (port, password) = (free_port()?, uuid::Uuid::new_v4().simple().to_string());
-        let mut command = tokio::process::Command::new(&program);
+        let config = config(&spec, &mcp_url, provider).to_string();
+        let mut command = serve_command(&program, &dir, port, &password, &config, spec.api_key.as_deref());
         command
-            .args(["serve", "--port", &port.to_string(), "--hostname", "127.0.0.1"])
-            .current_dir(&dir)
-            .env("OPENCODE_SERVER_PASSWORD", &password)
-            .env("OPENCODE_CONFIG_CONTENT", config(&spec, &mcp_url, provider).to_string())
-            .env("OPENCODE_DISABLE_AUTOUPDATE", "1")
-            .env("OPENCODE_DISABLE_CLAUDE_CODE", "1")
-            .env("XDG_CONFIG_HOME", xdg("config"))
-            .env("XDG_DATA_HOME", xdg("data"))
-            .env("XDG_STATE_HOME", xdg("state"))
-            .env("XDG_CACHE_HOME", xdg("cache"))
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        if let Some(key) = &spec.api_key {
-            command.env("WAMCP_MODEL_API_KEY", key);
-        }
         #[cfg(windows)]
         command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         let child = command
