@@ -160,16 +160,14 @@ export function AgentRosterModal(props: Props) {
             <RuntimeSelect value={form.runtime} onChange={setRuntime} pickInstalled={!agent} />
             <label>
               <span className="field-label">
-                {form.runtime === 'openclaude' ? 'Modelo do OpenRouter' : 'Modelo (opcional)'}
+                {form.runtime === 'opencode' ? 'Modelo (provedor/modelo)' : 'Modelo (opcional)'}
               </span>
               <input
                 className="field"
                 maxLength={80}
-                required={form.runtime === 'openclaude'}
+                required={form.runtime === 'opencode'}
                 placeholder={
-                  form.runtime === 'openclaude'
-                    ? 'Modelo do OpenRouter (ex.: openai/gpt-5)'
-                    : 'Padrão do runtime'
+                  form.runtime === 'opencode' ? 'Ex.: openrouter/openai/gpt-5' : 'Padrão do runtime'
                 }
                 {...field('model')}
               />

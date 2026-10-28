@@ -1,6 +1,14 @@
 //! Tables of the agentic engine (see `docs/engine/spec.md`). Every table carries the organization
 //! (`account_id`) and every engine query filters on it.
 pub const ENGINE: &str = "
+-- OpenClaude leaves the product (license risk): its agents and LLM bots move to OpenCode, the same
+-- OpenRouter model now named provedor/modelo.
+UPDATE agents SET runtime='opencode',
+  model=CASE WHEN model IS NULL OR trim(model)='' THEN NULL ELSE 'openrouter/'||trim(model) END
+  WHERE runtime='openclaude';
+UPDATE agent_bots SET provider='opencode',
+  model=CASE WHEN model IS NULL OR trim(model)='' THEN NULL ELSE 'openrouter/'||trim(model) END
+  WHERE provider='openclaude';
 ALTER TABLE agents ADD COLUMN account_id INTEGER NOT NULL DEFAULT 1 REFERENCES accounts(id);
 CREATE INDEX agents_account ON agents(account_id);
 CREATE TABLE engine_agent_policies(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
@@ -68,3 +76,48 @@ CREATE TABLE engine_memories(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL 
   deleted INTEGER NOT NULL DEFAULT 0,created TEXT NOT NULL);
 CREATE INDEX engine_memories_agent ON engine_memories(account_id,agent_id,deleted);
 ";
+
+#[cfg(test)]
+mod tests {
+    use rusqlite::Connection;
+
+    #[test]
+    fn openclaude_agents_and_bots_move_to_opencode() {
+        let db = Connection::open_in_memory().unwrap();
+        db.execute_batch(
+            "CREATE TABLE agents(id INTEGER PRIMARY KEY,runtime TEXT,model TEXT);
+             CREATE TABLE agent_bots(id INTEGER PRIMARY KEY,provider TEXT,model TEXT);
+             INSERT INTO agents VALUES(1,'openclaude','openai/gpt-4o-mini'),(2,'openclaude',''),(3,'claude_cli','sonnet');
+             INSERT INTO agent_bots VALUES(1,'openclaude',' openai/gpt-5 '),(2,'codex_cli',NULL);",
+        )
+        .unwrap();
+        let moves = super::ENGINE
+            .split("ALTER TABLE agents ADD COLUMN account_id")
+            .next()
+            .unwrap();
+        db.execute_batch(moves).unwrap();
+        let rows = |sql: &str| -> Vec<(String, Option<String>)> {
+            let mut statement = db.prepare(sql).unwrap();
+            statement
+                .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect()
+        };
+        assert_eq!(
+            rows("SELECT runtime,model FROM agents ORDER BY id"),
+            vec![
+                ("opencode".into(), Some("openrouter/openai/gpt-4o-mini".into())),
+                ("opencode".into(), None),
+                ("claude_cli".into(), Some("sonnet".into())),
+            ]
+        );
+        assert_eq!(
+            rows("SELECT provider,model FROM agent_bots ORDER BY id"),
+            vec![
+                ("opencode".into(), Some("openrouter/openai/gpt-5".into())),
+                ("codex_cli".into(), None)
+            ]
+        );
+    }
+}

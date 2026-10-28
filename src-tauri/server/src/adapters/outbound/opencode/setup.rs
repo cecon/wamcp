@@ -50,8 +50,8 @@ pub(super) fn find_program() -> Option<PathBuf> {
     })
 }
 
-/// The run's OpenCode config: no built-in tool, the engine's MCP server, the model key from the env.
-pub(super) fn config(spec: &RunSpec, mcp_url: &str, provider: &str) -> Value {
+/// An OpenCode config with no built-in tool and the model key read from the env (when there is one).
+pub(super) fn base_config(provider: &str, has_key: bool) -> Value {
     let deny: serde_json::Map<String, Value> = BUILT_IN.iter().map(|t| ((*t).to_string(), json!("deny"))).collect();
     let off: serde_json::Map<String, Value> = BUILT_IN.iter().map(|t| ((*t).to_string(), json!(false))).collect();
     let mut config = json!({
@@ -60,14 +60,37 @@ pub(super) fn config(spec: &RunSpec, mcp_url: &str, provider: &str) -> Value {
         "share": "disabled",
         "permission": Value::Object(deny),
         "tools": Value::Object(off),
-        "mcp": {"engine": {"type": "remote", "url": mcp_url, "enabled": true,
-            "headers": {"Authorization": format!("Bearer {}", spec.token)}}},
     });
     config["permission"]["external_directory"] = json!("deny");
-    if spec.api_key.is_some() {
+    if has_key {
         config["provider"] = json!({provider: {"options": {"apiKey": "{env:WAMCP_MODEL_API_KEY}"}}});
     }
     config
+}
+
+/// An engine run's config: the base one plus the engine's MCP server with the run's token.
+pub(super) fn config(spec: &RunSpec, mcp_url: &str, provider: &str) -> Value {
+    let mut config = base_config(provider, spec.api_key.is_some());
+    config["mcp"] = json!({"engine": {"type": "remote", "url": mcp_url, "enabled": true,
+        "headers": {"Authorization": format!("Bearer {}", spec.token)}}});
+    config
+}
+
+/// Waits for `opencode serve` to answer (30 s).
+pub(super) async fn wait_ready(http: &reqwest::Client, base: &str, password: &str) -> Result<()> {
+    for _ in 0..60 {
+        let ready = http
+            .get(format!("{base}/session/status"))
+            .basic_auth("opencode", Some(password))
+            .send()
+            .await
+            .is_ok_and(|r| r.status().is_success());
+        if ready {
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    crate::domain::error::fail("O OpenCode não respondeu em 30 s")
 }
 
 pub(super) fn free_port() -> Result<u16> {

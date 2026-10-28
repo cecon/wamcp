@@ -33,7 +33,7 @@ As fontes primárias foram conferidas em 2026-10-28: o repositório `anomalyco/o
    - configuração inline sem nenhuma permissão `ask`, para nada travar: as 17 tools internas ficam `deny`, também pelo mapa `tools`;
    - os nomes das tools vão ao MCP com `__` no lugar de `.`, porque as APIs de modelo recusam ponto em nome de função.
 4. **Adapter `ScriptedRuntime`** para testes: executa um roteiro determinístico, chamando as mesmas tools do motor pelo mesmo serviço. É ele que permite provar o fluxo, o reinício e as falhas sem chave de modelo.
-5. **OpenClaude não entra no motor.** A remoção do runtime existente (`ClaudeCli::openclaude`, desde o #37) é decisão do usuário (P2).
+5. **OpenClaude saiu do produto** (2026-10-28, decisão do usuário). O OpenCode também atende as caixas de entrada pela porta `Llm` (`OpenCodeLlm`: um `opencode serve` isolado por chamada, sem ferramentas, resposta por `format: json_schema`).
 
 ## Plano de substituição
 

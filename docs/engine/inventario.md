@@ -44,9 +44,9 @@ Status: fase 0 concluída em 2026-10-28, base `chore/remove-catalog` (`b04b22f`)
 | `ToolGrant`                                                                             | não existe                                                  | Tabela `engine_tool_grants`, negando por padrão.                                                                                          |
 | `Conversation` / `Message`                                                              | helpdesk                                                    | Reaproveitadas. A resposta final sai pelo `helpdesk.reply`. As mensagens entre agentes ficam em `engine_messages`, ligadas à atividade.   |
 | `Activity`, `Delegation`, `ExecutionRun`, `ToolInvocation`, `AuditEvent`, `AgentMemory` | não existem                                                 | Tabelas `engine_*` novas.                                                                                                                 |
-| `UsageRecord` e dashboard                                                               | `llm_usage` + painel (em `feat/members-panel`)              | O motor grava o uso de cada execução em `engine_runs` e em `llm_usage` (`run_ref` = `engine_run:<id>`). Não cria outro dashboard.  |
+| `UsageRecord` e dashboard                                                               | `llm_usage` + painel (em `feat/members-panel`)              | O motor grava o uso de cada execução em `engine_runs` e em `llm_usage` (`run_ref` = `engine_run:<id>`). Não cria outro dashboard.         |
 | Runtime OpenCode                                                                        | não existe                                                  | Adapter HTTP + SSE para `opencode serve` 1.x. Ver [ADR 001](adr-001-runtime.md).                                                          |
-| OpenClaude fora                                                                         | está no código desde o #37                                  | **Pendência P2 para o usuário.** Não removi.                                                                                              |
+| OpenClaude fora                                                                         | estava no código desde o #37                                | **Removido** a pedido do usuário; agentes migram para `opencode`.                                                                         |
 
 ## 4. Plano por fases
 
@@ -60,7 +60,7 @@ Status: fase 0 concluída em 2026-10-28, base `chore/remove-catalog` (`b04b22f`)
 ## 5. Pendências de alto impacto
 
 - **P1:** PostgreSQL ou SQLite. Só faz sentido mudar se houver versão em nuvem com várias empresas.
-- **P2:** remover o runtime OpenClaude, que tem risco de licença.
+- ~~**P2:**~~ OpenClaude removido; o OpenCode é o runtime adotado.
 - **P3:** OpenCode 1.x ou 2.x. A 2.x tem outros pacotes e outra documentação. Fixei a 1.19.5.
 - **P4:** teste com runtime real. Precisa do OpenCode instalado e de uma chave de modelo fornecida pelo usuário. Sem isso, os testes automatizados usam o adapter roteirizado.
 - **P5:** isolamento das tabelas antigas por conta, que ainda não filtram por `account_id`.

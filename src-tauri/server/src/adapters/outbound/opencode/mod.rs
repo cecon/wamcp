@@ -4,14 +4,17 @@
 //! the only tools are the engine's, through its MCP endpoint with the run's token. Checked against
 //! opencode 1.18.25; see docs/engine/adr-001-runtime.md.
 mod events;
+mod llm;
 mod setup;
+
+pub use llm::OpenCodeLlm;
 
 use crate::application::ports::{AgentRuntime, RunEvent, RunSpec, RunState};
 use crate::domain::error::{fail, Error, Result};
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use serde_json::{json, Value};
-use setup::{config, find_program, free_port, serve_command};
+use setup::{config, find_program, free_port, serve_command, wait_ready};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -102,7 +105,7 @@ impl AgentRuntime for OpenCodeRuntime {
             .spawn()
             .map_err(|e| Error::internal(format!("opencode serve: {e}")))?;
         let base = format!("http://127.0.0.1:{port}");
-        self.wait_ready(&base, &password).await?;
+        wait_ready(&self.http, &base, &password).await?;
         let session: Value = self
             .post(
                 (&base, &password),
@@ -210,23 +213,6 @@ impl OpenCodeRuntime {
 
     fn stop(&self, session: &str) {
         stop(&self.live, session);
-    }
-
-    async fn wait_ready(&self, base: &str, password: &str) -> Result<()> {
-        for _ in 0..60 {
-            let ready = self
-                .http
-                .get(format!("{base}/session/status"))
-                .basic_auth("opencode", Some(password))
-                .send()
-                .await
-                .is_ok_and(|r| r.status().is_success());
-            if ready {
-                return Ok(());
-            }
-            tokio::time::sleep(Duration::from_millis(500)).await;
-        }
-        fail("O OpenCode não respondeu em 30 s")
     }
 
     /// Follows `/event` for the session until a final event; then the run's server is stopped.

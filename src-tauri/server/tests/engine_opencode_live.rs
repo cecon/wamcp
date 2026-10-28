@@ -93,3 +93,37 @@ async fn opencode_runs_behind_the_engine() {
     let left: Vec<_> = std::fs::read_dir(work.path()).unwrap().collect();
     assert!(left.is_empty(), "run folders must be removed after each run");
 }
+
+#[tokio::test]
+#[ignore = "starts opencode serve; needs OpenCode installed"]
+async fn opencode_answers_inboxes_through_the_llm_port() {
+    use wamcp_server::adapters::outbound::opencode::OpenCodeLlm;
+    use wamcp_server::application::ports::{Llm, LlmRequest};
+    let work = tempfile::tempdir().unwrap();
+    let llm = OpenCodeLlm::new(work.path().to_path_buf());
+    assert!(llm.location().is_some(), "OpenCode not installed");
+    let key = std::env::var("WAMCP_ENGINE_LIVE_KEY").ok();
+    let request = LlmRequest {
+        provider: "opencode".into(),
+        model: Some(
+            std::env::var("WAMCP_ENGINE_LIVE_MODEL").unwrap_or_else(|_| "openrouter/openai/gpt-4o-mini".into()),
+        ),
+        system: "Responda em JSON.".into(),
+        prompt: "Diga olá.".into(),
+        schema: serde_json::json!({"type": "object", "properties": {"reply": {"type": "string"}}, "required": ["reply"]}),
+        api_key: key.clone(),
+    };
+    let started = std::time::Instant::now();
+    let result = llm.complete(&request).await;
+    println!("{result:?} in {:?}", started.elapsed());
+    match key {
+        Some(_) => assert!(result.unwrap().answer["reply"].is_string()),
+        None => assert!(result.unwrap_err().to_string().starts_with("OpenCode")),
+    }
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(
+        std::fs::read_dir(work.path()).unwrap().count(),
+        0,
+        "call folders are removed"
+    );
+}
