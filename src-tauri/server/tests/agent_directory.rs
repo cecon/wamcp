@@ -145,8 +145,8 @@ async fn skills_are_imported_and_only_executing_agents_hold_them() {
     let f = Fixture::new().await;
     let admin = f.bootstrap().await;
     let p = profiles(&admin).await;
-    let manual = json!({ "name": "Pedidos", "description": "Monta pedidos", "instructions": "Use o cardápio.",
-                         "tools": ["reply_conversation", "catalog_*"] });
+    let manual = json!({ "name": "Pedidos", "description": "Acompanha pedidos", "instructions": "Responda o status.",
+                         "tools": ["reply_conversation", "conversation_*"] });
     let pedidos = admin.post("/skills", manual.clone()).await;
     assert_eq!(pedidos.status, 201, "{:?}", pedidos.body);
     assert_eq!(admin.post("/skills", manual).await.status, 422, "unique names");

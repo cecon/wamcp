@@ -1,5 +1,5 @@
 //! Seed data: default skills (v24), mandatory profiles (v25), logins in the agent list (v26) and
-//! profile skills with the default delivery attendant (v28).
+//! profile skills (v28); v29 removes the catalog and sales seeds.
 //! Skills only use MCP tools that exist today; a skill with the same name is kept, and a deleted
 //! default skill does not come back.
 
@@ -115,3 +115,30 @@ INSERT OR IGNORE INTO custom_roles(name,description,permissions,agent_role,creat
 INSERT OR IGNORE INTO custom_role_skills(role_id,skill_id)
   SELECT r.id,s.id FROM custom_roles r JOIN skills s ON s.name='Atendente de delivery'
   WHERE r.name='Atendente de delivery' AND r.agent_role='operator';"#;
+
+/// Catalog, menus and sales are out of scope (migration v29): drops the menu tables, the sales skills
+/// and the "Atendente de delivery" profile (its agents and logins move to the operator profile) and
+/// takes the `catalog_*` tools out of every skill.
+pub const NO_CATALOG: &str = r#"CREATE TEMP TABLE no_catalog_target AS SELECT COALESCE(
+   (SELECT id FROM custom_roles WHERE agent_role='operator' AND name<>'Atendente de delivery' ORDER BY id LIMIT 1),
+   (SELECT id FROM custom_roles WHERE builtin=1)) AS id;
+UPDATE agents SET profile_id=(SELECT id FROM no_catalog_target)
+  WHERE profile_id IN (SELECT id FROM custom_roles WHERE name='Atendente de delivery' AND builtin=0);
+UPDATE users SET custom_role_id=(SELECT id FROM no_catalog_target)
+  WHERE custom_role_id IN (SELECT id FROM custom_roles WHERE name='Atendente de delivery' AND builtin=0);
+DROP TABLE no_catalog_target;
+DELETE FROM custom_roles WHERE name='Atendente de delivery' AND builtin=0;
+DELETE FROM skills WHERE name IN ('Atender pelo cardápio','Montar e fechar pedido','Atendente de delivery');
+UPDATE skills SET instructions=replace(instructions,'as instruções e o cardápio não respondem','as instruções não respondem')
+  WHERE name='Transferir para a equipe';
+UPDATE skills SET tools=(SELECT json_group_array(value) FROM json_each(skills.tools) WHERE value NOT LIKE 'catalog!_%' ESCAPE '!')
+  WHERE EXISTS(SELECT 1 FROM json_each(skills.tools) WHERE value LIKE 'catalog!_%' ESCAPE '!');
+DROP TABLE IF EXISTS menu_size_prices;
+DROP TABLE IF EXISTS menu_options;
+DROP TABLE IF EXISTS menu_item_groups;
+DROP TABLE IF EXISTS menu_groups;
+DROP TABLE IF EXISTS menu_items;
+DROP TABLE IF EXISTS menu_products;
+DROP TABLE IF EXISTS menu_categories;
+DROP TABLE IF EXISTS menu_settings;
+DROP TABLE IF EXISTS menu_imports;"#;

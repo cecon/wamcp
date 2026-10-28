@@ -65,7 +65,7 @@ export function SkillModal({ skill, onClose, onSaved }: Props) {
         </label>
         <label>
           <span className="field-label">Ferramentas</span>
-          <input className="field" placeholder="reply_conversation, catalog_*" {...field('tools')} />
+          <input className="field" placeholder="reply_conversation, conversation_*" {...field('tools')} />
         </label>
         <ModalFooter
           busy={busy}

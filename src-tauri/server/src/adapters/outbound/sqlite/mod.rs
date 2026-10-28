@@ -16,8 +16,6 @@ mod filters;
 mod inboxes;
 mod insights;
 mod macros;
-mod menu;
-mod menu_imports;
 mod messages;
 mod migrations;
 mod mirror;

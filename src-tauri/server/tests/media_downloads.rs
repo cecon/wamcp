@@ -72,7 +72,6 @@ fn hooked() -> (App, Arc<SqliteStore>, Arc<HookedWhatsApp>) {
         callback: Arc::new(RecordingCallback::default()),
         clock: Arc::new(ManualClock::at(START * 1000)),
         storage: Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default()),
-        crawler: Arc::new(wamcp_server::adapters::outbound::crawler::memory::ScriptedCrawler::default()),
         images: Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default()),
         secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
     };

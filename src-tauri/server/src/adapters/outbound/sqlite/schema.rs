@@ -157,5 +157,7 @@ pub fn steps() -> Vec<String> {
         "ALTER TABLE inboxes ADD COLUMN ai_agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL;".into(),
         // v28: perfis com skills (herdadas pelos agentes) e a skill e o perfil padrão "Atendente de delivery"
         super::default_skills::PROFILE_SKILLS.into(),
+        // v29: catálogo, cardápio e vendas saem do produto (tabelas, skills de venda e o perfil de delivery)
+        super::default_skills::NO_CATALOG.into(),
     ]
 }

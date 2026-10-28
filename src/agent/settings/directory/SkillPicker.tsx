@@ -62,7 +62,7 @@ export function SkillPicker({ library, selected, onToggle, onCreated }: Props) {
           />
           <input
             className="field"
-            placeholder="Ferramentas (ex.: reply_conversation, catalog_*)"
+            placeholder="Ferramentas (ex.: reply_conversation, conversation_*)"
             aria-label="Ferramentas da nova skill"
             value={draft.tools}
             onChange={(e) => setDraft({ ...draft, tools: e.target.value })}

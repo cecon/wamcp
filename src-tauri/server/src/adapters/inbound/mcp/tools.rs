@@ -78,7 +78,6 @@ impl Call<'_> {
         match tool.name {
             "get_media" => self.media(&token, args).await,
             "send_message" => self.send(&token, args).await,
-            name if name.starts_with("catalog_") => self.menu(tool, &token, args).await,
             _ if tool.helpdesk => self.helpdesk(tool, &token, args).await,
             _ => self.read(tool.name, &token, args),
         }
