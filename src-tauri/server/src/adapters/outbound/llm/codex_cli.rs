@@ -3,7 +3,7 @@
 //! `--output-last-message`. Codex has no system prompt flag, so the system text leads the prompt,
 //! which goes through stdin (`-`), never the command line.
 use super::launcher::{find, Cli, Launcher};
-use crate::application::ports::{Llm, LlmRequest};
+use crate::application::ports::{Completion, Llm, LlmRequest, TokenUsage};
 use crate::domain::error::{fail, Error, HelpdeskError, Result};
 use async_trait::async_trait;
 use serde_json::Value;
@@ -43,6 +43,7 @@ pub fn codex_arguments(request: &LlmRequest, schema: &Path, answer: &Path) -> Ve
         "read-only",
         "--color",
         "never",
+        "--json",
     ]
     .map(String::from)
     .into();
@@ -72,9 +73,27 @@ pub fn parse_codex_answer(text: &str, stderr: &[u8]) -> Result<Value> {
     }
 }
 
+/// With `--json`, stdout is one event per line; `turn.completed` carries the turn's token usage
+/// (summed when there are several turns). Codex reports no cost.
+pub fn codex_usage(stdout: &[u8]) -> TokenUsage {
+    let mut usage = TokenUsage::default();
+    for event in String::from_utf8_lossy(stdout)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
+    {
+        let Some(turn) = event.get("usage").filter(|u| u.is_object()) else {
+            continue;
+        };
+        usage.input_tokens += turn["input_tokens"].as_i64().unwrap_or(0);
+        usage.cached_input_tokens += turn["cached_input_tokens"].as_i64().unwrap_or(0);
+        usage.output_tokens += turn["output_tokens"].as_i64().unwrap_or(0);
+    }
+    usage
+}
+
 #[async_trait]
 impl Llm for CodexCli {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value> {
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         let Some(launcher) = &self.launcher else {
             return fail(
                 "Codex CLI não encontrado. Instale com npm install -g @openai/codex ou defina WAMCP_CODEX_BIN.",
@@ -97,7 +116,7 @@ impl Llm for CodexCli {
 }
 
 impl CodexCli {
-    async fn run(&self, launcher: &Launcher, request: &LlmRequest, schema: &Path, answer: &Path) -> Result<Value> {
+    async fn run(&self, launcher: &Launcher, request: &LlmRequest, schema: &Path, answer: &Path) -> Result<Completion> {
         let mut command = launcher.command();
         command
             .args(codex_arguments(request, schema, answer))
@@ -117,6 +136,9 @@ impl CodexCli {
             .map_err(|_| Error::from(HelpdeskError::new("Codex CLI excedeu o tempo limite")))?
             .map_err(Error::internal)?;
         let text = std::fs::read_to_string(answer).unwrap_or_default();
-        parse_codex_answer(&text, &output.stderr)
+        Ok(Completion {
+            answer: parse_codex_answer(&text, &output.stderr)?,
+            usage: codex_usage(&output.stdout),
+        })
     }
 }

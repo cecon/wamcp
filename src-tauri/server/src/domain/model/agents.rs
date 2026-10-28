@@ -29,6 +29,15 @@ pub struct RosterAgent {
     pub profile_skill_ids: Vec<i64>,
     pub credential_count: i64,
     pub created: String,
+    /// Who the agent answers to in the organization (the coordinator or person it takes work from).
+    #[serde(default)]
+    pub supervisor_id: Option<i64>,
+    /// Avatar choices (`hair`, `outfit`, `accessory`, `skin`, `color`); `{}` uses the defaults.
+    #[serde(default)]
+    pub avatar: serde_json::Value,
+    /// People with a login: `online`, `busy` or `offline`.
+    #[serde(default)]
+    pub availability: Option<String>,
 }
 
 /// Fields of an agent to create (`id` 0) or replace.
@@ -47,6 +56,7 @@ pub struct RosterAgentDraft {
     pub model: Option<String>,
     pub instructions: Option<String>,
     pub active: bool,
+    pub supervisor_id: Option<i64>,
 }
 
 /// What an operator knows how to do: instructions (like a Claude Code `SKILL.md`) and the tools it may call.
@@ -78,4 +88,64 @@ pub struct AgentCredential {
     pub kind: String,
     pub created: String,
     pub last_used: Option<String>,
+}
+
+/// Tokens one model call spent for an AI agent (or a legacy `llm` bot), recorded when it answers.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LlmUsage {
+    pub agent_id: Option<i64>,
+    pub agent_bot_id: Option<i64>,
+    pub conversation_id: Option<i64>,
+    /// The execution this call belongs to (an agent run or task), when there is one.
+    pub run_ref: Option<String>,
+    /// The runtime or provider that answered (`claude_cli`, …).
+    pub provider: String,
+    pub model: Option<String>,
+    /// Prompt tokens, cached ones included; `cached_tokens` says how many were cache reads.
+    pub input_tokens: i64,
+    pub cached_tokens: i64,
+    pub output_tokens: i64,
+    /// `None` when nobody knows the cost (Codex reports none).
+    pub cost: Option<f64>,
+    /// ISO code of `cost` (`USD` for the runtimes).
+    pub currency: String,
+    /// Whether `cost` came from the provider (`true`) or was estimated from a price table.
+    pub cost_reported: bool,
+    /// When the call ended (epoch ms).
+    pub at: i64,
+}
+
+/// An AI agent's usage over a period.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct UsageTotal {
+    pub agent_id: i64,
+    pub calls: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cost_usd: f64,
+    /// Calls whose runtime reported no cost: their tokens are not in the salary.
+    pub unpriced_calls: i64,
+}
+
+/// One day of an agent's usage (`day` is `YYYY-MM-DD`, UTC).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct UsageDay {
+    pub day: String,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cost_usd: f64,
+}
+
+/// A member's salary for a month: a person's seat, or an AI agent's token cost plus the margin.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct Salary {
+    pub agent_id: i64,
+    pub kind: String,
+    /// Month to date for the current month, in reais.
+    pub salary_brl: f64,
+    pub calls: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cost_usd: f64,
+    pub unpriced_calls: i64,
 }

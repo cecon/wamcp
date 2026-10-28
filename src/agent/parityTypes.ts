@@ -6,7 +6,14 @@ export interface Account {
   id: number;
   name: string;
   locale: Locale;
-  settings: { auto_resolve_duration?: number | null; auto_resolve_message?: string | null } | null;
+  settings: {
+    auto_resolve_duration?: number | null;
+    auto_resolve_message?: string | null;
+    /** Salary rates of the "Funcionários" panel (defaults: R$ 50, 50%, 5.5). */
+    seat_price_brl?: number;
+    ai_margin_percent?: number;
+    usd_brl_rate?: number;
+  } | null;
 }
 
 export type SearchType = 'all' | 'conversations' | 'contacts' | 'messages';

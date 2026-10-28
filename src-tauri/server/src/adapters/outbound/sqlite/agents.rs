@@ -1,19 +1,23 @@
 use super::db::{flag, int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteStore, PLAIN};
 use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
-use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, SealedCredential, Skill};
+use crate::domain::model::{
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, UsageDay, UsageTotal,
+};
+use rusqlite::types::Value as Sql;
+use serde_json::Value;
 
 /// The role and profile come from the profile; a person with a login uses the login's profile.
 const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS profile_id,p.name AS profile_name,
-  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created,
-  u.name AS user_name, u.email AS user_email,
+  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created,a.supervisor_id,a.avatar,
+  u.name AS user_name, u.email AS user_email, u.availability,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
   (SELECT json_group_array(r.skill_id) FROM custom_role_skills r WHERE r.role_id=p.id) AS profile_skill_ids,
   (SELECT COUNT(*) FROM agent_credentials c WHERE c.agent_id=a.id) AS credential_count
   FROM agents a LEFT JOIN users u ON u.id=a.user_id
   LEFT JOIN custom_roles p ON p.id=COALESCE(u.custom_role_id,a.profile_id)";
 const AGENT_SHAPE: Shape = Shape {
-    json: &["skill_ids", "profile_skill_ids"],
+    json: &["skill_ids", "profile_skill_ids", "avatar"],
     bools: &["active"],
 };
 const SKILL_SHAPE: Shape = Shape {
@@ -49,19 +53,20 @@ impl AgentsRepo for SqliteStore {
             opt_text(agent.model.as_deref()),
             opt_text(agent.instructions.as_deref()),
             flag(agent.active),
+            opt_int(agent.supervisor_id),
         ];
         let id = if agent.id == 0 {
             values.push(text(iso(now_ms())));
             self.insert(
-                "INSERT INTO agents(name,kind,role,profile_id,description,user_id,whatsapp_jid,runtime,model,instructions,active,created)
-                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO agents(name,kind,role,profile_id,description,user_id,whatsapp_jid,runtime,model,instructions,active,supervisor_id,created)
+                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 values,
             )?
         } else {
             values.push(int(agent.id));
             self.exec(
                 "UPDATE agents SET name=?,kind=?,role=?,profile_id=?,description=?,user_id=?,whatsapp_jid=?,runtime=?,model=?,
-                 instructions=?,active=? WHERE id=?",
+                 instructions=?,active=?,supervisor_id=? WHERE id=?",
                 values,
             )?;
             agent.id
@@ -166,5 +171,57 @@ impl AgentsRepo for SqliteStore {
     fn set_inbox_ai_agent(&self, inbox_id: i64, agent_id: Option<i64>) -> Result<()> {
         let sql = "UPDATE inboxes SET ai_agent_id=? WHERE id=?";
         self.exec(sql, vec![opt_int(agent_id), int(inbox_id)]).map(drop)
+    }
+
+    fn set_agent_avatar(&self, agent_id: i64, avatar: &Value) -> Result<()> {
+        let sql = "UPDATE agents SET avatar=? WHERE id=?";
+        self.exec(sql, vec![text(avatar.to_string()), int(agent_id)]).map(drop)
+    }
+
+    fn record_llm_usage(&self, usage: &LlmUsage) -> Result<()> {
+        self.insert(
+            "INSERT INTO llm_usage(agent_id,agent_bot_id,conversation_id,run_ref,provider,model,input_tokens,cached_tokens,
+               output_tokens,cost,currency,cost_source,at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            vec![
+                opt_int(usage.agent_id),
+                opt_int(usage.agent_bot_id),
+                opt_int(usage.conversation_id),
+                opt_text(usage.run_ref.as_deref()),
+                text(&usage.provider),
+                opt_text(usage.model.as_deref()),
+                int(usage.input_tokens),
+                int(usage.cached_tokens),
+                int(usage.output_tokens),
+                usage.cost.map_or(Sql::Null, Sql::Real),
+                text(&usage.currency),
+                text(match (usage.cost, usage.cost_reported) {
+                    (None, _) => "none",
+                    (Some(_), true) => "reported",
+                    (Some(_), false) => "estimated",
+                }),
+                text(iso(usage.at)),
+            ],
+        )
+        .map(drop)
+    }
+
+    fn usage_totals(&self, from: &str, to: &str) -> Result<Vec<UsageTotal>> {
+        self.rows(
+            "SELECT agent_id,COUNT(*) AS calls,SUM(input_tokens) AS input_tokens,SUM(output_tokens) AS output_tokens,
+               TOTAL(CASE WHEN currency='USD' THEN cost END) AS cost_usd,SUM(cost IS NULL) AS unpriced_calls
+             FROM llm_usage WHERE agent_id IS NOT NULL AND at>=? AND at<? GROUP BY agent_id",
+            vec![text(from), text(to)],
+            PLAIN,
+        )
+    }
+
+    fn usage_days(&self, agent_id: i64, from: &str) -> Result<Vec<UsageDay>> {
+        self.rows(
+            "SELECT substr(at,1,10) AS day,SUM(input_tokens) AS input_tokens,SUM(output_tokens) AS output_tokens,
+               TOTAL(CASE WHEN currency='USD' THEN cost END) AS cost_usd
+             FROM llm_usage WHERE agent_id=? AND at>=? GROUP BY day ORDER BY day",
+            vec![int(agent_id), text(from)],
+            PLAIN,
+        )
     }
 }

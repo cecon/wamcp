@@ -8,10 +8,10 @@ interface Props {
   onChange: () => Promise<void>;
 }
 
-/** Agents: one list of people and AI agents, each with a mandatory profile that sets its role. */
+/** "Funcionários": one list of people and AI agents, each with a mandatory profile that sets its role. */
 export function AgentsPage({ user, catalog, onChange }: Props) {
   return (
-    <SettingsPage>
+    <SettingsPage wide>
       <RosterSection user={user} catalog={catalog} onChange={onChange} />
     </SettingsPage>
   );

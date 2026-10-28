@@ -54,10 +54,10 @@ export function SettingsHeader({ title, description, back, search, count, action
 }
 
 /** Chatwoot settings page wrapper: centered max-w-5xl column on surface-1. */
-export function SettingsPage({ children }: { children: ReactNode }) {
+export function SettingsPage({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="h-full w-full overflow-auto bg-n-surface-1 px-6 pt-4 pb-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4">{children}</div>
+      <div className={`mx-auto flex ${wide ? 'max-w-7xl' : 'max-w-5xl'} flex-col gap-4`}>{children}</div>
     </div>
   );
 }

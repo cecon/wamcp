@@ -4,6 +4,7 @@ import type { ConversationType, FilterCondition } from './types';
 export type SettingsSection =
   | 'account'
   | 'agents'
+  | 'organization'
   | 'teams'
   | 'inboxes'
   | 'labels'

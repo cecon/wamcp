@@ -71,7 +71,7 @@ describe('sidebar', () => {
     await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
     expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
     await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
-    expect(await screen.findByRole('heading', { name: 'Agentes' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Funcionários' })).toBeInTheDocument();
     await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
     expect(within(nav()).queryByRole('button', { name: 'Webhooks' })).not.toBeInTheDocument();
 

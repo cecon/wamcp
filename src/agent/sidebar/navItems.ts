@@ -5,6 +5,7 @@ import {
   Inbox as InboxIcon,
   MessageSquareText,
   MonitorCog,
+  Network,
   Repeat,
   ScrollText,
   Sparkles,
@@ -22,7 +23,8 @@ import type { ReportSection, SettingsSection } from '../route';
 /** Settings entries of the sidebar (Chatwoot order); `desktop` ones exist only in the Tauri window. */
 export const SETTINGS: { section: SettingsSection; label: string; icon: typeof Bolt; desktop?: boolean }[] = [
   { section: 'account', label: 'Configurações da conta', icon: Briefcase },
-  { section: 'agents', label: 'Agentes', icon: SquareUser },
+  { section: 'agents', label: 'Funcionários', icon: SquareUser },
+  { section: 'organization', label: 'Organização', icon: Network },
   { section: 'teams', label: 'Times', icon: Users },
   { section: 'inboxes', label: 'Caixas de entrada', icon: InboxIcon },
   { section: 'connections', label: 'Conexões WhatsApp', icon: Smartphone },

@@ -159,5 +159,17 @@ pub fn steps() -> Vec<String> {
         super::default_skills::PROFILE_SKILLS.into(),
         // v29: catálogo, cardápio e vendas saem do produto (tabelas, skills de venda e o perfil de delivery)
         super::default_skills::NO_CATALOG.into(),
+        // v30: painel de funcionários: tokens e custo de cada chamada de LLM (o salário dos agentes de IA; tabela
+        // genérica, também para o motor agêntico: run_ref liga a uma execução),
+        // a quem cada agente responde na hierarquia e o avatar personalizado
+        "CREATE TABLE llm_usage(id INTEGER PRIMARY KEY,agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL,
+           agent_bot_id INTEGER,conversation_id INTEGER,run_ref TEXT,provider TEXT NOT NULL,model TEXT,
+           input_tokens INTEGER NOT NULL DEFAULT 0,cached_tokens INTEGER NOT NULL DEFAULT 0,output_tokens INTEGER NOT NULL DEFAULT 0,
+           cost REAL,currency TEXT NOT NULL DEFAULT 'USD',
+           cost_source TEXT NOT NULL DEFAULT 'none' CHECK(cost_source IN ('reported','estimated','none')),at TEXT NOT NULL);
+         CREATE INDEX llm_usage_agent ON llm_usage(agent_id,at);
+         ALTER TABLE agents ADD COLUMN supervisor_id INTEGER REFERENCES agents(id) ON DELETE SET NULL;
+         ALTER TABLE agents ADD COLUMN avatar TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(avatar));"
+            .into(),
     ]
 }

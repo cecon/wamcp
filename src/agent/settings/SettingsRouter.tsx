@@ -13,6 +13,7 @@ import { AuditLogPage } from './AuditLogPage';
 import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
 import { SkillsPage } from './directory/SkillsPage';
+import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
@@ -32,6 +33,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <AccountPage />;
     case 'agents':
       return <AgentsPage user={user} catalog={catalog} onChange={onChange} />;
+    case 'organization':
+      return <OrganizationPage catalog={catalog} />;
     case 'teams':
       return <TeamsPage catalog={catalog} teamId={route.id} onNavigate={onNavigate} onChange={onChange} />;
     case 'inboxes':

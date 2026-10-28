@@ -92,7 +92,9 @@ describe('profile skills', () => {
       'GET /agent_directory/3/credentials': [],
     });
     const user = renderSettings('agents');
-    expect(await screen.findByText('Cobranças, Transferir para a equipe')).toBeInTheDocument();
+    // The card lists the profile's skills and the agent's own.
+    expect(await screen.findByText('Cobranças')).toBeInTheDocument();
+    expect(screen.getByText('Transferir para a equipe')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Editar Ana' }));
     const dialog = screen.getByRole('dialog', { name: 'Editar Ana' });
     expect(within(dialog).getByText('Herdadas do perfil Financeiro: Cobranças.')).toBeInTheDocument();

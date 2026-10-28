@@ -49,6 +49,12 @@ export interface RosterAgent {
   /** Skills inherited from the profile. */
   profile_skill_ids?: number[];
   credential_count: number;
+  /** Who the agent answers to in the organization (a coordinator or a person). */
+  supervisor_id?: number | null;
+  /** Avatar choices; `{}` uses the defaults. */
+  avatar?: AvatarChoices;
+  /** People with a login: their availability. */
+  availability?: 'online' | 'busy' | 'offline' | null;
 }
 export interface Skill {
   id: number;
@@ -65,4 +71,42 @@ export interface AgentCredential {
   kind: 'api_key' | 'bearer' | 'basic' | 'secret';
   created: string;
   last_used: string | null;
+}
+/** Parts of a member's avatar (see AVATAR_PARTS in the backend). */
+export interface AvatarChoices {
+  skin?: string;
+  hair?: string;
+  outfit?: string;
+  accessory?: string;
+  color?: string;
+}
+/** How salaries are computed (account settings). */
+export interface SalaryRates {
+  seat_price_brl: number;
+  ai_margin_percent: number;
+  usd_brl_rate: number;
+}
+/** A member's salary for the month: a person's seat, or an AI agent's token cost plus the margin. */
+export interface Salary {
+  agent_id: number;
+  kind: RosterKind;
+  salary_brl: number;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  /** Calls whose runtime reported no cost (not in the salary). */
+  unpriced_calls: number;
+}
+export interface SalarySheet {
+  month: string;
+  rates: SalaryRates;
+  salaries: Salary[];
+}
+/** One day of an AI agent's token usage. */
+export interface UsageDay {
+  day: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
 }

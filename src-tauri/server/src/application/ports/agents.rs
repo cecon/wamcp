@@ -1,5 +1,8 @@
 use crate::domain::error::Result;
-use crate::domain::model::{AgentCredential, RosterAgent, RosterAgentDraft, SealedCredential, Skill};
+use crate::domain::model::{
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, UsageDay, UsageTotal,
+};
+use serde_json::Value;
 
 /// The agent roster: human and AI agents, skills and encrypted credentials.
 pub trait AgentsRepo {
@@ -27,4 +30,12 @@ pub trait AgentsRepo {
     fn agent_sealed_credentials(&self, agent_id: i64) -> Result<Vec<SealedCredential>>;
     /// Which AI agent answers the inbox (`None` disconnects it).
     fn set_inbox_ai_agent(&self, inbox_id: i64, agent_id: Option<i64>) -> Result<()>;
+    /// `avatar` is already validated.
+    fn set_agent_avatar(&self, agent_id: i64, avatar: &Value) -> Result<()>;
+
+    fn record_llm_usage(&self, usage: &LlmUsage) -> Result<()>;
+    /// Usage of each AI agent with calls in `[from, to)` (ISO instants).
+    fn usage_totals(&self, from: &str, to: &str) -> Result<Vec<UsageTotal>>;
+    /// The agent's usage per day since `from` (ISO instant), oldest first; days without calls are absent.
+    fn usage_days(&self, agent_id: i64, from: &str) -> Result<Vec<UsageDay>>;
 }

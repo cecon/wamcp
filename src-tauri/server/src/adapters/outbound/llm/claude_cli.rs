@@ -4,7 +4,7 @@
 //! models with the agent's key. The prompt (which carries the contact's words) goes through stdin,
 //! never the command line.
 use super::launcher::{find, Cli, Launcher};
-use crate::application::ports::{Llm, LlmRequest};
+use crate::application::ports::{Completion, Llm, LlmRequest, TokenUsage};
 use crate::domain::error::{fail, Error, HelpdeskError, Result};
 use async_trait::async_trait;
 use serde_json::Value;
@@ -139,9 +139,31 @@ fn parse_output_of(label: &str, stdout: &[u8], stderr: &[u8]) -> Result<Value> {
     }
 }
 
+/// Tokens and cost of the call from the result object's `usage` and `total_cost_usd` (the cost is
+/// what the API would charge, also reported when Claude Code runs on a subscription).
+pub fn parse_usage(stdout: &[u8]) -> TokenUsage {
+    let text = String::from_utf8_lossy(stdout);
+    let Some(result) = text
+        .lines()
+        .rev()
+        .find(|line| line.trim_start().starts_with('{'))
+        .and_then(|line| serde_json::from_str::<Value>(line).ok())
+    else {
+        return TokenUsage::default();
+    };
+    let usage = &result["usage"];
+    let count = |key: &str| usage[key].as_i64().unwrap_or(0);
+    TokenUsage {
+        input_tokens: count("input_tokens") + count("cache_creation_input_tokens") + count("cache_read_input_tokens"),
+        cached_input_tokens: count("cache_read_input_tokens"),
+        output_tokens: count("output_tokens"),
+        cost_usd: result["total_cost_usd"].as_f64(),
+    }
+}
+
 #[async_trait]
 impl Llm for ClaudeCli {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value> {
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         let Some(launcher) = &self.launcher else {
             return fail(if self.openrouter {
                 "OpenClaude não encontrado. Instale com npm install -g @gitlawb/openclaude ou defina WAMCP_OPENCLAUDE_BIN."
@@ -193,7 +215,10 @@ impl Llm for ClaudeCli {
             .await
             .map_err(|_| Error::from(HelpdeskError::new(format!("{} excedeu o tempo limite", self.label()))))?
             .map_err(Error::internal)?;
-        parse_output_of(self.label(), &output.stdout, &output.stderr)
+        Ok(Completion {
+            answer: parse_output_of(self.label(), &output.stdout, &output.stderr)?,
+            usage: parse_usage(&output.stdout),
+        })
     }
 
     fn location(&self) -> Option<String> {
