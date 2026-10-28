@@ -52,6 +52,12 @@ impl ClaudeCli {
         }
     }
 
+    /// Runs this program instead of the one found on the computer (tests).
+    pub fn with_launcher(mut self, launcher: Launcher) -> Self {
+        self.launcher = Some(launcher);
+        self
+    }
+
     fn label(&self) -> &'static str {
         if self.openrouter {
             "OpenClaude"
@@ -65,6 +71,10 @@ impl ClaudeCli {
 pub fn find_claude() -> Option<PathBuf> {
     find(&CLAUDE).map(|l| l.program)
 }
+
+/// Environment of every run: the user's claude.ai connectors (Gmail, Drive…) are not loaded, since
+/// `--strict-mcp-config` does not cover them and agents must only reach what the app grants.
+pub const ISOLATION_ENV: &[(&str, &str)] = &[("ENABLE_CLAUDEAI_MCP_SERVERS", "false")];
 
 /// Command-line arguments of one call (the prompt itself is written to stdin).
 pub fn arguments(request: &LlmRequest) -> Vec<String> {
@@ -158,6 +168,7 @@ impl Llm for ClaudeCli {
         for secret in ["WAMCP_ADMIN_TOKEN", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"] {
             command.env_remove(secret);
         }
+        command.envs(ISOLATION_ENV.iter().copied());
         if self.openrouter {
             let Some(model) = request.model.as_deref().map(str::trim).filter(|m| !m.is_empty()) else {
                 return fail("Informe no agente o modelo do OpenRouter (ex.: openai/gpt-4o-mini)");
