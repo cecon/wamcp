@@ -20,7 +20,6 @@ import { CONVERSATION_TYPE_LABEL } from '../labels';
 import type { Route } from '../route';
 import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
 import { ProfileMenu } from './ProfileMenu';
-import { CatalogNav } from './CatalogNav';
 import { REPORTS, SETTINGS } from './navItems';
 import { canManageContacts, canViewReports } from '../permissions';
 import { isDesktop } from '../desktop/tauri';
@@ -30,7 +29,7 @@ const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
   { type: 'unattended', icon: MessageCircleDashed },
   { type: 'participating', icon: UsersRound },
 ];
-type Group = 'conversations' | 'catalog' | 'reports' | 'settings' | null;
+type Group = 'conversations' | 'reports' | 'settings' | null;
 
 interface Props {
   user: User;
@@ -64,9 +63,7 @@ export function Sidebar({
 }: Props) {
   const isAdmin = user.role === 'administrator';
   const [expanded, setExpanded] = useState<Group>(
-    route.page === 'settings' || route.page === 'reports' || route.page === 'catalog'
-      ? route.page
-      : 'conversations',
+    route.page === 'settings' || route.page === 'reports' ? route.page : 'conversations',
   );
   const [q, setQ] = useState('');
   const conv = route.page === 'conversations' ? route : null;
@@ -209,17 +206,6 @@ export function Sidebar({
               onClick={() => open(null, { page: 'contacts' })}
             />
           )}
-          <CatalogNav
-            route={route}
-            isAdmin={isAdmin}
-            expanded={expanded === 'catalog'}
-            onToggle={() =>
-              expanded === 'catalog'
-                ? setExpanded(null)
-                : open('catalog', { page: 'catalog', section: 'menu' })
-            }
-            onNavigate={onNavigate}
-          />
           {canViewReports(user) && (
             <SidebarGroup
               icon={ChartSpline}

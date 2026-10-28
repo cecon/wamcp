@@ -1,12 +1,24 @@
-//! Downloads catalog photos over https with a timeout, a 5 MB limit and an image content type;
+//! Downloads photos (contact avatars) over https with a timeout, a 5 MB limit and an image content type;
 //! redirects are followed only to other allowed addresses. An in-memory fake serves tests.
 use crate::application::ports::ImageFetcher;
 use crate::domain::error::{fail, Result};
-use crate::domain::menu::images::{image_allowed, MAX_IMAGE_BYTES};
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::time::Duration;
+
+const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
+
+/// Photos are only fetched over https from public host names (no IPs or localhost).
+fn image_allowed(address: &str) -> bool {
+    let Ok(parsed) = url::Url::parse(address) else {
+        return false;
+    };
+    let Some(url::Host::Domain(host)) = parsed.host() else {
+        return false;
+    };
+    parsed.scheme() == "https" && host.contains('.') && !host.ends_with(".localhost") && host != "localhost"
+}
 
 pub struct HttpImageFetcher {
     client: reqwest::Client,
@@ -24,7 +36,7 @@ impl HttpImageFetcher {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(20))
             .redirect(policy)
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) wamcp-catalog")
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) wamcp")
             .build()
             .unwrap_or_default();
         Self { client }

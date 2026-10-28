@@ -64,13 +64,7 @@ async fn default_skills_ship_with_real_mcp_tools() {
         .iter()
         .map(|s| s["name"].as_str().unwrap())
         .collect();
-    for expected in [
-        "Atender pelo cardápio",
-        "Montar e fechar pedido",
-        "Transferir para a equipe",
-    ] {
-        assert!(names.contains(&expected), "{expected} in {names:?}");
-    }
+    assert_eq!(names, ["Transferir para a equipe"], "no catalog or sales skills");
     let real: Vec<&str> = wamcp_server::adapters::inbound::mcp::catalog::tools()
         .iter()
         .map(|t| t.name)
@@ -81,13 +75,6 @@ async fn default_skills_ship_with_real_mcp_tools() {
             assert!(real.contains(&tool.as_str().unwrap()), "{tool} is not an MCP tool");
         }
     }
-    let catalog = skills
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|s| s["name"] == "Atender pelo cardápio")
-        .unwrap();
-    assert!(catalog["tools"].as_array().unwrap().contains(&json!("catalog_search")));
 }
 
 #[tokio::test]

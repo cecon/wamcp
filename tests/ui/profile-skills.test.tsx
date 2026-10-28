@@ -16,10 +16,10 @@ const skill = (id: number, name: string): Skill => ({
   instructions: '',
   tools: [],
 });
-const SKILLS = [skill(7, 'Atendente de delivery'), skill(8, 'Transferir para a equipe')];
-const delivery: CustomRole = {
+const SKILLS = [skill(7, 'Cobranças'), skill(8, 'Transferir para a equipe')];
+const finance: CustomRole = {
   id: 30,
-  name: 'Atendente de delivery',
+  name: 'Financeiro',
   description: null,
   permissions: ['conversation_manage'],
   agent_role: 'operator',
@@ -43,14 +43,14 @@ function renderSettings(section: SettingsSection) {
 describe('profile skills', () => {
   it('links skills to a profile whose role executes', async () => {
     const api = fakeApi({
-      'GET /custom_roles': [delivery],
+      'GET /custom_roles': [finance],
       'GET /skills': SKILLS,
-      'PUT /custom_roles/30': (body) => ({ ...delivery, ...(body as object) }),
+      'PUT /custom_roles/30': (body) => ({ ...finance, ...(body as object) }),
     });
     const user = renderSettings('custom_roles');
-    await user.click(await screen.findByRole('button', { name: 'Editar Atendente de delivery' }));
+    await user.click(await screen.findByRole('button', { name: 'Editar Financeiro' }));
     const dialog = screen.getByRole('dialog', { name: 'Editar perfil' });
-    expect(await within(dialog).findByLabelText('Atendente de delivery')).toBeChecked();
+    expect(await within(dialog).findByLabelText('Cobranças')).toBeChecked();
     await user.click(within(dialog).getByLabelText('Transferir para a equipe'));
     await user.selectOptions(within(dialog).getByLabelText('Função'), 'coordinator');
     expect(within(dialog).queryByText('Skills')).not.toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('profile skills', () => {
       kind: 'ai',
       role: 'operator',
       profile_id: 30,
-      profile_name: 'Atendente de delivery',
+      profile_name: 'Financeiro',
       description: null,
       user_id: null,
       user_name: null,
@@ -87,16 +87,14 @@ describe('profile skills', () => {
     } as RosterAgent;
     fakeApi({
       'GET /agent_directory': [agent],
-      'GET /custom_roles': [delivery],
+      'GET /custom_roles': [finance],
       'GET /skills': SKILLS,
       'GET /agent_directory/3/credentials': [],
     });
     const user = renderSettings('agents');
-    expect(await screen.findByText('Atendente de delivery, Transferir para a equipe')).toBeInTheDocument();
+    expect(await screen.findByText('Cobranças, Transferir para a equipe')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Editar Ana' }));
     const dialog = screen.getByRole('dialog', { name: 'Editar Ana' });
-    expect(
-      within(dialog).getByText('Herdadas do perfil Atendente de delivery: Atendente de delivery.'),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText('Herdadas do perfil Financeiro: Cobranças.')).toBeInTheDocument();
   });
 });

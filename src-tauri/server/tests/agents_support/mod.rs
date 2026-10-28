@@ -3,11 +3,9 @@
 use super::common;
 use serde_json::{json, Value};
 
-/// The seeded profiles: the built-in "Padrão", one per AI role and "Atendente de delivery" (an
-/// operator profile with the default delivery skill).
+/// The seeded profiles: the built-in "Padrão" and one per AI role.
 pub struct Profiles {
     pub builtin: i64,
-    pub delivery: i64,
     pub roles: Vec<(String, i64)>,
 }
 
@@ -23,19 +21,11 @@ pub async fn profiles(admin: &common::Agent) -> Profiles {
     let builtin = list.iter().find(|r| r["builtin"] == true).unwrap()["id"]
         .as_i64()
         .unwrap();
-    let delivery = list.iter().find(|r| r["name"] == "Atendente de delivery").unwrap()["id"]
-        .as_i64()
-        .unwrap();
     let roles = list
         .iter()
-        .filter(|r| r["id"] != delivery)
         .filter_map(|r| Some((r["agent_role"].as_str()?.to_string(), r["id"].as_i64()?)))
         .collect();
-    Profiles {
-        builtin,
-        delivery,
-        roles,
-    }
+    Profiles { builtin, roles }
 }
 
 pub fn ai(p: &Profiles, name: &str, role: &str) -> Value {

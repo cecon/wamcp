@@ -53,7 +53,6 @@ async fn the_agent_web_app_appears_once_built_without_restarting_the_service() {
         callback: Arc::new(RecordingCallback::default()),
         clock: Arc::new(ManualClock::at(START * 1000)),
         storage: Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default()),
-        crawler: Arc::new(wamcp_server::adapters::outbound::crawler::memory::ScriptedCrawler::default()),
         images: Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default()),
         secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
     };

@@ -11,6 +11,12 @@ pub trait Clock: Send + Sync {
     }
 }
 
+/// Downloads a photo (https only, bounded size, image content types).
+#[async_trait]
+pub trait ImageFetcher: Send + Sync {
+    async fn fetch(&self, url: &str) -> Result<Vec<u8>>;
+}
+
 /// Password hashing (scrypt in production).
 #[async_trait]
 pub trait PasswordHasher: Send + Sync {
