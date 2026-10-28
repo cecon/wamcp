@@ -18,6 +18,7 @@ mod conversation_tools;
 pub mod core;
 pub mod crypto;
 pub mod custom_data;
+pub mod engine;
 pub mod event_bus;
 pub mod events;
 pub mod helpdesk;

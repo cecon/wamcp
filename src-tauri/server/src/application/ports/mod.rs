@@ -1,6 +1,7 @@
 //! Ports: what the use cases need from the outside world. Adapters implement them.
 mod agents;
 mod catalog;
+mod engine;
 mod external;
 mod mirror;
 mod people;
@@ -8,6 +9,7 @@ mod support;
 
 pub use agents::*;
 pub use catalog::*;
+pub use engine::*;
 pub use external::*;
 pub use mirror::*;
 pub use people::*;

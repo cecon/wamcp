@@ -6,4 +6,5 @@ pub mod adapters;
 pub mod application;
 pub mod compose;
 pub mod domain;
+pub mod engine_setup;
 pub mod server;

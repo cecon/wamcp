@@ -6,6 +6,7 @@ pub mod audit;
 pub mod automation;
 pub mod contacts;
 pub mod csat;
+pub mod engine;
 pub mod error;
 pub mod events;
 pub mod filters;

@@ -173,5 +173,8 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v31: o funcionário do sistema (agente de IA do próprio app) e as propostas que ele faz
         super::default_skills::SYSTEM_AGENT.into(),
+        // v32: motor agêntico —
+        // atividades, delegações, execuções, tools com grants, evidências, auditoria e memória, por organização
+        super::engine_schema::ENGINE.into(),
     ]
 }
