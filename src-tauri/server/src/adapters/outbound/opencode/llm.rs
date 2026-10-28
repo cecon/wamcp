@@ -93,6 +93,9 @@ pub fn parse_message(reply: &Value) -> Result<Completion> {
 #[async_trait]
 impl Llm for OpenCodeLlm {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
+        if request.mcp.is_some() {
+            return fail("Ferramentas MCP do app só rodam no Claude Code (claude_cli)");
+        }
         let Some(program) = &self.program else {
             return fail(
                 "OpenCode não encontrado. Instale com npm install -g opencode-ai ou defina WAMCP_OPENCODE_BIN.",

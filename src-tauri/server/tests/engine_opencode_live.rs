@@ -112,6 +112,7 @@ async fn opencode_answers_inboxes_through_the_llm_port() {
         prompt: "Diga olá.".into(),
         schema: serde_json::json!({"type": "object", "properties": {"reply": {"type": "string"}}, "required": ["reply"]}),
         api_key: key.clone(),
+        mcp: None,
     };
     let started = std::time::Instant::now();
     let result = llm.complete(&request).await;

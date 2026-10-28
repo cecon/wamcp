@@ -9,6 +9,10 @@ UPDATE agents SET runtime='opencode',
 UPDATE agent_bots SET provider='opencode',
   model=CASE WHEN model IS NULL OR trim(model)='' THEN NULL ELSE 'openrouter/'||trim(model) END
   WHERE provider='openclaude';
+UPDATE agents SET instructions=replace(instructions,'openclaude com OpenRouter','opencode com qualquer provedor (provedor/modelo, OpenRouter incluído)')
+  WHERE instructions LIKE '%openclaude com OpenRouter%';
+UPDATE skills SET instructions=replace(instructions,'openclaude com OpenRouter','opencode com qualquer provedor (provedor/modelo, OpenRouter incluído)')
+  WHERE instructions LIKE '%openclaude com OpenRouter%';
 -- SQLite cannot add a REFERENCES column with a default; the engine checks the organization itself.
 ALTER TABLE agents ADD COLUMN account_id INTEGER NOT NULL DEFAULT 1;
 CREATE INDEX agents_account ON agents(account_id);
@@ -86,9 +90,12 @@ mod tests {
     fn openclaude_agents_and_bots_move_to_opencode() {
         let db = Connection::open_in_memory().unwrap();
         db.execute_batch(
-            "CREATE TABLE agents(id INTEGER PRIMARY KEY,runtime TEXT,model TEXT);
+            "CREATE TABLE agents(id INTEGER PRIMARY KEY,runtime TEXT,model TEXT,instructions TEXT);
              CREATE TABLE agent_bots(id INTEGER PRIMARY KEY,provider TEXT,model TEXT);
-             INSERT INTO agents VALUES(1,'openclaude','openai/gpt-4o-mini'),(2,'openclaude',''),(3,'claude_cli','sonnet');
+             CREATE TABLE skills(id INTEGER PRIMARY KEY,instructions TEXT);
+             INSERT INTO agents VALUES(1,'openclaude','openai/gpt-4o-mini',NULL),(2,'openclaude','',NULL),
+               (3,'claude_cli','sonnet','Runtimes: codex_cli; openclaude com OpenRouter.');
+             INSERT INTO skills VALUES(1,'use openclaude com OpenRouter');
              INSERT INTO agent_bots VALUES(1,'openclaude',' openai/gpt-5 '),(2,'codex_cli',NULL);",
         )
         .unwrap();
@@ -112,6 +119,14 @@ mod tests {
                 ("opencode".into(), None),
                 ("claude_cli".into(), Some("sonnet".into())),
             ]
+        );
+        let texts =
+            rows("SELECT instructions,NULL FROM agents WHERE id=3 UNION ALL SELECT instructions,NULL FROM skills");
+        assert!(
+            texts
+                .iter()
+                .all(|(t, _)| !t.contains("openclaude") && t.contains("opencode")),
+            "{texts:?}"
         );
         assert_eq!(
             rows("SELECT provider,model FROM agent_bots ORDER BY id"),
