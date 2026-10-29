@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, SquarePen } from 'lucide-react';
 import type { Realtime } from '../api';
 import type { Catalog, CustomFilter, User } from '../types';
 import type { Route } from '../route';
 import { CONVERSATION_TYPE_LABEL } from '../labels';
+import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
+import { NewChatModal } from './NewChatModal';
 import { ChatList, type AssigneeType, type StatusFilter } from './ChatList';
 import { ConversationBox } from './ConversationBox';
 import { ConversationFilters } from './ConversationFilters';
@@ -47,7 +49,8 @@ export function ConversationsScreen({
 }: Props) {
   const [status, setStatus] = useState<StatusFilter>('open'),
     [tab, setTab] = useState<AssigneeType>('me'),
-    [sort, setSort] = useState('last_activity_at_desc');
+    [sort, setSort] = useState('last_activity_at_desc'),
+    [starting, setStarting] = useState(false);
   const list = useConversationList({ route, status, tab, sort, realtime });
   const { displayId } = route;
   const view = route.viewId ? views.find((v) => v.id === route.viewId) : undefined;
@@ -75,13 +78,22 @@ export function ConversationsScreen({
           sort={sort}
           filtering={Boolean(route.filters)}
           toolbar={
-            <ConversationFilters
-              route={route}
-              catalog={catalog}
-              view={view}
-              onNavigate={onNavigate}
-              onViewsChange={onViewsChange}
-            />
+            <>
+              <Button
+                size="xs"
+                icon={SquarePen}
+                aria-label="Nova conversa"
+                title="Nova conversa"
+                onClick={() => setStarting(true)}
+              />
+              <ConversationFilters
+                route={route}
+                catalog={catalog}
+                view={view}
+                onNavigate={onNavigate}
+                onViewsChange={onViewsChange}
+              />
+            </>
           }
           catalog={catalog}
           selected={displayId}
@@ -114,7 +126,26 @@ export function ConversationsScreen({
           <MessageCircle size={40} className="text-n-slate-8" />
           <p className="text-base font-medium text-n-slate-12">Selecione uma conversa</p>
           <p className="text-sm">As mensagens do WhatsApp chegam aqui em tempo real.</p>
+          <Button
+            className="mt-2"
+            size="sm"
+            icon={SquarePen}
+            label="Nova conversa"
+            onClick={() => setStarting(true)}
+          />
         </div>
+      )}
+      {starting && (
+        <NewChatModal
+          inboxes={catalog.inboxes}
+          onClose={() => setStarting(false)}
+          onAgent={(agentId) => onNavigate({ page: 'agent_chat', agentId })}
+          onConversation={(id) => {
+            setStarting(false);
+            list.reload();
+            onNavigate({ page: 'conversations', displayId: id });
+          }}
+        />
       )}
     </div>
   );

@@ -172,6 +172,7 @@ export function Sidebar({
             {catalog.teams.map((t) => (
               <SidebarLeaf
                 key={`t${t.id}`}
+                nested
                 label={t.name}
                 active={conv?.teamId === t.id}
                 onClick={() => onNavigate({ page: 'conversations', teamId: t.id })}
@@ -181,6 +182,7 @@ export function Sidebar({
             {catalog.inboxes.map((i) => (
               <SidebarLeaf
                 key={`i${i.id}`}
+                nested
                 label={i.name}
                 icon={<MessageCircle size={16} className="text-n-teal-10" />}
                 active={conv?.inboxId === i.id}
@@ -191,6 +193,7 @@ export function Sidebar({
             {catalog.labels.map((l) => (
               <SidebarLeaf
                 key={`l${l.id}`}
+                nested
                 label={l.title}
                 icon={dot(l.color)}
                 active={conv?.label === l.title}
