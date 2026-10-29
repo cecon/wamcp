@@ -51,7 +51,7 @@ impl ContactBookRepo for SqliteStore {
 
     fn contact_channels(&self, contact_id: i64) -> Result<Vec<ContactChannel>> {
         let sql = "SELECT ci.inbox_id, w.session_id, ci.source_id FROM contact_inboxes ci
-                   JOIN inboxes i ON i.id=ci.inbox_id JOIN channel_whatsapp w ON w.id=i.channel_id
+                   JOIN inboxes i ON i.id=ci.inbox_id JOIN channel_whatsapp w ON i.channel_type='whatsapp' AND w.id=i.channel_id
                    WHERE ci.contact_id=? ORDER BY ci.id";
         self.rows(sql, vec![int(contact_id)], PLAIN)
     }

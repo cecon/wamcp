@@ -233,8 +233,7 @@ impl HelpdeskService {
         actor: &Actor,
     ) -> Result<Message> {
         let repo = &self.core.repo;
-        let request = self.sign_for_whatsapp(&message, inbox, request);
-        let updated = match self.whatsapp.send_message(&inbox.session_id, &request).await {
+        let updated = match self.send_out(&message, inbox, request).await {
             Ok(_) => {
                 let current = repo.message(message.id)?.unwrap_or(message);
                 // A delivery receipt may already have advanced the status while the send was in flight.

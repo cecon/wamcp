@@ -21,7 +21,7 @@ impl HelpdeskService {
             .or_else(|| message.sender_name.clone())
     }
 
-    pub(super) fn sign_for_whatsapp(&self, message: &Message, inbox: &Inbox, mut request: SendRequest) -> SendRequest {
+    pub(crate) fn sign_for_whatsapp(&self, message: &Message, inbox: &Inbox, mut request: SendRequest) -> SendRequest {
         if inbox.show_agent_name == 0 {
             return request;
         }

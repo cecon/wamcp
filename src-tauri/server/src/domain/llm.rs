@@ -49,9 +49,9 @@ pub fn parse_answer(value: &Value) -> Option<Answer> {
     })
 }
 
-fn speaker(message: &Message) -> Option<&'static str> {
+fn speaker<'a>(message: &Message, contact: &'a str) -> Option<&'a str> {
     match (message.message_type.as_str(), message.sender_type.as_deref()) {
-        ("incoming", _) => Some("Cliente"),
+        ("incoming", _) => Some(contact),
         ("outgoing", Some("agent_bot")) => Some("Você"),
         ("outgoing", _) => Some("Atendente"),
         _ => None,
@@ -64,9 +64,16 @@ pub fn build_prompt(inbox_name: &str, instructions: Option<&str>, messages: &[Me
     if let Some(text) = instructions.map(str::trim).filter(|t| !t.is_empty()) {
         prompt.push_str(&format!("Instruções da empresa:\n{text}\n\n"));
     }
-    prompt.push_str("Conversa até agora:\n");
+    prompt.push_str(&transcript(messages, "Cliente"));
+    prompt.push_str("\nEscreva a próxima resposta para o cliente.");
+    prompt
+}
+
+/// The conversation so far (oldest first); `contact` names whoever writes to the inbox.
+pub fn transcript(messages: &[Message], contact: &str) -> String {
+    let mut lines = "Conversa até agora:\n".to_string();
     for message in messages.iter().filter(|m| !m.private) {
-        let Some(who) = speaker(message) else {
+        let Some(who) = speaker(message, contact) else {
             continue;
         };
         let content = message.content.as_deref().map(str::trim).unwrap_or_default();
@@ -75,10 +82,9 @@ pub fn build_prompt(inbox_name: &str, instructions: Option<&str>, messages: &[Me
             (true, false) => format!("[{} anexo(s)]", message.attachments.len()),
             (true, true) => continue,
         };
-        prompt.push_str(&format!("{who}: {content}\n"));
+        lines.push_str(&format!("{who}: {content}\n"));
     }
-    prompt.push_str("\nEscreva a próxima resposta para o cliente.");
-    prompt
+    lines
 }
 
 /// Whether an AI agent answers the customers of the inboxes it serves: active, with a role that

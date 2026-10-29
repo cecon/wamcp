@@ -18,6 +18,8 @@ mod engine_runs;
 mod engine_schema;
 mod events;
 mod filters;
+mod github;
+mod github_schema;
 mod inboxes;
 mod insights;
 mod macros;

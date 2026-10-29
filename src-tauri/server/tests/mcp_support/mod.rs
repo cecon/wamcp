@@ -86,6 +86,7 @@ impl Mcp {
         let clock = Arc::new(ManualClock::at(START * 1000));
         let storage = Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default());
         let images = Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default());
+        let github = Arc::new(wamcp_server::adapters::outbound::github::MemoryGithub::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa_hooks.clone(),
@@ -96,6 +97,7 @@ impl Mcp {
             storage: storage.clone(),
             images: images.clone(),
             secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
+            github: github.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -113,6 +115,7 @@ impl Mcp {
             clock,
             storage,
             images,
+            github,
             events,
             dir: None,
             admin_agent: Mutex::new(None),

@@ -201,5 +201,7 @@ pub fn steps() -> Vec<String> {
          DROP TABLE system_proposals;
          ALTER TABLE system_proposals_v33 RENAME TO system_proposals;"
             .into(),
+        // v34: canal GitHub (eventos de PR, issues, Actions e pushes viram conversas); inboxes é refeita
+        super::github_schema::github_channel(),
     ]
 }

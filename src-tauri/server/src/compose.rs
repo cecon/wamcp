@@ -16,8 +16,8 @@ use crate::application::llm_bots::LlmBotService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
 use crate::application::ports::{
-    Clock, EventCallback, ImageFetcher, Llm, MediaStorage, PasswordHasher, Repository, SecretBox, WebhookSender,
-    WhatsApp,
+    Clock, EventCallback, GithubApi, ImageFetcher, Llm, MediaStorage, PasswordHasher, Repository, SecretBox,
+    WebhookSender, WhatsApp,
 };
 use crate::application::reports::ReportService;
 use crate::application::sessions::{McpService, SessionService};
@@ -44,6 +44,8 @@ pub struct Ports {
     pub images: Arc<dyn ImageFetcher>,
     /// Encrypts agent credentials at rest.
     pub secrets: Arc<dyn SecretBox>,
+    /// The GitHub REST API (GitHub inboxes).
+    pub github: Arc<dyn GithubApi>,
 }
 
 pub struct Settings {
@@ -90,6 +92,8 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         core: core.clone(),
         whatsapp: ports.whatsapp.clone(),
         storage: ports.storage.clone(),
+        github: ports.github.clone(),
+        secrets: ports.secrets.clone(),
     };
     let notifications = NotificationService { core: core.clone() };
     let webhooks = WebhookService {
