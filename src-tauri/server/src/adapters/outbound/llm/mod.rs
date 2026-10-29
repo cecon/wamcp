@@ -4,10 +4,9 @@ pub mod claude_cli;
 pub mod codex_cli;
 pub mod launcher;
 
-use crate::application::ports::{Llm, LlmProviderStatus, LlmRequest};
+use crate::application::ports::{Completion, Llm, LlmProviderStatus, LlmRequest};
 use crate::domain::error::{fail, Result};
 use async_trait::async_trait;
-use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -40,7 +39,7 @@ impl LlmRouter {
 
 #[async_trait]
 impl Llm for LlmRouter {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value> {
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         match self.providers.get(&request.provider) {
             Some(provider) => provider.complete(request).await,
             None => fail(format!("Provedor de LLM indisponível: {}", request.provider)),

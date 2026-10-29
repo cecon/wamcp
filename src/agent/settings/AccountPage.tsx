@@ -5,11 +5,13 @@ import { useFetch } from '../useFetch';
 import { Button } from '../ui/Button';
 import { SettingsHeader, SettingsPage, Toggle } from '../ui/Settings';
 import { useAction } from './useAction';
+import { SalaryRatesForm } from './members/SalaryRatesForm';
 
 const LOCALES: Record<Locale, string> = { 'pt-BR': 'Português (Brasil)', en: 'English', es: 'Español' };
 const HEADER = {
   title: 'Configurações da conta',
-  description: 'Nome, idioma e resolução automática de conversas inativas desta conta.',
+  description:
+    'Nome, idioma, resolução automática de conversas inativas e os valores do salário digital desta conta.',
 };
 
 /** Chatwoot account settings: general settings and auto-resolve of inactive conversations. */
@@ -19,7 +21,10 @@ export function AccountPage() {
     <SettingsPage>
       <SettingsHeader {...HEADER} />
       {data ? (
-        <AccountForm account={data} />
+        <>
+          <AccountForm account={data} />
+          <SalaryRatesForm account={data} />
+        </>
       ) : (
         <p className="text-sm text-n-slate-11">{error || 'Carregando…'}</p>
       )}

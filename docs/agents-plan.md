@@ -140,6 +140,14 @@ Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, W
 - **Fora do escopo** (2026-10-28): catálogo de produtos, cardápio, vendas e o importador do iFood saíram do produto. A migração v29 apaga as tabelas do cardápio, as skills de venda e o perfil "Atendente de delivery"; quem usava esse perfil passa para o de operador.
 - `GET /agent_runtimes` diz quais runtimes estão instalados. A detecção procura `WAMCP_*_BIN`, depois o executável no PATH e no `~/.local/bin`, e por fim a instalação global do npm, rodada com o Node. O cadastro desabilita as runtimes ausentes.
 
+## Painel de funcionários e organograma (2026-10-28)
+
+- **Funcionários** (Configurações → Funcionários) substitui a tabela de agentes: cards de pessoas e agentes de IA (perfil, função, Pessoa/IA, status, salário do mês, skills) e um painel de detalhe com as abas Visão Geral, Habilidades, Memória, Ferramentas e Configurações.
+- **Salário digital:** cada chamada de LLM grava uma linha em `llm_usage` (migração v30): provider, modelo, tokens de entrada, em cache e de saída, custo com a moeda e a origem (`reported`, `estimated` ou `none`) e `run_ref`, a execução do motor agêntico a que a chamada pertence. O Claude Code informa `usage` e `total_cost_usd`; o Codex (`--json`) informa só os tokens, então essas chamadas aparecem como "sem custo" e não entram no salário. Uma pessoa ativa custa o assento fixo; um agente de IA começa o mês em R$ 0 e acumula `custo × cotação × (1 + margem)`. Os três valores (R$ 50, 50% e US$ 1 = R$ 5,50 por padrão) ficam nas configurações da conta. `GET /agent_directory/salaries?month=AAAA-MM` devolve a folha (o mês corrente é parcial, até agora) e `GET /agent_directory/{id}/usage?days=30` os tokens por dia. Os meses são contados em UTC.
+- **Hierarquia:** `agents.supervisor_id` diz a quem cada membro responde, sem ciclos. A página **Organização** mostra a árvore, o fluxo de cada caixa de entrada (caixa → agente de IA → a quem ele escala) e avisa coordenadores sem ninguém abaixo e executores de IA sem coordenador. Na fase 3, `delegate` do coordenador fica restrito a quem está abaixo dele.
+- **Avatar:** `agents.avatar` guarda pele, cabelo, roupa, acessório e cor, desenhados em SVG com as cores do tema do app.
+- **Memória:** a aba mostra só um aviso até a fase 2 (`agent_memories`).
+
 ## Decisões em aberto
 
 1. **Agente humano sem login:** basta o WhatsApp para ser consultado, ou todo humano precisa ser um `user`?

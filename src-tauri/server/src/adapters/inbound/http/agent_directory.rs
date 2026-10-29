@@ -6,11 +6,12 @@ use super::state::AppState;
 use crate::domain::agents::whatsapp_jid;
 use crate::domain::error::HelpdeskError;
 use crate::domain::model::{RosterAgentDraft, Skill};
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query as Params, State};
 use axum::response::Response;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use serde::Deserialize;
+use serde_json::Value;
 
 #[derive(Deserialize)]
 struct AgentBody {
@@ -24,6 +25,7 @@ struct AgentBody {
     model: Option<String>,
     instructions: Option<String>,
     active: Option<bool>,
+    supervisor_id: Option<i64>,
 }
 
 fn optional(value: Option<String>, max: usize) -> ApiResult<Option<String>> {
@@ -51,6 +53,7 @@ fn draft(id: i64, body: AgentBody) -> ApiResult<RosterAgentDraft> {
         model: optional(body.model, 80)?,
         instructions: optional(body.instructions, 8000)?,
         active: body.active.unwrap_or(true),
+        supervisor_id: body.supervisor_id,
     })
 }
 
@@ -219,6 +222,51 @@ async fn delete_credential(
     done()
 }
 
+#[derive(Deserialize)]
+struct Month {
+    month: Option<String>,
+}
+
+/// Every member's salary for `?month=AAAA-MM` (default: the current month, to date).
+async fn salaries(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Params(query): Params<Month>,
+) -> ApiResult<Response> {
+    ok(state
+        .support()
+        .agents
+        .salaries(&current.actor(), query.month.as_deref())?)
+}
+
+#[derive(Deserialize)]
+struct Days {
+    days: Option<i64>,
+}
+
+/// The agent's tokens per day over the last `?days=` days (30 by default).
+async fn usage(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(agent): Path<String>,
+    Params(query): Params<Days>,
+) -> ApiResult<Response> {
+    let days = query.days.unwrap_or(30);
+    ok(state.support().agents.usage(&current.actor(), id(&agent)?, days)?)
+}
+
+async fn set_avatar(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(agent): Path<String>,
+    Body(body): Body<Value>,
+) -> ApiResult<Response> {
+    ok(state
+        .support()
+        .agents
+        .set_avatar(&current.actor(), id(&agent)?, &body)?)
+}
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/agent_directory", get(agents).post(create_agent))
@@ -226,7 +274,10 @@ pub fn routes() -> Router<AppState> {
             "/agent_directory/{id}",
             put(update_agent).patch(update_agent).delete(delete_agent),
         )
+        .route("/agent_directory/salaries", get(salaries))
         .route("/agent_directory/{id}/skills", put(set_skills))
+        .route("/agent_directory/{id}/usage", get(usage))
+        .route("/agent_directory/{id}/avatar", put(set_avatar))
         .route(
             "/agent_directory/{id}/credentials",
             get(credentials).post(add_credential),

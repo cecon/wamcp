@@ -71,6 +71,8 @@ export function AgentRosterModal(props: Props) {
       profile_id: Number(form.profile_id) || null,
       description: form.description.trim() || null,
       active: form.active,
+      // Set in the detail pane or the organization tree; the form keeps it.
+      supervisor_id: agent?.supervisor_id ?? null,
     };
     if (human) return { ...common, whatsapp: form.whatsapp.trim() || null, user_id: userId };
     return {

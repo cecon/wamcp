@@ -12,7 +12,11 @@ use crate::domain::agents::{
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::llm::answers_customers;
-use crate::domain::model::{AgentCredential, Inbox, RosterAgent, RosterAgentDraft, Skill};
+use crate::domain::model::{AgentCredential, Inbox, RosterAgent, RosterAgentDraft, Skill, UsageDay};
+use crate::domain::salary::{
+    check_supervisor, current_month, month_bounds, salary, validate_avatar, window_start, SalaryRates, SalarySheet,
+};
+use serde_json::Value;
 use std::sync::{Arc, OnceLock};
 
 #[derive(Clone)]
@@ -113,7 +117,45 @@ impl AgentDirectory {
                 return fail_with("Login não encontrado", 422);
             }
         }
+        check_supervisor(draft.id, draft.supervisor_id, &self.core.repo.agents()?)?;
         self.core.repo.save_agent(draft)
+    }
+
+    pub fn set_avatar(&self, actor: &Actor, id: i64, avatar: &Value) -> Result<RosterAgent> {
+        require_admin(actor)?;
+        self.find_agent(id)?;
+        self.core.repo.set_agent_avatar(id, &validate_avatar(avatar)?)?;
+        self.find_agent(id)
+    }
+
+    /// Every member's salary for a `YYYY-MM` month (the current one by default, month to date):
+    /// people cost the seat, AI agents the cost of their calls plus the margin.
+    pub fn salaries(&self, actor: &Actor, month: Option<&str>) -> Result<SalarySheet> {
+        require_admin(actor)?;
+        let month = match month {
+            Some(month) => month.to_string(),
+            None => current_month(self.core.clock.now_ms()),
+        };
+        let (from, to) = month_bounds(&month)?;
+        let rates = SalaryRates::from_settings(&self.core.repo.account()?.settings);
+        let usage = self.core.repo.usage_totals(&from, &to)?;
+        let salaries = self
+            .core
+            .repo
+            .agents()?
+            .iter()
+            .map(|agent| salary(agent, usage.iter().find(|u| u.agent_id == agent.id), &rates))
+            .collect();
+        Ok(SalarySheet { month, rates, salaries })
+    }
+
+    /// The agent's tokens per day over the last `days` days (today included).
+    pub fn usage(&self, actor: &Actor, id: i64, days: i64) -> Result<Vec<UsageDay>> {
+        require_admin(actor)?;
+        self.find_agent(id)?;
+        self.core
+            .repo
+            .usage_days(id, &window_start(self.core.clock.now_ms(), days))
     }
 
     /// The role comes from the mandatory profile (same roles for people and AI); AI agents need one.

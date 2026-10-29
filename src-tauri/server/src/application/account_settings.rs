@@ -4,6 +4,7 @@ use crate::domain::actor::Actor;
 use crate::domain::error::Result;
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::Account;
+use crate::domain::salary::{MARGIN_KEY, RATE_KEY, SEAT_KEY};
 use serde_json::json;
 
 pub const LOCALES: [&str; 3] = ["pt-BR", "en", "es"];
@@ -18,6 +19,10 @@ pub struct AccountChanges {
     pub auto_resolve_duration: Option<Option<i64>>,
     /// Message sent to the contact when a conversation is resolved for inactivity.
     pub auto_resolve_message: Option<Option<String>>,
+    /// Monthly seat of a person, AI margin over the token cost and the dollar rate (see `domain::salary`).
+    pub seat_price_brl: Option<f64>,
+    pub ai_margin_percent: Option<f64>,
+    pub usd_brl_rate: Option<f64>,
 }
 
 impl HelpdeskService {
@@ -37,6 +42,9 @@ impl HelpdeskService {
                 "auto_resolve_message",
                 changes.auto_resolve_message.clone().map(|m| json!(m)),
             ),
+            (SEAT_KEY, changes.seat_price_brl.map(|v| json!(v))),
+            (MARGIN_KEY, changes.ai_margin_percent.map(|v| json!(v))),
+            (RATE_KEY, changes.usd_brl_rate.map(|v| json!(v))),
         ];
         for (key, value) in entries {
             if let Some(value) = value {

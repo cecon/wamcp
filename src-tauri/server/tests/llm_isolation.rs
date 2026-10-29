@@ -37,6 +37,6 @@ async fn claude_code_runs_without_the_users_claude_ai_connectors() {
         schema: json!({ "type": "object" }),
         api_key: None,
     };
-    let answer: Value = claude.complete(&request).await.unwrap();
+    let answer: Value = claude.complete(&request).await.unwrap().answer;
     assert_eq!(answer["reply"], "false|", "connectors off and no admin token");
 }

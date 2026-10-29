@@ -15,7 +15,7 @@ use std::time::Duration;
 use wamcp_server::adapters::outbound::llm::claude_cli::parse_output;
 use wamcp_server::adapters::outbound::llm::codex_cli::{codex_arguments, parse_codex_answer};
 use wamcp_server::adapters::outbound::llm::LlmRouter;
-use wamcp_server::application::ports::{Llm, LlmRequest};
+use wamcp_server::application::ports::{Completion, Llm, LlmRequest};
 use wamcp_server::domain::error::Result;
 use wamcp_server::domain::llm::openrouter_key;
 use wamcp_server::domain::model::SealedCredential;
@@ -28,9 +28,9 @@ struct FakeRuntime {
 
 #[async_trait]
 impl Llm for FakeRuntime {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value> {
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         self.calls.lock().push(request.clone());
-        Ok(json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": false }))
+        Ok(json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": false }).into())
     }
 
     fn location(&self) -> Option<String> {

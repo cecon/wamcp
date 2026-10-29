@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use wamcp_server::adapters::outbound::llm::claude_cli::{arguments, parse_output};
 use wamcp_server::adapters::outbound::llm::LlmRouter;
-use wamcp_server::application::ports::{Llm, LlmRequest};
+use wamcp_server::application::ports::{Completion, Llm, LlmRequest};
 use wamcp_server::domain::error::Result;
 
 /// Records every request and answers with the queued values (the last one repeats).
@@ -21,14 +21,15 @@ struct ScriptedLlm {
 
 #[async_trait]
 impl Llm for ScriptedLlm {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value> {
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         self.calls.lock().push(request.clone());
         let mut answers = self.answers.lock();
         Ok(if answers.len() > 1 {
             answers.remove(0)
         } else {
             answers[0].clone()
-        })
+        }
+        .into())
     }
 }
 

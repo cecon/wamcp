@@ -167,6 +167,34 @@ pub struct LlmRequest {
     pub api_key: Option<String>,
 }
 
+/// Tokens one call spent, as the runtime reported them (zeros when it reports nothing).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TokenUsage {
+    /// Prompt tokens, cache reads and writes included.
+    pub input_tokens: i64,
+    /// How many of the input tokens were read from the prompt cache.
+    pub cached_input_tokens: i64,
+    pub output_tokens: i64,
+    /// What the call cost in US dollars, when the runtime says so (Claude Code does; Codex does not).
+    pub cost_usd: Option<f64>,
+}
+
+/// What a model call returned: the JSON matching the schema and the tokens it spent.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Completion {
+    pub answer: Value,
+    pub usage: TokenUsage,
+}
+
+impl From<Value> for Completion {
+    fn from(answer: Value) -> Self {
+        Self {
+            answer,
+            usage: TokenUsage::default(),
+        }
+    }
+}
+
 /// Whether a provider can run on this computer: the program found, or why it cannot run.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct LlmProviderStatus {
@@ -178,7 +206,7 @@ pub struct LlmProviderStatus {
 /// A language model provider (a local CLI such as Claude Code, or an HTTP API).
 #[async_trait]
 pub trait Llm: Send + Sync {
-    async fn complete(&self, request: &LlmRequest) -> Result<Value>;
+    async fn complete(&self, request: &LlmRequest) -> Result<Completion>;
 
     /// Where this provider runs from (`None`: not installed on this computer).
     fn location(&self) -> Option<String> {

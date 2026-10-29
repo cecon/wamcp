@@ -5,14 +5,14 @@
 //! conversation at a time, with another one afterwards if the contact wrote meanwhile.
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
-use super::ports::{Llm, LlmRequest, SecretBox};
+use super::ports::{Llm, LlmRequest, SecretBox, TokenUsage};
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
 };
-use crate::domain::model::{Inbox, Message, BOT_LLM};
+use crate::domain::model::{Inbox, LlmUsage, Message, BOT_LLM};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -31,6 +31,13 @@ pub struct LlmBotService {
     queued: Arc<Mutex<HashMap<i64, bool>>>,
     running: Arc<AtomicUsize>,
     idle: Arc<Notify>,
+}
+
+/// Who answers an inbox and the call to make: an AI agent of the roster or a legacy `llm` bot.
+struct Responder {
+    request: LlmRequest,
+    agent_id: Option<i64>,
+    agent_bot_id: Option<i64>,
 }
 
 impl LlmBotService {
@@ -85,7 +92,7 @@ impl LlmBotService {
 
     /// Who answers the inbox: its AI agent (when it may answer customers), else its `llm` bot. The
     /// request carries the instructions as its prompt until the conversation is added.
-    fn responder(&self, inbox: &Inbox) -> Result<Option<LlmRequest>> {
+    fn responder(&self, inbox: &Inbox) -> Result<Option<Responder>> {
         let repo = &self.helpdesk.core.repo;
         let agent = match inbox.ai_agent_id {
             Some(id) => repo.agent(id)?.filter(answers_customers),
@@ -106,13 +113,21 @@ impl LlmBotService {
                 None => None,
             };
             let instructions = agent_instructions(&agent, &repo.skills()?);
-            return Ok(Some(request(agent.runtime, agent.model, instructions, api_key)));
+            return Ok(Some(Responder {
+                request: request(agent.runtime, agent.model, instructions, api_key),
+                agent_id: Some(agent.id),
+                agent_bot_id: None,
+            }));
         }
         let bot = match inbox.agent_bot_id {
             Some(id) => repo.agent_bot(id)?.filter(|b| b.kind == BOT_LLM),
             None => None,
         };
-        Ok(bot.map(|bot| request(bot.provider, bot.model, bot.instructions.unwrap_or_default(), None)))
+        Ok(bot.map(|bot| Responder {
+            agent_bot_id: Some(bot.id),
+            agent_id: None,
+            request: request(bot.provider, bot.model, bot.instructions.unwrap_or_default(), None),
+        }))
     }
 
     fn schedule(&self, conversation_id: i64) {
@@ -154,7 +169,7 @@ impl LlmBotService {
             return Ok(());
         };
         let inbox = core.inbox(conversation.inbox_id)?;
-        let Some(mut request) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
+        let Some(responder) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
             return Ok(());
         };
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
@@ -166,9 +181,11 @@ impl LlmBotService {
         if last.is_none_or(|m| m.message_type != "incoming") {
             return Ok(());
         }
+        let mut request = responder.request.clone();
         request.prompt = build_prompt(&inbox.name, Some(&request.prompt), &messages);
-        let value = self.llm.complete(&request).await?;
-        let Some(answer) = parse_answer(&value) else {
+        let completion = self.llm.complete(&request).await?;
+        self.record(&responder, conversation.id, completion.usage);
+        let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
         };
         // A person may have taken the conversation while the model was thinking.
@@ -187,6 +204,28 @@ impl LlmBotService {
                 .toggle_status(&actor, conversation.display_id, "open", None)?;
         }
         Ok(())
+    }
+
+    /// Keeps the tokens of the call: an AI agent's salary is the cost of its calls plus the margin.
+    fn record(&self, responder: &Responder, conversation_id: i64, usage: TokenUsage) {
+        let usage = LlmUsage {
+            agent_id: responder.agent_id,
+            agent_bot_id: responder.agent_bot_id,
+            conversation_id: Some(conversation_id),
+            run_ref: None,
+            provider: responder.request.provider.clone(),
+            model: responder.request.model.clone(),
+            input_tokens: usage.input_tokens,
+            cached_tokens: usage.cached_input_tokens,
+            output_tokens: usage.output_tokens,
+            cost: usage.cost_usd,
+            currency: "USD".into(),
+            cost_reported: usage.cost_usd.is_some(),
+            at: self.helpdesk.core.clock.now_ms(),
+        };
+        if let Err(error) = self.helpdesk.core.repo.record_llm_usage(&usage) {
+            tracing::warn!(%error, conversation_id, "uso de tokens não registrado");
+        }
     }
 
     /// Waits until no answer is scheduled or running (tests and shutdown).
