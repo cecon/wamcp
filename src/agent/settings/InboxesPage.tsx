@@ -13,6 +13,7 @@ import { InboxAgentSelect } from './InboxAgentSelect';
 import { useAction } from './useAction';
 import { ConnectGithubModal } from './github/ConnectGithubModal';
 import { GithubSetup } from './github/GithubSetup';
+import { NewConnectionModal } from './connections/ConnectionsPage';
 
 /** What the inbox list and header say about the channel. */
 const channelLine = (i: Inbox) =>
@@ -30,35 +31,31 @@ interface Props {
 /** Chatwoot Inboxes: channel tile list; each inbox opens a settings page with tabs. */
 export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
   const inbox = inboxId ? catalog.inboxes.find((i) => i.id === inboxId) : undefined;
-  const [connecting, setConnecting] = useState(false);
+  const [adding, setAdding] = useState<'whatsapp' | 'github' | null>(null);
+  const connection = (id: string) =>
+    onNavigate({ page: 'settings', section: 'connections', connectionId: id });
   if (inbox)
     return <InboxDetail inbox={inbox} catalog={catalog} onNavigate={onNavigate} onChange={onChange} />;
   return (
     <SettingsPage>
       <SettingsHeader
-        title="Caixas de entrada"
-        description="Cada conexão WhatsApp e cada repositório do GitHub é um canal com a sua caixa de entrada."
+        title="Canais"
+        description="Cada WhatsApp conectado e cada repositório do GitHub é um canal, com a sua caixa de entrada de conversas."
         action={
           <div className="flex flex-wrap gap-2">
+            <Button icon={Smartphone} label="Novo WhatsApp" onClick={() => setAdding('whatsapp')} />
             <Button
               color="slate"
               icon={GitPullRequest}
               label="Conectar GitHub"
-              onClick={() => setConnecting(true)}
-            />
-            <Button
-              icon={Smartphone}
-              label="Conexões WhatsApp"
-              onClick={() => onNavigate({ page: 'settings', section: 'connections' })}
+              onClick={() => setAdding('github')}
             />
           </div>
         }
-        count={`${catalog.inboxes.length} caixa${catalog.inboxes.length === 1 ? '' : 's'}`}
+        count={`${catalog.inboxes.length} ${catalog.inboxes.length === 1 ? 'canal' : 'canais'}`}
       />
       <ul className="divide-y divide-n-weak border-t border-n-weak">
-        {catalog.inboxes.length === 0 && (
-          <li className="py-20 text-center text-base">Nenhuma caixa de entrada.</li>
-        )}
+        {catalog.inboxes.length === 0 && <li className="py-20 text-center text-base">Nenhum canal ainda.</li>}
         {catalog.inboxes.map((i) => (
           <li key={i.id} className="flex items-center justify-between gap-4 py-4">
             <div className="flex min-w-0 items-center gap-4">
@@ -70,17 +67,38 @@ export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
                 <p className="truncate text-sm text-n-slate-11">{channelLine(i)}</p>
               </div>
             </div>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Settings}
-              aria-label={`Configurar ${i.name}`}
-              onClick={() => onNavigate({ page: 'settings', section: 'inboxes', id: i.id })}
-            />
+            <div className="flex gap-2">
+              {i.channel_type !== 'github' && i.session_id && (
+                <Button
+                  color="slate"
+                  variant="faded"
+                  icon={Smartphone}
+                  aria-label={`Conexão de ${i.name}`}
+                  title="QR Code, status e acesso MCP"
+                  onClick={() => connection(i.session_id)}
+                />
+              )}
+              <Button
+                color="slate"
+                variant="faded"
+                icon={Settings}
+                aria-label={`Configurar ${i.name}`}
+                onClick={() => onNavigate({ page: 'settings', section: 'inboxes', id: i.id })}
+              />
+            </div>
           </li>
         ))}
       </ul>
-      {connecting && <ConnectGithubModal onClose={() => setConnecting(false)} onConnected={onChange} />}
+      {adding === 'github' && <ConnectGithubModal onClose={() => setAdding(null)} onConnected={onChange} />}
+      {adding === 'whatsapp' && (
+        <NewConnectionModal
+          onClose={() => setAdding(null)}
+          onCreated={(created) => {
+            void onChange().catch(() => {});
+            connection(created.id);
+          }}
+        />
+      )}
     </SettingsPage>
   );
 }
@@ -122,7 +140,7 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
         title={inbox.name}
         description={channelLine(inbox)}
         back={{
-          label: 'Caixas de entrada',
+          label: 'Canais',
           onClick: () => onNavigate({ page: 'settings', section: 'inboxes' }),
         }}
       />

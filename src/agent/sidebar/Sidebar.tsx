@@ -258,7 +258,10 @@ export function Sidebar({
                   key={section}
                   label={label}
                   icon={<Icon size={16} />}
-                  active={route.page === 'settings' && route.section === section}
+                  active={
+                    route.page === 'settings' &&
+                    (route.section === section || (section === 'inboxes' && route.section === 'connections'))
+                  }
                   onClick={() => onNavigate({ page: 'settings', section })}
                 />
               ))}

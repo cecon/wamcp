@@ -83,7 +83,7 @@ const renderSidebar = () =>
 describe('outside the desktop app', () => {
   it('hides the Aplicativo page and never calls native commands', async () => {
     renderSidebar();
-    expect(screen.getByRole('button', { name: 'Conexões WhatsApp' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Canais' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('button', { name: 'Aplicativo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Minhas sessões' })).not.toBeInTheDocument();
   });

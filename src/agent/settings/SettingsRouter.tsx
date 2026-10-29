@@ -61,8 +61,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'custom_roles':
       return <CustomRolesPage onChange={onChange} />;
     case 'connections':
-      return (
+      // WhatsApp connections are listed with the other channels; this page is one connection.
+      return route.connectionId ? (
         <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
+      ) : (
+        <InboxesPage catalog={catalog} onNavigate={onNavigate} onChange={onChange} />
       );
     case 'engine':
       return <EnginePage />;
