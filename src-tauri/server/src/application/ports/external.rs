@@ -163,7 +163,7 @@ pub struct LlmRequest {
     pub system: String,
     pub prompt: String,
     pub schema: Value,
-    /// Key for providers that call a paid API on the agent's behalf (OpenClaude with OpenRouter).
+    /// Key for providers that call a paid API on the agent's behalf (OpenCode with OpenRouter, …).
     pub api_key: Option<String>,
     /// An MCP server the runtime may call while it works (only Claude Code uses tools today).
     pub mcp: Option<LlmMcp>,

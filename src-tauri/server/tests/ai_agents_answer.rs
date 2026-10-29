@@ -49,17 +49,17 @@ struct Setup {
     f: Fixture,
     admin: common::Agent,
     claude: Arc<FakeRuntime>,
-    openclaude: Arc<FakeRuntime>,
+    opencode: Arc<FakeRuntime>,
     session: String,
     inbox: i64,
 }
 
 async fn setup() -> Setup {
     let mut f = Fixture::new().await;
-    let (claude, openclaude) = (runtime(Some("C:/bin/claude.exe")), runtime(None));
+    let (claude, opencode) = (runtime(Some("C:/bin/claude.exe")), runtime(None));
     let router = LlmRouter::default()
         .with("claude_cli", claude.clone())
-        .with("openclaude", openclaude.clone());
+        .with("opencode", opencode.clone());
     f.app.attach_llm(Arc::new(router), Duration::ZERO);
     let session = f.session("Padaria").id;
     let admin = f.bootstrap().await;
@@ -68,7 +68,7 @@ async fn setup() -> Setup {
         f,
         admin,
         claude,
-        openclaude,
+        opencode,
         session,
         inbox,
     }
@@ -169,23 +169,23 @@ async fn open_conversations_stay_with_people_until_handed_to_the_agent() {
 }
 
 #[tokio::test]
-async fn openclaude_agents_send_their_openrouter_key_and_only_executors_connect() {
+async fn opencode_agents_send_their_model_key_and_only_executors_connect() {
     let s = setup().await;
     let p = profiles(&s.admin).await;
     let mut body = ai(&p, "Rota", "operator");
-    body["runtime"] = json!("openclaude");
-    body["model"] = json!("openai/gpt-4o-mini");
+    body["runtime"] = json!("opencode");
+    body["model"] = json!("openrouter/openai/gpt-4o-mini");
     let rota = s.agent(body).await;
     let url = format!("/agent_directory/{rota}/credentials");
     let key = json!({ "name": "OPENROUTER_API_KEY", "kind": "api_key", "secret": "sk-or-123" });
     assert_eq!(s.admin.post(&url, key).await.status, 201);
     assert_eq!(s.connect(Some(rota)).await.status, 200);
     s.write("IN1", "Oi").await;
-    let calls = s.openclaude.calls.lock().clone();
+    let calls = s.opencode.calls.lock().clone();
     assert_eq!(calls.len(), 1);
     assert_eq!(
         (calls[0].provider.as_str(), calls[0].api_key.as_deref()),
-        ("openclaude", Some("sk-or-123"))
+        ("opencode", Some("sk-or-123"))
     );
     assert!(s.claude.calls.lock().is_empty());
 
@@ -206,7 +206,7 @@ async fn runtimes_list_says_what_is_installed() {
     let s = setup().await;
     let list = s.admin.get("/agent_runtimes").await.body;
     let ids: Vec<_> = list.as_array().unwrap().iter().map(|r| r["id"].clone()).collect();
-    assert_eq!(ids, vec![json!("claude_cli"), json!("codex_cli"), json!("openclaude")]);
+    assert_eq!(ids, vec![json!("claude_cli"), json!("codex_cli"), json!("opencode")]);
     assert_eq!(
         (list[0]["available"].clone(), list[0]["detail"].clone()),
         (json!(true), json!("C:/bin/claude.exe"))

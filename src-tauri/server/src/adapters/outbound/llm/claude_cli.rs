@@ -1,9 +1,7 @@
 //! The local Claude Code CLI as an LLM: `claude -p` with no built-in tools, none of the operator's own
 //! setup (hooks, plugins, CLAUDE.md) and no MCP server but the run's own (the system agent calls the
-//! app's tools through it), returning the JSON Schema's structured output.
-//! OpenClaude (a Claude Code fork for other providers) takes the same flags and runs OpenRouter
-//! models with the agent's key. The prompt (which carries the contact's words) goes through stdin,
-//! never the command line.
+//! app's tools through it), returning the JSON Schema's structured output. The prompt (which carries
+//! the contact's words) goes through stdin, never the command line.
 use super::launcher::{find, Cli, Launcher};
 use crate::application::ports::{Completion, Llm, LlmMcp, LlmRequest, TokenUsage};
 use crate::domain::error::{fail, Error, HelpdeskError, Result};
@@ -19,19 +17,12 @@ const CLAUDE: Cli = Cli {
     exe: "claude",
     npm_script: Some("@anthropic-ai/claude-code/cli.js"),
 };
-const OPENCLAUDE: Cli = Cli {
-    var: "WAMCP_OPENCLAUDE_BIN",
-    exe: "openclaude",
-    npm_script: Some("@gitlawb/openclaude/bin/openclaude"),
-};
-const OPENROUTER_URL: &str = "https://openrouter.ai/api/v1";
+const LABEL: &str = "Claude Code";
 /// Runs that call MCP tools take several model turns.
 const TOOLS_TIMEOUT: Duration = Duration::from_secs(600);
 
 pub struct ClaudeCli {
     launcher: Option<Launcher>,
-    /// OpenClaude against OpenRouter instead of Claude Code with the operator's login.
-    openrouter: bool,
     work_dir: PathBuf,
     timeout: Duration,
 }
@@ -40,18 +31,8 @@ impl ClaudeCli {
     pub fn new(work_dir: PathBuf) -> Self {
         Self {
             launcher: find(&CLAUDE),
-            openrouter: false,
             work_dir,
             timeout: Duration::from_secs(180),
-        }
-    }
-
-    /// OpenClaude installed by the operator (`npm install -g @gitlawb/openclaude`).
-    pub fn openclaude(work_dir: PathBuf) -> Self {
-        Self {
-            launcher: find(&OPENCLAUDE),
-            openrouter: true,
-            ..Self::new(work_dir)
         }
     }
 
@@ -59,14 +40,6 @@ impl ClaudeCli {
     pub fn with_launcher(mut self, launcher: Launcher) -> Self {
         self.launcher = Some(launcher);
         self
-    }
-
-    fn label(&self) -> &'static str {
-        if self.openrouter {
-            "OpenClaude"
-        } else {
-            "Claude Code"
-        }
     }
 }
 
@@ -130,7 +103,7 @@ pub fn mcp_arguments(mcp: &LlmMcp, config: &Path) -> Vec<String> {
 /// `--output-format json` prints one result object; the schema's answer is in `structured_output`
 /// (or, for models without structured output, a JSON object as the result text).
 pub fn parse_output(stdout: &[u8], stderr: &[u8]) -> Result<Value> {
-    parse_output_of("Claude Code", stdout, stderr)
+    parse_output_of(LABEL, stdout, stderr)
 }
 
 fn parse_output_of(label: &str, stdout: &[u8], stderr: &[u8]) -> Result<Value> {
@@ -200,22 +173,11 @@ impl Drop for TempFile {
 impl Llm for ClaudeCli {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         let Some(launcher) = &self.launcher else {
-            return fail(if self.openrouter {
-                "OpenClaude não encontrado. Instale com npm install -g @gitlawb/openclaude ou defina WAMCP_OPENCLAUDE_BIN."
-            } else {
-                "Claude Code não encontrado. Instale-o ou defina WAMCP_CLAUDE_BIN."
-            });
+            return fail("Claude Code não encontrado. Instale-o ou defina WAMCP_CLAUDE_BIN.");
         };
         let mut args = arguments(request);
-        if self.openrouter {
-            // OpenClaude takes the OpenRouter model from OPENAI_MODEL.
-            if let Some(at) = args.iter().position(|a| a == "--model") {
-                args.drain(at..at + 2);
-            }
-        }
         std::fs::create_dir_all(&self.work_dir).map_err(Error::internal)?;
         let config = match &request.mcp {
-            Some(_) if self.openrouter => return fail("Ferramentas MCP só rodam no Claude Code (claude_cli)"),
             Some(mcp) => {
                 let path = self
                     .work_dir
@@ -243,19 +205,6 @@ impl Llm for ClaudeCli {
             // Wait for the run's server instead of starting the model before its tools exist.
             command.env("MCP_CONNECTION_NONBLOCKING", "false");
         }
-        if self.openrouter {
-            let Some(model) = request.model.as_deref().map(str::trim).filter(|m| !m.is_empty()) else {
-                return fail("Informe no agente o modelo do OpenRouter (ex.: openai/gpt-4o-mini)");
-            };
-            let Some(key) = request.api_key.as_deref().filter(|k| !k.is_empty()) else {
-                return fail("Cadastre no agente a credencial OPENROUTER_API_KEY com a chave do OpenRouter");
-            };
-            command
-                .env("CLAUDE_CODE_USE_OPENAI", "1")
-                .env("OPENAI_BASE_URL", OPENROUTER_URL)
-                .env("OPENAI_API_KEY", key)
-                .env("OPENAI_MODEL", model);
-        }
         let mut child = command.spawn().map_err(Error::internal)?;
         if let Some(mut stdin) = child.stdin.take() {
             stdin
@@ -265,10 +214,10 @@ impl Llm for ClaudeCli {
         }
         let output = tokio::time::timeout(timeout, child.wait_with_output())
             .await
-            .map_err(|_| Error::from(HelpdeskError::new(format!("{} excedeu o tempo limite", self.label()))))?
+            .map_err(|_| Error::from(HelpdeskError::new(format!("{LABEL} excedeu o tempo limite"))))?
             .map_err(Error::internal)?;
         Ok(Completion {
-            answer: parse_output_of(self.label(), &output.stdout, &output.stderr)?,
+            answer: parse_output_of(LABEL, &output.stdout, &output.stderr)?,
             usage: parse_usage(&output.stdout),
         })
     }

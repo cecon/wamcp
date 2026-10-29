@@ -160,6 +160,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let support = Support {
         system: SystemAgent::new(agents.clone()),
         agents,
+        engine: Arc::default(),
         avatars,
         accounts: AccountService {
             core: core.clone(),

@@ -6,9 +6,9 @@ use super::model::{RosterAgentDraft, Skill};
 
 pub const KINDS: [&str; 2] = ["human", "ai"];
 pub const ROLES: [&str; 4] = ["coordinator", "operator", "dev_support", "qa"];
-/// Agentic runtimes an AI agent may use (see docs/agents-plan.md). OpenRouter only serves LLMs:
-/// agentic work over OpenRouter models runs in OpenClaude.
-pub const RUNTIMES: [&str; 3] = ["claude_cli", "codex_cli", "openclaude"];
+/// Agentic runtimes an AI agent may use (see docs/agents-plan.md). OpenCode runs any provider's
+/// model (`provedor/modelo`, OpenRouter included) and is the agentic engine's runtime.
+pub const RUNTIMES: [&str; 3] = ["claude_cli", "codex_cli", "opencode"];
 pub const CREDENTIAL_KINDS: [&str; 4] = ["api_key", "bearer", "basic", "secret"];
 
 /// Whether an agent with this role executes tasks (and so may hold skills); "" means no role.

@@ -17,6 +17,7 @@ import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
+import { EnginePage } from './engine/EnginePage';
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -63,6 +64,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return (
         <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
       );
+    case 'engine':
+      return <EnginePage />;
     case 'app':
       return <AppSettingsPage />;
   }

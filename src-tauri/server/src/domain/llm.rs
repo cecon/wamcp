@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 /// Providers the server can drive: the AI agent runtimes, each an adapter behind the `Llm` port.
 pub const LLM_PROVIDERS: &[&str] = &RUNTIMES;
-/// The credential OpenClaude sends to OpenRouter when an agent has more than one API key.
+/// The credential OpenCode sends to the model provider when an agent has more than one API key.
 pub const OPENROUTER_KEY: &str = "OPENROUTER_API_KEY";
 /// How many recent messages of the conversation the model sees.
 pub const TRANSCRIPT_LIMIT: i64 = 40;
@@ -113,7 +113,7 @@ pub fn agent_instructions(agent: &RosterAgent, skills: &[Skill]) -> String {
     text
 }
 
-/// The API key OpenClaude uses for OpenRouter: the credential named `OPENROUTER_API_KEY`, else the
+/// The API key OpenCode uses for the model provider: the credential named `OPENROUTER_API_KEY`, else the
 /// agent's only `api_key` or `bearer` credential.
 pub fn openrouter_key(credentials: &[SealedCredential]) -> Option<&SealedCredential> {
     if let Some(named) = credentials.iter().find(|c| c.name.eq_ignore_ascii_case(OPENROUTER_KEY)) {

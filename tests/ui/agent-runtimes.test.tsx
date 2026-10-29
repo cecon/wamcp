@@ -15,7 +15,7 @@ const PROFILES: CustomRole[] = [
 const RUNTIMES: RuntimeStatus[] = [
   { id: 'claude_cli', available: false, detail: 'Não instalado neste computador' },
   { id: 'codex_cli', available: false, detail: 'Não instalado neste computador' },
-  { id: 'openclaude', available: true, detail: 'C:/npm/openclaude' },
+  { id: 'opencode', available: true, detail: 'C:/npm/opencode.exe' },
 ];
 const roster = (id: number, fields: Partial<RosterAgent>): RosterAgent => ({
   id,
@@ -65,18 +65,22 @@ describe('AI agent runtimes', () => {
     await user.click(await screen.findByRole('button', { name: 'Adicionar agente de IA' }));
     const dialog = screen.getByRole('dialog', { name: 'Adicionar agente de IA' });
     const runtime = within(dialog).getByLabelText('Runtime');
-    await waitFor(() => expect(runtime).toHaveValue('openclaude'));
-    expect(within(dialog).getByText(/Encontrado em C:\/npm\/openclaude/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/credencial OPENROUTER_API_KEY/)).toBeInTheDocument();
+    await waitFor(() => expect(runtime).toHaveValue('opencode'));
+    expect(within(dialog).getByText(/Encontrado em C:\/npm\/opencode\.exe/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/credencial de API deste agente/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole('option', { name: /OpenClaude/ })).not.toBeInTheDocument();
     const codex = within(dialog).getByRole('option', { name: /Codex CLI.*não instalado/ });
     expect(codex).toBeDisabled();
     await user.type(within(dialog).getByLabelText('Nome'), 'Rota');
-    await user.type(within(dialog).getByLabelText('Modelo do OpenRouter'), 'openai/gpt-4o-mini');
+    await user.type(
+      within(dialog).getByLabelText('Modelo (provedor/modelo)'),
+      'openrouter/openai/gpt-4o-mini',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Criar agente' }));
     await waitFor(() => expect(api.called('POST', '/agent_directory')).toHaveLength(1));
     expect(api.called('POST', '/agent_directory')[0].body).toMatchObject({
-      runtime: 'openclaude',
-      model: 'openai/gpt-4o-mini',
+      runtime: 'opencode',
+      model: 'openrouter/openai/gpt-4o-mini',
     });
   });
 

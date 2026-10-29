@@ -15,6 +15,7 @@ mod contacts;
 mod conversation_tools;
 mod conversations;
 mod custom_data;
+mod engine;
 pub mod error;
 pub mod input;
 mod macros;
@@ -33,7 +34,7 @@ mod web_app;
 use axum::extract::DefaultBodyLimit;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{any, get};
+use axum::routing::{any, get, post};
 use axum::{Json, Router};
 use serde_json::json;
 use state::AppState;
@@ -72,6 +73,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(agent_bots::routes())
         .merge(agent_directory::routes())
         .merge(agent_runtimes::routes())
+        .merge(engine::routes())
         .merge(roles::routes())
         .merge(admin::routes(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))
@@ -90,6 +92,7 @@ pub fn public_router(state: AppState) -> Router {
         router = router
             .route("/mcp-system", any(super::mcp::system::endpoint))
             .nest("/api/v1", helpdesk_api(&state))
+            .route("/engine/mcp", post(super::mcp_engine::endpoint))
             .merge(accounts::bootstrap_routes())
             .merge(web_app::routes());
     }

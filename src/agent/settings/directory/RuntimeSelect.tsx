@@ -13,7 +13,7 @@ interface Props {
 const INSTALL: Record<string, string> = {
   claude_cli: 'Instale o Claude Code e entre com a sua conta (comando claude).',
   codex_cli: 'Instale com npm install -g @openai/codex e entre com codex login.',
-  openclaude: 'Instale com npm install -g @gitlawb/openclaude.',
+  opencode: 'Instale com npm install -g opencode-ai.',
 };
 
 /** The AI agent's runtime, marking the ones not installed on this computer. */
@@ -46,8 +46,8 @@ export function RuntimeSelect({ value, onChange, pickInstalled }: Props) {
           {current.available
             ? `Encontrado em ${current.detail}`
             : `Não instalado neste computador. ${INSTALL[value] ?? ''}`}
-          {value === 'openclaude' &&
-            ' Usa um modelo do OpenRouter com a credencial OPENROUTER_API_KEY deste agente.'}
+          {value === 'opencode' &&
+            ' Usa o modelo provedor/modelo com a credencial de API deste agente (OPENROUTER_API_KEY para o OpenRouter).'}
         </span>
       )}
     </div>

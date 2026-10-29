@@ -72,16 +72,13 @@ struct RunOutcome { session_id, result, is_error }
 
 As ferramentas chegam ao runtime pelo **próprio endpoint MCP do app**, com um token emitido por execução e preso a uma tripla (agente, tarefa, conversa). O token é revogado no fim da execução. Esse desenho já foi validado na versão em Node, com o Claude Code real. O servidor decide quais ferramentas cada token enxerga, a partir das skills do agente e da sua função. Por exemplo, o token de um coordenador **não lista** ferramentas de execução.
 
-| Runtime      | Como roda                                                                        | Situação               |
-| ------------ | -------------------------------------------------------------------------------- | ---------------------- |
-| `claude_cli` | `claude -p --mcp-config … --allowedTools … --resume`                             | flags já validadas     |
-| `codex_cli`  | `codex exec` com MCP configurado                                                 | a validar              |
-| `openclaude` | fork multi-provedor do Claude Code; com OpenRouter, ele conduz a sessão agêntica | **ver o risco abaixo** |
+| Runtime      | Como roda                                                                                 | Situação                                       |
+| ------------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `claude_cli` | `claude -p --mcp-config … --allowedTools … --resume`                                      | flags já validadas                             |
+| `codex_cli`  | `codex exec` com MCP configurado                                                          | a validar                                      |
+| `opencode`   | OpenCode (MIT), qualquer provedor no formato `provedor/modelo`; runtime do motor agêntico | adotado ([ADR 001](engine/adr-001-runtime.md)) |
 
-**Risco do OpenClaude:** segundo as fontes públicas, ele derivou do código-fonte do Claude Code que foi exposto em 31/03/2026. O código original é propriedade da Anthropic. **Empacotá-lo dentro do instalador do app traz risco de licença e de distribuição.** Recomendações:
-
-- não empacotar no instalador; tratar como runtime **opcional, instalado pelo usuário** (como o Claude Code hoje), detectado no PATH;
-- **Decisão (2026-10-26):** o OpenRouter só serve como LLM. Trabalho agêntico com modelos do OpenRouter roda no OpenClaude (runtime `openclaude`, com o modelo do OpenRouter no campo modelo e a chave como credencial do agente). Robôs de LLM simples podem ganhar um provedor `openrouter` direto na porta `Llm`.
+**OpenClaude removido (2026-10-28):** ele derivou do código-fonte do Claude Code exposto em 31/03/2026, e o arquivo LICENSE dele diz que não há autorização para distribuir. O produto adota o **OpenCode** (MIT) no lugar. Agentes que usavam `openclaude` passam para `opencode` na migração do motor, com o modelo do OpenRouter renomeado para `openrouter/<modelo>` e a mesma credencial `OPENROUTER_API_KEY`.
 
 ## Fluxos
 
@@ -116,7 +113,7 @@ As ferramentas chegam ao runtime pelo **próprio endpoint MCP do app**, com um t
 2. **Runtime agêntico + MCP por execução:** a porta `AgentRuntime`, o runtime `claude_cli`, o token por tarefa, o filtro de ferramentas por skill e função, e a memória (`remember`/`recall`).
 3. **Coordenação:** `agent_tasks`, a regra "coordenador só delega" no servidor, o painel de tarefas na conversa e a migração dos robôs `llm`.
 4. **HITL pelo WhatsApp:** sessão interna, `hitl_requests`, roteamento das respostas, retomada e expiração.
-5. **Mais runtimes:** `codex_cli` e `openclaude` (com OpenRouter), detectados no PATH; provedor `openrouter` para os robôs de LLM.
+5. **Mais runtimes:** `codex_cli` e `opencode` (qualquer provedor, OpenRouter incluído), detectados no PATH.
 6. **QA e observabilidade:** etapa de revisão, custo e tempo por tarefa, e relatórios.
 
 Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, WhatsApp), testes de integração em `src-tauri/server/tests` e testes de UI.
@@ -135,7 +132,7 @@ Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, W
 - **Runtimes:**
   - `claude_cli` usa o login do Claude Code.
   - `codex_cli` roda `codex exec` em sandbox somente leitura, com o login do Codex. Ainda não foi testado com o binário real.
-  - `openclaude` roda o OpenClaude apontado para o OpenRouter, com o modelo do cadastro e a credencial `OPENROUTER_API_KEY` do agente (ou a única chave de API dele).
+  - `opencode` roda o OpenCode isolado (sem ferramentas, saída estruturada por JSON Schema), com o modelo `provedor/modelo` do cadastro e a credencial `OPENROUTER_API_KEY` do agente (ou a única chave de API dele).
 - **Skills nos perfis** (migração v28, `custom_role_skills`): todo agente do perfil herda essas skills, somadas às dele. Só perfis cuja função executa têm skills.
 - **Fora do escopo** (2026-10-28): catálogo de produtos, cardápio, vendas e o importador do iFood saíram do produto. A migração v29 apaga as tabelas do cardápio, as skills de venda e o perfil "Atendente de delivery"; quem usava esse perfil passa para o de operador.
 - `GET /agent_runtimes` diz quais runtimes estão instalados. A detecção procura `WAMCP_*_BIN`, depois o executável no PATH e no `~/.local/bin`, e por fim a instalação global do npm, rodada com o Node. O cadastro desabilita as runtimes ausentes.
@@ -153,7 +150,7 @@ Cada fase entra com testes no padrão atual: fakes das portas (`AgentRuntime`, W
 1. **Agente humano sem login:** basta o WhatsApp para ser consultado, ou todo humano precisa ser um `user`?
 2. **Sessão interna do HITL:** dá para reservar um número só para falar com a equipe, ou usamos a mesma sessão dos clientes, com a desambiguação pelo número do humano?
 3. **Quem responde ao cliente:** sempre o operador, ou o coordenador pode responder perguntas triviais? A regra 1, tomada ao pé da letra, impede o coordenador de responder.
-4. ~~**OpenRouter:**~~ decidido: só como LLM; o agêntico com OpenRouter usa o OpenClaude.
+4. ~~**OpenRouter:**~~ decidido: modelos do OpenRouter rodam no OpenCode (`openrouter/<modelo>`).
 5. **Chave das credenciais:** DPAPI do Windows (presa ao usuário do Windows) ou arquivo de chave (mais portátil para backup)?
 6. **Skills:** cadastradas na interface, importadas de arquivos `SKILL.md` no formato do Claude Code, ou as duas formas?
 7. **Limites:** quantos agentes de IA rodando ao mesmo tempo nesta máquina, e qual orçamento de tempo e custo por tarefa?

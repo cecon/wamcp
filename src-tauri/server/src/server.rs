@@ -122,6 +122,7 @@ async fn serve(
 pub async fn run(config: Config) -> Result<Running> {
     std::fs::create_dir_all(&config.data_dir).map_err(Error::internal)?;
     let store = Arc::new(SqliteStore::open(&config.data_dir)?);
+    let engine_store: Arc<dyn crate::application::ports::EngineRepo> = store.clone();
     #[cfg(feature = "whatsapp")]
     let clients = whatsapp_port(&config.data_dir, store.clone());
     #[cfg(feature = "whatsapp")]
@@ -161,7 +162,21 @@ pub async fn run(config: Config) -> Result<Running> {
     let (addr, server) = serve(app.public_router(), config.bind, config.port, receiver).await?;
     // The system agent's runtime calls the app's tools on this computer, never through the tunnel.
     let _ = app.mcp_url.set(format!("http://127.0.0.1:{}/mcp-system", addr.port()));
+    // Agentic engine: OpenCode runs (one server per run, folders in <data dir>/engine) reach the
+    // engine's MCP endpoint on this listener; unfinished activities resume after a restart.
+    let runtime = crate::adapters::outbound::opencode::OpenCodeRuntime::new(config.data_dir.join("engine"));
+    let engine = app.attach_engine(
+        engine_store,
+        vec![("opencode".into(), Arc::new(runtime))],
+        "opencode",
+        Some(format!("http://127.0.0.1:{}/engine/mcp", addr.port())),
+    );
     let mut tasks = app.start_jobs();
+    tasks.push(tokio::spawn(async move {
+        if let Err(error) = engine.recover().await {
+            tracing::warn!(%error, "engine recovery failed");
+        }
+    }));
     tasks.push(server);
     #[cfg(feature = "whatsapp")]
     clients.restore().await;

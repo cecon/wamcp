@@ -31,8 +31,10 @@ impl LlmRouter {
             )
             .with("codex_cli", Arc::new(codex_cli::CodexCli::new(work_dir.join("codex"))))
             .with(
-                "openclaude",
-                Arc::new(claude_cli::ClaudeCli::openclaude(work_dir.join("openclaude"))),
+                "opencode",
+                Arc::new(crate::adapters::outbound::opencode::OpenCodeLlm::new(
+                    work_dir.join("opencode"),
+                )),
             )
     }
 }

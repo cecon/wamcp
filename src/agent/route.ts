@@ -17,6 +17,7 @@ export type SettingsSection =
   | 'webhooks'
   | 'audit'
   | 'custom_roles'
+  | 'engine'
   | 'connections'
   | 'app';
 
