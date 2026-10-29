@@ -5,7 +5,7 @@ import { useFetch } from '../useFetch';
 import { MemberAvatar } from '../settings/members/MemberAvatar';
 import { cn } from '../ui/cn';
 import { AgentChatThread } from './AgentChatThread';
-import { chatTime, type ChatAgent, type ChatMessage } from './types';
+import { chatTime, type ChatAgent, type ChatMessage, type ChatStep } from './types';
 
 interface Props {
   agentId?: number;
@@ -32,6 +32,9 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
     return all.filter((m, i) => all.findIndex((n) => n.id === m.id) === i).sort((a, b) => a.id - b.id);
   }, [thread.data, live, agentId]);
 
+  // What each agent is doing on its answer (`agent_chat.progress`), until the answer arrives.
+  const [steps, setSteps] = useState<{ agentId: number; step: ChatStep }[]>([]);
+
   const { reload } = agents,
     reloadThread = thread.reload;
   useEffect(
@@ -41,8 +44,16 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
           reload();
           reloadThread();
         }
+        if (event === 'agent_chat.progress') {
+          const step = { agentId: data.agent_id as number, step: data.step as unknown as ChatStep };
+          setSteps((current) => [...current, step]);
+          return;
+        }
         if (event !== 'agent_chat.message') return;
-        setLive((current) => [...current, data as unknown as ChatMessage]);
+        const message = data as unknown as ChatMessage;
+        setLive((current) => [...current, message]);
+        if (message.role !== 'user')
+          setSteps((current) => current.filter((s) => s.agentId !== message.agent_id));
         reload();
       }),
     [realtime, reload, reloadThread],
@@ -109,6 +120,7 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
         <AgentChatThread
           agent={agent}
           messages={messages}
+          steps={steps.filter((s) => s.agentId === agent.id).map((s) => s.step)}
           error={thread.error}
           onSent={(m) => setLive((current) => [...current, m])}
           onBack={() => onSelect(undefined)}

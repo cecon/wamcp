@@ -215,10 +215,28 @@ pub struct LlmProviderStatus {
     pub detail: String,
 }
 
+/// What a runtime is doing while it works, shown live to the person waiting for the answer (the
+/// runtimes hide the model's own thinking, so these are the notes it writes and the tools it calls).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(tag = "kind", content = "text", rename_all = "snake_case")]
+pub enum Progress {
+    Note(String),
+    Tool(String),
+}
+
+/// Receives the steps of a run as they happen.
+pub type ProgressSink<'a> = &'a (dyn Fn(Progress) + Send + Sync);
+
 /// A language model provider (a local CLI such as Claude Code, or an HTTP API).
 #[async_trait]
 pub trait Llm: Send + Sync {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion>;
+
+    /// Like `complete`, telling `progress` each step of the run (providers that cannot just answer).
+    async fn complete_live(&self, request: &LlmRequest, progress: ProgressSink<'_>) -> Result<Completion> {
+        let _ = progress;
+        self.complete(request).await
+    }
 
     /// Where this provider runs from (`None`: not installed on this computer).
     fn location(&self) -> Option<String> {

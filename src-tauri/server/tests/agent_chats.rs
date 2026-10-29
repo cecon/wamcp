@@ -12,7 +12,9 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
 use wamcp_server::adapters::outbound::llm::LlmRouter;
-use wamcp_server::application::ports::{AgentsRepo, Completion, Llm, LlmRequest, TokenUsage, UsersRepo};
+use wamcp_server::application::ports::{
+    AgentsRepo, Completion, Llm, LlmRequest, Progress, ProgressSink, TokenUsage, UsersRepo,
+};
 use wamcp_server::application::system_agent::SystemAgent;
 use wamcp_server::domain::error::{fail, Result};
 
@@ -61,6 +63,11 @@ impl Llm for Scripted {
             answer: json!({ "reply": reply }),
             usage,
         })
+    }
+
+    async fn complete_live(&self, request: &LlmRequest, progress: ProgressSink<'_>) -> Result<Completion> {
+        progress(Progress::Note("Vou ver o que a pessoa precisa.".into()));
+        self.complete(request).await
     }
 
     fn location(&self) -> Option<String> {
@@ -180,6 +187,15 @@ async fn people_talk_with_ai_agents_in_private_chats() {
     assert_eq!(chat_events.len(), 2);
     assert!(chat_events.iter().all(|e| notifications.visible_to(&maria_user, e)));
     assert!(chat_events.iter().all(|e| !notifications.visible_to(&admin_user, e)));
+    // So do the agent's steps while it works.
+    let steps: Vec<_> = events.iter().filter(|e| e.event == "agent_chat.progress").collect();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(
+        steps[0].data["step"],
+        json!({ "kind": "note", "text": "Vou ver o que a pessoa precisa." })
+    );
+    assert!(notifications.visible_to(&maria_user, steps[0]));
+    assert!(!notifications.visible_to(&admin_user, steps[0]));
 
     // Its tokens count in the agent's salary.
     let totals =

@@ -81,12 +81,26 @@ describe('chats with AI agents', () => {
     expect(await within(chat).findByText('O cliente ACME pagou?')).toBeInTheDocument();
     expect(within(chat).getByRole('status')).toHaveTextContent('Anny está pensando…');
 
+    // What the agent does shows up while it works (another agent's steps do not).
+    const step = (agentId: number, kind: string, text: string) =>
+      emit({ event: 'agent_chat.progress', data: { agent_id: agentId, chat_id: 1, step: { kind, text } } });
+    step(3, 'note', 'Vou procurar o boleto da ACME.');
+    step(3, 'tool', 'list_conversations');
+    step(4, 'note', 'Outra conversa.');
+    const doing = within(chat).getByRole('list', { name: 'O que Anny está fazendo' });
+    expect(
+      within(doing)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Vou procurar o boleto da ACME.', 'Usando list_conversations']);
+
     // The same message on the events stream is not shown twice; the answer ends the wait.
     emit({ event: 'agent_chat.message', data: { ...message(10, 'user', 'O cliente ACME pagou?') } });
     emit({ event: 'agent_chat.message', data: { ...message(11, 'agent', 'Pagou: R$ 1.200,00 em 12/10.') } });
     expect(await within(chat).findByText('Pagou: R$ 1.200,00 em 12/10.')).toBeInTheDocument();
     expect(within(chat).getAllByText('O cliente ACME pagou?')).toHaveLength(1);
     expect(within(chat).queryByRole('status')).not.toBeInTheDocument();
+    expect(within(chat).queryByText('Vou procurar o boleto da ACME.')).not.toBeInTheDocument();
   });
 
   it('shows why the agent could not answer', async () => {

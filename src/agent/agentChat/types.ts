@@ -12,6 +12,12 @@ export interface ChatMessage {
   created_at: number;
 }
 
+/** A step of the agent while it works on the answer: a note it wrote or a tool it called. */
+export interface ChatStep {
+  kind: 'note' | 'tool';
+  text: string;
+}
+
 /** An AI agent the person may talk to, with the newest message of their chat. */
 export interface ChatAgent {
   id: number;
