@@ -5,11 +5,14 @@
 use super::{LlmBotService, Responder};
 use crate::application::agent_chats::post_chat_message;
 use crate::application::ports::{LlmRequest, Progress, ProgressSink};
+use crate::domain::agent_context::{agent_context, AgentChannel, Workplace, RECENT_CONVERSATIONS};
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::{
     agent_instructions, build_chat_prompt, chat_schema, chats_with, openrouter_key, CHAT_SYSTEM, CHAT_TRANSCRIPT_LIMIT,
 };
-use crate::domain::model::{AgentChat, Message, Thread, CHAT_AGENT, CHAT_ERROR, CHAT_USER};
+use crate::domain::model::{
+    AgentChat, ConversationFilters, Message, RosterAgent, Thread, User, CHAT_AGENT, CHAT_ERROR, CHAT_USER,
+};
 use serde_json::json;
 
 impl LlmBotService {
@@ -65,7 +68,7 @@ impl LlmBotService {
             provider: agent.runtime.clone().unwrap_or_default(),
             model: agent.model.clone(),
             system: CHAT_SYSTEM.into(),
-            prompt: build_chat_prompt(&person, &instructions, messages),
+            prompt: build_chat_prompt(&person, &self.about(&agent, &user)?, &instructions, messages),
             schema: chat_schema(),
             api_key,
             mcp: None,
@@ -87,5 +90,39 @@ impl LlmBotService {
             return fail("o agente respondeu sem mensagem");
         }
         Ok(reply.into())
+    }
+
+    /// Who the agent is, where and with whom it works, and the channels it answers, with their newest conversations when the person
+    /// may see that inbox (administrators see every inbox, others only the ones they belong to).
+    fn about(&self, agent: &RosterAgent, user: &User) -> Result<String> {
+        let repo = &self.helpdesk.core.repo;
+        let visible = match user.role.as_str() {
+            "administrator" => None,
+            _ => Some(repo.member_inbox_ids(user.id)?),
+        };
+        let mut channels = Vec::new();
+        for inbox in repo.inboxes(None)? {
+            if inbox.ai_agent_id != Some(agent.id) {
+                continue;
+            }
+            let recent = if visible.as_ref().is_none_or(|ids| ids.contains(&inbox.id)) {
+                let filters = ConversationFilters {
+                    inbox_id: Some(inbox.id),
+                    ..Default::default()
+                };
+                let mut list = repo.conversations(&filters)?;
+                list.truncate(RECENT_CONVERSATIONS);
+                list
+            } else {
+                Vec::new()
+            };
+            channels.push(AgentChannel { inbox, recent });
+        }
+        let (account, team) = (repo.account()?, repo.agents()?);
+        let workplace = Workplace {
+            company: &account.name,
+            team: &team,
+        };
+        Ok(agent_context(agent, &workplace, &channels))
     }
 }

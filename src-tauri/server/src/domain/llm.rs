@@ -158,8 +158,13 @@ pub fn chat_schema() -> Value {
 }
 
 /// The prompt of a chat turn: the agent's instructions and skills, then the chat so far.
-pub fn build_chat_prompt(person: &str, instructions: &str, messages: &[Message]) -> String {
-    let mut prompt = String::new();
+pub fn build_chat_prompt(person: &str, about: &str, instructions: &str, messages: &[Message]) -> String {
+    let mut prompt = format!(
+        "{}
+
+",
+        about.trim()
+    );
     if !instructions.trim().is_empty() {
         prompt.push_str(&format!("Suas instruções:\n{}\n\n", instructions.trim()));
     }

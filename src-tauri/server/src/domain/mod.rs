@@ -1,6 +1,7 @@
 //! Pure business rules and entities. Depends on nothing but std and data crates.
 pub mod access;
 pub mod actor;
+pub mod agent_context;
 pub mod agents;
 pub mod audit;
 pub mod automation;

@@ -230,7 +230,15 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
         Duration::ZERO,
     );
     let p = profiles(&c.admin).await;
-    let jhon = c.admin.post("/agent_directory", ai(&p, "Jhon", "operator")).await.body["id"].clone();
+    let anny = c
+        .admin
+        .post("/agent_directory", ai(&p, "Anny", "coordinator"))
+        .await
+        .body["id"]
+        .clone();
+    let mut body = ai(&p, "Jhon", "operator");
+    body["supervisor_id"] = anny;
+    let jhon = c.admin.post("/agent_directory", body).await.body["id"].clone();
     let linked = c
         .admin
         .post(
@@ -259,4 +267,27 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
     c.deliver("push", "d2", &push, None).await;
     assert_eq!(c.f.github.comments.lock().len(), 1);
     assert!(c.f.wa.sent().is_empty(), "nothing goes to WhatsApp");
+
+    // Asked in the app, Jhon knows the repository it watches and what reached it there.
+    let jhon = jhon.as_i64().unwrap();
+    let asked = c
+        .admin
+        .post(
+            &format!("/agent_chats/{jhon}/messages"),
+            json!({ "content": "Quais os últimos PRs?" }),
+        )
+        .await;
+    assert_eq!(asked.status, 201, "{:?}", asked.body);
+    c.f.settle().await;
+    let chat = reviewer.requests.lock().last().unwrap().clone();
+    assert!(chat.prompt.contains("Sobre você: Jhon"), "{}", chat.prompt);
+    assert!(
+        chat.prompt.contains(&format!("GitHub, repositório {REPO}")),
+        "{}",
+        chat.prompt
+    );
+    assert!(chat.prompt.contains(&format!("{REPO}#7")), "{}", chat.prompt);
+    assert!(chat.prompt.contains("Você trabalha na empresa"), "{}", chat.prompt);
+    assert!(chat.prompt.contains("Seu responsável direto é Anny"), "{}", chat.prompt);
+    assert!(chat.prompt.contains("- Anny (agente de IA"), "{}", chat.prompt);
 }
