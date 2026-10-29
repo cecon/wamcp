@@ -1,6 +1,7 @@
 import {
   Bolt,
   Bot,
+  CalendarClock,
   Braces,
   Briefcase,
   Inbox as InboxIcon,
@@ -40,6 +41,7 @@ export const SETTINGS: { section: SettingsSection; label: string; icon: typeof B
   { section: 'audit', label: 'Registro de auditoria', icon: ScrollText },
   { section: 'custom_roles', label: 'Perfis', icon: ShieldCheck },
   { section: 'engine', label: 'Motor de agentes', icon: Bot },
+  { section: 'schedules', label: 'Agendamentos', icon: CalendarClock },
   { section: 'app', label: 'Aplicativo', icon: MonitorCog, desktop: true },
 ];
 

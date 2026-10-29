@@ -6,6 +6,7 @@
 //! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
 mod chat;
+mod scheduled;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
