@@ -46,7 +46,10 @@ describe('chats with AI agents', () => {
   it('lists the agents and opens a chat', async () => {
     fakeApi({
       'GET /agent_chats': [
-        agent(9, 'Sistema', { system: true, last: { ...message(4, 'agent', 'Proposta 1. Aprova?'), agent_id: 9 } }),
+        agent(9, 'Sistema', {
+          system: true,
+          last: { ...message(4, 'agent', 'Proposta 1. Aprova?'), agent_id: 9 },
+        }),
         agent(3, 'Anny'),
       ],
     });
@@ -72,7 +75,9 @@ describe('chats with AI agents', () => {
     const user = userEvent.setup();
     await user.type(within(chat).getByLabelText('Mensagem para Anny'), 'O cliente ACME pagou?{Enter}');
     await waitFor(() => expect(api.called('POST', '/agent_chats/3/messages')).toHaveLength(1));
-    expect(api.called('POST', '/agent_chats/3/messages')[0].body).toEqual({ content: 'O cliente ACME pagou?' });
+    expect(api.called('POST', '/agent_chats/3/messages')[0].body).toEqual({
+      content: 'O cliente ACME pagou?',
+    });
     expect(await within(chat).findByText('O cliente ACME pagou?')).toBeInTheDocument();
     expect(within(chat).getByRole('status')).toHaveTextContent('Anny está pensando…');
 
