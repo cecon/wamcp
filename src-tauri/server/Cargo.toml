@@ -24,7 +24,7 @@ hex = "0.4"
 hmac = "0.12"
 parking_lot = "0.12"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
-rand = "0.9"
+rand = "0.10"
 regex = "1"
 ring = "0.17"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
