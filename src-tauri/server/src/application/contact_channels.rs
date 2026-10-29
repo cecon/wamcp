@@ -37,6 +37,9 @@ impl HelpdeskService {
     ) -> Result<Conversation> {
         let contact = self.find_contact(contact_id)?;
         let inbox = self.core.inbox(inbox_id)?;
+        if inbox.channel_type != "whatsapp" {
+            return fail_with("Conversas do GitHub começam pelos eventos do repositório", 422);
+        }
         if !actor.is_admin() && !self.core.member_inbox_ids(actor)?.contains(&inbox.id) {
             return fail_with("Sem acesso a esta caixa de entrada", 403);
         }

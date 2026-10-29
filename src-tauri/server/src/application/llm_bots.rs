@@ -13,6 +13,7 @@ use super::ports::{Llm, LlmRequest, SecretBox, TokenUsage};
 use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
+use crate::domain::github;
 use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
@@ -226,7 +227,13 @@ impl LlmBotService {
             return Ok(());
         }
         let mut request = responder.request.clone();
-        request.prompt = build_prompt(&inbox.name, Some(&request.prompt), &messages);
+        request.prompt = match &inbox.github_repo {
+            Some(repo) => {
+                request.system = github::SYSTEM.into();
+                github::build_prompt(repo, Some(&request.prompt), &messages)
+            }
+            None => build_prompt(&inbox.name, Some(&request.prompt), &messages),
+        };
         let completion = self.llm.complete(&request).await?;
         self.record(&responder, Some(conversation.id), None, completion.usage);
         let Some(answer) = parse_answer(&completion.answer) else {

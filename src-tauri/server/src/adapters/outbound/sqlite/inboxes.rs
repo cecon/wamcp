@@ -4,8 +4,12 @@ use crate::domain::error::{Error, Result};
 use crate::domain::model::{DaySchedule, Inbox, InboxChanges, WorkingHour};
 use rusqlite::types::Value as Sql;
 
-const INBOX: &str = "SELECT i.*, w.session_id, w.ignore_groups, s.status AS session_status, s.phone FROM inboxes i
-  JOIN channel_whatsapp w ON w.id=i.channel_id JOIN sessions s ON s.id=w.session_id";
+/// Channel ids are per channel table, so each join also checks the inbox's channel type.
+const INBOX: &str = "SELECT i.*, COALESCE(w.session_id,'') AS session_id, COALESCE(w.ignore_groups,1) AS ignore_groups,
+  COALESCE(s.status,'connected') AS session_status, s.phone, g.repo AS github_repo FROM inboxes i
+  LEFT JOIN channel_whatsapp w ON i.channel_type='whatsapp' AND w.id=i.channel_id
+  LEFT JOIN sessions s ON s.id=w.session_id
+  LEFT JOIN channel_github g ON i.channel_type='github' AND g.id=i.channel_id";
 pub(crate) const PAGE: i64 = 25;
 
 impl InboxRepo for SqliteStore {
@@ -24,7 +28,7 @@ impl InboxRepo for SqliteStore {
     }
 
     fn inbox_for_session(&self, session_id: &str) -> Result<Option<Inbox>> {
-        let sql = "SELECT i.id FROM inboxes i JOIN channel_whatsapp w ON w.id=i.channel_id WHERE w.session_id=?";
+        let sql = "SELECT i.id FROM inboxes i JOIN channel_whatsapp w ON w.id=i.channel_id WHERE i.channel_type='whatsapp' AND w.session_id=?";
         if let Some(id) = self.scalar(sql, vec![text(session_id)])? {
             return self.inbox(id);
         }

@@ -132,8 +132,8 @@ impl HelpdeskService {
         if emoji.chars().count() > 8 {
             return fail("Reação inválida");
         }
-        if let Some(source_id) = &message.source_id {
-            let inbox = self.core.inbox(conversation.inbox_id)?;
+        let inbox = self.core.inbox(conversation.inbox_id)?;
+        if let Some(source_id) = message.source_id.as_ref().filter(|_| inbox.channel_type == "whatsapp") {
             let target = MessageRef {
                 id: source_id.clone(),
                 from_me: message.message_type == "outgoing",
@@ -153,8 +153,14 @@ impl HelpdeskService {
         if message.message_type != "outgoing" {
             return fail_with("Só é possível apagar mensagens enviadas pela equipe", 422);
         }
-        if let (Some(source_id), false, false) = (&message.source_id, message.private, message.status == "failed") {
-            let inbox = self.core.inbox(conversation.inbox_id)?;
+        let inbox = self.core.inbox(conversation.inbox_id)?;
+        let on_whatsapp = inbox.channel_type == "whatsapp";
+        if let (Some(source_id), false, false, true) = (
+            &message.source_id,
+            message.private,
+            message.status == "failed",
+            on_whatsapp,
+        ) {
             self.whatsapp
                 .revoke(&inbox.session_id, &conversation.contact_jid, source_id)
                 .await?;

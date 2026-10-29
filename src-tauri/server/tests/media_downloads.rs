@@ -74,6 +74,7 @@ fn hooked() -> (App, Arc<SqliteStore>, Arc<HookedWhatsApp>) {
         storage: Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default()),
         images: Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default()),
         secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
+        github: Arc::new(wamcp_server::adapters::outbound::github::MemoryGithub::default()),
     };
     let settings = Settings {
         public_url: ORIGIN.into(),

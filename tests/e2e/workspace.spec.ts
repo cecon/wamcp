@@ -34,9 +34,9 @@ test('connection creation, MCP token display and revocation', async ({ page }) =
     },
   });
   await page.goto('/');
-  await openSettings(page, 'Conexões WhatsApp');
-  await expect(page.getByRole('heading', { name: 'Conexões WhatsApp' })).toBeVisible();
-  await page.getByRole('button', { name: 'Nova conexão' }).click();
+  await openSettings(page, 'Canais');
+  await expect(page.getByRole('heading', { name: 'Canais' })).toBeVisible();
+  await page.getByRole('button', { name: 'Novo WhatsApp' }).click();
   await page.getByLabel('Nome da conexão').fill('Atendimento');
   await page.getByRole('button', { name: 'Criar conexão' }).click();
   await expect(page.getByRole('heading', { name: 'Atendimento', exact: true })).toBeVisible();

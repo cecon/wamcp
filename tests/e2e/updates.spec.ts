@@ -44,6 +44,6 @@ test('browsers on the network never see the desktop page', async ({ page }) => {
   await mockApi(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Configurações', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Conexões WhatsApp', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Canais', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Aplicativo', exact: true })).toHaveCount(0);
 });

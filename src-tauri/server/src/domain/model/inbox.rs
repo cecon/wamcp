@@ -36,6 +36,9 @@ pub struct Inbox {
     /// Agent replies reach WhatsApp as `*Nome*:` on the first line (on by default).
     #[serde(default = "enabled")]
     pub show_agent_name: i64,
+    /// `owner/repo` of a GitHub inbox.
+    #[serde(default)]
+    pub github_repo: Option<String>,
 }
 
 fn enabled() -> i64 {
@@ -135,4 +138,16 @@ pub struct Account {
     pub locale: String,
     pub settings: Value,
     pub created: String,
+}
+
+/// The GitHub side of a `github` inbox. `token` and `webhook_secret` are sealed (encrypted at rest).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct GithubChannel {
+    pub inbox_id: i64,
+    pub repo: String,
+    pub token: String,
+    pub webhook_secret: String,
+    /// The login of the token's account: its own comments come back as events and are ignored.
+    pub own_login: Option<String>,
+    pub hook_id: Option<i64>,
 }

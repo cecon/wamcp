@@ -1,7 +1,7 @@
 //! Conversation use cases. The actor is an agent, the MCP bot of an inbox or an automation;
 //! bots only reach their own inbox and reply as `agent_bot`.
 use super::core::Core;
-use super::ports::{HistoryPage, MediaStorage, WhatsApp};
+use super::ports::{GithubApi, HistoryPage, MediaStorage, SecretBox, WhatsApp};
 use crate::domain::actor::Actor;
 use crate::domain::error::{Error, HelpdeskError, Result};
 use crate::domain::model::{
@@ -17,6 +17,10 @@ pub struct HelpdeskService {
     pub core: Core,
     pub whatsapp: Arc<dyn WhatsApp>,
     pub storage: Arc<dyn MediaStorage>,
+    /// GitHub inboxes comment on pull requests and issues through it.
+    pub github: Arc<dyn GithubApi>,
+    /// Opens the sealed GitHub tokens and webhook secrets.
+    pub secrets: Arc<dyn SecretBox>,
 }
 
 /// A contact with the conversations the actor may see.

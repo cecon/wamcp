@@ -27,3 +27,20 @@ pub fn base64url(bytes: &[u8]) -> String {
 pub fn same_secret(a: &str, b: &str) -> bool {
     !a.is_empty() && a.len() == b.len() && bool::from(a.as_bytes().ct_eq(b.as_bytes()))
 }
+
+/// Whether `signature` (`sha256=<hex>`, as GitHub sends in `X-Hub-Signature-256`) signs `body`
+/// with `secret`.
+pub fn valid_hub_signature(secret: &str, body: &[u8], signature: &str) -> bool {
+    use hmac::{Hmac, Mac};
+    let Some(hex_digest) = signature.strip_prefix("sha256=") else {
+        return false;
+    };
+    let Ok(sent) = hex::decode(hex_digest) else {
+        return false;
+    };
+    let Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) else {
+        return false;
+    };
+    mac.update(body);
+    mac.verify_slice(&sent).is_ok()
+}

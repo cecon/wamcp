@@ -8,7 +8,7 @@ const ATTACHMENT: &str = "SELECT a.id,a.message_id,a.file_type,a.mime_type,a.fil
   a.path IS NOT NULL AS downloaded,'/api/v1/attachments/'||a.id AS data_url,a.path,w.session_id,m.inbox_id,m.wa_jid,
   m.source_id,m.created_at
   FROM attachments a JOIN conversation_messages m ON m.id=a.message_id JOIN inboxes i ON i.id=m.inbox_id
-  JOIN channel_whatsapp w ON w.id=i.channel_id";
+  JOIN channel_whatsapp w ON i.channel_type='whatsapp' AND w.id=i.channel_id";
 const SHAPE: Shape = Shape {
     json: &[],
     bools: &["voice", "downloaded"],

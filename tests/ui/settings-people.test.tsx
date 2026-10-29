@@ -267,7 +267,7 @@ describe('inboxes', () => {
       }
     ).working_hours;
     expect([days[0].closed_all_day, days[1].open_minutes, days[1].close_minutes]).toEqual([false, 420, 1170]);
-    await user.click(screen.getByRole('button', { name: /Caixas de entrada/ }));
+    await user.click(screen.getByRole('button', { name: /Canais/ }));
     expect(onNavigate).toHaveBeenCalledWith({ page: 'settings', section: 'inboxes' });
   });
 
@@ -289,6 +289,6 @@ describe('inboxes', () => {
     expect(await screen.findByText('Fuso horário inválido')).toBeInTheDocument();
     view.unmount();
     renderSettings('inboxes', undefined, { ...catalog, inboxes: [] });
-    expect(screen.getByText('Nenhuma caixa de entrada.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum canal ainda.')).toBeInTheDocument();
   });
 });

@@ -145,6 +145,7 @@ pub async fn run(config: Config) -> Result<Running> {
             crate::adapters::outbound::secret_box::AesSecretBox::from_file(&config.data_dir.join("agents.key"))
                 .map_err(Error::internal)?,
         ),
+        github: Arc::new(crate::adapters::outbound::github::HttpGithub::new()),
     };
     let settings = Settings {
         public_url: config.public_url,

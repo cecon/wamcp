@@ -55,7 +55,7 @@ export function ConnectionDetailPage({ id, onBack, onChange }: Props) {
     return () => clearInterval(timer);
   }, [loaded, connected, load]);
 
-  const back = { label: 'Conexões WhatsApp', onClick: onBack };
+  const back = { label: 'Canais', onClick: onBack };
   if (!detail)
     return (
       <SettingsPage>
