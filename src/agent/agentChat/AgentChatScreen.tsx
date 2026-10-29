@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bot } from 'lucide-react';
-import type { Realtime } from '../api';
+import { REALTIME_RECONNECTED, type Realtime } from '../api';
 import { useFetch } from '../useFetch';
 import { MemberAvatar } from '../settings/members/MemberAvatar';
 import { cn } from '../ui/cn';
@@ -13,6 +13,8 @@ interface Props {
   /** Opens an agent's chat (`undefined`: back to the list on small screens). */
   onSelect: (agentId?: number) => void;
 }
+
+const CHECK_MS = 5000;
 
 const preview = (m: ChatMessage | null) =>
   !m ? 'Comece uma conversa' : m.role === 'user' ? `Você: ${m.content}` : m.content;
@@ -30,16 +32,31 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
     return all.filter((m, i) => all.findIndex((n) => n.id === m.id) === i).sort((a, b) => a.id - b.id);
   }, [thread.data, live, agentId]);
 
-  const { reload } = agents;
+  const { reload } = agents,
+    reloadThread = thread.reload;
   useEffect(
     () =>
       realtime?.subscribe(({ event, data }) => {
+        if (event === REALTIME_RECONNECTED) {
+          reload();
+          reloadThread();
+        }
         if (event !== 'agent_chat.message') return;
         setLive((current) => [...current, data as unknown as ChatMessage]);
         reload();
       }),
-    [realtime, reload],
+    [realtime, reload, reloadThread],
   );
+  // While the agent is answering, look again now and then in case its event never arrives.
+  const waiting = messages.at(-1)?.role === 'user';
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setInterval(() => {
+      reload();
+      reloadThread();
+    }, CHECK_MS);
+    return () => clearInterval(timer);
+  }, [waiting, reload, reloadThread]);
 
   return (
     <div className="flex min-w-0 flex-1">

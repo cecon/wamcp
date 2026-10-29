@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { History } from 'lucide-react';
-import { http, query, type Realtime } from '../api';
+import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
 import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
@@ -65,14 +65,18 @@ export function ConversationBox({
   useEffect(
     () =>
       realtime.subscribe(({ event, data }) => {
-        if (event.startsWith('message.') && data.conversation_id === conversation?.id) {
+        if (event === REALTIME_RECONNECTED)
+          void http<Message[]>(`${path}/messages`)
+            .then(setMessages)
+            .catch(() => {});
+        else if (event.startsWith('message.') && data.conversation_id === conversation?.id) {
           setMessages((list) => upsert(list, data as unknown as Message));
           if (data.message_type === 'incoming') seen();
         } else if (data.display_id === displayId && 'status' in data && 'inbox_id' in data) {
           setConversation(data as unknown as Conversation);
         }
       }),
-    [realtime, conversation?.id, displayId, seen],
+    [realtime, conversation?.id, displayId, seen, path],
   );
 
   async function act(run: () => Promise<unknown>) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { http, type Realtime } from '../api';
+import { http, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { AppNotification } from '../types';
 
 type Unread = { unread: number };
@@ -18,7 +18,7 @@ export function useNotifications(realtime: Realtime, onUnread: (count: number) =
   useEffect(() => {
     const initial = setTimeout(() => void load().catch((e: Error) => setError(e.message)), 0);
     const unsubscribe = realtime.subscribe(({ event }) => {
-      if (event === 'notification.created') void load().catch(() => {});
+      if (event === 'notification.created' || event === REALTIME_RECONNECTED) void load().catch(() => {});
     });
     return () => {
       clearTimeout(initial);

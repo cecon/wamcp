@@ -67,6 +67,8 @@ const json = (data: unknown, code: number) =>
 /** Minimal EventSource double; tests push server events with `FakeEventSource.emit`. */
 export class FakeEventSource {
   static instances: FakeEventSource[] = [];
+  static CLOSED = 2;
+  readyState = 1;
   listeners = new Map<string, ((e: MessageEvent) => void)[]>();
   onopen: (() => void) | null = null;
   onerror: (() => void) | null = null;
