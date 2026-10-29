@@ -3,9 +3,12 @@
 //! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
 //! model asks to). Bursts are debounced and runs are limited; one run per
 //! conversation at a time, with another one afterwards if the contact wrote meanwhile.
+mod admin;
+
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
 use super::ports::{Llm, LlmRequest, SecretBox, TokenUsage};
+use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::{
@@ -16,7 +19,7 @@ use crate::domain::model::{Inbox, LlmUsage, Message, BOT_LLM};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::{Notify, Semaphore};
 
@@ -31,6 +34,9 @@ pub struct LlmBotService {
     queued: Arc<Mutex<HashMap<i64, bool>>>,
     running: Arc<AtomicUsize>,
     idle: Arc<Notify>,
+    system: Option<SystemAgent>,
+    /// The app's own MCP endpoint for the system agent, known once the server listens.
+    mcp_url: Arc<OnceLock<String>>,
 }
 
 /// Who answers an inbox and the call to make: an AI agent of the roster or a legacy `llm` bot.
@@ -57,7 +63,16 @@ impl LlmBotService {
             queued: Arc::default(),
             running: Arc::default(),
             idle: Arc::default(),
+            system: None,
+            mcp_url: Arc::default(),
         }
+    }
+
+    /// Lets administrators talk to the system agent; `mcp_url` is filled when the server listens.
+    pub fn with_system(mut self, system: SystemAgent, mcp_url: Arc<OnceLock<String>>) -> Self {
+        self.system = Some(system);
+        self.mcp_url = mcp_url;
+        self
     }
 
     /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves,
@@ -86,6 +101,9 @@ impl LlmBotService {
         let Ok(Some(conversation)) = core.repo.conversation_by_id(conversation_id) else {
             return false;
         };
+        if matches!(self.system_target(&conversation), Ok(Some(_))) {
+            return true;
+        }
         let inbox = core.inbox(conversation.inbox_id);
         conversation.status == "pending" && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
     }
@@ -105,6 +123,7 @@ impl LlmBotService {
             prompt: instructions,
             schema: answer_schema(),
             api_key,
+            mcp: None,
         };
         if let Some(agent) = agent {
             let credentials = repo.agent_sealed_credentials(agent.id)?;
@@ -168,6 +187,9 @@ impl LlmBotService {
         let Some(conversation) = core.repo.conversation_by_id(conversation_id)? else {
             return Ok(());
         };
+        if let Some((agent, admin)) = self.system_target(&conversation)? {
+            return self.answer_admin(&conversation, &agent, admin).await;
+        }
         let inbox = core.inbox(conversation.inbox_id)?;
         let Some(responder) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
             return Ok(());

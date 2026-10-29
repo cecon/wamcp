@@ -159,6 +159,8 @@ pub async fn run(config: Config) -> Result<Running> {
     clients.attach(app.sink.clone());
     let (stop, receiver) = watch::channel(false);
     let (addr, server) = serve(app.public_router(), config.bind, config.port, receiver).await?;
+    // The system agent's runtime calls the app's tools on this computer, never through the tunnel.
+    let _ = app.mcp_url.set(format!("http://127.0.0.1:{}/mcp-system", addr.port()));
     let mut tasks = app.start_jobs();
     tasks.push(server);
     #[cfg(feature = "whatsapp")]

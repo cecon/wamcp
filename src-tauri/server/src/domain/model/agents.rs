@@ -28,6 +28,10 @@ pub struct RosterAgent {
     #[serde(default)]
     pub profile_skill_ids: Vec<i64>,
     pub credential_count: i64,
+    /// The app's own agent (one at most): administrators talk to it to set the app up; it never
+    /// answers customers and cannot be removed.
+    #[serde(default)]
+    pub system: bool,
     pub created: String,
     /// Who the agent answers to in the organization (the coordinator or person it takes work from).
     #[serde(default)]
@@ -148,4 +152,21 @@ pub struct Salary {
     pub output_tokens: i64,
     pub cost_usd: f64,
     pub unpriced_calls: i64,
+}
+
+/// A change the system agent wants to make, executed only after an administrator approves it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SystemProposal {
+    pub id: i64,
+    pub conversation_id: i64,
+    pub after_message_id: i64,
+    /// `create_skill`, `create_agent`, `set_agent_skills` or `connect_inbox`.
+    pub action: String,
+    pub args: serde_json::Value,
+    pub summary: String,
+    /// `pending`, `done`, `failed` or `discarded`.
+    pub status: String,
+    pub result: Option<String>,
+    pub created_at: i64,
+    pub decided_at: Option<i64>,
 }

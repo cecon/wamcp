@@ -20,6 +20,7 @@ pub mod roles;
 pub mod salary;
 pub mod schedule;
 pub mod sla;
+pub mod system;
 pub mod totp;
 pub mod voice;
 pub mod webhooks;

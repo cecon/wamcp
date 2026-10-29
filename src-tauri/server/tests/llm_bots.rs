@@ -211,6 +211,7 @@ fn claude_cli_runs_headless_without_tools_and_reads_the_structured_output() {
         prompt: "Cliente: segredo do contato".into(),
         schema: json!({ "type": "object" }),
         api_key: None,
+        mcp: None,
     };
     let args = arguments(&request);
     let after = |flag: &str| args[args.iter().position(|a| a == flag).unwrap() + 1].clone();

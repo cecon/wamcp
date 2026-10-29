@@ -2,15 +2,16 @@ use super::db::{flag, int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteSt
 use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{
-    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, UsageDay, UsageTotal,
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, UsageDay,
+    UsageTotal,
 };
 use rusqlite::types::Value as Sql;
 use serde_json::Value;
 
 /// The role and profile come from the profile; a person with a login uses the login's profile.
 const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS profile_id,p.name AS profile_name,
-  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.created,a.supervisor_id,a.avatar,
-  u.name AS user_name, u.email AS user_email, u.availability,
+  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.system,a.created,
+  a.supervisor_id,a.avatar,u.name AS user_name, u.email AS user_email, u.availability,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
   (SELECT json_group_array(r.skill_id) FROM custom_role_skills r WHERE r.role_id=p.id) AS profile_skill_ids,
   (SELECT COUNT(*) FROM agent_credentials c WHERE c.agent_id=a.id) AS credential_count
@@ -18,10 +19,14 @@ const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS prof
   LEFT JOIN custom_roles p ON p.id=COALESCE(u.custom_role_id,a.profile_id)";
 const AGENT_SHAPE: Shape = Shape {
     json: &["skill_ids", "profile_skill_ids", "avatar"],
-    bools: &["active"],
+    bools: &["active", "system"],
 };
 const SKILL_SHAPE: Shape = Shape {
     json: &["tools"],
+    bools: &[],
+};
+const PROPOSAL_SHAPE: Shape = Shape {
+    json: &["args"],
     bools: &[],
 };
 const CREDENTIAL: &str = "SELECT id,agent_id,name,kind,created,last_used FROM agent_credentials";
@@ -223,5 +228,45 @@ impl AgentsRepo for SqliteStore {
             vec![int(agent_id), text(from)],
             PLAIN,
         )
+    }
+
+    fn system_agent(&self) -> Result<Option<RosterAgent>> {
+        self.row(&format!("{AGENT} WHERE a.system=1"), vec![], AGENT_SHAPE)
+    }
+
+    fn add_proposal(
+        &self,
+        conversation_id: i64,
+        after_message_id: i64,
+        action: &str,
+        args: &serde_json::Value,
+        summary: &str,
+    ) -> Result<SystemProposal> {
+        let id = self.insert(
+            "INSERT INTO system_proposals(conversation_id,after_message_id,action,args,summary,created_at)
+             VALUES(?,?,?,?,?,?)",
+            vec![
+                int(conversation_id),
+                int(after_message_id),
+                text(action),
+                text(args.to_string()),
+                text(summary),
+                int(now_ms()),
+            ],
+        )?;
+        self.proposal(id)?.ok_or_else(|| Error::internal("proposal vanished"))
+    }
+
+    fn proposal(&self, id: i64) -> Result<Option<SystemProposal>> {
+        self.row(
+            "SELECT * FROM system_proposals WHERE id=?",
+            vec![int(id)],
+            PROPOSAL_SHAPE,
+        )
+    }
+
+    fn decide_proposal(&self, id: i64, status: &str, result: Option<&str>) -> Result<bool> {
+        let sql = "UPDATE system_proposals SET status=?,result=?,decided_at=? WHERE id=? AND status='pending'";
+        Ok(self.exec(sql, vec![text(status), opt_text(result), int(now_ms()), int(id)])? > 0)
     }
 }

@@ -55,6 +55,8 @@ export interface RosterAgent {
   avatar?: AvatarChoices;
   /** People with a login: their availability. */
   availability?: 'online' | 'busy' | 'offline' | null;
+  /** The app's own agent: administrators talk to it on WhatsApp; it never answers customers. */
+  system?: boolean;
 }
 export interface Skill {
   id: number;

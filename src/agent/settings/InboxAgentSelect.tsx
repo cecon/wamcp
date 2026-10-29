@@ -15,7 +15,7 @@ export function InboxAgentSelect({ inbox, onChange }: Props) {
   const { data } = useFetch<RosterAgent[]>('/agent_directory');
   const { error, busy, run } = useAction();
   const agents = (data || []).filter(
-    (a) => a.kind === 'ai' && ((a.active && executes(a.role)) || a.id === inbox.ai_agent_id),
+    (a) => a.kind === 'ai' && !a.system && ((a.active && executes(a.role)) || a.id === inbox.ai_agent_id),
   );
   const connect = (value: string) =>
     run(async () => {

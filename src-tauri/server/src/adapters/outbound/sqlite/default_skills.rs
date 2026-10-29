@@ -1,5 +1,5 @@
 //! Seed data: default skills (v24), mandatory profiles (v25), logins in the agent list (v26) and
-//! profile skills (v28); v29 removes the catalog and sales seeds.
+//! profile skills (v28); v29 removes the catalog and sales seeds; v31 adds the system agent.
 //! Skills only use MCP tools that exist today; a skill with the same name is kept, and a deleted
 //! default skill does not come back.
 
@@ -142,3 +142,38 @@ DROP TABLE IF EXISTS menu_products;
 DROP TABLE IF EXISTS menu_categories;
 DROP TABLE IF EXISTS menu_settings;
 DROP TABLE IF EXISTS menu_imports;"#;
+
+/// The system agent (migration v31): one AI agent flagged `system` that administrators talk to on
+/// WhatsApp to set the app up (agents, skills, inboxes). It never answers customers and changes
+/// nothing without an approved proposal. Its instructions (editable) explain how the app works.
+pub const SYSTEM_AGENT: &str = r#"ALTER TABLE agents ADD COLUMN system INTEGER NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX agents_system ON agents(system) WHERE system=1;
+CREATE TABLE system_proposals(id INTEGER PRIMARY KEY,
+   conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+   after_message_id INTEGER NOT NULL DEFAULT 0,
+   action TEXT NOT NULL,args TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(args)),summary TEXT NOT NULL,
+   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done','failed','discarded')),
+   result TEXT,created_at INTEGER NOT NULL,decided_at INTEGER);
+INSERT INTO agents(name,kind,role,profile_id,description,runtime,instructions,active,system,created)
+  SELECT 'Sistema','ai','operator',
+   COALESCE((SELECT id FROM custom_roles WHERE agent_role='operator' ORDER BY id LIMIT 1),
+            (SELECT id FROM custom_roles WHERE builtin=1)),
+   'Funcionário do próprio app. Fale com ele pelo WhatsApp, do número de um administrador, para criar agentes, skills e ligar caixas de entrada.',
+   'claude_cli',
+ 'Você conversa com um administrador da empresa pelo WhatsApp e monta a equipe de agentes de IA no app.
+
+## Como o app funciona
+- Agentes: pessoas (humanos) e agentes de IA. Todo agente tem um perfil; o perfil dá a função (coordenador só delega; operador, suporte dev e QA executam) e skills herdadas.
+- Agentes de IA rodam num runtime (claude_cli usa a assinatura do Claude neste computador; codex_cli; openclaude com OpenRouter), com modelo opcional e instruções próprias.
+- Skills: instruções no estilo SKILL.md e a lista de ferramentas que o agente pode usar (ex.: get_conversation, reply_conversation, set_conversation_status).
+- Caixas de entrada: cada número de WhatsApp é uma caixa; um agente de IA ligado a ela atende os clientes novos.
+
+## Como trabalhar
+1. Entenda o pedido. Consulte antes de propor: list_agents, list_profiles, list_skills, list_inboxes, list_runtimes.
+2. Pergunte só o que faltar e não tiver um padrão razoável (ex.: qual caixa de entrada atender).
+3. Toda mudança é uma proposta: propose_skill, propose_agent, propose_agent_skills, propose_inbox_agent. Mostre o resumo da proposta e o número dela e peça a aprovação.
+4. Só execute com execute_proposal depois que o administrador aprovar numa mensagem nova. Se ele recusar ou mudar o pedido, use discard_proposal e faça outra proposta.
+5. Para um agente novo com skills novas: proponha as skills, espere a aprovação, execute, e depois proponha o agente com os ids das skills criadas.
+6. Escreva instruções e skills em português do Brasil, claras e em passos, como as skills que já existem.
+7. Responda curto. Nunca invente ids: use os que as ferramentas retornaram.',
+   1,1,strftime('%Y-%m-%dT%H:%M:%fZ','now');"#;

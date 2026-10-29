@@ -84,7 +84,11 @@ pub fn build_prompt(inbox_name: &str, instructions: Option<&str>, messages: &[Me
 /// Whether an AI agent answers the customers of the inboxes it serves: active, with a role that
 /// executes (coordinators only delegate) and a runtime.
 pub fn answers_customers(agent: &RosterAgent) -> bool {
-    agent.kind == "ai" && agent.active && executes(agent.role.as_deref().unwrap_or_default()) && agent.runtime.is_some()
+    agent.kind == "ai"
+        && !agent.system
+        && agent.active
+        && executes(agent.role.as_deref().unwrap_or_default())
+        && agent.runtime.is_some()
 }
 
 /// The agent's own instructions followed by the instructions of its skills and its profile's.

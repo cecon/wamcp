@@ -241,6 +241,7 @@ fn codex_and_claude_outputs_are_read_back() {
         prompt: "Cliente: oi".into(),
         schema: json!({ "type": "object" }),
         api_key: None,
+        mcp: None,
     };
     let args = codex_arguments(&request, Path::new("s.json"), Path::new("a.txt"));
     let after = |flag: &str| args[args.iter().position(|a| a == flag).unwrap() + 1].clone();

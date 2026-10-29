@@ -105,8 +105,8 @@ async fn admins_register_human_and_ai_agents_with_role_rules() {
     let list = admin.get("/agent_directory").await.body;
     assert_eq!(
         list.as_array().unwrap().len(),
-        5,
-        "admin and Maria logins, Ana and two AI agents"
+        6,
+        "admin and Maria logins, Ana, two AI agents and the system agent"
     );
 
     let id = &operator["id"];
