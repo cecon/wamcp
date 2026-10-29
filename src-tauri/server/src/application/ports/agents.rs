@@ -1,7 +1,7 @@
 use crate::domain::error::Result;
 use crate::domain::model::{
-    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, UsageDay,
-    UsageTotal,
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, Thread,
+    UsageDay, UsageTotal,
 };
 use serde_json::Value;
 
@@ -42,10 +42,10 @@ pub trait AgentsRepo {
 
     /// The app's own agent, when it exists.
     fn system_agent(&self) -> Result<Option<RosterAgent>>;
-    /// `after_message_id`: the newest message of the conversation when it was proposed (approvals come later).
+    /// `after_message_id`: the newest message of the thread when it was proposed (approvals come later).
     fn add_proposal(
         &self,
-        conversation_id: i64,
+        thread: Thread,
         after_message_id: i64,
         action: &str,
         args: &serde_json::Value,

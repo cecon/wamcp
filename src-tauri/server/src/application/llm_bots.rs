@@ -2,8 +2,10 @@
 //! bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
 //! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
 //! model asks to). Bursts are debounced and runs are limited; one run per
-//! conversation at a time, with another one afterwards if the contact wrote meanwhile.
+//! conversation at a time, with another one afterwards if the contact wrote meanwhile. The same queue
+//! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
+mod chat;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
@@ -15,7 +17,7 @@ use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
 };
-use crate::domain::model::{Inbox, LlmUsage, Message, BOT_LLM};
+use crate::domain::model::{ChatMessage, Inbox, LlmUsage, Message, BOT_LLM, CHAT_USER};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -30,13 +32,20 @@ pub struct LlmBotService {
     secrets: Arc<dyn SecretBox>,
     debounce: Duration,
     slots: Arc<Semaphore>,
-    /// Conversations with a scheduled or running answer; `true` = the contact wrote again meanwhile.
-    queued: Arc<Mutex<HashMap<i64, bool>>>,
+    /// Conversations and chats with a scheduled or running answer; `true` = someone wrote again meanwhile.
+    queued: Arc<Mutex<HashMap<Target, bool>>>,
     running: Arc<AtomicUsize>,
     idle: Arc<Notify>,
     system: Option<SystemAgent>,
     /// The app's own MCP endpoint for the system agent, known once the server listens.
     mcp_url: Arc<OnceLock<String>>,
+}
+
+/// What an answer is for: a customer's conversation or a person's chat with an AI agent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Target {
+    Conversation(i64),
+    Chat(i64),
 }
 
 /// Who answers an inbox and the call to make: an AI agent of the roster or a legacy `llm` bot.
@@ -76,8 +85,17 @@ impl LlmBotService {
     }
 
     /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves,
-    /// or when a person hands an open conversation back to it (status `pending`).
+    /// when a person hands an open conversation back to it (status `pending`), or when a person
+    /// writes in their chat with an AI agent.
     pub fn on_event(&self, envelope: &Envelope) {
+        if envelope.event == "agent_chat.message" {
+            if let Ok(m) = serde_json::from_value::<ChatMessage>(envelope.data.clone()) {
+                if m.role == CHAT_USER {
+                    self.schedule(Target::Chat(m.chat_id));
+                }
+            }
+            return;
+        }
         let conversation_id = match envelope.event.as_str() {
             "message.created" => match serde_json::from_value::<Message>(envelope.data.clone()) {
                 Ok(m) if m.message_type == "incoming" && !m.private => m.conversation_id,
@@ -92,7 +110,7 @@ impl LlmBotService {
             _ => return,
         };
         if self.serves(conversation_id) {
-            self.schedule(conversation_id);
+            self.schedule(Target::Conversation(conversation_id));
         }
     }
 
@@ -149,29 +167,33 @@ impl LlmBotService {
         }))
     }
 
-    fn schedule(&self, conversation_id: i64) {
+    fn schedule(&self, target: Target) {
         {
             let mut queued = self.queued.lock();
-            if let Some(again) = queued.get_mut(&conversation_id) {
+            if let Some(again) = queued.get_mut(&target) {
                 *again = true;
                 return;
             }
-            queued.insert(conversation_id, false);
+            queued.insert(target, false);
         }
         self.running.fetch_add(1, Ordering::AcqRel);
         let this = self.clone();
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(this.debounce).await;
-                this.queued.lock().insert(conversation_id, false);
+                this.queued.lock().insert(target, false);
                 if let Ok(_slot) = this.slots.acquire().await {
-                    if let Err(error) = this.answer(conversation_id).await {
-                        tracing::warn!(%error, conversation_id, "robô de LLM não respondeu");
+                    let outcome = match target {
+                        Target::Conversation(id) => this.answer(id).await,
+                        Target::Chat(id) => this.answer_chat(id).await,
+                    };
+                    if let Err(error) = outcome {
+                        tracing::warn!(%error, ?target, "robô de LLM não respondeu");
                     }
                 }
                 let mut queued = this.queued.lock();
-                if queued.get(&conversation_id) != Some(&true) {
-                    queued.remove(&conversation_id);
+                if queued.get(&target) != Some(&true) {
+                    queued.remove(&target);
                     break;
                 }
             }
@@ -206,7 +228,7 @@ impl LlmBotService {
         let mut request = responder.request.clone();
         request.prompt = build_prompt(&inbox.name, Some(&request.prompt), &messages);
         let completion = self.llm.complete(&request).await?;
-        self.record(&responder, conversation.id, completion.usage);
+        self.record(&responder, Some(conversation.id), None, completion.usage);
         let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
         };
@@ -229,12 +251,13 @@ impl LlmBotService {
     }
 
     /// Keeps the tokens of the call: an AI agent's salary is the cost of its calls plus the margin.
-    fn record(&self, responder: &Responder, conversation_id: i64, usage: TokenUsage) {
+    /// `run_ref` names what the call was for when it is not a conversation (`agent_chat:<id>`).
+    fn record(&self, responder: &Responder, conversation_id: Option<i64>, run_ref: Option<String>, usage: TokenUsage) {
         let usage = LlmUsage {
             agent_id: responder.agent_id,
             agent_bot_id: responder.agent_bot_id,
-            conversation_id: Some(conversation_id),
-            run_ref: None,
+            conversation_id,
+            run_ref,
             provider: responder.request.provider.clone(),
             model: responder.request.model.clone(),
             input_tokens: usage.input_tokens,
@@ -246,7 +269,7 @@ impl LlmBotService {
             at: self.helpdesk.core.clock.now_ms(),
         };
         if let Err(error) = self.helpdesk.core.repo.record_llm_usage(&usage) {
-            tracing::warn!(%error, conversation_id, "uso de tokens não registrado");
+            tracing::warn!(%error, ?conversation_id, "uso de tokens não registrado");
         }
     }
 

@@ -17,6 +17,7 @@ use wamcp_server::adapters::outbound::llm::LlmRouter;
 use wamcp_server::application::ports::{AgentsRepo, Completion, Llm, LlmMcp, LlmRequest, TokenUsage, UsersRepo};
 use wamcp_server::application::system_agent::SystemAgent;
 use wamcp_server::domain::error::Result;
+use wamcp_server::domain::model::Thread;
 
 const ADMIN_JID: &str = "5511911112222@s.whatsapp.net";
 
@@ -210,7 +211,7 @@ async fn the_mcp_endpoint_only_serves_a_run_in_progress() {
     assert_eq!(denied.status, 401);
     let system = s.f.app.state.support().system.clone();
     let user = s.f.store.users().unwrap().remove(0);
-    let token = system.open_run(1, user);
+    let token = system.open_run(Thread::Conversation(1), user);
     let auth = format!("Bearer {token}");
     let listed =
         s.f.public(request("POST", "/mcp-system", Some(call), &[("authorization", &auth)]))
@@ -271,7 +272,7 @@ async fn real_claude_code_calls_the_app_tools() {
         "created": "2026-01-01T00:00:00Z", "last_login": null }))
     .unwrap();
     let system = running.app.state.support().system.clone();
-    let token = system.open_run(1, admin);
+    let token = system.open_run(Thread::Conversation(1), admin);
     let request = LlmRequest {
         provider: "claude_cli".into(),
         model: Some("haiku".into()),

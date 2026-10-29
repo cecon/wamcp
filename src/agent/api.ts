@@ -92,6 +92,7 @@ const EVENTS = [
   'presence.update',
   'conversation.typing_on',
   'conversation.typing_off',
+  'agent_chat.message',
   'sla.missed',
   'catalog.updated',
   'catalog.import.updated',

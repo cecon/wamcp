@@ -69,10 +69,12 @@ interface LeafProps {
   onClick: () => void;
   icon?: ReactNode;
   count?: number;
+  /** Listed under a sub-group heading (Times, Canais, Etiquetas): indented one more level. */
+  nested?: boolean;
 }
 
 /** Child item with the tree connector line (Chatwoot SidebarGroupLeaf). */
-export function SidebarLeaf({ label, active, onClick, icon, count }: LeafProps) {
+export function SidebarLeaf({ label, active, onClick, icon, count, nested }: LeafProps) {
   return (
     <li className="relative ms-3 min-w-0 py-0.5 ps-2 before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-n-slate-4 last:before:bottom-1/2">
       <button
@@ -81,6 +83,7 @@ export function SidebarLeaf({ label, active, onClick, icon, count }: LeafProps) 
         aria-current={active ? 'page' : undefined}
         className={cn(
           'flex h-8 w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm',
+          nested && 'ps-8',
           active
             ? 'bg-n-alpha-2 text-n-slate-12'
             : 'text-n-slate-11 hover:bg-gradient-to-r hover:from-transparent hover:via-n-slate-3/70 hover:to-n-slate-3/70',

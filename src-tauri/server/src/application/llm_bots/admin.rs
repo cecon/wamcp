@@ -5,7 +5,7 @@ use crate::application::ports::{LlmMcp, LlmRequest};
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::agent_instructions;
-use crate::domain::model::{Conversation, RosterAgent, User};
+use crate::domain::model::{Conversation, Message, RosterAgent, Thread, User};
 use crate::domain::system::{build_system_prompt, reply_schema, MCP_NAME, SYSTEM_PROMPT, SYSTEM_TRANSCRIPT_LIMIT};
 
 impl LlmBotService {
@@ -33,7 +33,7 @@ impl LlmBotService {
         agent: &RosterAgent,
         admin: User,
     ) -> Result<()> {
-        let (Some(system), Some(url)) = (&self.system, self.mcp_url.get()) else {
+        let (Some(_), Some(url)) = (&self.system, self.mcp_url.get()) else {
             return Ok(());
         };
         let repo = &self.helpdesk.core.repo;
@@ -45,42 +45,64 @@ impl LlmBotService {
         if last.is_none_or(|m| m.message_type != "incoming") {
             return Ok(());
         }
+        let reply = self
+            .system_turn(agent, admin, Thread::Conversation(conversation.id), &messages, url)
+            .await?;
+        let actor = Actor::Bot {
+            inbox_id: conversation.inbox_id,
+        };
+        self.helpdesk
+            .reply(&actor, conversation.display_id, &reply, false)
+            .await?;
+        Ok(())
+    }
+
+    /// One run of the system agent for the administrator on `thread`: the app's tools are open to it
+    /// while the run lasts, and its tokens count like any AI agent's (its own card in the panel).
+    pub(super) async fn system_turn(
+        &self,
+        agent: &RosterAgent,
+        admin: User,
+        thread: Thread,
+        messages: &[Message],
+        url: &str,
+    ) -> Result<String> {
+        let Some(system) = &self.system else {
+            return fail("O funcionário do sistema não está disponível");
+        };
         let name = admin.display_name.clone().unwrap_or_else(|| admin.name.clone());
-        let instructions = agent_instructions(agent, &repo.skills()?);
-        let token = system.open_run(conversation.id, admin);
+        let instructions = agent_instructions(agent, &self.helpdesk.core.repo.skills()?);
+        let token = system.open_run(thread, admin);
         let request = LlmRequest {
             provider: "claude_cli".into(),
             model: agent.model.clone(),
             system: SYSTEM_PROMPT.into(),
-            prompt: build_system_prompt(&name, &instructions, &messages),
+            prompt: build_system_prompt(&name, &instructions, messages),
             schema: reply_schema(),
             api_key: None,
             mcp: Some(LlmMcp {
                 name: MCP_NAME.into(),
-                url: url.clone(),
+                url: url.into(),
                 token: token.clone(),
             }),
         };
         let outcome = self.llm.complete(&request).await;
         system.close_run(&token);
         let completion = outcome?;
-        // Its tokens count like any AI agent's (the system agent's own card in the panel).
         let responder = Responder {
             request,
             agent_id: Some(agent.id),
             agent_bot_id: None,
         };
-        self.record(&responder, conversation.id, completion.usage);
+        let (conversation, run_ref) = match thread {
+            Thread::Conversation(id) => (Some(id), None),
+            Thread::Chat(id) => (None, Some(format!("agent_chat:{id}"))),
+        };
+        self.record(&responder, conversation, run_ref, completion.usage);
         let reply = completion.answer["reply"].as_str().map(str::trim).unwrap_or_default();
         if reply.is_empty() {
             return fail("O funcionário do sistema respondeu sem mensagem");
         }
-        let actor = Actor::Bot {
-            inbox_id: conversation.inbox_id,
-        };
-        self.helpdesk
-            .reply(&actor, conversation.display_id, reply, false)
-            .await?;
-        Ok(())
+        Ok(reply.to_string())
     }
 }

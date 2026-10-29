@@ -159,6 +159,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     };
     let support = Support {
         system: SystemAgent::new(agents.clone()),
+        chats: crate::application::agent_chats::AgentChatService { core: core.clone() },
         agents,
         engine: Arc::default(),
         avatars,

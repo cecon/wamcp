@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   AtSign,
   Bolt,
+  Bot,
   ChartSpline,
   Contact,
   Folder,
@@ -171,6 +172,7 @@ export function Sidebar({
             {catalog.teams.map((t) => (
               <SidebarLeaf
                 key={`t${t.id}`}
+                nested
                 label={t.name}
                 active={conv?.teamId === t.id}
                 onClick={() => onNavigate({ page: 'conversations', teamId: t.id })}
@@ -180,6 +182,7 @@ export function Sidebar({
             {catalog.inboxes.map((i) => (
               <SidebarLeaf
                 key={`i${i.id}`}
+                nested
                 label={i.name}
                 icon={<MessageCircle size={16} className="text-n-teal-10" />}
                 active={conv?.inboxId === i.id}
@@ -190,6 +193,7 @@ export function Sidebar({
             {catalog.labels.map((l) => (
               <SidebarLeaf
                 key={`l${l.id}`}
+                nested
                 label={l.title}
                 icon={dot(l.color)}
                 active={conv?.label === l.title}
@@ -197,6 +201,13 @@ export function Sidebar({
               />
             ))}
           </SidebarGroup>
+          <SidebarGroup
+            icon={Bot}
+            label="Agentes"
+            active={route.page === 'agent_chat'}
+            parentOfActive={false}
+            onClick={() => open(null, { page: 'agent_chat' })}
+          />
           {canManageContacts(user) && (
             <SidebarGroup
               icon={Contact}

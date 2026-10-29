@@ -198,10 +198,11 @@ impl NotificationService {
     }
 
     /// Per-agent visibility of a bus event (Chatwoot's RoomChannel): administrators get everything,
-    /// agents get events from their inboxes, and notifications go only to their owner.
+    /// agents get events from their inboxes, and notifications and agent chats go only to their owner.
     pub fn visible_to(&self, user: &User, envelope: &Envelope) -> bool {
         let data = &envelope.data;
-        if envelope.event.starts_with("notification.") {
+        // Notifications and chats with AI agents are private, also to other administrators.
+        if envelope.event.starts_with("notification.") || envelope.event.starts_with("agent_chat.") {
             return data["user_id"].as_i64() == Some(user.id);
         }
         if user.role == "administrator" {

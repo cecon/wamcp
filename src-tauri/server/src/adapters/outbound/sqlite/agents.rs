@@ -2,8 +2,8 @@ use super::db::{flag, int, iso, now_ms, opt_int, opt_text, text, Shape, SqliteSt
 use crate::application::ports::AgentsRepo;
 use crate::domain::error::{Error, Result};
 use crate::domain::model::{
-    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, UsageDay,
-    UsageTotal,
+    AgentCredential, LlmUsage, RosterAgent, RosterAgentDraft, SealedCredential, Skill, SystemProposal, Thread,
+    UsageDay, UsageTotal,
 };
 use rusqlite::types::Value as Sql;
 use serde_json::Value;
@@ -236,17 +236,22 @@ impl AgentsRepo for SqliteStore {
 
     fn add_proposal(
         &self,
-        conversation_id: i64,
+        thread: Thread,
         after_message_id: i64,
         action: &str,
         args: &serde_json::Value,
         summary: &str,
     ) -> Result<SystemProposal> {
+        let (conversation, chat) = match thread {
+            Thread::Conversation(id) => (Some(id), None),
+            Thread::Chat(id) => (None, Some(id)),
+        };
         let id = self.insert(
-            "INSERT INTO system_proposals(conversation_id,after_message_id,action,args,summary,created_at)
-             VALUES(?,?,?,?,?,?)",
+            "INSERT INTO system_proposals(conversation_id,chat_id,after_message_id,action,args,summary,created_at)
+             VALUES(?,?,?,?,?,?,?)",
             vec![
-                int(conversation_id),
+                opt_int(conversation),
+                opt_int(chat),
                 int(after_message_id),
                 text(action),
                 text(args.to_string()),

@@ -176,5 +176,30 @@ pub fn steps() -> Vec<String> {
         // v32: motor agêntico —
         // atividades, delegações, execuções, tools com grants, evidências, auditoria e memória, por organização
         super::engine_schema::ENGINE.into(),
+        // v33: chat interno de cada pessoa logada com os agentes de IA (fora do WhatsApp e das conversas de
+        // clientes); propostas do funcionário do sistema também podem nascer nesse chat
+        "CREATE TABLE agent_chats(id INTEGER PRIMARY KEY,
+           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+           agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+           created_at INTEGER NOT NULL,UNIQUE(user_id,agent_id));
+         CREATE TABLE agent_chat_messages(id INTEGER PRIMARY KEY,
+           chat_id INTEGER NOT NULL REFERENCES agent_chats(id) ON DELETE CASCADE,
+           role TEXT NOT NULL CHECK(role IN ('user','agent','error')),content TEXT NOT NULL,created_at INTEGER NOT NULL);
+         CREATE INDEX agent_chat_messages_chat ON agent_chat_messages(chat_id,id);
+         CREATE TABLE system_proposals_v33(id INTEGER PRIMARY KEY,
+           conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
+           chat_id INTEGER REFERENCES agent_chats(id) ON DELETE CASCADE,
+           after_message_id INTEGER NOT NULL DEFAULT 0,
+           action TEXT NOT NULL,args TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(args)),summary TEXT NOT NULL,
+           status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','done','failed','discarded')),
+           result TEXT,created_at INTEGER NOT NULL,decided_at INTEGER,
+           CHECK((conversation_id IS NULL) <> (chat_id IS NULL)));
+         INSERT INTO system_proposals_v33(id,conversation_id,after_message_id,action,args,summary,status,result,
+           created_at,decided_at)
+           SELECT id,conversation_id,after_message_id,action,args,summary,status,result,created_at,decided_at
+           FROM system_proposals;
+         DROP TABLE system_proposals;
+         ALTER TABLE system_proposals_v33 RENAME TO system_proposals;"
+            .into(),
     ]
 }
