@@ -24,6 +24,8 @@ pub struct Support {
     pub accounts: AccountService,
     /// The roster of human and AI agents, skills and credentials.
     pub agents: crate::application::agents::AgentDirectory,
+    /// Private chats of people logged in with AI agents.
+    pub chats: crate::application::agent_chats::AgentChatService,
     /// The app's own agent: its runs and tools (`/mcp-system`).
     pub system: crate::application::system_agent::SystemAgent,
     /// The agentic engine, attached once the server knows its own address (MCP endpoint for runtimes).

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   AtSign,
   Bolt,
+  Bot,
   ChartSpline,
   Contact,
   Folder,
@@ -197,6 +198,13 @@ export function Sidebar({
               />
             ))}
           </SidebarGroup>
+          <SidebarGroup
+            icon={Bot}
+            label="Agentes"
+            active={route.page === 'agent_chat'}
+            parentOfActive={false}
+            onClick={() => open(null, { page: 'agent_chat' })}
+          />
           {canManageContacts(user) && (
             <SidebarGroup
               icon={Contact}

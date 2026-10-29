@@ -158,7 +158,10 @@ pub struct Salary {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SystemProposal {
     pub id: i64,
-    pub conversation_id: i64,
+    /// Made in an administrator's WhatsApp conversation, or (`chat_id`) in their chat in the app.
+    pub conversation_id: Option<i64>,
+    #[serde(default)]
+    pub chat_id: Option<i64>,
     pub after_message_id: i64,
     /// `create_skill`, `create_agent`, `set_agent_skills` or `connect_inbox`.
     pub action: String,
@@ -169,4 +172,14 @@ pub struct SystemProposal {
     pub result: Option<String>,
     pub created_at: i64,
     pub decided_at: Option<i64>,
+}
+
+impl SystemProposal {
+    pub fn thread(&self) -> Option<super::Thread> {
+        match (self.conversation_id, self.chat_id) {
+            (Some(id), _) => Some(super::Thread::Conversation(id)),
+            (None, Some(id)) => Some(super::Thread::Chat(id)),
+            (None, None) => None,
+        }
+    }
 }

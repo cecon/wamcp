@@ -43,6 +43,8 @@ export type Route =
       filters?: FilterCondition[];
     }
   | { page: 'contacts'; contactId?: number }
+  /** Private chats with AI agents inside the app. */
+  | { page: 'agent_chat'; agentId?: number }
   | { page: 'reports'; section?: ReportSection }
   | { page: 'search' }
   | { page: 'profile' }

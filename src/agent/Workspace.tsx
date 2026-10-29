@@ -8,6 +8,7 @@ import { Sidebar } from './sidebar/Sidebar';
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { NotificationsPage } from './NotificationsPage';
 import { ContactsPage } from './ContactsPage';
+import { AgentChatScreen } from './agentChat/AgentChatScreen';
 import { Reports } from './Reports';
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
@@ -122,6 +123,13 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             onNavigate={setRoute}
             views={views}
             onViewsChange={() => void reloadViews()}
+          />
+        )}
+        {route.page === 'agent_chat' && (
+          <AgentChatScreen
+            agentId={route.agentId}
+            realtime={realtime}
+            onSelect={(agentId) => setRoute({ page: 'agent_chat', agentId })}
           />
         )}
         {route.page === 'notifications' && (

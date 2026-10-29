@@ -4,6 +4,7 @@ mod account;
 mod accounts;
 mod admin;
 mod agent_bots;
+mod agent_chats;
 mod agent_directory;
 mod agent_runtimes;
 mod audit;
@@ -72,6 +73,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(sla::routes())
         .merge(agent_bots::routes())
         .merge(agent_directory::routes())
+        .merge(agent_chats::routes())
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
         .merge(roles::routes())

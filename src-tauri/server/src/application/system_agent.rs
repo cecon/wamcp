@@ -1,5 +1,5 @@
 //! The system agent's side of the app: who may talk to it (administrators, from the WhatsApp number
-//! of their roster entry), the short-lived runs its runtime authenticates with on the app's MCP
+//! of their roster entry or in their chat in the app), the short-lived runs its runtime authenticates with on the app's MCP
 //! endpoint, and its tools. Reads run at once; changes become proposals that run only after the
 //! administrator approves them in a later message, as that administrator.
 mod actions;
@@ -7,7 +7,7 @@ mod actions;
 use super::agents::AgentDirectory;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, fail_with, HelpdeskError, Result};
-use crate::domain::model::{Conversation, SystemProposal, User};
+use crate::domain::model::{Conversation, Message, SystemProposal, Thread, User};
 use crate::domain::system::same_number;
 use parking_lot::Mutex;
 use serde::Deserialize;
@@ -15,10 +15,10 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// One answer being written: the conversation it belongs to and the administrator it acts for.
+/// One answer being written: where it belongs (conversation or chat) and the administrator it acts for.
 #[derive(Clone)]
 struct Run {
-    conversation_id: i64,
+    thread: Thread,
     admin: User,
 }
 
@@ -109,10 +109,23 @@ impl SystemAgent {
     }
 
     /// Starts a run; the token is the bearer credential of the app's MCP endpoint until it ends.
-    pub fn open_run(&self, conversation_id: i64, admin: User) -> String {
+    pub fn open_run(&self, thread: Thread, admin: User) -> String {
         let token = format!("wsys_{}", uuid::Uuid::new_v4().simple());
-        self.runs.lock().insert(token.clone(), Run { conversation_id, admin });
+        self.runs.lock().insert(token.clone(), Run { thread, admin });
         token
+    }
+
+    /// The newest `limit` messages of the thread, oldest first (chat messages read as conversation ones).
+    fn thread_messages(&self, thread: Thread, limit: i64) -> Result<Vec<Message>> {
+        match thread {
+            Thread::Conversation(id) => self.repo().messages(id, None, limit),
+            Thread::Chat(id) => Ok(self
+                .repo()
+                .chat_messages(id, limit)?
+                .iter()
+                .map(|m| m.as_message())
+                .collect()),
+        }
     }
 
     pub fn close_run(&self, token: &str) {
@@ -235,11 +248,9 @@ impl SystemAgent {
     }
 
     fn propose(&self, run: &Run, action: &str, args: &Value, summary: String) -> Result<Value> {
-        let newest = self.repo().messages(run.conversation_id, None, 1)?;
+        let newest = self.thread_messages(run.thread, 1)?;
         let after = newest.last().map_or(0, |m| m.id);
-        let proposal = self
-            .repo()
-            .add_proposal(run.conversation_id, after, action, args, &summary)?;
+        let proposal = self.repo().add_proposal(run.thread, after, action, args, &summary)?;
         Ok(json!({
             "proposal_id": proposal.id,
             "summary": summary,
@@ -248,10 +259,7 @@ impl SystemAgent {
     }
 
     fn own_proposal(&self, run: &Run, id: i64) -> Result<SystemProposal> {
-        let proposal = self
-            .repo()
-            .proposal(id)?
-            .filter(|p| p.conversation_id == run.conversation_id);
+        let proposal = self.repo().proposal(id)?.filter(|p| p.thread() == Some(run.thread));
         let Some(proposal) = proposal else {
             return Err(HelpdeskError::not_found("Proposta não encontrada nesta conversa").into());
         };
@@ -264,7 +272,7 @@ impl SystemAgent {
     /// Runs an approved proposal as the administrator: approval is a message they sent after it.
     fn execute(&self, run: &Run, actor: &Actor, id: i64) -> Result<Value> {
         let proposal = self.own_proposal(run, id)?;
-        let messages = self.repo().messages(run.conversation_id, None, 50)?;
+        let messages = self.thread_messages(run.thread, 50)?;
         let approved = messages
             .iter()
             .any(|m| m.id > proposal.after_message_id && m.message_type == "incoming" && !m.private);
