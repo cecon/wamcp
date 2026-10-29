@@ -27,7 +27,7 @@ function Harness({ initial, onChange }: { initial: Route; onChange: () => Promis
   );
 }
 
-/** Settings → Conexões WhatsApp with working in-app navigation. */
+/** Settings → Canais (WhatsApp connections) with working in-app navigation. */
 export function renderConnections(
   connectionId?: string,
   options: Parameters<typeof userEvent.setup>[0] = {},

@@ -5,6 +5,7 @@ mod agents;
 mod catalog;
 mod engine;
 mod external;
+mod github;
 mod mirror;
 mod people;
 mod support;
@@ -15,6 +16,7 @@ pub use agents::*;
 pub use catalog::*;
 pub use engine::*;
 pub use external::*;
+pub use github::*;
 pub use mirror::*;
 pub use people::*;
 pub use support::*;
@@ -31,6 +33,7 @@ pub trait Repository:
     UsersRepo
     + TeamsRepo
     + InboxRepo
+    + GithubRepo
     + ContactRepo
     + ContactBookRepo
     + ConversationRepo
@@ -65,6 +68,7 @@ impl<T> Repository for T where
     T: UsersRepo
         + TeamsRepo
         + InboxRepo
+        + GithubRepo
         + ContactRepo
         + ContactBookRepo
         + ConversationRepo

@@ -86,6 +86,9 @@ impl HelpdeskService {
             return Ok(());
         }
         let inbox = self.core.inbox(conversation.inbox_id)?;
+        if inbox.channel_type != "whatsapp" {
+            return Ok(());
+        }
         self.whatsapp
             .mark_read(&inbox.session_id, &conversation.contact_jid, &unread)
             .await

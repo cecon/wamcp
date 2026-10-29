@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, Settings, Smartphone } from 'lucide-react';
+import { GitPullRequest, MessageCircle, Settings, Smartphone } from 'lucide-react';
 import { http } from '../api';
 import type { Catalog, Inbox, User } from '../types';
 import type { Route } from '../route';
@@ -11,6 +11,15 @@ import { InboxAutomation } from './InboxAutomation';
 import { InboxLimit } from './InboxLimit';
 import { InboxAgentSelect } from './InboxAgentSelect';
 import { useAction } from './useAction';
+import { ConnectGithubModal } from './github/ConnectGithubModal';
+import { GithubSetup } from './github/GithubSetup';
+import { NewConnectionModal } from './connections/ConnectionsPage';
+
+/** What the inbox list and header say about the channel. */
+const channelLine = (i: Inbox) =>
+  i.channel_type === 'github'
+    ? `GitHub · ${i.github_repo}`
+    : `WhatsApp · ${i.phone ? `+${i.phone}` : 'sem número'} · ${i.session_status === 'connected' ? 'conectado' : i.session_status}`;
 
 interface Props {
   catalog: Catalog;
@@ -22,50 +31,74 @@ interface Props {
 /** Chatwoot Inboxes: channel tile list; each inbox opens a settings page with tabs. */
 export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
   const inbox = inboxId ? catalog.inboxes.find((i) => i.id === inboxId) : undefined;
+  const [adding, setAdding] = useState<'whatsapp' | 'github' | null>(null);
+  const connection = (id: string) =>
+    onNavigate({ page: 'settings', section: 'connections', connectionId: id });
   if (inbox)
     return <InboxDetail inbox={inbox} catalog={catalog} onNavigate={onNavigate} onChange={onChange} />;
   return (
     <SettingsPage>
       <SettingsHeader
-        title="Caixas de entrada"
-        description="Cada conexão WhatsApp é um canal. Novas conexões criam a caixa de entrada automaticamente."
+        title="Canais"
+        description="Cada WhatsApp conectado e cada repositório do GitHub é um canal, com a sua caixa de entrada de conversas."
         action={
-          <Button
-            icon={Smartphone}
-            label="Conexões WhatsApp"
-            onClick={() => onNavigate({ page: 'settings', section: 'connections' })}
-          />
+          <div className="flex flex-wrap gap-2">
+            <Button icon={Smartphone} label="Novo WhatsApp" onClick={() => setAdding('whatsapp')} />
+            <Button
+              color="slate"
+              icon={GitPullRequest}
+              label="Conectar GitHub"
+              onClick={() => setAdding('github')}
+            />
+          </div>
         }
-        count={`${catalog.inboxes.length} caixa${catalog.inboxes.length === 1 ? '' : 's'}`}
+        count={`${catalog.inboxes.length} ${catalog.inboxes.length === 1 ? 'canal' : 'canais'}`}
       />
       <ul className="divide-y divide-n-weak border-t border-n-weak">
-        {catalog.inboxes.length === 0 && (
-          <li className="py-20 text-center text-base">Nenhuma caixa de entrada.</li>
-        )}
+        {catalog.inboxes.length === 0 && <li className="py-20 text-center text-base">Nenhum canal ainda.</li>}
         {catalog.inboxes.map((i) => (
           <li key={i.id} className="flex items-center justify-between gap-4 py-4">
             <div className="flex min-w-0 items-center gap-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-n-strong bg-n-alpha-3 text-n-slate-10 shadow-sm ring ring-n-solid-1">
-                <MessageCircle size={22} />
+                {i.channel_type === 'github' ? <GitPullRequest size={22} /> : <MessageCircle size={22} />}
               </span>
               <div className="min-w-0">
                 <p className="text-heading-3 truncate text-n-slate-12">{i.name}</p>
-                <p className="truncate text-sm text-n-slate-11">
-                  WhatsApp · {i.phone ? `+${i.phone}` : 'sem número'} ·{' '}
-                  {i.session_status === 'connected' ? 'conectado' : i.session_status}
-                </p>
+                <p className="truncate text-sm text-n-slate-11">{channelLine(i)}</p>
               </div>
             </div>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Settings}
-              aria-label={`Configurar ${i.name}`}
-              onClick={() => onNavigate({ page: 'settings', section: 'inboxes', id: i.id })}
-            />
+            <div className="flex gap-2">
+              {i.channel_type !== 'github' && i.session_id && (
+                <Button
+                  color="slate"
+                  variant="faded"
+                  icon={Smartphone}
+                  aria-label={`Conexão de ${i.name}`}
+                  title="QR Code, status e acesso MCP"
+                  onClick={() => connection(i.session_id)}
+                />
+              )}
+              <Button
+                color="slate"
+                variant="faded"
+                icon={Settings}
+                aria-label={`Configurar ${i.name}`}
+                onClick={() => onNavigate({ page: 'settings', section: 'inboxes', id: i.id })}
+              />
+            </div>
           </li>
         ))}
       </ul>
+      {adding === 'github' && <ConnectGithubModal onClose={() => setAdding(null)} onConnected={onChange} />}
+      {adding === 'whatsapp' && (
+        <NewConnectionModal
+          onClose={() => setAdding(null)}
+          onCreated={(created) => {
+            void onChange().catch(() => {});
+            connection(created.id);
+          }}
+        />
+      )}
     </SettingsPage>
   );
 }
@@ -105,9 +138,9 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
     <SettingsPage>
       <SettingsHeader
         title={inbox.name}
-        description={`WhatsApp · ${inbox.phone ? `+${inbox.phone}` : 'sem número'}`}
+        description={channelLine(inbox)}
         back={{
-          label: 'Caixas de entrada',
+          label: 'Canais',
           onClick: () => onNavigate({ page: 'settings', section: 'inboxes' }),
         }}
       />
@@ -132,6 +165,7 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
       {error && <p className="text-sm text-n-ruby-11">{error}</p>}
       {tab === 'settings' && (
         <div className="flex max-w-2xl flex-col">
+          {inbox.channel_type === 'github' && <GithubSetup inboxId={inbox.id} />}
           <form
             className="flex items-end gap-2 pb-2"
             onSubmit={(e) => {
@@ -170,18 +204,22 @@ function InboxDetail({ inbox, catalog, onNavigate, onChange }: { inbox: Inbox } 
               checked={Boolean(inbox.lock_to_single_conversation)}
               onChange={(v) => void patch({ lock_to_single_conversation: v })}
             />
-            <Toggle
-              label="Mostrar o nome do agente"
-              hint="O cliente vê no WhatsApp quem respondeu, em negrito na primeira linha (ex.: *Maria*:)."
-              checked={inbox.show_agent_name !== 0}
-              onChange={(v) => void patch({ show_agent_name: v })}
-            />
-            <Toggle
-              label="Ignorar grupos"
-              hint="Grupos do WhatsApp não viram conversas."
-              checked={Boolean(inbox.ignore_groups)}
-              onChange={(v) => void patch({ ignore_groups: v })}
-            />
+            {inbox.channel_type !== 'github' && (
+              <>
+                <Toggle
+                  label="Mostrar o nome do agente"
+                  hint="O cliente vê no WhatsApp quem respondeu, em negrito na primeira linha (ex.: *Maria*:)."
+                  checked={inbox.show_agent_name !== 0}
+                  onChange={(v) => void patch({ show_agent_name: v })}
+                />
+                <Toggle
+                  label="Ignorar grupos"
+                  hint="Grupos do WhatsApp não viram conversas."
+                  checked={Boolean(inbox.ignore_groups)}
+                  onChange={(v) => void patch({ ignore_groups: v })}
+                />
+              </>
+            )}
             <Toggle
               label="Atendimento por IA (MCP)"
               hint="Conversas novas ficam pendentes para a IA até ela transferir para humanos."

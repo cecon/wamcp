@@ -55,6 +55,7 @@ async fn the_agent_web_app_appears_once_built_without_restarting_the_service() {
         storage: Arc::new(wamcp_server::adapters::outbound::media_storage::MemoryMediaStorage::default()),
         images: Arc::new(wamcp_server::adapters::outbound::image_fetcher::MemoryImageFetcher::default()),
         secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
+        github: Arc::new(wamcp_server::adapters::outbound::github::MemoryGithub::default()),
     };
     let settings = Settings {
         public_url: ORIGIN.into(),

@@ -114,6 +114,7 @@ pub struct Fixture {
     pub clock: Arc<ManualClock>,
     pub storage: Arc<MemoryMediaStorage>,
     pub images: Arc<MemoryImageFetcher>,
+    pub github: Arc<wamcp_server::adapters::outbound::github::MemoryGithub>,
     pub events: Arc<Mutex<Vec<Envelope>>>,
     pub dir: Option<tempfile::TempDir>,
     /// The administrator session used by `admin()` and `bootstrap()`, created on first use.
@@ -171,6 +172,7 @@ impl Fixture {
         let clock = Arc::new(ManualClock::at(START * 1000));
         let storage = Arc::new(MemoryMediaStorage::default());
         let images = Arc::new(MemoryImageFetcher::default());
+        let github = Arc::new(wamcp_server::adapters::outbound::github::MemoryGithub::default());
         let ports = Ports {
             repo: store.clone(),
             whatsapp: wa.clone(),
@@ -181,6 +183,7 @@ impl Fixture {
             storage: storage.clone(),
             images: images.clone(),
             secrets: Arc::new(wamcp_server::adapters::outbound::secret_box::AesSecretBox::generated()),
+            github: github.clone(),
         };
         let settings = Settings {
             public_url: ORIGIN.into(),
@@ -203,6 +206,7 @@ impl Fixture {
             clock,
             storage,
             images,
+            github,
             events,
             dir,
             admin_agent: Mutex::new(None),

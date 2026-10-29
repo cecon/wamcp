@@ -20,6 +20,10 @@ export interface User {
 export interface Inbox {
   id: number;
   name: string;
+  /** `whatsapp` or `github` (a repository's events). */
+  channel_type?: string;
+  /** `owner/repo` of a GitHub inbox. */
+  github_repo?: string | null;
   session_id: string;
   session_status: string;
   phone: string | null;

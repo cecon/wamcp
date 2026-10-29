@@ -29,6 +29,40 @@ pub struct Shape {
 
 pub const PLAIN: Shape = Shape { json: &[], bools: &[] };
 
+/// Marks a migration step that rebuilds a table other tables reference (SQLite cannot change a
+/// CHECK in place): it runs with foreign keys off, so dropping the old table does not cascade, and
+/// is refused if it leaves more broken references than there were.
+pub const WITHOUT_FOREIGN_KEYS: &str = "-- foreign_keys=off\n";
+
+fn broken_references(conn: &Connection) -> rusqlite::Result<i64> {
+    conn.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r.get(0))
+}
+
+fn migrate(conn: &Connection, step: usize, sql: &str) -> Result<()> {
+    let rebuild = sql.starts_with(WITHOUT_FOREIGN_KEYS);
+    let before = if rebuild {
+        conn.execute_batch("PRAGMA foreign_keys=OFF;")?;
+        broken_references(conn)?
+    } else {
+        0
+    };
+    let run = || -> Result<()> {
+        conn.execute_batch(&format!("BEGIN;{sql};"))?;
+        if rebuild && broken_references(conn)? > before {
+            return Err(Error::internal(format!("migration {} broke foreign keys", step + 1)));
+        }
+        conn.execute_batch(&format!("PRAGMA user_version={};COMMIT;", step + 1))?;
+        Ok(())
+    };
+    let result = run().inspect_err(|_| {
+        let _ = conn.execute_batch("ROLLBACK");
+    });
+    if rebuild {
+        conn.execute_batch("PRAGMA foreign_keys=ON;")?;
+    }
+    result
+}
+
 fn row_map(row: &Row, shape: &Shape) -> rusqlite::Result<Map<String, Value>> {
     let statement = row.as_ref();
     let mut map = Map::new();
@@ -72,10 +106,7 @@ impl SqliteStore {
             .enumerate()
             .skip(usize::try_from(version).unwrap_or(0))
         {
-            conn.execute_batch(&format!("BEGIN;{sql};PRAGMA user_version={};COMMIT;", step + 1))
-                .inspect_err(|_| {
-                    let _ = conn.execute_batch("ROLLBACK");
-                })?;
+            migrate(&conn, step, sql)?;
         }
         conn.execute_batch(EXTRAS)?;
         conn.execute("UPDATE sessions SET status='disconnected'", [])?;

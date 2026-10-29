@@ -7,15 +7,10 @@ import { connected, renderConnections } from './connection-harness';
 
 const QR = 'QR Code para conectar o WhatsApp';
 
-describe('WhatsApp connections list', () => {
-  it('lists connections with their status and creates a new one with its inbox', async () => {
+describe('WhatsApp channels', () => {
+  it('creates a WhatsApp channel from Canais, opens its QR Code and goes back', async () => {
     let created: ConnectionDetail | null = null;
     const api = fakeApi({
-      'GET /sessions': () => [
-        { id: 's1', name: 'Suporte', phone: '5511999999999', status: 'connected' },
-        { id: 's2', name: 'Vendas', phone: null, status: 'qr' },
-        { id: 's3', name: 'Antigo', phone: null, status: 'disconnected' },
-      ],
       'POST /sessions': (body) => {
         created = { ...(body as { name: string }), id: 's9', phone: null, status: 'disconnected' };
         return created;
@@ -23,14 +18,10 @@ describe('WhatsApp connections list', () => {
       'GET /sessions/s9': () => ({ ...created, qr: null, mcpUrl: 'https://x/mcp/s9' }),
     });
     const { user, onChange } = renderConnections();
-    expect(await screen.findByText('Suporte')).toBeInTheDocument();
-    expect(screen.getByText('3 conexões')).toBeInTheDocument();
-    expect(screen.getByText('+5511999999999')).toBeInTheDocument();
-    expect(screen.getByText('Conectado')).toBeInTheDocument();
-    expect(screen.getByText('Aguardando QR Code')).toBeInTheDocument();
-    expect(screen.getByText('Desconectado')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Canais' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conectar GitHub' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Nova conexão' }));
+    await user.click(screen.getByRole('button', { name: 'Novo WhatsApp' }));
     const dialog = screen.getByRole('dialog', { name: 'Nova conexão' });
     await user.type(within(dialog).getByLabelText('Nome da conexão'), '  Financeiro ');
     await user.click(within(dialog).getByRole('button', { name: 'Criar conexão' }));
@@ -39,20 +30,18 @@ describe('WhatsApp connections list', () => {
     expect(onChange).toHaveBeenCalled();
     expect(await screen.findByText('Pronto para conectar')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Conexões WhatsApp' }));
-    expect(await screen.findByText('Vendas')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Canais' }));
+    expect(await screen.findByRole('heading', { name: 'Canais' })).toBeInTheDocument();
   });
 
-  it('shows the empty state, creation errors and opens a connection', async () => {
+  it('reports creation errors', async () => {
     fakeApi({
-      'GET /sessions': [],
       'POST /sessions': () => {
         throw status(400, 'Nome inválido');
       },
     });
     const { user } = renderConnections();
-    expect(await screen.findByText(/Nenhuma conexão ainda/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Nova conexão' }));
+    await user.click(await screen.findByRole('button', { name: 'Novo WhatsApp' }));
     const dialog = screen.getByRole('dialog', { name: 'Nova conexão' });
     expect(within(dialog).getByRole('button', { name: 'Criar conexão' })).toBeDisabled();
     await user.type(within(dialog).getByLabelText('Nome da conexão'), 'X');

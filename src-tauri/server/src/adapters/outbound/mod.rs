@@ -3,6 +3,7 @@ pub mod callback_address;
 pub mod clock;
 pub mod event_callback;
 pub mod finance_mock;
+pub mod github;
 pub mod image_fetcher;
 pub mod llm;
 pub mod media_storage;

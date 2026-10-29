@@ -201,7 +201,9 @@ pub fn steps() -> Vec<String> {
          DROP TABLE system_proposals;
          ALTER TABLE system_proposals_v33 RENAME TO system_proposals;"
             .into(),
-        // v34: agendamentos (crons) em que agentes de IA se inscrevem para trabalhar sozinhos, e o histórico
+        // v34: canal GitHub (eventos de PR, issues, Actions e pushes viram conversas); inboxes é refeita
+        super::github_schema::github_channel(),
+        // v35: agendamentos (crons) em que agentes de IA se inscrevem para trabalhar sozinhos, e o histórico
         // das execuções; o resultado vai para o chat do agente com quem criou o agendamento
         "CREATE TABLE agent_schedules(id INTEGER PRIMARY KEY,name TEXT NOT NULL,cron TEXT,interval_minutes INTEGER,
            timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',prompt TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,
