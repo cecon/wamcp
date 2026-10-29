@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { http, query, type Realtime } from '../api';
+import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Conversation, Meta } from '../types';
 import type { Route } from '../route';
 import type { AssigneeType, StatusFilter } from './ChatList';
@@ -13,6 +13,7 @@ const REFRESH = new Set([
   'assignee.changed',
   'team.changed',
   'message.created',
+  REALTIME_RECONNECTED,
 ]);
 const PAGE = 25;
 

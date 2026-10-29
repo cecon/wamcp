@@ -104,23 +104,50 @@ export interface RealtimeEvent {
 }
 export type Realtime = { subscribe(listener: (e: RealtimeEvent) => void): () => void; close(): void };
 
-/** One EventSource per tab, fanned out to components. The browser reconnects automatically. */
-export function connectRealtime(onStatus: (online: boolean) => void): Realtime {
+/** Sent to listeners when the stream is back after a drop: events may have been missed, so refetch. */
+export const REALTIME_RECONNECTED = 'realtime.reconnected';
+
+/**
+ * One EventSource per tab, fanned out to components. The browser retries a dropped stream by
+ * itself, but gives up for good when the retry gets an error response (the server restarting), so
+ * a closed stream is opened again here.
+ */
+export function connectRealtime(onStatus: (online: boolean) => void, retryMs = 3000): Realtime {
   const listeners = new Set<(e: RealtimeEvent) => void>();
-  const source = new EventSource('/api/v1/events');
-  source.onopen = () => onStatus(true);
-  source.onerror = () => onStatus(false);
-  for (const name of EVENTS)
-    source.addEventListener(name, (message) => {
-      const payload = JSON.parse((message as MessageEvent).data);
-      for (const listener of listeners) listener({ event: name, data: payload.data });
-    });
+  const emit = (e: RealtimeEvent) => listeners.forEach((listener) => listener(e));
+  let source: EventSource,
+    dropped = false,
+    closed = false,
+    retry: ReturnType<typeof setTimeout> | undefined;
+  const open = () => {
+    source = new EventSource('/api/v1/events');
+    source.onopen = () => {
+      onStatus(true);
+      if (dropped) emit({ event: REALTIME_RECONNECTED, data: {} });
+      dropped = false;
+    };
+    source.onerror = () => {
+      onStatus(false);
+      dropped = true;
+      if (source.readyState === EventSource.CLOSED && !closed) retry = setTimeout(open, retryMs);
+    };
+    for (const name of EVENTS)
+      source.addEventListener(name, (message) => {
+        const payload = JSON.parse((message as MessageEvent).data);
+        emit({ event: name, data: payload.data });
+      });
+  };
+  open();
   return {
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    close: () => source.close(),
+    close: () => {
+      closed = true;
+      clearTimeout(retry);
+      source.close();
+    },
   };
 }
 
