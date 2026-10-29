@@ -25,7 +25,19 @@ export function firstRun<T>(path: string, method = 'GET', body?: unknown): Promi
   return request<T>(`/api/helpdesk${path}`, method, body);
 }
 
-async function request<T>(url: string, method: string, body: unknown): Promise<T> {
+const CSRF_REFUSED = 'Token CSRF inválido';
+
+/**
+ * The token lives only in this module, so it is lost when the module is loaded again (a code
+ * update in development) while the session cookie stays valid: ask the session for it again.
+ */
+async function refreshCsrf() {
+  const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+  if (response.ok) setCsrf((await response.json().catch(() => null))?.csrf ?? null);
+  return response.ok;
+}
+
+async function request<T>(url: string, method: string, body: unknown, retried = false): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
   const response = await fetch(url, {
@@ -35,13 +47,15 @@ async function request<T>(url: string, method: string, body: unknown): Promise<T
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await response.json().catch(() => null);
+  if (response.status === 403 && data?.error === CSRF_REFUSED && !retried && (await refreshCsrf()))
+    return request<T>(url, method, body, true);
   if (!response.ok)
     throw new ApiError(data?.error || 'Não foi possível concluir a operação.', response.status);
   return data as T;
 }
 
 /** Multipart POST: the browser sets the boundary, so no JSON content-type here. */
-export async function upload<T>(path: string, form: FormData): Promise<T> {
+export async function upload<T>(path: string, form: FormData, retried = false): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     method: 'POST',
     credentials: 'same-origin',
@@ -49,6 +63,8 @@ export async function upload<T>(path: string, form: FormData): Promise<T> {
     body: form,
   });
   const data = await response.json().catch(() => null);
+  if (response.status === 403 && data?.error === CSRF_REFUSED && !retried && (await refreshCsrf()))
+    return upload<T>(path, form, true);
   if (!response.ok) throw new ApiError(data?.error || 'Não foi possível enviar o arquivo.', response.status);
   return data as T;
 }

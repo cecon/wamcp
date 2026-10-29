@@ -93,9 +93,22 @@ export function AgentChatThread({ agent, messages, error, onSent, onBack }: Prop
           ))}
         </ul>
         {waiting && (
-          <p className="mt-2 text-sm text-n-slate-11" role="status">
-            {agent.name} está pensando…
-          </p>
+          <div className="mt-2 flex items-end gap-2 pr-10" role="status">
+            <MemberAvatar choices={agent.avatar} kind="ai" seed={agent.id} size={24} title={agent.name} />
+            <span
+              className="flex h-10 items-center gap-1 rounded-xl rounded-bl-sm bg-n-solid-iris px-4"
+              aria-hidden
+            >
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="size-2 animate-bounce rounded-full bg-n-iris-9"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+            </span>
+            <span className="animate-pulse text-xs text-n-slate-11">{agent.name} está pensando…</span>
+          </div>
         )}
         <div ref={end} />
       </div>
