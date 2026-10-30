@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 
 // Verificação do spike: abre ?c3spike, coleta erros de console/página e tira print.
 const url = process.argv[2] ?? 'http://127.0.0.1:1420/?c3spike';

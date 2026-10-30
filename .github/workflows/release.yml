@@ -53,7 +53,12 @@ jobs:
         with:
           workspaces: src-tauri -> target
       - name: Authorize the private C3Theme git dependency
-        run: git config --global url."https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/".insteadOf "https://github.com/"
+        shell: bash
+        run: |
+          base="https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/"
+          git config --global --add url."$base".insteadOf "git@github.com:"
+          git config --global --add url."$base".insteadOf "ssh://git@github.com/"
+          git config --global --add url."$base".insteadOf "https://github.com/"
       - run: pnpm install --frozen-lockfile
       - name: Bump build version
         id: version

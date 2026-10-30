@@ -5,7 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@10.32.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["@c3theme/chat", "@c3theme/ui", "esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "@c3theme/chat",
+      "@c3theme/ui",
+      "esbuild",
+      "sharp"
+    ]
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
