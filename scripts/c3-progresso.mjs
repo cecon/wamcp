@@ -83,7 +83,8 @@ export function relatorio(pastas) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const atual = relatorio(levantar());
   if (process.argv.includes('--check')) {
-    const salvo = readFileSync(path.join(RAIZ, ARQUIVO), 'utf8');
+    // Normaliza o fim de linha: o checkout do Windows (autocrlf) traz CRLF e o arquivo gerado é sempre LF.
+    const salvo = readFileSync(path.join(RAIZ, ARQUIVO), 'utf8').replace(/\r\n/g, '\n');
     if (salvo !== atual) {
       console.error('Progresso desatualizado: rode node scripts/c3-progresso.mjs');
       process.exit(1);
