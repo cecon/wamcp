@@ -63,6 +63,7 @@ Decisões de implementação:
 1. **Clique no item-pai.** O `VerticalNav` do pacote só expande/recolhe quando o item tem filhos; o sidebar atual **navega** ao clicar (ex.: “Configurações” abre Funcionários). Para manter o comportamento atual sem copiar o menu, o `NavItem` precisa de algo como `defaultChild`/`onClick`. **Alternativa:** aceitar a mudança de UX (pai só expande) e atualizar o [shell.test.tsx](../../tests/ui/shell.test.tsx).
 2. **`aria-current` no item ativo.** O sidebar hoje marca `aria-current="page"`; o pacote usa classe `Mui-selected`. Pedir o atributo (ou adaptar os testes).
 3. **Exports pequenos:** `C3Tokens` (usei `C3ThemeProviderProps['tokens']`), `useColorMode` e `Z_INDEX`; e o `injectFirst` dentro do `C3ThemeProvider`.
+4. **Imports com extensão no `dist`.** O pacote emite `import './theme/vars'` sem `.js`. No Vite/build funciona; no Vitest com pnpm o pacote cai em `node_modules/.pnpm`, é externalizado e o Node ESM não resolve. Contornado com `test.server.deps.inline: [/@c3theme\//]` no [`vitest.config.ts`](../../vitest.config.ts); o certo é o C3Theme emitir com extensão (NodeNext).
 
 Sem os itens 1–2, virar o padrão exige reescrever 3 testes de shell e aceitar a mudança de comportamento do menu — decisão de produto, não técnica.
 

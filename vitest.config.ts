@@ -22,6 +22,10 @@ export default defineConfig({
     include: ['tests/ui/**/*.test.tsx'],
     setupFiles: ['tests/ui/setup.ts'],
     restoreMocks: true,
+    // O `dist` do @c3theme/ui importa sem extensão (ex.: `./theme/vars`). Com pnpm o pacote cai em
+    // `node_modules/.pnpm` e o Vitest o externaliza; aí o Node ESM não resolve. Inlinar deixa o Vite resolver
+    // como faz no build. (Pedido ao C3Theme: emitir `.js` nos imports para funcionar em Node ESM puro.)
+    server: { deps: { inline: [/@c3theme\//] } },
     // Long user-event flows (automation rules, filters) exceed 5s on a loaded machine.
     testTimeout: 15000,
     coverage: {
