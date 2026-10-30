@@ -203,5 +203,22 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v34: canal GitHub (eventos de PR, issues, Actions e pushes viram conversas); inboxes é refeita
         super::github_schema::github_channel(),
+        // v35: agendamentos (crons) em que agentes de IA se inscrevem para trabalhar sozinhos, e o histórico
+        // das execuções; o resultado vai para o chat do agente com quem criou o agendamento
+        "CREATE TABLE agent_schedules(id INTEGER PRIMARY KEY,name TEXT NOT NULL,cron TEXT,interval_minutes INTEGER,
+           timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',prompt TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,
+           created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,last_run_at INTEGER,next_run_at INTEGER,
+           created_at INTEGER NOT NULL,CHECK((cron IS NULL) <> (interval_minutes IS NULL)));
+         CREATE INDEX agent_schedules_due ON agent_schedules(active,next_run_at);
+         CREATE TABLE agent_schedule_agents(
+           schedule_id INTEGER NOT NULL REFERENCES agent_schedules(id) ON DELETE CASCADE,
+           agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,PRIMARY KEY(schedule_id,agent_id));
+         CREATE TABLE agent_schedule_runs(id INTEGER PRIMARY KEY,
+           schedule_id INTEGER NOT NULL REFERENCES agent_schedules(id) ON DELETE CASCADE,
+           agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+           status TEXT NOT NULL CHECK(status IN ('running','done','failed','skipped')),
+           output TEXT,error TEXT,started_at INTEGER NOT NULL,finished_at INTEGER);
+         CREATE INDEX agent_schedule_runs_schedule ON agent_schedule_runs(schedule_id,id);"
+            .into(),
     ]
 }

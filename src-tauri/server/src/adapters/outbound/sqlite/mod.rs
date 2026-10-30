@@ -2,6 +2,7 @@
 mod account;
 mod agent_bots;
 mod agent_chats;
+mod agent_schedules;
 mod agents;
 mod attachments;
 mod automation;

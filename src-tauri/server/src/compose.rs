@@ -164,6 +164,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let support = Support {
         system: SystemAgent::new(agents.clone()),
         chats: crate::application::agent_chats::AgentChatService { core: core.clone() },
+        schedules: crate::application::agent_schedules::AgentScheduleService::new(core.clone()),
         agents,
         engine: Arc::default(),
         avatars,
@@ -228,6 +229,7 @@ impl App {
         let secrets = support.agents.secrets.clone();
         let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2)
             .with_system(support.system.clone(), self.mcp_url.clone());
+        support.schedules.attach(bots.clone());
         let listener = bots.clone();
         support.bus.subscribe(move |e| listener.on_event(e));
         self.llm_bots = Some(bots);
@@ -243,6 +245,7 @@ impl App {
         }
         if let Some(bots) = &self.llm_bots {
             bots.settle().await;
+            self.state.support().schedules.settle().await;
             for worker in &self.workers {
                 worker.settle().await;
             }
@@ -270,7 +273,17 @@ impl App {
                 let _ = webhooks.deliver_due().await;
             }
         });
-        let mut jobs = vec![snoozes, deliveries];
+        // Agent schedules: unfinished runs of the last session failed; missed runs happen once (30 s).
+        let schedules = support.schedules.clone();
+        let scheduler = tokio::spawn(async move {
+            let _ = schedules.recover();
+            let mut ticker = tokio::time::interval(Duration::from_secs(30));
+            loop {
+                ticker.tick().await;
+                let _ = schedules.run_due();
+            }
+        });
+        let mut jobs = vec![snoozes, deliveries, scheduler];
         if let Some(events) = self.state.events.clone() {
             jobs.push(tokio::spawn(async move {
                 let mut ticker = tokio::time::interval(Duration::from_secs(1));

@@ -18,6 +18,7 @@ import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
 import { EnginePage } from './engine/EnginePage';
+import { SchedulesPage } from './schedules/SchedulesPage';
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -69,6 +70,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       );
     case 'engine':
       return <EnginePage />;
+    case 'schedules':
+      return <SchedulesPage />;
     case 'app':
       return <AppSettingsPage />;
   }
