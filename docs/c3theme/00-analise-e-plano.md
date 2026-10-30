@@ -6,7 +6,7 @@
 >
 > **Base do levantamento:** `origin/main` do C3Theme em `2d62f45` (2026-10-30) — o mesmo commit que o `nati-next` fixa. Números, rotas e evidências nos anexos [01](01-c3theme-inventario.md) (C3Theme), [02](02-nati-next-blueprint.md) (migração já feita no nati-next) e [03](03-whatsappmcp-ui-inventario.md) (UI deste app).
 >
-> **Atualização (30/10/2026):** o time do C3Theme entregou os P0 deste documento — `@c3theme/chat` (contrato, `ChatTransport`, hooks headless, `MessageList` virtualizada, `Composer` com áudio), tokens externos no tema, `FillHeight`, `EmptyState`, `useColorMode`, escala de `z-index` e `UploadField`. O spike de convivência da Fase 1 foi executado e está em [04-spike-convivencia.md](04-spike-convivencia.md); a fundação (pnpm, provider, tokens e modo escuro) está em [05-fundacao.md](05-fundacao.md).
+> **Atualização (30/10/2026):** o time do C3Theme entregou os P0 deste documento — `@c3theme/chat` (contrato, `ChatTransport`, hooks headless, `MessageList` virtualizada, `Composer` com áudio), tokens externos no tema, `FillHeight`, `EmptyState`, `useColorMode`, escala de `z-index` e `UploadField`. O spike de convivência da Fase 1 foi executado e está em [04-spike-convivencia.md](04-spike-convivencia.md); a fundação (pnpm, provider, tokens e modo escuro) está em [05-fundacao.md](05-fundacao.md); router e o shell do pacote (ainda por flag) em [06-router-e-shell.md](06-router-e-shell.md).
 
 ---
 
