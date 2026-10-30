@@ -21,7 +21,7 @@
     "prepare:desktop": "node scripts/prepare-desktop.mjs",
     "desktop": "pnpm run prepare:desktop && tauri dev",
     "desktop:build": "pnpm run prepare:desktop && tauri build",
-    "lint": "eslint . --max-warnings 0 && node scripts/check-architecture.mjs",
+    "lint": "eslint . --max-warnings 0 && node scripts/check-architecture.mjs && node scripts/c3-progresso.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "progresso:c3": "node scripts/c3-progresso.mjs",
