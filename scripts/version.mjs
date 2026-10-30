@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-const files = ['package.json', 'package-lock.json', 'src-tauri/tauri.conf.json'];
+const files = ['package.json', 'src-tauri/tauri.conf.json'];
 const pkg = JSON.parse(readFileSync(files[0], 'utf8'));
 let version = process.argv[2];
 if (version === 'next') {

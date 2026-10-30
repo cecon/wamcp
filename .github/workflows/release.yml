@@ -41,22 +41,27 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.gate.outputs.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-      - run: npm ci
+      - name: Authorize the private C3Theme git dependency
+        run: git config --global url."https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - run: pnpm install --frozen-lockfile
       - name: Bump build version
         id: version
         run: node scripts/release-version.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npm run prepare:desktop
-      - run: npx tauri build
+      - run: pnpm run prepare:desktop
+      - run: pnpm exec tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       - name: Prepare signed update feed and checksums
