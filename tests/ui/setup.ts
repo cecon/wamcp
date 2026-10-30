@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { FakeEventSource } from './fake-api';
 
 // jsdom lacks these browser APIs used by the agent UI.
@@ -42,3 +42,6 @@ afterEach(() => {
   FakeEventSource.instances = [];
   localStorage.clear();
 });
+
+// As seções migradas carregam o chunk do MUI na primeira renderização; 3 s evita flake sem mascarar falhas.
+configure({ asyncUtilTimeout: 10000 });

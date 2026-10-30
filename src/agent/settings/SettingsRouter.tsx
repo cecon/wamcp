@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 
 import type { Catalog, User } from '../types';
 import type { Route } from '../route';
@@ -6,13 +6,8 @@ import { AgentsPage } from './AgentsPage';
 import { TeamsPage } from './TeamsPage';
 import { InboxesPage } from './InboxesPage';
 import { AttributesPage } from './AttributesPage';
-
-// Etiquetas é a tela piloto migrada para o C3Theme: o chunk do MUI carrega só quando a seção abre.
-const LabelsPage = lazy(() => import('./LabelsPage').then((module) => ({ default: module.LabelsPage })));
-import { CannedPage } from './CannedPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
-import { MacrosPage } from './MacrosPage';
 import { AuditLogPage } from './AuditLogPage';
 import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
@@ -23,6 +18,18 @@ import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
 import { EnginePage } from './engine/EnginePage';
 import { SchedulesPage } from './schedules/SchedulesPage';
+
+// Telas migradas para o C3Theme: o chunk do MUI só carrega quando a seção abre.
+const LabelsPage = lazy(() => import('./LabelsPage').then((module) => ({ default: module.LabelsPage })));
+const CannedPage = lazy(() => import('./CannedPage').then((module) => ({ default: module.CannedPage })));
+const MacrosPage = lazy(() => import('./MacrosPage').then((module) => ({ default: module.MacrosPage })));
+
+/** Carrega a seção migrada mantendo o resto da página montado. */
+function LazyPage({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-n-slate-11">Carregando…</div>}>{children}</Suspense>
+  );
+}
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -47,20 +54,28 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <InboxesPage catalog={catalog} inboxId={route.id} onNavigate={onNavigate} onChange={onChange} />;
     case 'labels':
       return (
-        <Suspense fallback={<div className="p-6 text-sm text-n-slate-11">Carregando…</div>}>
+        <LazyPage>
           <LabelsPage catalog={catalog} onChange={onChange} />
-        </Suspense>
+        </LazyPage>
       );
     case 'attributes':
       return <AttributesPage />;
     case 'canned':
-      return <CannedPage />;
+      return (
+        <LazyPage>
+          <CannedPage />
+        </LazyPage>
+      );
     case 'automation':
       return <AutomationPage catalog={catalog} />;
     case 'skills':
       return <SkillsPage />;
     case 'macros':
-      return <MacrosPage user={user} catalog={catalog} />;
+      return (
+        <LazyPage>
+          <MacrosPage user={user} catalog={catalog} />
+        </LazyPage>
+      );
     case 'sla':
       return <SlaPage />;
     case 'webhooks':

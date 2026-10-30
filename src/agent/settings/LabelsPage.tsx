@@ -1,19 +1,16 @@
 import { useState } from 'react';
 
 // material-ui
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // third-party
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 // C3Theme
 import { ActionDialog, Panel } from '@c3theme/ui';
@@ -21,8 +18,8 @@ import { DataTable } from '@c3theme/ui/table';
 
 import { http } from '../api';
 import type { Catalog, Label } from '../types';
-import C3Provider from '../c3/C3Provider';
 import { useAction } from './useAction';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 interface Props {
   catalog: Catalog;
@@ -30,9 +27,9 @@ interface Props {
 }
 
 /**
- * Primeira tela do lote de migração (Configurações → Etiquetas) escrita sobre o C3Theme: painel, tabela de dados,
- * diálogo de ação e campos do MUI no lugar das classes utilitárias. Os contratos da tela continuam iguais
- * (título, busca, contagem, "Adicionar etiqueta", "Editar/Excluir <nome>") para os testes e o uso não mudarem.
+ * Tela piloto do lote 1 (Configurações → Etiquetas) sobre o C3Theme: painel, tabela de dados, diálogo de ação e
+ * campos do MUI. Os contratos continuam iguais (título, busca, contagem, "Adicionar etiqueta",
+ * "Editar/Excluir <nome>") para os testes e o uso não mudarem.
  */
 export function LabelsPage({ catalog, onChange }: Props) {
   const [q, setQ] = useState(''),
@@ -113,65 +110,33 @@ export function LabelsPage({ catalog, onChange }: Props) {
   ];
 
   return (
-    <C3Provider>
-      <Box sx={{ height: '100%', overflow: 'auto', bgcolor: 'background.default', p: { xs: 2, md: 3 } }}>
-        <Stack spacing={2} sx={{ maxWidth: 1100, mx: 'auto' }}>
-          <Panel>
-            <Stack spacing={2}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
-              >
-                <Box>
-                  <Typography variant="h4">Etiquetas</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Etiquetas ajudam a categorizar e priorizar conversas. Você pode adicioná-las pelo painel
-                    da conversa.
-                  </Typography>
-                </Box>
-                <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEditing('new')}>
-                  Adicionar etiqueta
-                </Button>
-              </Stack>
-
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <OutlinedInput
-                  size="small"
-                  value={q}
-                  onChange={(event) => setQ(event.target.value)}
-                  placeholder="Pesquisar etiquetas…"
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <Search size={14} />
-                    </InputAdornment>
-                  }
-                  slotProps={{ input: { 'aria-label': 'Pesquisar etiquetas…' } }}
-                  sx={{ width: 260 }}
-                />
-                <Typography variant="body2" color="text.secondary">
-                  {count}
-                </Typography>
-              </Stack>
-
-              {error && <Alert severity="error">{error}</Alert>}
-
-              <DataTable
-                rows={visible}
-                columns={columns}
-                getRowId={(label) => String(label.id)}
-                paginate={visible.length > 10}
-                empty="Nenhuma etiqueta ainda."
-                ariaLabel="Etiquetas"
-              />
-            </Stack>
-          </Panel>
-        </Stack>
-      </Box>
+    <SettingsC3Page>
+      <SettingsC3Header
+        title="Etiquetas"
+        description="Etiquetas ajudam a categorizar e priorizar conversas. Você pode adicioná-las pelo painel da conversa."
+        search={{ value: q, onChange: setQ, placeholder: 'Pesquisar etiquetas…' }}
+        count={count}
+        action={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEditing('new')}>
+            Adicionar etiqueta
+          </Button>
+        }
+      />
+      <Panel flush>
+        {error && (
+          <Box sx={{ p: 2 }}>
+            <SettingsC3Error>{error}</SettingsC3Error>
+          </Box>
+        )}
+        <DataTable
+          rows={visible}
+          columns={columns}
+          getRowId={(label) => String(label.id)}
+          paginate={visible.length > 10}
+          empty="Nenhuma etiqueta ainda."
+          ariaLabel="Etiquetas"
+        />
+      </Panel>
       {editing && (
         <LabelDialog
           label={editing === 'new' ? null : editing}
@@ -179,7 +144,7 @@ export function LabelsPage({ catalog, onChange }: Props) {
           onSaved={onChange}
         />
       )}
-    </C3Provider>
+    </SettingsC3Page>
   );
 }
 
