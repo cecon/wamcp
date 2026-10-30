@@ -17,6 +17,8 @@ export default defineConfig({
       '@mui/material',
       '@emotion/react',
       '@emotion/styled',
+      '@tanstack/react-table',
+      '@tanstack/react-virtual',
     ],
   },
   // One app for everyone: the backend serves this build at /app/ to the Tauri window and to browsers

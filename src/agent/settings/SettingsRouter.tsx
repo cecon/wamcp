@@ -1,10 +1,14 @@
+import { lazy, Suspense } from 'react';
+
 import type { Catalog, User } from '../types';
 import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
 import { TeamsPage } from './TeamsPage';
 import { InboxesPage } from './InboxesPage';
-import { LabelsPage } from './LabelsPage';
 import { AttributesPage } from './AttributesPage';
+
+// Etiquetas é a tela piloto migrada para o C3Theme: o chunk do MUI carrega só quando a seção abre.
+const LabelsPage = lazy(() => import('./LabelsPage').then((module) => ({ default: module.LabelsPage })));
 import { CannedPage } from './CannedPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
@@ -42,7 +46,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'inboxes':
       return <InboxesPage catalog={catalog} inboxId={route.id} onNavigate={onNavigate} onChange={onChange} />;
     case 'labels':
-      return <LabelsPage catalog={catalog} onChange={onChange} />;
+      return (
+        <Suspense fallback={<div className="p-6 text-sm text-n-slate-11">Carregando…</div>}>
+          <LabelsPage catalog={catalog} onChange={onChange} />
+        </Suspense>
+      );
     case 'attributes':
       return <AttributesPage />;
     case 'canned':

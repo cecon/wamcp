@@ -15,6 +15,8 @@ export default defineConfig({
       '@mui/material',
       '@emotion/react',
       '@emotion/styled',
+      '@tanstack/react-table',
+      '@tanstack/react-virtual',
     ],
   },
   test: {
