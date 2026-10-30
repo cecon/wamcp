@@ -1,9 +1,15 @@
 import { useState } from 'react';
+
+// material-ui
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+
+// C3Theme
+import { ActionDialog, SelectField } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { AttributeDefinition, AttributeDisplayType, FilterType } from '../types';
 import { ATTRIBUTE_MODEL_LABEL, ATTRIBUTE_TYPE_LABEL } from '../labels';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
 import { useAction } from './useAction';
 
 interface Props {
@@ -15,7 +21,10 @@ interface Props {
 
 const blankToNull = (text: string) => text.trim() || null;
 
-/** Add/edit a custom attribute; key, model and type are fixed after creation (as in Chatwoot). */
+/**
+ * Criar/editar atributo no `ActionDialog` do pacote (lote 3). Modelo, chave e tipo seguem fixos depois de criado, e
+ * os selects continuam **nativos** (`SelectField native`) para não mudar a semântica de formulário nem os testes.
+ */
 export function AttributeModal({ definition: d, model, onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     model: d?.attribute_model || model,
@@ -30,6 +39,7 @@ export function AttributeModal({ definition: d, model, onClose, onSaved }: Props
   const { error, busy, run } = useAction();
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const isText = form.type === 'text';
+  const isEdit = Boolean(d);
 
   function submit() {
     const common = {
@@ -39,7 +49,7 @@ export function AttributeModal({ definition: d, model, onClose, onSaved }: Props
         form.type === 'list'
           ? form.values
               .split(',')
-              .map((v) => v.trim())
+              .map((value) => value.trim())
               .filter(Boolean)
           : undefined,
       regex_pattern: isText ? blankToNull(form.pattern) : null,
@@ -60,109 +70,92 @@ export function AttributeModal({ definition: d, model, onClose, onSaved }: Props
   }
 
   return (
-    <Modal title={d ? 'Editar atributo' : 'Adicionar atributo'} onClose={onClose}>
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <label>
-          <span className="field-label">Aplica-se a</span>
-          <select
-            className="field"
-            value={form.model}
-            disabled={Boolean(d)}
-            onChange={(e) => set({ model: e.target.value as FilterType })}
-          >
-            {(['conversation', 'contact'] as const).map((m) => (
-              <option key={m} value={m}>
-                {ATTRIBUTE_MODEL_LABEL[m]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Nome de exibição</span>
-          <input
-            className="field"
-            value={form.name}
-            maxLength={80}
-            required
-            onChange={(e) => set({ name: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Chave</span>
-          <input
-            className="field"
-            value={form.key}
-            maxLength={60}
-            disabled={Boolean(d)}
-            placeholder="gerada a partir do nome"
-            onChange={(e) => set({ key: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <textarea
-            className="field"
-            value={form.description}
-            maxLength={500}
-            onChange={(e) => set({ description: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Tipo</span>
-          <select
-            className="field"
-            value={form.type}
-            disabled={Boolean(d)}
-            onChange={(e) => set({ type: e.target.value as AttributeDisplayType })}
-          >
-            {Object.entries(ATTRIBUTE_TYPE_LABEL).map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+    <ActionDialog
+      open
+      title={d ? 'Editar atributo' : 'Adicionar atributo'}
+      confirmLabel={d ? 'Salvar' : 'Criar'}
+      backLabel="Cancelar"
+      loading={busy}
+      error={error}
+      onClose={onClose}
+      onConfirm={() => void submit()}
+    >
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <SelectField
+          native
+          label="Aplica-se a"
+          size="small"
+          value={form.model}
+          disabled={isEdit}
+          onChange={(value) => value && set({ model: value as FilterType })}
+          options={(['conversation', 'contact'] as const).map((value) => ({
+            value,
+            label: ATTRIBUTE_MODEL_LABEL[value],
+          }))}
+        />
+        <TextField
+          label="Nome de exibição"
+          size="small"
+          required
+          value={form.name}
+          onChange={(event) => set({ name: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 80 } }}
+        />
+        <TextField
+          label="Chave"
+          size="small"
+          value={form.key}
+          disabled={isEdit}
+          placeholder="gerada a partir do nome"
+          onChange={(event) => set({ key: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 60 } }}
+        />
+        <TextField
+          label="Descrição"
+          size="small"
+          multiline
+          minRows={2}
+          value={form.description}
+          onChange={(event) => set({ description: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 500 } }}
+        />
+        <SelectField
+          native
+          label="Tipo"
+          size="small"
+          value={form.type}
+          disabled={isEdit}
+          onChange={(value) => value && set({ type: value as AttributeDisplayType })}
+          options={Object.entries(ATTRIBUTE_TYPE_LABEL).map(([value, label]) => ({ value, label }))}
+        />
         {form.type === 'list' && (
-          <label>
-            <span className="field-label">Opções da lista (separadas por vírgula)</span>
-            <input
-              className="field"
-              value={form.values}
-              required
-              onChange={(e) => set({ values: e.target.value })}
-            />
-          </label>
+          <TextField
+            label="Opções da lista (separadas por vírgula)"
+            size="small"
+            required
+            value={form.values}
+            onChange={(event) => set({ values: event.target.value })}
+          />
         )}
         {isText && (
           <>
-            <label>
-              <span className="field-label">Padrão (regex)</span>
-              <input
-                className="field"
-                value={form.pattern}
-                placeholder="^[A-Z]{3}-\d+$"
-                onChange={(e) => set({ pattern: e.target.value })}
-              />
-            </label>
-            <label>
-              <span className="field-label">Dica do padrão</span>
-              <input
-                className="field"
-                value={form.cue}
-                maxLength={200}
-                onChange={(e) => set({ cue: e.target.value })}
-              />
-            </label>
+            <TextField
+              label="Padrão (regex)"
+              size="small"
+              value={form.pattern}
+              placeholder="^[A-Z]{3}-\d+$"
+              onChange={(event) => set({ pattern: event.target.value })}
+            />
+            <TextField
+              label="Dica do padrão"
+              size="small"
+              value={form.cue}
+              onChange={(event) => set({ cue: event.target.value })}
+              slotProps={{ htmlInput: { maxLength: 200 } }}
+            />
           </>
         )}
-        <ModalFooter busy={busy} submit={d ? 'Salvar' : 'Criar'} onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }

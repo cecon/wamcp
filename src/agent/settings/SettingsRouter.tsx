@@ -5,7 +5,6 @@ import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
 import { TeamsPage } from './TeamsPage';
 import { InboxesPage } from './InboxesPage';
-import { AttributesPage } from './AttributesPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
 import { AuditLogPage } from './AuditLogPage';
@@ -23,6 +22,9 @@ import { SchedulesPage } from './schedules/SchedulesPage';
 const LabelsPage = lazy(() => import('./LabelsPage').then((module) => ({ default: module.LabelsPage })));
 const CannedPage = lazy(() => import('./CannedPage').then((module) => ({ default: module.CannedPage })));
 const MacrosPage = lazy(() => import('./MacrosPage').then((module) => ({ default: module.MacrosPage })));
+const AttributesPage = lazy(() =>
+  import('./AttributesPage').then((module) => ({ default: module.AttributesPage })),
+);
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -59,7 +61,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'attributes':
-      return <AttributesPage />;
+      return (
+        <LazyPage>
+          <AttributesPage />
+        </LazyPage>
+      );
     case 'canned':
       return (
         <LazyPage>
