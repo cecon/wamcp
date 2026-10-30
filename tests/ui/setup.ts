@@ -10,6 +10,30 @@ vi.stubGlobal('EventSource', FakeEventSource);
 URL.createObjectURL = () => 'blob:preview';
 URL.revokeObjectURL = () => {};
 
+// MUI (color mode, useMediaQuery) e alguns componentes usam estas APIs, que o jsdom não implementa. As telas
+// migradas para o C3Theme dependem delas, então os stubs valem para toda a suíte de UI.
+vi.stubGlobal(
+  'matchMedia',
+  vi.fn((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+);
+vi.stubGlobal(
+  'ResizeObserver',
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 afterEach(() => {
   cleanup();
   FakeEventSource.instances = [];
