@@ -31,16 +31,16 @@ function SelectPopover<T extends string>({
 }) {
   return (
     <Dropdown
-      className="w-80 p-4"
+      className="w-72 p-3"
       trigger={({ toggle }) => (
         <Button color="slate" variant="faded" size="xs" icon={icon} aria-label={label} onClick={toggle} />
       )}
     >
       {(close) => (
-        <label className="flex items-center justify-between gap-3 text-sm text-n-slate-12">
+        <label className="grid gap-1.5 text-sm text-n-slate-12">
           {field}
           <select
-            className="field !h-8 !w-52 !py-1"
+            className="field !h-8 !w-full !py-1"
             value={value}
             onChange={(e) => {
               onChange(e.target.value as T);

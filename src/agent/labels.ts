@@ -87,8 +87,8 @@ export const SORT_LABEL: Record<string, string> = {
   created_at_asc: 'Criação: mais antigas',
   priority_desc: 'Prioridade: mais alta primeiro',
   priority_asc: 'Prioridade: mais baixa primeiro',
-  waiting_since_asc: 'Aguardando resposta: há mais tempo',
-  waiting_since_desc: 'Aguardando resposta: há menos tempo',
+  waiting_since_asc: 'Aguardando: há mais tempo',
+  waiting_since_desc: 'Aguardando: há menos tempo',
 };
 export const CONVERSATION_TYPE_LABEL: Record<ConversationType, string> = {
   mentions: 'Menções',
