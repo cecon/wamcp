@@ -5,7 +5,7 @@ use crate::application::ports::{LlmMcp, LlmRequest, ProgressSink};
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::agent_instructions;
-use crate::domain::model::{Conversation, Message, RosterAgent, Thread, User};
+use crate::domain::model::{chat_run_ref, Conversation, Message, RosterAgent, Thread, User};
 use crate::domain::system::{build_system_prompt, reply_schema, MCP_NAME, SYSTEM_PROMPT, SYSTEM_TRANSCRIPT_LIMIT};
 
 impl LlmBotService {
@@ -79,7 +79,13 @@ impl LlmBotService {
             return fail("O funcionário do sistema não está disponível");
         };
         let name = admin.display_name.clone().unwrap_or_else(|| admin.name.clone());
-        let instructions = agent_instructions(agent, &self.helpdesk.core.repo.skills()?);
+        let repo = &self.helpdesk.core.repo;
+        let instructions = agent_instructions(agent, &repo.skills()?);
+        // The tokens count in the chat session the run answers, even if the person opens another meanwhile.
+        let (conversation, run_ref) = match thread {
+            Thread::Conversation(id) => (Some(id), None),
+            Thread::Chat(id) => (None, repo.agent_chat_by_id(id)?.map(|c| chat_run_ref(id, c.session))),
+        };
         let token = system.open_run(thread, admin);
         let request = LlmRequest {
             provider: "claude_cli".into(),
@@ -101,10 +107,6 @@ impl LlmBotService {
             request,
             agent_id: Some(agent.id),
             agent_bot_id: None,
-        };
-        let (conversation, run_ref) = match thread {
-            Thread::Conversation(id) => (Some(id), None),
-            Thread::Chat(id) => (None, Some(format!("agent_chat:{id}"))),
         };
         self.record(&responder, conversation, run_ref, completion.usage);
         let reply = completion.answer["reply"].as_str().map(str::trim).unwrap_or_default();

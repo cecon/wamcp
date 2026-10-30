@@ -220,5 +220,12 @@ pub fn steps() -> Vec<String> {
            output TEXT,error TEXT,started_at INTEGER NOT NULL,finished_at INTEGER);
          CREATE INDEX agent_schedule_runs_schedule ON agent_schedule_runs(schedule_id,id);"
             .into(),
+        // v36: sessões nos chats com agentes (o agente só vê a sessão aberta; uma nova começa do zero);
+        // o uso de tokens de cada chamada passa a apontar a sessão
+        "ALTER TABLE agent_chats ADD COLUMN session INTEGER NOT NULL DEFAULT 1;
+         ALTER TABLE agent_chat_messages ADD COLUMN session INTEGER NOT NULL DEFAULT 1;
+         CREATE INDEX agent_chat_messages_session ON agent_chat_messages(chat_id,session,id);
+         UPDATE llm_usage SET run_ref=run_ref||':1' WHERE run_ref GLOB 'agent_chat:[0-9]*' AND run_ref NOT GLOB '*:*:*';"
+            .into(),
     ]
 }

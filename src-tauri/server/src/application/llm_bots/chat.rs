@@ -1,7 +1,8 @@
 //! A person's chat with an AI agent in the app: each message of the person gets the agent's answer
 //! through its runtime, with its instructions and skills (the system agent, for administrators, with
 //! the app's tools). Its steps reach the person live (`agent_chat.progress`) and a failure is stored
-//! in the chat too, so the person sees why there is no answer.
+//! in the chat too, so the person sees why there is no answer. The agent sees only the open session
+//! of the chat, and a session that spent its tokens gets no more answers.
 use super::{LlmBotService, Responder};
 use crate::application::agent_chats::post_chat_message;
 use crate::application::ports::{LlmRequest, Progress, ProgressSink};
@@ -11,7 +12,8 @@ use crate::domain::llm::{
     agent_instructions, build_chat_prompt, chat_schema, chats_with, openrouter_key, CHAT_SYSTEM, CHAT_TRANSCRIPT_LIMIT,
 };
 use crate::domain::model::{
-    AgentChat, ConversationFilters, Message, RosterAgent, Thread, User, CHAT_AGENT, CHAT_ERROR, CHAT_USER,
+    chat_run_ref, session_full, AgentChat, ConversationFilters, Message, RosterAgent, Thread, User, CHAT_AGENT,
+    CHAT_ERROR, CHAT_USER, SESSION_FULL,
 };
 use serde_json::json;
 
@@ -32,10 +34,26 @@ impl LlmBotService {
             let event = json!({ "chat_id": chat.id, "user_id": chat.user_id, "agent_id": chat.agent_id, "step": step });
             core.emit("agent_chat.progress", &event, None);
         };
-        let (role, content) = match self.chat_turn(&chat, &messages, &progress).await {
-            Ok(reply) => (CHAT_AGENT, reply),
-            Err(error) => (CHAT_ERROR, format!("Não consegui responder: {error}")),
+        let spent = repo
+            .chat_sessions(chat.id)?
+            .iter()
+            .find(|s| s.number == chat.session)
+            .map_or(0, |s| s.tokens);
+        let (role, content) = if session_full(spent) {
+            (CHAT_ERROR, SESSION_FULL.to_string())
+        } else {
+            match self.chat_turn(&chat, &messages, &progress).await {
+                Ok(reply) => (CHAT_AGENT, reply),
+                Err(error) => (CHAT_ERROR, format!("Não consegui responder: {error}")),
+            }
         };
+        // The person may have closed the session meanwhile: the answer belongs to the one they left.
+        if repo
+            .agent_chat_by_id(chat.id)?
+            .is_none_or(|now| now.session != chat.session)
+        {
+            return Ok(());
+        }
         post_chat_message(&self.helpdesk.core, chat.id, role, &content)?;
         Ok(())
     }
@@ -82,7 +100,7 @@ impl LlmBotService {
         self.record(
             &responder,
             None,
-            Some(format!("agent_chat:{}", chat.id)),
+            Some(chat_run_ref(chat.id, chat.session)),
             completion.usage,
         );
         let reply = completion.answer["reply"].as_str().map(str::trim).unwrap_or_default();

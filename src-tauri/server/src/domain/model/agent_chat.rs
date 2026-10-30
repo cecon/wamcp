@@ -10,6 +10,8 @@ pub struct AgentChat {
     pub user_id: i64,
     pub agent_id: i64,
     pub created_at: i64,
+    /// The open session: the agent sees only its messages; a new one starts from scratch.
+    pub session: i64,
 }
 
 /// One message of an agent chat: `user` (the person), `agent` (the agent's reply) or `error`
@@ -23,11 +25,42 @@ pub struct ChatMessage {
     pub role: String,
     pub content: String,
     pub created_at: i64,
+    pub session: i64,
 }
 
 pub const CHAT_USER: &str = "user";
 pub const CHAT_AGENT: &str = "agent";
 pub const CHAT_ERROR: &str = "error";
+
+/// Tokens (input, cached input and output, added over its calls) a chat session may spend; after
+/// that the person starts a new session, which the agent sees from scratch.
+pub const SESSION_TOKEN_LIMIT: i64 = 500_000;
+
+/// One session of a chat: its messages and what the agent spent on it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ChatSession {
+    pub number: i64,
+    pub started_at: i64,
+    pub last_at: i64,
+    pub messages: i64,
+    /// The person's first message of the session.
+    pub preview: Option<String>,
+    pub tokens: i64,
+    pub cost_usd: f64,
+}
+
+/// Whether the session spent its tokens and the person must start a new one.
+pub fn session_full(tokens: i64) -> bool {
+    tokens >= SESSION_TOKEN_LIMIT
+}
+
+/// Why a full session takes no more messages.
+pub const SESSION_FULL: &str = "Esta conversa chegou ao limite de tokens. Comece uma nova conversa para continuar.";
+
+/// The usage reference of a chat session's calls (`llm_usage.run_ref`).
+pub fn chat_run_ref(chat_id: i64, session: i64) -> String {
+    format!("agent_chat:{chat_id}:{session}")
+}
 
 impl ChatMessage {
     /// The message as a conversation message (the person writes `incoming`, the agent answers

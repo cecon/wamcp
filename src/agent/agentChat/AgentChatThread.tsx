@@ -5,13 +5,21 @@ import { MemberAvatar } from '../settings/members/MemberAvatar';
 import { MessageBody } from '../conversations/MessageBody';
 import { Button } from '../ui/Button';
 import { cn } from '../ui/cn';
-import { chatTime, type ChatAgent, type ChatMessage, type ChatStep } from './types';
+import { ChatMarkdown } from './ChatMarkdown';
+import { ChatSessionBar } from './ChatSessionBar';
+import { chatTime, type ChatAgent, type ChatMessage, type ChatSessions, type ChatStep } from './types';
 
 interface Props {
   agent: ChatAgent;
   messages: ChatMessage[];
   /** What the agent is doing on its answer, newest last. */
   steps: ChatStep[];
+  sessions: ChatSessions | null;
+  /** The session on screen (an earlier one is read only). */
+  viewing: number;
+  onView: (session: number) => void;
+  onNewSession: () => Promise<void>;
+  starting: boolean;
   error: string;
   onSent: (message: ChatMessage) => void;
   onBack: () => void;
@@ -20,13 +28,22 @@ interface Props {
 /** Newest steps shown while the agent works (older ones scroll away). */
 const SHOWN_STEPS = 6;
 
-/** The chat with one agent: the messages, what the agent is doing while the answer is on its way, and the composer. */
-export function AgentChatThread({ agent, messages, steps, error, onSent, onBack }: Props) {
+/** The chat with one agent: the messages, what the agent is doing while the answer is on its way, and
+ * the composer; an earlier session is read only and a session out of tokens asks for a new one. */
+export function AgentChatThread(props: Props) {
+  const { agent, messages, steps, sessions, viewing, onView, onNewSession, starting, error, onSent, onBack } =
+    props;
   const [draft, setDraft] = useState(''),
     [sending, setSending] = useState(false),
     [sendError, setSendError] = useState('');
   const end = useRef<HTMLDivElement>(null);
-  const waiting = messages.at(-1)?.role === 'user';
+  const past = sessions !== null && viewing !== sessions.current;
+  const full = sessions?.sessions.find((s) => s.number === sessions.current)?.full ?? false;
+  const waiting = !past && messages.at(-1)?.role === 'user';
+  const startNew = () => {
+    setSendError('');
+    onNewSession().catch((e: Error) => setSendError(e.message));
+  };
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'end' });
   }, [messages.length, waiting, steps.length]);
@@ -66,6 +83,13 @@ export function AgentChatThread({ agent, messages, steps, error, onSent, onBack 
               : [agent.profile_name, agent.model].filter(Boolean).join(' · ') || 'Agente de IA'}
           </p>
         </div>
+        <ChatSessionBar
+          sessions={sessions}
+          viewing={viewing}
+          onView={onView}
+          onNew={startNew}
+          busy={starting}
+        />
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {error && <p className="text-sm text-n-ruby-11">{error}</p>}
@@ -91,7 +115,11 @@ export function AgentChatThread({ agent, messages, steps, error, onSent, onBack 
                     <CircleAlert size={12} /> Sem resposta
                   </p>
                 )}
-                <MessageBody content={m.content} />
+                {m.role === 'user' ? (
+                  <MessageBody content={m.content} />
+                ) : (
+                  <ChatMarkdown content={m.content} />
+                )}
                 <p className="mt-2 text-right text-xs text-n-slate-10">{chatTime(m.created_at)}</p>
               </div>
             </li>
@@ -140,7 +168,27 @@ export function AgentChatThread({ agent, messages, steps, error, onSent, onBack 
         )}
         <div ref={end} />
       </div>
+      {(past || full) && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-n-weak bg-n-alpha-1 px-4 py-3 text-sm text-n-slate-11">
+          <span>
+            {past
+              ? 'Esta conversa foi encerrada: você pode ler, mas não responder.'
+              : `Esta conversa chegou ao limite de tokens. Comece uma nova para continuar com ${agent.name}.`}
+          </span>
+          {past ? (
+            <Button
+              color="slate"
+              variant="faded"
+              label="Voltar para a conversa atual"
+              onClick={() => onView(sessions.current)}
+            />
+          ) : (
+            <Button label="Nova conversa" disabled={starting} onClick={startNew} />
+          )}
+        </div>
+      )}
       <form
+        hidden={past}
         className="flex shrink-0 items-end gap-2 border-t border-n-weak p-3"
         onSubmit={(e) => {
           e.preventDefault();
@@ -152,6 +200,7 @@ export function AgentChatThread({ agent, messages, steps, error, onSent, onBack 
           aria-label={`Mensagem para ${agent.name}`}
           placeholder={`Mensagem para ${agent.name}`}
           rows={1}
+          disabled={full}
           value={draft}
           maxLength={4000}
           onChange={(e) => setDraft(e.target.value)}
@@ -167,7 +216,7 @@ export function AgentChatThread({ agent, messages, steps, error, onSent, onBack 
           size="md"
           icon={SendHorizontal}
           aria-label="Enviar"
-          disabled={sending || !draft.trim()}
+          disabled={sending || full || !draft.trim()}
         />
       </form>
       {sendError && <p className="px-3 pb-2 text-sm text-n-ruby-11">{sendError}</p>}

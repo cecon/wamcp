@@ -10,6 +10,29 @@ export interface ChatMessage {
   role: 'user' | 'agent' | 'error';
   content: string;
   created_at: number;
+  /** The chat session it belongs to (a new session starts from scratch for the agent). */
+  session: number;
+}
+
+/** One session of the chat, with what the agent spent on it. */
+export interface ChatSession {
+  number: number;
+  started_at: number;
+  last_at: number;
+  messages: number;
+  /** The person's first message. */
+  preview: string | null;
+  tokens: number;
+  cost_brl: number;
+  /** Reached the token limit: takes no more messages. */
+  full: boolean;
+}
+
+/** The chat's sessions, newest first, and which one is open. */
+export interface ChatSessions {
+  current: number;
+  token_limit: number;
+  sessions: ChatSession[];
 }
 
 /** A step of the agent while it works on the answer: a note it wrote or a tool it called. */
@@ -32,6 +55,22 @@ export interface ChatAgent {
   avatar?: AvatarChoices;
   last: ChatMessage | null;
 }
+
+const COMPACT = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+/** "12,3 mil" tokens. */
+export const tokens = (n: number) => COMPACT.format(n);
+export const brl = (n: number) => BRL.format(n);
+
+/** A Markdown message as one line of plain text (the chat list's preview). */
+export const plainText = (markdown: string) =>
+  markdown
+    .replace(/`{3}[\s\S]*?(`{3}|$)/g, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*(#{1,6}|>|[-*+]|\d+\.|\|?-{3,}.*)\s*/gm, '')
+    .replace(/[*_~`|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 export const chatTime = (ms: number) => {
   const date = new Date(ms);
