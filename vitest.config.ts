@@ -15,7 +15,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/agent/**/*.{ts,tsx}'],
-      exclude: ['src/agent/main.tsx', 'src/agent/types.ts'],
+      // O spike do C3Theme é dev-only (`?c3spike`) e monta MUI fora do ambiente de teste do app.
+      exclude: ['src/agent/main.tsx', 'src/agent/types.ts', 'src/agent/Entry.tsx', 'src/agent/c3/**'],
       reporter: ['text-summary', 'text', 'lcov'],
       reportsDirectory: 'test-results/coverage-ui',
       thresholds: { lines: 80, statements: 80, functions: 80, branches: 70 },
