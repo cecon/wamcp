@@ -79,6 +79,8 @@ O C3Theme instala por git **com subpasta** (`github:cecon/C3Theme#<sha>&path:pac
 
 **Recomendação:** **A** (alinha com o C3Theme e o nati-next, que já usam pnpm) e manter **B** de reserva se o release do app não puder mudar de gerenciador agora.
 
+**Decisão executada (30/10):** opção **A**. A migração está no commit `chore(deps): migrate to pnpm…` e o resultado da fundação, com evidências, em [05-fundacao.md](05-fundacao.md).
+
 ## 6. Como reproduzir
 
 ```powershell
