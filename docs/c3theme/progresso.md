@@ -4,7 +4,7 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**9 de 153 telas migradas (6%)** · faltam 144
+**11 de 153 telas migradas (7%)** · faltam 142
 
 | Pasta         | Migradas | Faltam |
 | ------------- | -------: | -----: |
@@ -22,7 +22,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 | profile       |    0 / 7 |      7 |
 | reports       |    0 / 9 |      9 |
 | search        |    0 / 3 |      3 |
-| settings      |   6 / 63 |     57 |
+| settings      |   8 / 63 |     55 |
 | shortcuts     |    0 / 1 |      1 |
 | sidebar       |    0 / 3 |      3 |
 | sla           |    0 / 2 |      2 |
@@ -144,7 +144,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 
 ### settings
 
-- `settings/AccountPage.tsx`
 - `settings/ActionsEditor.tsx`
 - `settings/AgentModal.tsx`
 - `settings/app/AppSettingsPage.tsx`
@@ -197,7 +196,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 - `settings/schedules/SchedulesPage.tsx`
 - `settings/SettingsRouter.tsx`
 - `settings/SlaModal.tsx`
-- `settings/SlaPage.tsx`
 - `settings/TeamsPage.tsx`
 - `settings/ValueInput.tsx`
 - `settings/WebhooksPage.tsx`

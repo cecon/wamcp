@@ -8,8 +8,6 @@ import { InboxesPage } from './InboxesPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
 import { AuditLogPage } from './AuditLogPage';
-import { AccountPage } from './AccountPage';
-import { SlaPage } from './SlaPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
@@ -25,6 +23,8 @@ const MacrosPage = lazy(() => import('./MacrosPage').then((module) => ({ default
 const AttributesPage = lazy(() =>
   import('./AttributesPage').then((module) => ({ default: module.AttributesPage })),
 );
+const AccountPage = lazy(() => import('./AccountPage').then((module) => ({ default: module.AccountPage })));
+const SlaPage = lazy(() => import('./SlaPage').then((module) => ({ default: module.SlaPage })));
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -45,7 +45,11 @@ interface Props {
 export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: Props) {
   switch (route.section) {
     case 'account':
-      return <AccountPage />;
+      return (
+        <LazyPage>
+          <AccountPage />
+        </LazyPage>
+      );
     case 'agents':
       return <AgentsPage user={user} catalog={catalog} onChange={onChange} />;
     case 'organization':
@@ -83,7 +87,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'sla':
-      return <SlaPage />;
+      return (
+        <LazyPage>
+          <SlaPage />
+        </LazyPage>
+      );
     case 'webhooks':
       return <WebhooksPage catalog={catalog} />;
     case 'audit':
