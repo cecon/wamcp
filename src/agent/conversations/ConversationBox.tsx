@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { History } from 'lucide-react';
 import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
@@ -10,6 +10,9 @@ import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
 import { TypingIndicator } from './TypingIndicator';
 import { useConversationShortcuts } from './useConversationShortcuts';
+
+// Frente de chat da adoção: o thread do @c3theme/chat entra em chunk próprio e só com ?c3chat.
+const C3Thread = lazy(() => import('../chat/C3Thread').then((module) => ({ default: module.C3Thread })));
 
 interface Props {
   displayId: number;
@@ -45,6 +48,7 @@ export function ConversationBox({
     [error, setError] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
   const path = `/conversations/${displayId}`;
+  const c3Chat = new URLSearchParams(window.location.search).has('c3chat');
 
   const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
   const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
@@ -145,63 +149,86 @@ export function ConversationBox({
           }
         />
         {error && <p className="px-4 pt-2 text-sm text-n-ruby-11">{error}</p>}
-        <div className="flex-1 overflow-y-auto pb-4">
-          <div className="flex justify-center gap-2 py-3">
-            {older && (
-              <Button
-                color="slate"
-                variant="faded"
-                size="xs"
-                label="Mensagens anteriores"
-                onClick={() => void loadOlder()}
-              />
-            )}
-            <Button
-              color="slate"
-              variant="faded"
-              size="xs"
-              icon={History}
-              label="Histórico do WhatsApp"
-              onClick={() => void loadHistory()}
+        {c3Chat ? (
+          <Suspense
+            fallback={
+              <div className="flex flex-1 items-center justify-center text-sm text-n-slate-11">
+                Carregando conversa…
+              </div>
+            }
+          >
+            <C3Thread
+              displayId={displayId}
+              contactName={
+                conversation.contact_name || conversation.contact_phone || conversation.contact_jid
+              }
+              currentUserId={user.id}
+              currentUserName={user.name}
+              realtime={realtime}
+              disabled={conversation.status === 'resolved'}
             />
-          </div>
-          {history && (
-            <div
-              aria-label="Histórico do WhatsApp"
-              className="mx-4 mb-3 rounded-xl border border-dashed border-n-strong p-3"
-            >
-              {history.length === 0 && (
-                <p className="text-sm text-n-slate-11">Sem histórico anterior sincronizado.</p>
+          </Suspense>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto pb-4">
+              <div className="flex justify-center gap-2 py-3">
+                {older && (
+                  <Button
+                    color="slate"
+                    variant="faded"
+                    size="xs"
+                    label="Mensagens anteriores"
+                    onClick={() => void loadOlder()}
+                  />
+                )}
+                <Button
+                  color="slate"
+                  variant="faded"
+                  size="xs"
+                  icon={History}
+                  label="Histórico do WhatsApp"
+                  onClick={() => void loadHistory()}
+                />
+              </div>
+              {history && (
+                <div
+                  aria-label="Histórico do WhatsApp"
+                  className="mx-4 mb-3 rounded-xl border border-dashed border-n-strong p-3"
+                >
+                  {history.length === 0 && (
+                    <p className="text-sm text-n-slate-11">Sem histórico anterior sincronizado.</p>
+                  )}
+                  {history.map((h) => (
+                    <p key={h.id} className="flex justify-between gap-3 py-0.5 text-xs text-n-slate-11">
+                      <span className={h.from_me ? 'text-n-blue-11' : 'text-n-slate-12'}>{h.body}</span>
+                      <span className="shrink-0">{new Date(h.ts * 1000).toLocaleString('pt-BR')}</span>
+                    </p>
+                  ))}
+                </div>
               )}
-              {history.map((h) => (
-                <p key={h.id} className="flex justify-between gap-3 py-0.5 text-xs text-n-slate-11">
-                  <span className={h.from_me ? 'text-n-blue-11' : 'text-n-slate-12'}>{h.body}</span>
-                  <span className="shrink-0">{new Date(h.ts * 1000).toLocaleString('pt-BR')}</span>
-                </p>
-              ))}
+              <MessageList
+                messages={messages}
+                path={path}
+                currentUserId={user.id}
+                onUpsert={upsertOne}
+                onReply={setReplyTo}
+                onError={setError}
+              />
+              <div ref={bottom} />
             </div>
-          )}
-          <MessageList
-            messages={messages}
-            path={path}
-            currentUserId={user.id}
-            onUpsert={upsertOne}
-            onReply={setReplyTo}
-            onError={setError}
-          />
-          <div ref={bottom} />
-        </div>
-        <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
-        <ReplyBox
-          path={path}
-          disabled={conversation.status === 'resolved'}
-          conversation={conversation}
-          user={user}
-          agents={catalog.agents}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
-          onSent={upsertOne}
-        />
+            <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
+            <ReplyBox
+              path={path}
+              disabled={conversation.status === 'resolved'}
+              conversation={conversation}
+              user={user}
+              agents={catalog.agents}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
+              onSent={upsertOne}
+            />
+          </>
+        )}
       </section>
       {panel && (
         <ContactPanel

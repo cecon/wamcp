@@ -4,28 +4,29 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**6 de 150 telas migradas (4%)** · faltam 144
+**9 de 153 telas migradas (6%)** · faltam 144
 
-| Pasta | Migradas | Faltam |
-|---|---:|---:|
-| (raiz) | 0 / 4 | 4 |
-| agentChat | 0 / 4 | 4 |
-| attributes | 0 / 2 | 2 |
-| auth | 0 / 3 | 3 |
-| contacts | 0 / 10 | 10 |
-| conversations | 0 / 23 | 23 |
-| desktop | 0 / 1 | 1 |
-| filters | 0 / 3 | 3 |
-| macros | 0 / 1 | 1 |
-| notifications | 0 / 3 | 3 |
-| profile | 0 / 7 | 7 |
-| reports | 0 / 9 | 9 |
-| search | 0 / 3 | 3 |
-| settings | 6 / 63 | 57 |
-| shortcuts | 0 / 1 | 1 |
-| sidebar | 0 / 3 | 3 |
-| sla | 0 / 2 | 2 |
-| ui | 0 / 8 | 8 |
+| Pasta         | Migradas | Faltam |
+| ------------- | -------: | -----: |
+| (raiz)        |    0 / 4 |      4 |
+| agentChat     |    0 / 4 |      4 |
+| attributes    |    0 / 2 |      2 |
+| auth          |    0 / 3 |      3 |
+| chat          |    3 / 3 |      0 |
+| contacts      |   0 / 10 |     10 |
+| conversations |   0 / 23 |     23 |
+| desktop       |    0 / 1 |      1 |
+| filters       |    0 / 3 |      3 |
+| macros        |    0 / 1 |      1 |
+| notifications |    0 / 3 |      3 |
+| profile       |    0 / 7 |      7 |
+| reports       |    0 / 9 |      9 |
+| search        |    0 / 3 |      3 |
+| settings      |   6 / 63 |     57 |
+| shortcuts     |    0 / 1 |      1 |
+| sidebar       |    0 / 3 |      3 |
+| sla           |    0 / 2 |      2 |
+| ui            |    0 / 8 |      8 |
 
 ## O que falta, por pasta
 
