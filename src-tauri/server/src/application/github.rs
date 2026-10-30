@@ -6,7 +6,7 @@ use super::helpdesk::HelpdeskService;
 use super::ports::SendRequest;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail_with, Result};
-use crate::domain::github::{self, comment_target, parse, valid_repo, GithubEvent, EVENTS, GITHUB};
+use crate::domain::github::{self, comment_target, marked, parse, valid_repo, GithubEvent, EVENTS, GITHUB};
 use crate::domain::helpdesk::{initial_status, route_incoming, Route};
 use crate::domain::model::{
     ContactChanges, ContactInbox, ConversationChanges as Changes, GithubChannel, Inbox, Message, NewMessage,
@@ -106,7 +106,7 @@ impl HelpdeskService {
         let Ok(payload) = serde_json::from_slice::<Value>(body) else {
             return fail_with("Corpo inválido", 400);
         };
-        let Some(parsed) = parse(event, &payload, channel.own_login.as_deref()) else {
+        let Some(parsed) = parse(event, &payload) else {
             return Ok(None);
         };
         // Deliveries of another repository (a hook copied by mistake) do not belong here.
@@ -225,7 +225,7 @@ impl HelpdeskService {
         };
         let token = self.secrets.open(&channel.token)?;
         self.github
-            .comment(&token, &channel.repo, number, text)
+            .comment(&token, &channel.repo, number, &marked(text))
             .await
             .map(|_| ())
     }
