@@ -1,6 +1,6 @@
 //! Which GitHub webhook events reach a GitHub inbox, and as what.
 use serde_json::json;
-use wamcp_server::domain::github::{comment_target, parse, valid_repo};
+use wamcp_server::domain::github::{comment_target, marked, parse, valid_repo};
 
 fn repository() -> serde_json::Value {
     json!({ "full_name": "cecon/wamcp", "default_branch": "main", "html_url": "https://github.com/cecon/wamcp" })
@@ -14,16 +14,16 @@ fn failed_workflows_go_to_their_pull_request_or_to_the_activity() {
                                   "head_sha": "abcdef1234567", "html_url": "https://github.com/cecon/wamcp/actions/runs/9",
                                   "display_title": "Corrige login", "pull_requests": prs } })
     };
-    let on_pr = parse("workflow_run", &run("failure", json!([{ "number": 12 }])), None).unwrap();
+    let on_pr = parse("workflow_run", &run("failure", json!([{ "number": 12 }]))).unwrap();
     assert_eq!(on_pr.thread.source_id, "cecon/wamcp#12");
     assert_eq!(
         on_pr.text,
         "O workflow \"CI\" falhou (failure) em fix/login (abcdef1).\nhttps://github.com/cecon/wamcp/actions/runs/9"
     );
-    let on_main = parse("workflow_run", &run("timed_out", json!([])), None).unwrap();
+    let on_main = parse("workflow_run", &run("timed_out", json!([]))).unwrap();
     assert_eq!(on_main.thread.source_id, "cecon/wamcp@atividade");
     assert!(
-        parse("workflow_run", &run("success", json!([])), None).is_none(),
+        parse("workflow_run", &run("success", json!([]))).is_none(),
         "only failures"
     );
 }
@@ -34,30 +34,33 @@ fn reviews_issues_and_unknown_events() {
         json!({ "action": "submitted", "sender": { "login": "joao" }, "repository": repository(),
                 "pull_request": { "number": 3, "title": "X" }, "review": { "state": state, "body": body } })
     };
-    let approved = parse("pull_request_review", &review("approved", ""), None).unwrap();
+    let approved = parse("pull_request_review", &review("approved", "")).unwrap();
     assert_eq!(approved.text, "@joao revisou o PR e aprovou.");
-    let changes = parse(
-        "pull_request_review",
-        &review("changes_requested", "Falta teste."),
-        None,
-    )
-    .unwrap();
+    let changes = parse("pull_request_review", &review("changes_requested", "Falta teste.")).unwrap();
     assert_eq!(changes.text, "@joao revisou o PR e pediu mudanças.\n\nFalta teste.");
     assert!(
-        parse("pull_request_review", &review("commented", " "), None).is_none(),
+        parse("pull_request_review", &review("commented", " ")).is_none(),
         "empty review comment"
     );
 
     let issue = json!({ "action": "opened", "sender": { "login": "ana" }, "repository": repository(),
                         "issue": { "number": 8, "title": "Erro no login", "body": "Passos…" } });
-    let opened = parse("issues", &issue, Some("wamcp-bot")).unwrap();
+    let opened = parse("issues", &issue).unwrap();
     assert_eq!(opened.thread.title, "Issue #8: Erro no login");
     assert_eq!(opened.text, "@ana abriu a issue: Erro no login\n\nPassos…");
+    let comment = |body: &str| {
+        json!({ "action": "created", "sender": { "login": "cecon" }, "repository": repository(),
+                "issue": { "number": 8, "title": "Erro no login" }, "comment": { "body": body } })
+    };
     assert!(
-        parse("issues", &issue, Some("ANA")).is_none(),
-        "the channel's own account"
+        parse("issue_comment", &comment("Alguém viu isso?")).is_some(),
+        "the token's own account still reaches the inbox"
     );
-    assert!(parse("star", &issue, None).is_none());
+    assert!(
+        parse("issue_comment", &comment(&marked("Resposta do agente"))).is_none(),
+        "the echo of a comment the app posted"
+    );
+    assert!(parse("star", &issue).is_none());
 
     assert_eq!(comment_target("cecon/wamcp#8"), Some(("cecon/wamcp", 8)));
     assert_eq!(comment_target("cecon/wamcp@atividade"), None);

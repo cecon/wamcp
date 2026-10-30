@@ -18,6 +18,9 @@ pub const EVENTS: [&str; 7] = [
 /// Longest text taken from a title, body or comment.
 const TEXT_LIMIT: usize = 4000;
 const FAILED: [&str; 3] = ["failure", "timed_out", "startup_failure"];
+/// Hidden mark at the end of every comment the app posts. Its webhook echo is recognised by it,
+/// not by the author: the token is often the person's own, so their own events must still arrive.
+pub const COMMENT_MARK: &str = "<!-- wamcp -->";
 
 pub const SYSTEM: &str = "Você é um agente de uma equipe de software e acompanha um repositório no GitHub. Cada \
 conversa é um pull request, uma issue ou a atividade do repositório (pushes na branch principal e workflows que \
@@ -111,13 +114,18 @@ fn short(sha: &str) -> &str {
     sha.get(..7).unwrap_or(sha)
 }
 
+/// A comment as posted by the app: the text followed by [`COMMENT_MARK`].
+pub fn marked(text: &str) -> String {
+    format!("{text}\n\n{COMMENT_MARK}")
+}
+
 /// Reads one webhook delivery. `None` when the channel ignores it: an event or action it does not
-/// follow, or one caused by the channel's own account (its comments would answer themselves).
-pub fn parse(event: &str, payload: &Value, own_login: Option<&str>) -> Option<GithubEvent> {
-    let sender = text(payload, &["sender", "login"]).to_string();
-    if own_login.is_some_and(|own| own.eq_ignore_ascii_case(&sender)) {
+/// follow, or the echo of a comment the app posted (it would answer itself).
+pub fn parse(event: &str, payload: &Value) -> Option<GithubEvent> {
+    if text(payload, &["comment", "body"]).contains(COMMENT_MARK) {
         return None;
     }
+    let sender = text(payload, &["sender", "login"]).to_string();
     let repo = text(payload, &["repository", "full_name"]);
     if !valid_repo(repo) {
         return None;
