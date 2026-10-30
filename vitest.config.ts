@@ -5,6 +5,18 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: { __APP_VERSION__: JSON.stringify('0.0.0-test') },
+  // Mesmo dedupe do vite.config.ts: os pacotes do C3Theme linkados têm o próprio React/Router no monorepo.
+  resolve: {
+    dedupe: [
+      'react',
+      'react-dom',
+      'react-router',
+      'react-intl',
+      '@mui/material',
+      '@emotion/react',
+      '@emotion/styled',
+    ],
+  },
   test: {
     environment: 'jsdom',
     include: ['tests/ui/**/*.test.tsx'],

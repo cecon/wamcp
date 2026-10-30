@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import { connectRealtime, http, type Realtime } from './api';
 import type { AppNotification, Availability, Catalog, User } from './types';
-import { HOME, type Route } from './route';
+import { useRoute } from './navigation/useRoute';
 import { canOpen } from './permissions';
 import { NoAccess } from './ui/NoAccess';
 import { Sidebar } from './sidebar/Sidebar';
+
+// O shell do C3Theme (MUI/Emotion) entra em chunk separado para o shell atual continuar leve até a troca do padrão.
+const C3Workspace = lazy(() => import('./shell/C3Workspace'));
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { NotificationsPage } from './NotificationsPage';
 import { ContactsPage } from './ContactsPage';
@@ -29,7 +32,7 @@ interface Props {
 
 /** Chatwoot Dashboard.vue: sidebar + main router view. */
 export function Workspace({ user, onUser, onLogout }: Props) {
-  const [route, setRoute] = useState<Route>(HOME),
+  const [route, setRoute] = useRoute(['c3shell']),
     [online, setOnline] = useState(false),
     [catalog, setCatalog] = useState<Catalog>({ inboxes: [], agents: [], teams: [], labels: [] }),
     [unread, setUnread] = useState(0),
@@ -91,80 +94,110 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     { keys: 'mod+k', run: () => setRoute({ page: 'search' }) },
   ]);
 
+  // Troca do shell em curso (Fase 2): `?c3shell` monta o AppLayout do C3Theme; o padrão continua o sidebar atual
+  // até a decisão de UX/testes da próxima rodada.
+  const c3Shell = new URLSearchParams(window.location.search).has('c3shell');
+  const bell = (
+    <NotificationBell realtime={realtime} unread={unread} onUnread={setUnread} onOpen={openConversation} />
+  );
+
+  const content = (
+    <>
+      {route.page === 'conversations' && (
+        <ConversationsScreen
+          route={route}
+          user={user}
+          catalog={catalog}
+          realtime={realtime}
+          onNavigate={setRoute}
+          views={views}
+          onViewsChange={() => void reloadViews()}
+        />
+      )}
+      {route.page === 'agent_chat' && (
+        <AgentChatScreen
+          agentId={route.agentId}
+          realtime={realtime}
+          onSelect={(agentId) => setRoute({ page: 'agent_chat', agentId })}
+        />
+      )}
+      {route.page === 'notifications' && (
+        <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
+      )}
+      {!allowed && <NoAccess />}
+      {route.page === 'contacts' && allowed && (
+        <ContactsPage
+          user={user}
+          catalog={catalog}
+          realtime={realtime}
+          onOpenConversation={openConversation}
+          contactId={route.contactId}
+        />
+      )}
+      {route.page === 'search' && (
+        <SearchPage
+          onOpenConversation={openConversation}
+          onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
+        />
+      )}
+      {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
+      {route.page === 'profile' && <ProfilePage user={user} />}
+      {route.page === 'settings' && allowed && (
+        <SettingsRouter
+          route={route}
+          user={user}
+          catalog={catalog}
+          onNavigate={setRoute}
+          onChange={reloadCatalog}
+        />
+      )}
+    </>
+  );
+
   return (
-    <div className="flex h-full overflow-hidden text-n-slate-12">
-      <Sidebar
-        user={user}
-        catalog={catalog}
-        views={views}
-        route={route}
-        unread={unread}
-        online={online}
-        onNavigate={setRoute}
-        onAvailability={setAvailability}
-        onLogout={() => void logout()}
-        onShortcuts={() => setShortcuts(true)}
-        bell={
-          <NotificationBell
-            realtime={realtime}
-            unread={unread}
-            onUnread={setUnread}
-            onOpen={openConversation}
-          />
-        }
-      />
-      <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-n-surface-1">
-        {route.page === 'conversations' && (
-          <ConversationsScreen
-            route={route}
+    <>
+      {c3Shell ? (
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <C3Workspace
             user={user}
             catalog={catalog}
-            realtime={realtime}
-            onNavigate={setRoute}
             views={views}
-            onViewsChange={() => void reloadViews()}
-          />
-        )}
-        {route.page === 'agent_chat' && (
-          <AgentChatScreen
-            agentId={route.agentId}
-            realtime={realtime}
-            onSelect={(agentId) => setRoute({ page: 'agent_chat', agentId })}
-          />
-        )}
-        {route.page === 'notifications' && (
-          <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
-        )}
-        {!allowed && <NoAccess />}
-        {route.page === 'contacts' && allowed && (
-          <ContactsPage
-            user={user}
-            catalog={catalog}
-            realtime={realtime}
-            onOpenConversation={openConversation}
-            contactId={route.contactId}
-          />
-        )}
-        {route.page === 'search' && (
-          <SearchPage
-            onOpenConversation={openConversation}
-            onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
-          />
-        )}
-        {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
-        {route.page === 'profile' && <ProfilePage user={user} />}
-        {route.page === 'settings' && allowed && (
-          <SettingsRouter
             route={route}
+            unread={unread}
+            online={online}
+            onNavigate={setRoute}
+            onAvailability={setAvailability}
+            onLogout={() => void logout()}
+            onShortcuts={() => setShortcuts(true)}
+            bell={bell}
+          >
+            {content}
+          </C3Workspace>
+        </Suspense>
+      ) : (
+        <div className="flex h-full overflow-hidden text-n-slate-12">
+          <Sidebar
             user={user}
             catalog={catalog}
+            views={views}
+            route={route}
+            unread={unread}
+            online={online}
             onNavigate={setRoute}
-            onChange={reloadCatalog}
+            onAvailability={setAvailability}
+            onLogout={() => void logout()}
+            onShortcuts={() => setShortcuts(true)}
+            bell={bell}
           />
-        )}
-      </main>
+          <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-n-surface-1">{content}</main>
+        </div>
+      )}
       {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
       {isDesktop() && <UpdateNotice />}
-    </div>
+    </>
   );
 }
