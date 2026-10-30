@@ -1,0 +1,232 @@
+# Progresso da migração para o C3Theme
+
+Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desatualizado). Uma tela conta como
+**migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
+usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
+
+**1 de 149 telas migradas (1%)** · faltam 148
+
+| Pasta | Migradas | Faltam |
+|---|---:|---:|
+| (raiz) | 0 / 4 | 4 |
+| agentChat | 0 / 4 | 4 |
+| attributes | 0 / 2 | 2 |
+| auth | 0 / 3 | 3 |
+| contacts | 0 / 10 | 10 |
+| conversations | 0 / 23 | 23 |
+| desktop | 0 / 1 | 1 |
+| filters | 0 / 3 | 3 |
+| macros | 0 / 1 | 1 |
+| notifications | 0 / 3 | 3 |
+| profile | 0 / 7 | 7 |
+| reports | 0 / 9 | 9 |
+| search | 0 / 3 | 3 |
+| settings | 1 / 62 | 61 |
+| shortcuts | 0 / 1 | 1 |
+| sidebar | 0 / 3 | 3 |
+| sla | 0 / 2 | 2 |
+| ui | 0 / 8 | 8 |
+
+## O que falta, por pasta
+
+### (raiz)
+
+- `AgentApp.tsx`
+- `ContactsPage.tsx`
+- `NotificationsPage.tsx`
+- `Workspace.tsx`
+
+### agentChat
+
+- `agentChat/AgentChatScreen.tsx`
+- `agentChat/AgentChatThread.tsx`
+- `agentChat/ChatMarkdown.tsx`
+- `agentChat/ChatSessionBar.tsx`
+
+### attributes
+
+- `attributes/AttributeInput.tsx`
+- `attributes/AttributesSection.tsx`
+
+### auth
+
+- `auth/Bootstrap.tsx`
+- `auth/Login.tsx`
+- `auth/MfaStep.tsx`
+
+### contacts
+
+- `contacts/ContactActions.tsx`
+- `contacts/ContactDetail.tsx`
+- `contacts/ContactForm.tsx`
+- `contacts/ContactLabels.tsx`
+- `contacts/ContactNotes.tsx`
+- `contacts/ContactsToolbar.tsx`
+- `contacts/ImportModal.tsx`
+- `contacts/MergeModal.tsx`
+- `contacts/NewContactModal.tsx`
+- `contacts/NewConversationModal.tsx`
+
+### conversations
+
+- `conversations/Attachments.tsx`
+- `conversations/BulkActionBar.tsx`
+- `conversations/ChatList.tsx`
+- `conversations/ChatListHeader.tsx`
+- `conversations/composer/ComposerParts.tsx`
+- `conversations/composer/ComposerPickers.tsx`
+- `conversations/ContactPanel.tsx`
+- `conversations/ConversationActions.tsx`
+- `conversations/ConversationBox.tsx`
+- `conversations/ConversationCard.tsx`
+- `conversations/ConversationHeader.tsx`
+- `conversations/ConversationMenu.tsx`
+- `conversations/ConversationsScreen.tsx`
+- `conversations/MessageActions.tsx`
+- `conversations/MessageBody.tsx`
+- `conversations/MessageExtras.tsx`
+- `conversations/MessageItem.tsx`
+- `conversations/MessageList.tsx`
+- `conversations/NewChatModal.tsx`
+- `conversations/ParticipantsSection.tsx`
+- `conversations/ReplyBox.tsx`
+- `conversations/TypingIndicator.tsx`
+- `conversations/whatsappFormat.tsx`
+
+### desktop
+
+- `desktop/UpdateNotice.tsx`
+
+### filters
+
+- `filters/ConditionRow.tsx`
+- `filters/FilterModal.tsx`
+- `filters/SavedViewControls.tsx`
+
+### macros
+
+- `macros/MacroRunner.tsx`
+
+### notifications
+
+- `notifications/NotificationBell.tsx`
+- `notifications/NotificationItem.tsx`
+- `notifications/NotificationList.tsx`
+
+### profile
+
+- `profile/BackupCodes.tsx`
+- `profile/MfaModals.tsx`
+- `profile/MfaSection.tsx`
+- `profile/NotificationPreferences.tsx`
+- `profile/ProfilePage.tsx`
+- `profile/qr/QrCode.tsx`
+- `profile/SessionsSection.tsx`
+
+### reports
+
+- `reports/BarChart.tsx`
+- `reports/BreakdownReport.tsx`
+- `reports/CsatReport.tsx`
+- `reports/CsatResponses.tsx`
+- `reports/MetricReport.tsx`
+- `reports/OverviewReport.tsx`
+- `reports/ReportFilters.tsx`
+- `reports/ReportParts.tsx`
+- `reports/SummaryReports.tsx`
+
+### search
+
+- `search/Highlight.tsx`
+- `search/SearchPage.tsx`
+- `search/SearchResults.tsx`
+
+### settings
+
+- `settings/AccountPage.tsx`
+- `settings/ActionsEditor.tsx`
+- `settings/AgentModal.tsx`
+- `settings/app/AppSettingsPage.tsx`
+- `settings/AttributeModal.tsx`
+- `settings/AttributesPage.tsx`
+- `settings/AuditLogPage.tsx`
+- `settings/AutomationPage.tsx`
+- `settings/CannedPage.tsx`
+- `settings/ConditionsEditor.tsx`
+- `settings/connections/AuditList.tsx`
+- `settings/connections/ChatGptLink.tsx`
+- `settings/connections/ConnectionDetailPage.tsx`
+- `settings/connections/ConnectionsPage.tsx`
+- `settings/connections/ConnectionStatus.tsx`
+- `settings/connections/HistoryMessages.tsx`
+- `settings/connections/HistoryViewer.tsx`
+- `settings/connections/McpAccess.tsx`
+- `settings/connections/PairingPanel.tsx`
+- `settings/DeliveriesPanel.tsx`
+- `settings/directory/AccessSection.tsx`
+- `settings/directory/AgentRosterModal.tsx`
+- `settings/directory/CredentialsPanel.tsx`
+- `settings/directory/RosterSection.tsx`
+- `settings/directory/RuntimeSelect.tsx`
+- `settings/directory/SkillModal.tsx`
+- `settings/directory/SkillPicker.tsx`
+- `settings/directory/SkillsPage.tsx`
+- `settings/engine/ActivityPanel.tsx`
+- `settings/engine/AskModal.tsx`
+- `settings/engine/EnginePage.tsx`
+- `settings/engine/PermissionsPanel.tsx`
+- `settings/engine/StatusPill.tsx`
+- `settings/github/ConnectGithubModal.tsx`
+- `settings/github/GithubSetup.tsx`
+- `settings/github/WebhookInstructions.tsx`
+- `settings/InboxAgentSelect.tsx`
+- `settings/InboxAutomation.tsx`
+- `settings/InboxesPage.tsx`
+- `settings/InboxLimit.tsx`
+- `settings/MacroEditor.tsx`
+- `settings/MacrosPage.tsx`
+- `settings/members/AvatarEditor.tsx`
+- `settings/members/MemberAvatar.tsx`
+- `settings/members/MemberCard.tsx`
+- `settings/members/MemberDetail.tsx`
+- `settings/members/OrganizationPage.tsx`
+- `settings/members/SalaryRatesForm.tsx`
+- `settings/members/UsageChart.tsx`
+- `settings/roles/CustomRoleModal.tsx`
+- `settings/roles/CustomRolesPage.tsx`
+- `settings/RuleEditor.tsx`
+- `settings/schedules/RunHistory.tsx`
+- `settings/schedules/ScheduleEditor.tsx`
+- `settings/schedules/SchedulesPage.tsx`
+- `settings/SettingsRouter.tsx`
+- `settings/SlaModal.tsx`
+- `settings/SlaPage.tsx`
+- `settings/TeamsPage.tsx`
+- `settings/ValueInput.tsx`
+- `settings/WebhooksPage.tsx`
+
+### shortcuts
+
+- `shortcuts/ShortcutsModal.tsx`
+
+### sidebar
+
+- `sidebar/ProfileMenu.tsx`
+- `sidebar/Sidebar.tsx`
+- `sidebar/SidebarParts.tsx`
+
+### sla
+
+- `sla/SlaBadge.tsx`
+- `sla/SlaSection.tsx`
+
+### ui
+
+- `ui/Accordion.tsx`
+- `ui/Avatar.tsx`
+- `ui/Button.tsx`
+- `ui/Confirm.tsx`
+- `ui/NoAccess.tsx`
+- `ui/Overlay.tsx`
+- `ui/SecretField.tsx`
+- `ui/Settings.tsx`

@@ -48,6 +48,6 @@ Arquivos: [`settings/LabelsPage.tsx`](../../src/agent/settings/LabelsPage.tsx) (
 ## 5. Próximos lotes
 
 1. **Lote 2 — Configurações simples**: `CannedPage` (respostas prontas), `AttributesPage` e `MacrosPage` (listas + diálogos), aplicando a mesma receita.
-2. **Script de régua**: contar arquivos de `src/agent` que ainda usam classes/tokens do tema antigo por pasta, gerar `docs/c3theme/progresso.md` e só depois ligar no `pnpm check`.
+2. **Régua**: `pnpm progresso:c3` (`node scripts/c3-progresso.mjs`) gera [progresso.md](progresso.md), com o número por pasta. Baseline deste lote: **1 de 149 telas migradas (1%)** — a régua conta como migrada a tela que importa MUI/`@c3theme/*`, e como pendente a que ainda desenha com `className` sem o pacote. `--check` fica pronto para entrar no `pnpm check` quando o lote 2 começar.
 3. **Lote 3 — Contatos** (lista + detalhe + importação/merge) e **Relatórios** (filtros de período + gráficos), que dependem de mais decisões de componente.
 4. **Chat**: `ChatTransport` sobre a API atual e troca pelo `@c3theme/chat` (último, pelo risco de mídia/scroll).

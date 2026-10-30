@@ -24,6 +24,7 @@
     "lint": "eslint . --max-warnings 0 && node scripts/check-architecture.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "progresso:c3": "node scripts/c3-progresso.mjs",
     "test:e2e": "playwright test",
     "check": "pnpm run lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:ui",
     "version": "node scripts/version.mjs",
