@@ -191,9 +191,11 @@ async fn signed_events_become_one_conversation_per_pull_request() {
     let comment = json!({ "action": "created", "sender": { "login": "joao" }, "repository": repository(),
         "issue": { "number": 12, "title": "Corrige login", "pull_request": {} }, "comment": { "body": "Ficou bom?" } });
     c.deliver("issue_comment", "d2", &comment, None).await;
-    let own = json!({ "action": "created", "sender": { "login": "wamcp-bot" }, "repository": repository(),
-        "issue": { "number": 12, "title": "Corrige login", "pull_request": {} }, "comment": { "body": "eco" } });
-    c.deliver("issue_comment", "d3", &own, None).await;
+    // The app's own comment comes back as an event: it carries the mark, whoever the author is.
+    let echo = json!({ "action": "created", "sender": { "login": "wamcp-bot" }, "repository": repository(),
+        "issue": { "number": 12, "title": "Corrige login", "pull_request": {} },
+        "comment": { "body": "eco\n\n<!-- wamcp -->" } });
+    c.deliver("issue_comment", "d3", &echo, None).await;
 
     let list = c.conversations().await;
     assert_eq!(list.len(), 1);
@@ -243,7 +245,11 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
     c.deliver("pull_request", "d1", &pr_opened(7), None).await;
     assert_eq!(
         c.f.github.comments.lock().clone(),
-        [(REPO.to_string(), 7, "Revisei: falta teste.".to_string())]
+        [(
+            REPO.to_string(),
+            7,
+            "Revisei: falta teste.\n\n<!-- wamcp -->".to_string()
+        )]
     );
     let request = reviewer.requests.lock()[0].clone();
     assert!(request.system.contains("repositório no GitHub"), "{}", request.system);
@@ -253,10 +259,24 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
         request.prompt
     );
 
+    // GitHub echoes the comment back, signed by the token's account: it does not wake the agent again.
+    let posted = c.f.github.comments.lock()[0].2.clone();
+    let echo = json!({ "action": "created", "sender": { "login": "wamcp-bot" }, "repository": repository(),
+        "issue": { "number": 7, "title": "Corrige login", "pull_request": {} }, "comment": { "body": posted } });
+    c.deliver("issue_comment", "d1-echo", &echo, None).await;
+    assert_eq!(reviewer.requests.lock().len(), 1);
+
+    // The token's account is often the person's own: what they do on GitHub still reaches the agent.
+    let mine = json!({ "action": "created", "sender": { "login": "wamcp-bot" }, "repository": repository(),
+        "issue": { "number": 7, "title": "Corrige login", "pull_request": {} }, "comment": { "body": "E agora?" } });
+    c.deliver("issue_comment", "d1-mine", &mine, None).await;
+    assert_eq!(reviewer.requests.lock().len(), 2);
+    assert_eq!(c.f.github.comments.lock().len(), 2);
+
     // On the activity conversation the agent has no pull request to comment on.
     let push = json!({ "ref": "refs/heads/main", "sender": { "login": "maria" }, "repository": repository(),
                        "commits": [{ "id": "abcdef1234567", "message": "x" }] });
     c.deliver("push", "d2", &push, None).await;
-    assert_eq!(c.f.github.comments.lock().len(), 1);
+    assert_eq!(c.f.github.comments.lock().len(), 2);
     assert!(c.f.wa.sent().is_empty(), "nothing goes to WhatsApp");
 }
