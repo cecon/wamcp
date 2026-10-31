@@ -22,12 +22,12 @@
 
 | Medida                                            | Valor                                                                                                                    |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Commits da adoção na branch `feat/c3theme-adocao` | 34                                                                                                                       |
+| Commits da adoção na branch `feat/c3theme-adocao` | 28                                                                                                                       |
 | Telas migradas                                    | **26 de 153 (17%)**                                                                                                      |
 | Suíte de UI                                       | **51 arquivos / 220 testes** + 6 testes node do servidor                                                                 |
 | Cobertura                                         | limiares 80/80/80/70 mantidos                                                                                            |
 | Testes existentes alterados                       | 1 asserção (rótulo com asterisco do MUI, lote 3); os lotes 1, 2 e 4 não mudaram nenhum                                   |
-| `main` (gzip)                                     | 693,6 kB (**205,8 kB**) — MUI fora do principal; `react-router` responde por +41 kB                                      |
+| `main` (gzip)                                     | 692,3 kB (**205,5 kB**) — MUI fora do principal; `react-router` responde por +41 kB                                      |
 | Chunks lazy do C3Theme                            | `C3Provider` 314 kB (100,3 gzip) + shell 46 kB (11,4) + páginas de 0,8–10 kB + login 6,5 kB + contatos 17 kB + chat 7 kB |
 | CI local equivalente                              | `pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run build`, `pnpm run test:ui` verdes                           |
 
@@ -42,7 +42,7 @@
 
 ## 4. Pendências conhecidas
 
-**Telas (142):** Contatos (10 arquivos), Conversas (23), Relatórios (11), Configurações restantes (Agents/Teams/Inboxes/Webhooks/Auditoria/Roles/Engine/Schedules/Conexões/App), Agente de IA (4), Auth/Perfil/Notificações. A receita está nos lotes 1–4 e a régua mede o avanço.
+**Telas (127):** Conversas (23), Relatórios (11), Configurações restantes (Agents/Teams/Inboxes/Webhooks/Auditoria/Roles/Engine/Schedules/Conexões/App), Agente de IA (4), detalhe do contato (`SidePanel`), Perfil/Notificações (seções internas) e bootstrap/avisos. A receita está nos lotes 1–12 e a régua mede o avanço.
 
 **Decisões de produto:** virar o shell C3 para padrão; virar o thread do chat; definir se o shell passa a exigir `react-router` em telas que hoje usam `onNavigate` próprio (já compatível).
 
@@ -58,3 +58,14 @@
 4. Atualize o documento do lote e a régua no mesmo commit.
 
 > **Estado do objetivo:** fundação concluída; lotes em andamento. A branch está pronta para revisão/merge e o restante é execução repetível — não há bloqueio técnico conhecido.
+
+---
+
+## 6. Atualização final do ciclo (31/10/2026)
+
+- **Lotes 1–12 entregues** em 10 rodadas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e os 4 modais).
+- **Régua:** 26 de 153 telas (17%), com gate no `pnpm lint`.
+- **Verificação final (worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em duas execuções — tudo verde no HEAD `17bfbce`.
+- **Bundle:** `main` 692,3 kB (gzip 205,5); MUI sempre em chunks lazy; páginas migradas de 0,8 a 17,5 kB.
+- **Ainda fora:** 127 telas, shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote listados na §4.
+- **Para retomar:** dizer “continuar” (a meta amplia o limite de rodadas), rodar `pnpm progresso:c3` e seguir a receita da §5.
