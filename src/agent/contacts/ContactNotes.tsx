@@ -1,15 +1,25 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Trash2 } from 'lucide-react';
+
 import { http } from '../api';
 import type { ContactNote } from '../types';
-import { Button } from '../ui/Button';
 
 interface Props {
   contactId: number;
   onError: (message: string) => void;
 }
 
-/** Chatwoot contact notes: add a note, list newest first, delete (author or administrator). */
+/** Notas do contato no C3Theme (lote 10): adiciona, lista da mais nova e exclui (autor ou administrador). */
 export function ContactNotes({ contactId, onError }: Props) {
   const [notes, setNotes] = useState<ContactNote[]>([]),
     [draft, setDraft] = useState('');
@@ -21,11 +31,11 @@ export function ContactNotes({ contactId, onError }: Props) {
   }, [path]);
   const fail = (e: Error) => onError(e.message);
   return (
-    <div className="flex flex-col gap-3">
-      <form
-        className="flex flex-col gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
+    <Stack spacing={1.5}>
+      <Box
+        component="form"
+        onSubmit={(event) => {
+          event.preventDefault();
           void http<ContactNote>(path, 'POST', { content: draft.trim() })
             .then((note) => {
               setNotes((list) => [note, ...list]);
@@ -34,47 +44,59 @@ export function ContactNotes({ contactId, onError }: Props) {
             .catch(fail);
         }}
       >
-        <textarea
-          className="field"
-          aria-label="Nova nota"
-          placeholder="Escreva uma nota sobre o contato…"
-          value={draft}
-          maxLength={5000}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-        <Button
-          type="submit"
-          size="xs"
-          label="Adicionar nota"
-          className="self-end"
-          disabled={!draft.trim()}
-        />
-      </form>
-      {notes.length === 0 && <p className="text-sm text-n-slate-11">Nenhuma nota ainda.</p>}
-      <ul className="flex flex-col gap-2">
-        {notes.map((n) => (
-          <li key={n.id} className="rounded-lg bg-n-slate-2 p-3 text-sm">
-            <p className="whitespace-pre-wrap text-n-slate-12">{n.content}</p>
-            <div className="mt-1 flex items-center justify-between text-xs text-n-slate-11">
-              <span>
-                {n.user_name || 'Sistema'} · {new Date(n.created_at * 1000).toLocaleString('pt-BR')}
-              </span>
-              <Button
-                color="slate"
-                variant="ghost"
-                size="xs"
-                icon={Trash2}
+        <Stack spacing={1}>
+          <TextField
+            multiline
+            minRows={2}
+            value={draft}
+            placeholder="Escreva uma nota sobre o contato…"
+            onChange={(event) => setDraft(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 5000, 'aria-label': 'Nova nota' } }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            size="small"
+            disabled={!draft.trim()}
+            sx={{ alignSelf: 'flex-end' }}
+          >
+            Adicionar nota
+          </Button>
+        </Stack>
+      </Box>
+      {notes.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          Nenhuma nota ainda.
+        </Typography>
+      )}
+      <Box
+        component="ul"
+        sx={{ display: 'flex', flexDirection: 'column', gap: 1, listStyle: 'none', m: 0, p: 0 }}
+      >
+        {notes.map((note) => (
+          <Box key={note.id} component="li" sx={{ borderRadius: 1.5, bgcolor: 'action.hover', p: 1.5 }}>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {note.content}
+            </Typography>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                {note.user_name || 'Sistema'} · {new Date(note.created_at * 1000).toLocaleString('pt-BR')}
+              </Typography>
+              <IconButton
+                size="small"
                 aria-label="Excluir nota"
                 onClick={() =>
-                  void http(`${path}/${n.id}`, 'DELETE')
-                    .then(() => setNotes((list) => list.filter((x) => x.id !== n.id)))
+                  void http(`${path}/${note.id}`, 'DELETE')
+                    .then(() => setNotes((list) => list.filter((x) => x.id !== note.id)))
                     .catch(fail)
                 }
-              />
-            </div>
-          </li>
+              >
+                <Trash2 size={14} />
+              </IconButton>
+            </Stack>
+          </Box>
         ))}
-      </ul>
-    </div>
+      </Box>
+    </Stack>
   );
 }
