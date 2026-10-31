@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter } from 'react-router';
 import { http, setCsrf } from './api';
 import type { User } from './types';
 import { Workspace } from './Workspace';
-import { Login } from './auth/Login';
 import type { Me } from './auth/authError';
 import { useTheme } from './theme/theme';
 import { routerBase } from './navigation/routes';
+
+// Login/MFA usam o C3Theme (AuthLayout + campos do MUI): entram em chunk próprio para a tela inicial não pesar.
+const Login = lazy(() => import('./auth/Login').then((module) => ({ default: module.Login })));
 
 export default function AgentApp() {
   useTheme();
@@ -24,12 +26,16 @@ export default function AgentApp() {
   const content = loading ? (
     <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
   ) : !user ? (
-    <Login
-      onLogin={(me) => {
-        setCsrf(me.csrf);
-        setUser(me.user);
-      }}
-    />
+    <Suspense
+      fallback={<div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>}
+    >
+      <Login
+        onLogin={(me) => {
+          setCsrf(me.csrf);
+          setUser(me.user);
+        }}
+      />
+    </Suspense>
   ) : (
     <Workspace
       user={user}
