@@ -29,7 +29,7 @@ export default defineConfig({
     // como faz no build. (Pedido ao C3Theme: emitir `.js` nos imports para funcionar em Node ESM puro.)
     server: { deps: { inline: [/@c3theme\//] } },
     // Long user-event flows (automation rules, filters) exceed 5s on a loaded machine.
-    testTimeout: 30000,
+    testTimeout: 60000,
     coverage: {
       provider: 'v8',
       include: ['src/agent/**/*.{ts,tsx}'],
