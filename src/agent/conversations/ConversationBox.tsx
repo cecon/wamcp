@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { History } from 'lucide-react';
+
 import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
-import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
 import { ConversationMenu } from './ConversationMenu';
 import { MessageList } from './MessageList';
@@ -29,7 +37,7 @@ const upsert = (list: Message[], message: Message) =>
     ? list.map((m) => (m.id === message.id ? message : m))
     : [...list, message].sort((a, b) => a.id - b.id);
 
-/** Chatwoot ConversationBox (header, messages, reply box) plus the contact panel on the right. */
+/** Thread da conversa no C3Theme (lote 17): cabeçalho, mensagens, compositor e painel do contato. */
 export function ConversationBox({
   displayId,
   user,
@@ -121,15 +129,36 @@ export function ConversationBox({
 
   if (!conversation)
     return (
-      <div className="flex flex-1 items-center justify-center border-l border-n-weak bg-n-surface-1 text-sm text-n-slate-11">
-        {error || 'Carregando…'}
-      </div>
+      <Box
+        sx={{
+          display: 'flex',
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderLeft: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          {error || 'Carregando…'}
+        </Typography>
+      </Box>
     );
   return (
     <>
-      <section
+      <Box
+        component="section"
         aria-label="Conversa"
-        className="flex min-w-0 flex-1 flex-col border-l border-n-weak bg-n-surface-1"
+        sx={{
+          display: 'flex',
+          minWidth: 0,
+          flex: 1,
+          flexDirection: 'column',
+          borderLeft: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
       >
         <ConversationHeader
           conversation={conversation}
@@ -148,13 +177,19 @@ export function ConversationBox({
             />
           }
         />
-        {error && <p className="px-4 pt-2 text-sm text-n-ruby-11">{error}</p>}
+        {error && (
+          <Typography variant="body2" sx={{ px: 2, pt: 1, color: 'error.main' }}>
+            {error}
+          </Typography>
+        )}
         {c3Chat ? (
           <Suspense
             fallback={
-              <div className="flex flex-1 items-center justify-center text-sm text-n-slate-11">
-                Carregando conversa…
-              </div>
+              <Box sx={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Carregando conversa…
+                </Typography>
+              </Box>
             }
           >
             <C3Thread
@@ -170,41 +205,59 @@ export function ConversationBox({
           </Suspense>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto pb-4">
-              <div className="flex justify-center gap-2 py-3">
+            <Box sx={{ flex: 1, overflowY: 'auto', pb: 2 }}>
+              <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', py: 1.5 }}>
                 {older && (
-                  <Button
-                    color="slate"
-                    variant="faded"
-                    size="xs"
-                    label="Mensagens anteriores"
-                    onClick={() => void loadOlder()}
-                  />
+                  <Button size="small" variant="outlined" onClick={() => void loadOlder()}>
+                    Mensagens anteriores
+                  </Button>
                 )}
                 <Button
-                  color="slate"
-                  variant="faded"
-                  size="xs"
-                  icon={History}
-                  label="Histórico do WhatsApp"
+                  size="small"
+                  variant="outlined"
+                  startIcon={<History size={14} />}
                   onClick={() => void loadHistory()}
-                />
-              </div>
+                >
+                  Histórico do WhatsApp
+                </Button>
+              </Stack>
               {history && (
-                <div
+                <Box
                   aria-label="Histórico do WhatsApp"
-                  className="mx-4 mb-3 rounded-xl border border-dashed border-n-strong p-3"
+                  sx={{
+                    mx: 2,
+                    mb: 1.5,
+                    borderRadius: 2,
+                    border: 1,
+                    borderStyle: 'dashed',
+                    borderColor: 'divider',
+                    p: 1.5,
+                  }}
                 >
                   {history.length === 0 && (
-                    <p className="text-sm text-n-slate-11">Sem histórico anterior sincronizado.</p>
+                    <Typography variant="body2" color="text.secondary">
+                      Sem histórico anterior sincronizado.
+                    </Typography>
                   )}
                   {history.map((h) => (
-                    <p key={h.id} className="flex justify-between gap-3 py-0.5 text-xs text-n-slate-11">
-                      <span className={h.from_me ? 'text-n-blue-11' : 'text-n-slate-12'}>{h.body}</span>
-                      <span className="shrink-0">{new Date(h.ts * 1000).toLocaleString('pt-BR')}</span>
-                    </p>
+                    <Stack
+                      key={h.id}
+                      direction="row"
+                      spacing={1.5}
+                      sx={{ justifyContent: 'space-between', py: 0.25 }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ color: h.from_me ? 'primary.main' : 'text.primary' }}
+                      >
+                        {h.body}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                        {new Date(h.ts * 1000).toLocaleString('pt-BR')}
+                      </Typography>
+                    </Stack>
                   ))}
-                </div>
+                </Box>
               )}
               <MessageList
                 messages={messages}
@@ -215,7 +268,7 @@ export function ConversationBox({
                 onError={setError}
               />
               <div ref={bottom} />
-            </div>
+            </Box>
             <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
             <ReplyBox
               path={path}
@@ -229,7 +282,7 @@ export function ConversationBox({
             />
           </>
         )}
-      </section>
+      </Box>
       {panel && (
         <ContactPanel
           conversation={conversation}

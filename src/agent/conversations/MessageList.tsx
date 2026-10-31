@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
 import { http } from '../api';
 import type { Message } from '../types';
 import type { MessageHandlers } from './MessageActions';
@@ -43,7 +46,7 @@ export function MessageList({ messages, path, currentUserId, onUpsert, onReply, 
   }, [path, onUpsert, onReply, onError]);
 
   return (
-    <ul className="px-4">
+    <Box component="ul" sx={{ px: 2, listStyle: 'none', m: 0, p: 0 }}>
       {messages.map((m) => {
         const replyTo = m.content_attributes.in_reply_to;
         return (
@@ -57,6 +60,6 @@ export function MessageList({ messages, path, currentUserId, onUpsert, onReply, 
           />
         );
       })}
-    </ul>
+    </Box>
   );
 }
