@@ -1,9 +1,19 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+
+// third-party
 import { Copy, Reply, SmilePlus, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
+import C3Provider from '../c3/C3Provider';
 import type { Message } from '../types';
-import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
-import { Dropdown, Modal } from '../ui/Overlay';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -23,13 +33,11 @@ interface Props {
   handlers: MessageHandlers;
 }
 
-const ICON =
-  'grid size-7 place-content-center rounded-md text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12';
-
-/** Chatwoot message context menu, as a hover toolbar next to the bubble. */
+/** Ações da mensagem no C3Theme (lote 19): toolbar de responder/reagir/copiar/apagar e o diálogo de apagar. */
 export function MessageActions({ message: m, outgoing, myReaction, handlers }: Props) {
   const [confirm, setConfirm] = useState(false),
-    [copied, setCopied] = useState(false);
+    [copied, setCopied] = useState(false),
+    [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const deleted = Boolean(m.content_attributes.deleted);
   if (deleted) return null;
   const copy = () =>
@@ -37,105 +45,111 @@ export function MessageActions({ message: m, outgoing, myReaction, handlers }: P
       ?.writeText(m.content || '')
       .then(() => setCopied(true))
       .catch(() => {});
+  const iconSx = { p: 0.5, borderRadius: 1, color: 'text.secondary' };
   return (
     <>
-      <div
+      <Box
         role="toolbar"
         aria-label="Ações da mensagem"
-        className={cn(
-          'flex items-center gap-0.5 self-center rounded-lg border border-n-weak bg-n-solid-1 p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-within:opacity-100',
-          outgoing ? 'mr-1' : 'ml-1',
-        )}
+        className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.25,
+          alignSelf: 'center',
+          borderRadius: 1,
+          border: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          p: 0.25,
+          boxShadow: 1,
+          mr: outgoing ? 0.5 : 0,
+          ml: outgoing ? 0 : 0.5,
+        }}
       >
-        <button
-          type="button"
+        <IconButton
+          size="small"
           aria-label="Responder"
           title="Responder"
-          className={ICON}
+          sx={iconSx}
           onClick={() => handlers.onReply(m)}
         >
           <Reply size={15} />
-        </button>
+        </IconButton>
         {!m.private && (
-          <Dropdown
-            align={outgoing ? 'end' : 'start'}
-            placement="top"
-            className="flex min-w-0 grid-flow-col"
-            trigger={({ toggle }) => (
-              <button type="button" aria-label="Reagir" title="Reagir" className={ICON} onClick={toggle}>
-                <SmilePlus size={15} />
-              </button>
-            )}
-          >
-            {(close) =>
-              QUICK_REACTIONS.map((emoji) => (
-                <button
+          <>
+            <IconButton
+              size="small"
+              aria-label="Reagir"
+              title="Reagir"
+              sx={iconSx}
+              onClick={(event) => setAnchor(event.currentTarget)}
+            >
+              <SmilePlus size={15} />
+            </IconButton>
+            <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+              {QUICK_REACTIONS.map((emoji) => (
+                <MenuItem
                   key={emoji}
-                  type="button"
-                  role="menuitem"
                   aria-label={emoji}
                   aria-pressed={myReaction === emoji}
+                  selected={myReaction === emoji}
                   onClick={() => {
                     handlers.onReact(m, myReaction === emoji ? '' : emoji);
-                    close();
+                    setAnchor(null);
                   }}
-                  className={cn(
-                    'grid size-8 place-content-center rounded-lg text-lg hover:bg-n-alpha-2',
-                    myReaction === emoji && 'bg-n-brand/15',
-                  )}
+                  sx={{ justifyContent: 'center', fontSize: 18, minWidth: 40 }}
                 >
                   {emoji}
-                </button>
-              ))
-            }
-          </Dropdown>
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
         )}
         {m.content && (
-          <button
-            type="button"
+          <IconButton
+            size="small"
             aria-label={copied ? 'Texto copiado' : 'Copiar texto'}
             title="Copiar texto"
-            className={ICON}
+            sx={iconSx}
             onClick={copy}
             onMouseLeave={() => setCopied(false)}
           >
             <Copy size={15} />
-          </button>
+          </IconButton>
         )}
         {m.message_type === 'outgoing' && (
-          <button
-            type="button"
+          <IconButton
+            size="small"
             aria-label="Apagar"
             title="Apagar"
-            className={ICON}
+            sx={iconSx}
             onClick={() => setConfirm(true)}
           >
             <Trash2 size={15} />
-          </button>
+          </IconButton>
         )}
-      </div>
+      </Box>
       {confirm && (
-        <Modal
-          title="Apagar mensagem?"
-          description={
-            m.private
-              ? 'A nota privada será removida da conversa.'
-              : 'A mensagem será apagada para todos, inclusive no WhatsApp do contato.'
-          }
-          onClose={() => setConfirm(false)}
-        >
-          <div className="flex justify-end gap-2">
-            <Button color="slate" variant="faded" label="Cancelar" onClick={() => setConfirm(false)} />
-            <Button
-              color="ruby"
-              label="Apagar"
-              onClick={() => {
-                setConfirm(false);
-                handlers.onDelete(m);
-              }}
-            />
-          </div>
-        </Modal>
+        <C3Provider>
+          <ActionDialog
+            open
+            title="Apagar mensagem?"
+            description={
+              m.private
+                ? 'A nota privada será removida da conversa.'
+                : 'A mensagem será apagada para todos, inclusive no WhatsApp do contato.'
+            }
+            confirmLabel="Apagar"
+            backLabel="Cancelar"
+            tone="danger"
+            onClose={() => setConfirm(false)}
+            onConfirm={() => {
+              setConfirm(false);
+              handlers.onDelete(m);
+            }}
+          />
+        </C3Provider>
       )}
     </>
   );

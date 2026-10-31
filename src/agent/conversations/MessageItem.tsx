@@ -89,7 +89,7 @@ export function MessageItem({ message: m, quoted, handlers, currentUserId, highl
     <Box
       component="li"
       id={`message${m.id}`}
-      className={highlighted ? 'bg-n-alpha-1' : undefined}
+      className={highlighted ? 'group bg-n-alpha-1' : 'group'}
       sx={{
         mb: 1,
         display: 'flex',
