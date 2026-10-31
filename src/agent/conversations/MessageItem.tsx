@@ -1,7 +1,13 @@
+// material-ui
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { AlertCircle, Ban, Check, CheckCheck, Clock, LockKeyhole } from 'lucide-react';
+
 import type { Message, Reaction } from '../types';
 import { Avatar } from '../ui/Avatar';
-import { cn } from '../ui/cn';
 import { Attachments } from './Attachments';
 import { MessageActions, type MessageHandlers } from './MessageActions';
 import { QuotedMessage, Reactions, RetryButton } from './MessageExtras';
@@ -15,14 +21,16 @@ function Status({ message }: { message: Message }) {
   if (message.status === 'pending') return <Clock size={14} aria-label="Enviando" />;
   if (message.status === 'sent') return <Check size={14} aria-label="Enviada" />;
   if (message.status === 'delivered') return <CheckCheck size={14} aria-label="Entregue" />;
-  if (message.status === 'read') return <CheckCheck size={14} className="text-[#7EB6FF]" aria-label="Lida" />;
+  if (message.status === 'read')
+    return <CheckCheck size={14} style={{ color: '#7EB6FF' }} aria-label="Lida" />;
   return (
-    <span
-      className="flex items-center gap-1 text-n-ruby-11"
+    <Box
+      component="span"
       title={message.content_attributes.external_error || 'Falha no envio'}
+      sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'error.main' }}
     >
       <AlertCircle size={14} /> não enviada
-    </span>
+    </Box>
   );
 }
 
@@ -36,18 +44,21 @@ interface Props {
   highlighted?: boolean;
 }
 
-/** Chatwoot components-next/message: activity pill, incoming left, outgoing right with avatar. */
+/** Balão de mensagem no C3Theme (lote 18): pílula de atividade, recebidas à esquerda e enviadas à direita. */
 export function MessageItem({ message: m, quoted, handlers, currentUserId, highlighted }: Props) {
   if (m.message_type === 'activity')
     return (
-      <li className="mb-2 flex justify-center">
-        <span
-          className="rounded-xl bg-n-alpha-1 px-3 py-1 text-sm text-n-slate-11"
+      <Box component="li" sx={{ mb: 1, display: 'flex', justifyContent: 'center' }}>
+        <Box
+          component="span"
           title={time(m.created_at)}
+          sx={{ borderRadius: 2, bgcolor: 'action.hover', px: 1.5, py: 0.5 }}
         >
-          {m.content}
-        </span>
-      </li>
+          <Typography variant="body2" color="text.secondary">
+            {m.content}
+          </Typography>
+        </Box>
+      </Box>
     );
   const attrs = m.content_attributes;
   const outgoing = m.message_type !== 'incoming';
@@ -56,16 +67,16 @@ export function MessageItem({ message: m, quoted, handlers, currentUserId, highl
   const author = authorOf(m);
   const mine = (r: Reaction) => r.sender_type === 'user' && r.sender_id === currentUserId;
   const bubble = deleted
-    ? 'bg-n-alpha-1 text-n-slate-11'
+    ? { bgcolor: 'var(--color-n-alpha-1)', color: 'text.secondary' }
     : m.private
-      ? 'bg-n-solid-amber text-n-amber-12'
+      ? { bgcolor: 'var(--color-n-solid-amber)', color: 'var(--color-n-amber-12)' }
       : failed
-        ? 'bg-n-ruby-4 text-n-ruby-12'
+        ? { bgcolor: 'var(--color-n-ruby-4)', color: 'var(--color-n-ruby-12)' }
         : m.sender_type === 'agent_bot' || attrs.automated
-          ? 'bg-n-solid-iris text-n-slate-12'
+          ? { bgcolor: 'var(--color-n-solid-iris)', color: 'var(--color-n-slate-12)' }
           : outgoing
-            ? 'bg-n-solid-blue text-n-slate-12'
-            : 'bg-n-slate-4 text-n-slate-12';
+            ? { bgcolor: 'var(--color-n-solid-blue)', color: 'var(--color-n-slate-12)' }
+            : { bgcolor: 'var(--color-n-slate-4)', color: 'var(--color-n-slate-12)' };
   const actions = handlers && (
     <MessageActions
       message={m}
@@ -75,70 +86,104 @@ export function MessageItem({ message: m, quoted, handlers, currentUserId, highl
     />
   );
   return (
-    <li
+    <Box
+      component="li"
       id={`message${m.id}`}
-      className={cn(
-        'group mb-2 flex w-full rounded-lg transition-colors',
-        outgoing ? 'justify-end pl-8' : 'pr-8',
-        highlighted && 'bg-n-alpha-1',
-      )}
+      className={highlighted ? 'bg-n-alpha-1' : undefined}
+      sx={{
+        mb: 1,
+        display: 'flex',
+        width: '100%',
+        borderRadius: 1.5,
+        transition: 'background-color .15s',
+        justifyContent: outgoing ? 'flex-end' : 'flex-start',
+        pl: outgoing ? 4 : 0,
+        pr: outgoing ? 0 : 4,
+        bgcolor: highlighted ? 'action.hover' : 'transparent',
+      }}
     >
-      <div className={cn('grid gap-x-2', outgoing ? 'grid-cols-[1fr_24px]' : 'grid-cols-1')}>
-        <div className={cn('flex min-w-0', outgoing && 'justify-end')}>
-          {outgoing && actions}
-          <div className="flex min-w-0 flex-col">
-            <div
-              className={cn(
-                'max-w-lg min-w-0 px-4 py-3 text-sm',
-                outgoing ? 'rounded-xl rounded-br-sm' : 'rounded-xl rounded-bl-sm',
-                bubble,
-              )}
-            >
-              {(m.private || outgoing) && (
-                <p
-                  className={cn(
-                    'mb-1 flex items-center gap-1 text-xs font-medium',
-                    m.private ? 'text-n-amber-12/70' : 'text-n-slate-11',
-                  )}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'flex-end',
+          justifyContent: outgoing ? 'flex-end' : 'flex-start',
+          minWidth: 0,
+          width: '100%',
+        }}
+      >
+        {!outgoing && actions}
+        <Stack sx={{ minWidth: 0, alignItems: outgoing ? 'flex-end' : 'flex-start' }}>
+          <Box
+            sx={{
+              maxWidth: 512,
+              minWidth: 0,
+              px: 2,
+              py: 1.5,
+              fontSize: 14,
+              borderRadius: 2,
+              borderBottomRightRadius: outgoing ? 4 : undefined,
+              borderBottomLeftRadius: outgoing ? undefined : 4,
+              ...bubble,
+            }}
+          >
+            {(m.private || outgoing) && (
+              <Stack direction="row" spacing={0.5} sx={{ mb: 0.5, alignItems: 'center' }}>
+                {m.private && <LockKeyhole size={12} />}
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 500, color: m.private ? 'var(--color-n-amber-12)' : 'text.secondary' }}
                 >
-                  {m.private && <LockKeyhole size={12} />}
                   {author}
                   {m.private && ' · nota privada'}
-                </p>
+                </Typography>
+              </Stack>
+            )}
+            {quoted && !deleted && <QuotedMessage message={quoted} onJump={handlers?.onJump} />}
+            {deleted ? (
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <Ban size={14} />
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                  Esta mensagem foi apagada
+                </Typography>
+              </Stack>
+            ) : (
+              <>
+                <Attachments items={m.attachments || []} />
+                {m.content && <MessageBody content={m.content} />}
+              </>
+            )}
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                mt: 1,
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                color: m.private ? 'var(--color-n-amber-12)' : 'text.secondary',
+              }}
+            >
+              {attrs.edited && !deleted && (
+                <Box
+                  component="span"
+                  title={attrs.previous_content ? `Antes: ${attrs.previous_content}` : undefined}
+                  sx={{ fontSize: 12 }}
+                >
+                  (editada)
+                </Box>
               )}
-              {quoted && !deleted && <QuotedMessage message={quoted} onJump={handlers?.onJump} />}
-              {deleted ? (
-                <p className="flex items-center gap-1.5 italic">
-                  <Ban size={14} /> Esta mensagem foi apagada
-                </p>
-              ) : (
-                <>
-                  <Attachments items={m.attachments || []} />
-                  {m.content && <MessageBody content={m.content} />}
-                </>
-              )}
-              <p
-                className={cn(
-                  'mt-2 flex items-center justify-end gap-1.5 text-xs',
-                  m.private ? 'text-n-amber-12/50' : 'text-n-slate-10',
-                )}
-              >
-                {attrs.edited && !deleted && (
-                  <span title={attrs.previous_content ? `Antes: ${attrs.previous_content}` : undefined}>
-                    (editada)
-                  </span>
-                )}
+              <Typography variant="caption" color="inherit">
                 {time(m.created_at)}
-                {outgoing && !m.private && <Status message={m} />}
-              </p>
-            </div>
-            {!deleted && <Reactions reactions={attrs.reactions || []} outgoing={outgoing} mine={mine} />}
-            {failed && outgoing && handlers && <RetryButton onRetry={() => handlers.onRetry(m)} />}
-          </div>
-          {!outgoing && actions}
-        </div>
-        {outgoing && <Avatar name={author} size={24} className="self-end" />}
-      </div>
-    </li>
+              </Typography>
+              {outgoing && !m.private && <Status message={m} />}
+            </Stack>
+          </Box>
+          {!deleted && <Reactions reactions={attrs.reactions || []} outgoing={outgoing} mine={mine} />}
+          {failed && outgoing && handlers && <RetryButton onRetry={() => handlers.onRetry(m)} />}
+        </Stack>
+        {outgoing && actions}
+        {outgoing && <Avatar name={author} size={24} />}
+      </Stack>
+    </Box>
   );
 }

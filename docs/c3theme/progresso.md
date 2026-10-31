@@ -4,7 +4,7 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**40 de 153 telas migradas (26%)** · faltam 113
+**42 de 153 telas migradas (27%)** · faltam 111
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
@@ -14,7 +14,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 | auth | 3 / 3 | 0 |
 | chat | 3 / 3 | 0 |
 | contacts | 8 / 10 | 2 |
-| conversations | 6 / 23 | 17 |
+| conversations | 8 / 23 | 15 |
 | desktop | 0 / 1 | 1 |
 | filters | 0 / 3 | 3 |
 | macros | 0 / 1 | 1 |
@@ -64,8 +64,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 - `conversations/ConversationsScreen.tsx`
 - `conversations/MessageActions.tsx`
 - `conversations/MessageBody.tsx`
-- `conversations/MessageExtras.tsx`
-- `conversations/MessageItem.tsx`
 - `conversations/NewChatModal.tsx`
 - `conversations/ParticipantsSection.tsx`
 - `conversations/ReplyBox.tsx`
