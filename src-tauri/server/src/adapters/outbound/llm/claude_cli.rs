@@ -2,8 +2,9 @@
 //! setup (hooks, plugins, CLAUDE.md) and no MCP server but the run's own (the system agent calls the
 //! app's tools through it), returning the JSON Schema's structured output. The prompt (which carries
 //! the contact's words) goes through stdin, never the command line.
+use super::claude_stream::read_run;
 use super::launcher::{find, Cli, Launcher};
-use crate::application::ports::{Completion, Llm, LlmMcp, LlmRequest, TokenUsage};
+use crate::application::ports::{Completion, Llm, LlmMcp, LlmRequest, ProgressSink, TokenUsage};
 use crate::domain::error::{fail, Error, HelpdeskError, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -57,7 +58,8 @@ pub fn arguments(request: &LlmRequest) -> Vec<String> {
     let mut args: Vec<String> = [
         "-p",
         "--output-format",
-        "json",
+        "stream-json",
+        "--verbose",
         "--no-session-persistence",
         "--setting-sources",
         "project,local",
@@ -100,7 +102,7 @@ pub fn mcp_arguments(mcp: &LlmMcp, config: &Path) -> Vec<String> {
     ]
 }
 
-/// `--output-format json` prints one result object; the schema's answer is in `structured_output`
+/// The last line of the output is the result object; the schema's answer is in `structured_output`
 /// (or, for models without structured output, a JSON object as the result text).
 pub fn parse_output(stdout: &[u8], stderr: &[u8]) -> Result<Value> {
     parse_output_of(LABEL, stdout, stderr)
@@ -172,6 +174,10 @@ impl Drop for TempFile {
 #[async_trait]
 impl Llm for ClaudeCli {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
+        self.complete_live(request, &|_| {}).await
+    }
+
+    async fn complete_live(&self, request: &LlmRequest, progress: ProgressSink<'_>) -> Result<Completion> {
         let Some(launcher) = &self.launcher else {
             return fail("Claude Code não encontrado. Instale-o ou defina WAMCP_CLAUDE_BIN.");
         };
@@ -212,13 +218,12 @@ impl Llm for ClaudeCli {
                 .await
                 .map_err(Error::internal)?;
         }
-        let output = tokio::time::timeout(timeout, child.wait_with_output())
+        let (stdout, stderr) = tokio::time::timeout(timeout, read_run(&mut child, progress))
             .await
-            .map_err(|_| Error::from(HelpdeskError::new(format!("{LABEL} excedeu o tempo limite"))))?
-            .map_err(Error::internal)?;
+            .map_err(|_| Error::from(HelpdeskError::new(format!("{LABEL} excedeu o tempo limite"))))??;
         Ok(Completion {
-            answer: parse_output_of(LABEL, &output.stdout, &output.stderr)?,
-            usage: parse_usage(&output.stdout),
+            answer: parse_output_of(LABEL, &stdout, &stderr)?,
+            usage: parse_usage(&stdout),
         })
     }
 

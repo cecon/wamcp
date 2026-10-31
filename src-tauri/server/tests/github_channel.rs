@@ -3,23 +3,18 @@
 //! workflows go to the repository's activity), and the inbox's AI agent answers with a comment.
 mod agents_support;
 mod common;
+mod github_support;
 
 use agents_support::{ai, profiles};
 use async_trait::async_trait;
-use axum::body::Body;
-use axum::http::Request;
-use common::Fixture;
-use hmac::{Hmac, Mac};
+use github_support::{connected, pr_opened, repository, REPO};
 use parking_lot::Mutex;
-use serde_json::{json, Value};
-use sha2::Sha256;
+use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 use wamcp_server::adapters::outbound::llm::LlmRouter;
 use wamcp_server::application::ports::{Completion, Llm, LlmRequest, TokenUsage};
 use wamcp_server::domain::error::Result;
-
-const REPO: &str = "cecon/wamcp";
 
 /// Comments on pull requests and stays quiet on pushes.
 #[derive(Default)]
@@ -44,88 +39,6 @@ impl Llm for Reviewer {
 
     fn location(&self) -> Option<String> {
         Some("C:/bin/claude.exe".into())
-    }
-}
-
-struct Channel {
-    f: Fixture,
-    admin: common::Agent,
-    inbox: i64,
-    secret: String,
-}
-
-async fn connected() -> Channel {
-    let f = Fixture::new().await;
-    let admin = f.bootstrap().await;
-    let reply = admin
-        .post(
-            "/github_channels",
-            json!({ "name": "wamcp no GitHub", "repo": REPO, "token": "ghp_teste" }),
-        )
-        .await;
-    assert_eq!(reply.status, 201, "{:?}", reply.body);
-    let inbox = reply.body["inbox"]["id"].as_i64().unwrap();
-    let secret = reply.body["webhook_secret"].as_str().unwrap().to_string();
-    Channel {
-        f,
-        admin,
-        inbox,
-        secret,
-    }
-}
-
-fn signature(secret: &str, body: &[u8]) -> String {
-    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
-    mac.update(body);
-    format!("sha256={}", hex::encode(mac.finalize().into_bytes()))
-}
-
-fn repository() -> Value {
-    json!({ "full_name": REPO, "default_branch": "main", "html_url": format!("https://github.com/{REPO}") })
-}
-
-fn pr_opened(number: u64) -> Value {
-    json!({ "action": "opened", "sender": { "login": "maria" }, "repository": repository(),
-            "pull_request": { "number": number, "title": "Corrige login", "body": "Troca o token de lugar.",
-                              "html_url": format!("https://github.com/{REPO}/pull/{number}"),
-                              "head": { "ref": "fix/login" }, "base": { "ref": "main" } } })
-}
-
-impl Channel {
-    async fn deliver(&self, event: &str, delivery: &str, payload: &Value, secret: Option<&str>) -> u16 {
-        let body = serde_json::to_vec(payload).unwrap();
-        let signed = signature(secret.unwrap_or(&self.secret), &body);
-        let request = Request::post(format!("/api/github/{}/webhook", self.inbox))
-            .header("content-type", "application/json")
-            .header("x-github-event", event)
-            .header("x-github-delivery", delivery)
-            .header("x-hub-signature-256", signed)
-            .body(Body::from(body))
-            .unwrap();
-        let status = self.f.public(request).await.status;
-        self.f.settle().await;
-        status
-    }
-
-    async fn conversations(&self) -> Vec<Value> {
-        let list = self
-            .admin
-            .get(&format!("/conversations?inbox_id={}&status=all", self.inbox))
-            .await;
-        list.body.as_array().cloned().unwrap_or_default()
-    }
-
-    async fn messages(&self, display_id: &Value) -> Vec<String> {
-        let list = self
-            .admin
-            .get(&format!("/conversations/{display_id}/messages"))
-            .await
-            .body;
-        list.as_array()
-            .unwrap()
-            .iter()
-            .filter_map(|m| m["content"].as_str().map(String::from))
-            .collect()
     }
 }
 
@@ -232,7 +145,15 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
         Duration::ZERO,
     );
     let p = profiles(&c.admin).await;
-    let jhon = c.admin.post("/agent_directory", ai(&p, "Jhon", "operator")).await.body["id"].clone();
+    let anny = c
+        .admin
+        .post("/agent_directory", ai(&p, "Anny", "coordinator"))
+        .await
+        .body["id"]
+        .clone();
+    let mut body = ai(&p, "Jhon", "operator");
+    body["supervisor_id"] = anny;
+    let jhon = c.admin.post("/agent_directory", body).await.body["id"].clone();
     let linked = c
         .admin
         .post(
@@ -279,4 +200,27 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
     c.deliver("push", "d2", &push, None).await;
     assert_eq!(c.f.github.comments.lock().len(), 2);
     assert!(c.f.wa.sent().is_empty(), "nothing goes to WhatsApp");
+
+    // Asked in the app, Jhon knows the repository it watches and what reached it there.
+    let jhon = jhon.as_i64().unwrap();
+    let asked = c
+        .admin
+        .post(
+            &format!("/agent_chats/{jhon}/messages"),
+            json!({ "content": "Quais os últimos PRs?" }),
+        )
+        .await;
+    assert_eq!(asked.status, 201, "{:?}", asked.body);
+    c.f.settle().await;
+    let chat = reviewer.requests.lock().last().unwrap().clone();
+    assert!(chat.prompt.contains("Sobre você: Jhon"), "{}", chat.prompt);
+    assert!(
+        chat.prompt.contains(&format!("GitHub, repositório {REPO}")),
+        "{}",
+        chat.prompt
+    );
+    assert!(chat.prompt.contains(&format!("{REPO}#7")), "{}", chat.prompt);
+    assert!(chat.prompt.contains("Você trabalha na empresa"), "{}", chat.prompt);
+    assert!(chat.prompt.contains("Seu responsável direto é Anny"), "{}", chat.prompt);
+    assert!(chat.prompt.contains("- Anny (agente de IA"), "{}", chat.prompt);
 }

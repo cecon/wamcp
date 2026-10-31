@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bot } from 'lucide-react';
-import { REALTIME_RECONNECTED, type Realtime } from '../api';
+import { http, REALTIME_RECONNECTED, type Realtime } from '../api';
 import { useFetch } from '../useFetch';
 import { MemberAvatar } from '../settings/members/MemberAvatar';
 import { cn } from '../ui/cn';
 import { AgentChatThread } from './AgentChatThread';
-import { chatTime, type ChatAgent, type ChatMessage } from './types';
+import {
+  chatTime,
+  plainText,
+  type ChatAgent,
+  type ChatMessage,
+  type ChatSessions,
+  type ChatStep,
+} from './types';
 
 interface Props {
   agentId?: number;
@@ -17,38 +24,76 @@ interface Props {
 const CHECK_MS = 5000;
 
 const preview = (m: ChatMessage | null) =>
-  !m ? 'Comece uma conversa' : m.role === 'user' ? `Você: ${m.content}` : m.content;
+  !m ? 'Comece uma conversa' : m.role === 'user' ? `Você: ${m.content}` : plainText(m.content);
 
 /** Agentes: the person's private chats with AI agents, inside the app (not WhatsApp, not customers). */
 export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
   const agents = useFetch<ChatAgent[]>('/agent_chats');
   const list = agents.data || [];
   const agent = list.find((a) => a.id === agentId);
-  const thread = useFetch<ChatMessage[]>(agent ? `/agent_chats/${agent.id}/messages` : null);
+  // What each agent is doing on its answer (`agent_chat.progress`), until the answer arrives.
+  const [steps, setSteps] = useState<{ agentId: number; step: ChatStep }[]>([]);
+  const sessions = useFetch<ChatSessions>(agent ? `/agent_chats/${agent.id}/sessions` : null);
+  // The session on screen: the one the person picked in this agent's history, else the open one.
+  const [picked, setPicked] = useState<{ agentId: number; session: number } | null>(null);
+  const chosen = picked && picked.agentId === agentId ? picked.session : undefined;
+  const current = sessions.data?.current;
+  const shown = chosen ?? current;
+  const thread = useFetch<ChatMessage[]>(
+    agent ? `/agent_chats/${agent.id}/messages${chosen === undefined ? '' : `?session=${chosen}`}` : null,
+  );
   // Messages sent or received since the thread was fetched; shown with it, each once and in order.
   const [live, setLive] = useState<ChatMessage[]>([]);
   const messages = useMemo(() => {
-    const all = [...(thread.data || []), ...live.filter((m) => m.agent_id === agentId)];
+    const all = [...(thread.data || []), ...live].filter(
+      (m) => m.agent_id === agentId && (shown === undefined || m.session === shown),
+    );
     return all.filter((m, i) => all.findIndex((n) => n.id === m.id) === i).sort((a, b) => a.id - b.id);
-  }, [thread.data, live, agentId]);
+  }, [thread.data, live, agentId, shown]);
+  const [starting, setStarting] = useState(false);
+  const startSession = async () => {
+    if (!agent || starting) return;
+    setStarting(true);
+    try {
+      const opened = await http<ChatSessions>(`/agent_chats/${agent.id}/sessions`, 'POST', {});
+      setPicked({ agentId: agent.id, session: opened.current });
+      setSteps((list) => list.filter((s) => s.agentId !== agent.id));
+      sessions.reload();
+      agents.reload();
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const { reload } = agents,
-    reloadThread = thread.reload;
+    reloadThread = thread.reload,
+    reloadSessions = sessions.reload;
   useEffect(
     () =>
       realtime?.subscribe(({ event, data }) => {
         if (event === REALTIME_RECONNECTED) {
           reload();
           reloadThread();
+          reloadSessions();
+        }
+        if (event === 'agent_chat.progress') {
+          const step = { agentId: data.agent_id as number, step: data.step as unknown as ChatStep };
+          setSteps((current) => [...current, step]);
+          return;
         }
         if (event !== 'agent_chat.message') return;
-        setLive((current) => [...current, data as unknown as ChatMessage]);
+        const message = data as unknown as ChatMessage;
+        setLive((current) => [...current, message]);
+        if (message.role !== 'user')
+          setSteps((current) => current.filter((s) => s.agentId !== message.agent_id));
         reload();
+        reloadSessions();
       }),
-    [realtime, reload, reloadThread],
+    [realtime, reload, reloadThread, reloadSessions],
   );
   // While the agent is answering, look again now and then in case its event never arrives.
-  const waiting = messages.at(-1)?.role === 'user';
+  const past = shown !== undefined && current !== undefined && shown !== current;
+  const waiting = !past && messages.at(-1)?.role === 'user';
   useEffect(() => {
     if (!waiting) return;
     const timer = setInterval(() => {
@@ -109,6 +154,12 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
         <AgentChatThread
           agent={agent}
           messages={messages}
+          steps={steps.filter((s) => s.agentId === agent.id).map((s) => s.step)}
+          sessions={sessions.data}
+          viewing={shown ?? 0}
+          onView={(session) => setPicked({ agentId: agent.id, session })}
+          onNewSession={startSession}
+          starting={starting}
           error={thread.error}
           onSent={(m) => setLive((current) => [...current, m])}
           onBack={() => onSelect(undefined)}

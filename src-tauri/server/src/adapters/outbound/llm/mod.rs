@@ -1,10 +1,11 @@
 //! LLM providers behind the `Llm` port, routed by the AI agent's runtime (`provider`). A new
 //! provider is one more adapter registered here and listed in `RUNTIMES`.
 pub mod claude_cli;
+pub mod claude_stream;
 pub mod codex_cli;
 pub mod launcher;
 
-use crate::application::ports::{Completion, Llm, LlmProviderStatus, LlmRequest};
+use crate::application::ports::{Completion, Llm, LlmProviderStatus, LlmRequest, ProgressSink};
 use crate::domain::error::{fail, Result};
 use async_trait::async_trait;
 use std::collections::BTreeMap;
@@ -44,6 +45,13 @@ impl Llm for LlmRouter {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         match self.providers.get(&request.provider) {
             Some(provider) => provider.complete(request).await,
+            None => fail(format!("Provedor de LLM indisponível: {}", request.provider)),
+        }
+    }
+
+    async fn complete_live(&self, request: &LlmRequest, progress: ProgressSink<'_>) -> Result<Completion> {
+        match self.providers.get(&request.provider) {
+            Some(provider) => provider.complete_live(request, progress).await,
             None => fail(format!("Provedor de LLM indisponível: {}", request.provider)),
         }
     }

@@ -1,10 +1,14 @@
 //! Chats of people logged in to the app with AI agents: private (only the person sees them), away
 //! from WhatsApp and from the customers' conversations. The person's message goes to the bus, and
-//! the LLM bots answer it through the agent's runtime (see `llm_bots/chat.rs`).
+//! the LLM bots answer it through the agent's runtime (see `llm_bots/chat.rs`). A chat has sessions:
+//! the person ends one and starts another, and each spends up to `SESSION_TOKEN_LIMIT` tokens.
 use super::core::Core;
 use crate::domain::error::{fail, HelpdeskError, Result};
 use crate::domain::llm::{chats_with, CHAT_TRANSCRIPT_LIMIT};
-use crate::domain::model::{ChatMessage, RosterAgent, User, CHAT_USER};
+use crate::domain::model::{
+    session_full, AgentChat, ChatMessage, RosterAgent, User, CHAT_USER, SESSION_FULL, SESSION_TOKEN_LIMIT,
+};
+use crate::domain::salary::SalaryRates;
 use serde_json::{json, Value};
 
 /// Longest message a person may send.
@@ -65,11 +69,43 @@ impl AgentChatService {
         }
     }
 
-    /// The newest messages of the person's chat with the agent, oldest first.
-    pub fn messages(&self, user: &User, agent_id: i64) -> Result<Vec<ChatMessage>> {
+    /// The newest messages of a session of the person's chat with the agent (the open one by default), oldest first.
+    pub fn messages(&self, user: &User, agent_id: i64, session: Option<i64>) -> Result<Vec<ChatMessage>> {
         let agent = self.agent(user, agent_id)?;
         let chat = self.core.repo.agent_chat(user.id, agent.id)?;
-        self.core.repo.chat_messages(chat.id, CHAT_TRANSCRIPT_LIMIT)
+        let session = session.unwrap_or(chat.session);
+        self.core.repo.session_messages(chat.id, session, CHAT_TRANSCRIPT_LIMIT)
+    }
+
+    /// The sessions of the person's chat with the agent, newest first, with the tokens each spent and
+    /// their cost in reais (as in the agent's salary).
+    pub fn sessions(&self, user: &User, agent_id: i64) -> Result<Value> {
+        let agent = self.agent(user, agent_id)?;
+        let chat = self.core.repo.agent_chat(user.id, agent.id)?;
+        self.sessions_of(&chat)
+    }
+
+    /// Ends the open session (if it has messages) and opens a new one, which the agent sees from scratch.
+    pub fn new_session(&self, user: &User, agent_id: i64) -> Result<Value> {
+        let agent = self.agent(user, agent_id)?;
+        let chat = self.core.repo.agent_chat(user.id, agent.id)?;
+        let chat = self.core.repo.new_chat_session(chat.id)?;
+        self.sessions_of(&chat)
+    }
+
+    fn sessions_of(&self, chat: &AgentChat) -> Result<Value> {
+        let rate = SalaryRates::from_settings(&self.core.repo.account()?.settings).ai_brl_per_usd();
+        let sessions = self.core.repo.chat_sessions(chat.id)?;
+        Ok(json!({
+            "current": chat.session,
+            "token_limit": SESSION_TOKEN_LIMIT,
+            "sessions": sessions.iter().map(|s| {
+                let mut value = json!(s);
+                value["cost_brl"] = json!((s.cost_usd * rate * 100.0).round() / 100.0);
+                value["full"] = json!(session_full(s.tokens));
+                value
+            }).collect::<Vec<_>>(),
+        }))
     }
 
     /// The person writes to the agent; the answer arrives later as another `agent_chat.message`.
@@ -80,6 +116,13 @@ impl AgentChatService {
         }
         let agent = self.agent(user, agent_id)?;
         let chat = self.core.repo.agent_chat(user.id, agent.id)?;
+        let sessions = self.core.repo.chat_sessions(chat.id)?;
+        if sessions
+            .iter()
+            .any(|s| s.number == chat.session && session_full(s.tokens))
+        {
+            return fail(SESSION_FULL);
+        }
         post_chat_message(&self.core, chat.id, CHAT_USER, content)
     }
 }
