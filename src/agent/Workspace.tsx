@@ -18,8 +18,10 @@ const ProfilePage = lazy(() =>
 const SearchPage = lazy(() =>
   import('./search/SearchPage').then((module) => ({ default: module.SearchPage })),
 );
+const ContactsPage = lazy(() =>
+  import('./ContactsPage').then((module) => ({ default: module.ContactsPage })),
+);
 import { ConversationsScreen } from './conversations/ConversationsScreen';
-import { ContactsPage } from './ContactsPage';
 import { AgentChatScreen } from './agentChat/AgentChatScreen';
 import { Reports } from './Reports';
 import { SettingsRouter } from './settings/SettingsRouter';
@@ -139,13 +141,19 @@ export function Workspace({ user, onUser, onLogout }: Props) {
       )}
       {!allowed && <NoAccess />}
       {route.page === 'contacts' && allowed && (
-        <ContactsPage
-          user={user}
-          catalog={catalog}
-          realtime={realtime}
-          onOpenConversation={openConversation}
-          contactId={route.contactId}
-        />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <ContactsPage
+            user={user}
+            catalog={catalog}
+            realtime={realtime}
+            onOpenConversation={openConversation}
+            contactId={route.contactId}
+          />
+        </Suspense>
       )}
       {route.page === 'search' && (
         <Suspense
