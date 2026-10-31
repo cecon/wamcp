@@ -4,11 +4,11 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**11 de 153 telas migradas (7%)** · faltam 142
+**13 de 153 telas migradas (8%)** · faltam 140
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
-| (raiz) | 0 / 4 | 4 |
+| (raiz) | 1 / 4 | 3 |
 | agentChat | 0 / 4 | 4 |
 | attributes | 0 / 2 | 2 |
 | auth | 0 / 3 | 3 |
@@ -19,7 +19,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 | filters | 0 / 3 | 3 |
 | macros | 0 / 1 | 1 |
 | notifications | 0 / 3 | 3 |
-| profile | 0 / 7 | 7 |
+| profile | 1 / 7 | 6 |
 | reports | 0 / 9 | 9 |
 | search | 0 / 3 | 3 |
 | settings | 8 / 63 | 55 |
@@ -34,7 +34,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 
 - `AgentApp.tsx`
 - `ContactsPage.tsx`
-- `NotificationsPage.tsx`
 - `Workspace.tsx`
 
 ### agentChat
@@ -120,7 +119,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 - `profile/MfaModals.tsx`
 - `profile/MfaSection.tsx`
 - `profile/NotificationPreferences.tsx`
-- `profile/ProfilePage.tsx`
 - `profile/qr/QrCode.tsx`
 - `profile/SessionsSection.tsx`
 

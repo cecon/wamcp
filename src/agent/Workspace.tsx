@@ -8,8 +8,14 @@ import { Sidebar } from './sidebar/Sidebar';
 
 // O shell do C3Theme (MUI/Emotion) entra em chunk separado para o shell atual continuar leve até a troca do padrão.
 const C3Workspace = lazy(() => import('./shell/C3Workspace'));
+// Páginas já migradas para o C3Theme carregam o chunk do MUI só quando abertas.
+const NotificationsPage = lazy(() =>
+  import('./NotificationsPage').then((module) => ({ default: module.NotificationsPage })),
+);
+const ProfilePage = lazy(() =>
+  import('./profile/ProfilePage').then((module) => ({ default: module.ProfilePage })),
+);
 import { ConversationsScreen } from './conversations/ConversationsScreen';
-import { NotificationsPage } from './NotificationsPage';
 import { ContactsPage } from './ContactsPage';
 import { AgentChatScreen } from './agentChat/AgentChatScreen';
 import { Reports } from './Reports';
@@ -17,7 +23,6 @@ import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
 import { NotificationBell } from './notifications/NotificationBell';
 import { alertNotification } from './notifications/browserAlerts';
-import { ProfilePage } from './profile/ProfilePage';
 import { SearchPage } from './search/SearchPage';
 import { ShortcutsModal } from './shortcuts/ShortcutsModal';
 import { useHotkeys } from './shortcuts/hotkeys';
@@ -122,7 +127,13 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         />
       )}
       {route.page === 'notifications' && (
-        <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
+        </Suspense>
       )}
       {!allowed && <NoAccess />}
       {route.page === 'contacts' && allowed && (
@@ -141,7 +152,15 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         />
       )}
       {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
-      {route.page === 'profile' && <ProfilePage user={user} />}
+      {route.page === 'profile' && (
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <ProfilePage user={user} />
+        </Suspense>
+      )}
       {route.page === 'settings' && allowed && (
         <SettingsRouter
           route={route}
