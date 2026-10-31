@@ -32,7 +32,8 @@ describe('navigation by permission', () => {
 
     // A contact reached from the global search shows the no-access page.
     await user.click(screen.getByRole('button', { name: 'Pesquisa global' }));
-    await user.type(screen.getByLabelText('Pesquisar mensagens, contatos ou conversas'), 'joão');
+    // A Busca é uma página lazy (chunk do C3Theme): espera o campo montar antes de digitar.
+    await user.type(await screen.findByLabelText('Pesquisar mensagens, contatos ou conversas'), 'joão');
     const contacts = await screen.findByRole('region', { name: 'Contatos' });
     await user.click(within(contacts).getByRole('button'));
     expect(await screen.findByText('Você não tem acesso a esta página')).toBeInTheDocument();

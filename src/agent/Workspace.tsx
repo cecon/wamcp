@@ -15,6 +15,9 @@ const NotificationsPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('./profile/ProfilePage').then((module) => ({ default: module.ProfilePage })),
 );
+const SearchPage = lazy(() =>
+  import('./search/SearchPage').then((module) => ({ default: module.SearchPage })),
+);
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { ContactsPage } from './ContactsPage';
 import { AgentChatScreen } from './agentChat/AgentChatScreen';
@@ -23,7 +26,6 @@ import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
 import { NotificationBell } from './notifications/NotificationBell';
 import { alertNotification } from './notifications/browserAlerts';
-import { SearchPage } from './search/SearchPage';
 import { ShortcutsModal } from './shortcuts/ShortcutsModal';
 import { useHotkeys } from './shortcuts/hotkeys';
 import { isDesktop } from './desktop/tauri';
@@ -146,10 +148,16 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         />
       )}
       {route.page === 'search' && (
-        <SearchPage
-          onOpenConversation={openConversation}
-          onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
-        />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <SearchPage
+            onOpenConversation={openConversation}
+            onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
+          />
+        </Suspense>
       )}
       {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
       {route.page === 'profile' && (

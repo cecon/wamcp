@@ -7,3 +7,4 @@ src-tauri/Cargo.lock
 package-lock.json
 test-results
 playwright-report
+docs/c3theme/progresso.md

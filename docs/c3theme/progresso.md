@@ -4,7 +4,7 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**13 de 153 telas migradas (8%)** · faltam 140
+**14 de 153 telas migradas (9%)** · faltam 139
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
@@ -21,7 +21,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 | notifications | 0 / 3 | 3 |
 | profile | 1 / 7 | 6 |
 | reports | 0 / 9 | 9 |
-| search | 0 / 3 | 3 |
+| search | 1 / 3 | 2 |
 | settings | 8 / 63 | 55 |
 | shortcuts | 0 / 1 | 1 |
 | sidebar | 0 / 3 | 3 |
@@ -137,7 +137,6 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 ### search
 
 - `search/Highlight.tsx`
-- `search/SearchPage.tsx`
 - `search/SearchResults.tsx`
 
 ### settings
