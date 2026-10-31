@@ -1,4 +1,11 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import type { MetricKey, ReportPoint, ReportSummary } from '../parityTypes';
 import { useFetch } from '../useFetch';
 import { cn } from '../ui/cn';
@@ -14,26 +21,29 @@ interface TileProps {
   onSelect: () => void;
 }
 
-/** Metric value with its change against the previous period; clicking shows it in the chart. */
+/** Métrica com a variação contra o período anterior; clicar mostra no gráfico (lote 14). */
 function MetricTile({ metric, value, selected, onSelect }: TileProps) {
   const change = value ? trend(value.current, value.previous) : null;
   // Response and resolution times improve when they go down.
   const good = change !== null && (metric.time ? change <= 0 : change >= 0);
   return (
-    <button
-      type="button"
+    <Button
+      variant="outlined"
       aria-pressed={selected}
       onClick={onSelect}
-      className={cn(
-        'rounded-lg p-3 text-left outline outline-1 -outline-offset-1 hover:bg-n-alpha-1',
-        selected ? 'outline-n-brand' : 'outline-transparent',
-      )}
+      sx={{
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        textTransform: 'none',
+        p: 1.5,
+        borderColor: selected ? 'primary.main' : 'divider',
+      }}
     >
-      <span className="block text-sm font-medium text-n-slate-11">{metric.label}</span>
-      <span className="mt-1 flex items-baseline gap-2">
-        <span className="text-2xl text-n-slate-12">
-          {value ? formatMetric(metric.key, value.current) : '…'}
-        </span>
+      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+        {metric.label}
+      </Typography>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', mt: 0.5 }}>
+        <Typography variant="h5">{value ? formatMetric(metric.key, value.current) : '…'}</Typography>
         {change !== null && (
           <span
             title="Em relação ao período anterior"
@@ -43,8 +53,8 @@ function MetricTile({ metric, value, selected, onSelect }: TileProps) {
             {change}%
           </span>
         )}
-      </span>
-    </button>
+      </Stack>
+    </Button>
   );
 }
 
@@ -54,7 +64,7 @@ interface Props {
   groupBy: GroupBy;
 }
 
-/** Chatwoot ReportContainer: summary of the six metrics and the chart of the selected one. */
+/** ReportContainer no C3Theme (lote 14): resumo das seis métricas e o gráfico da selecionada. */
 export function MetricReport({ scope, range, groupBy }: Props) {
   const [metric, setMetric] = useState<MetricKey>('conversations_count');
   const summary = useFetch<ReportSummary>(`/reports/summary_v2${reportQuery(scope, range)}`);
@@ -66,12 +76,18 @@ export function MetricReport({ scope, range, groupBy }: Props) {
   return (
     <>
       {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
+        <Box role="alert" sx={{ color: 'error.main', fontSize: 14 }}>
           {error}
-        </p>
+        </Box>
       )}
       <ReportCard>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+            gap: 1,
+          }}
+        >
           {METRICS.map((m) => (
             <MetricTile
               key={m.key}
@@ -81,7 +97,7 @@ export function MetricReport({ scope, range, groupBy }: Props) {
               onSelect={() => setMetric(m.key)}
             />
           ))}
-        </div>
+        </Box>
       </ReportCard>
       <ReportCard title={selected.label}>
         <BarChart
