@@ -8,9 +8,6 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-// third-party
-import { MonitorSmartphone } from 'lucide-react';
-
 // C3Theme
 import { AuthLayout } from '@c3theme/ui';
 
@@ -26,9 +23,18 @@ export interface FirstRunStatus {
   local: boolean;
 }
 
-const CARD = 'w-full max-w-md bg-n-solid-1 p-8 sm:rounded-lg sm:p-11 sm:shadow-lg';
+const ASIDE = (
+  <>
+    <Typography variant="h2" color="inherit">
+      Atendimento no WhatsApp
+    </Typography>
+    <Typography variant="body1" sx={{ mt: 1, maxWidth: 420, opacity: 0.9 }}>
+      Converse com seus clientes, organize filas e acompanhe o time em um só lugar.
+    </Typography>
+  </>
+);
 
-/** Chatwoot auth card; on the first run it creates the administrator (only on this computer). */
+/** Autenticação no C3Theme (lote 8): login, verificação em duas etapas e primeiro acesso no `AuthLayout`. */
 export function Login({ onLogin }: { onLogin: (me: Me) => void }) {
   const [setup, setSetup] = useState<FirstRunStatus | null>(null),
     [challenge, setChallenge] = useState<string | null>(null),
@@ -47,60 +53,44 @@ export function Login({ onLogin }: { onLogin: (me: Me) => void }) {
   const signedIn = (result: LoginResult) =>
     'mfa_required' in result ? setChallenge(result.mfa_token) : onLogin(result);
 
-  // Primeiro acesso fica na moldura antiga até o Bootstrap migrar (ele tem cartão e regras próprias).
-  if (!challenge && setup?.needsBootstrap) {
-    return (
-      <main className="flex min-h-full flex-col items-center justify-center bg-n-background px-4 py-12">
-        {setup.local ? (
-          <Bootstrap
-            onSignedIn={signedIn}
-            onExists={(message) => {
-              setNotice(message);
-              setSetup({ ...setup, needsBootstrap: false });
-            }}
-          />
-        ) : (
-          <div className={CARD} role="status">
-            <span className="mb-6 flex size-10 items-center justify-center rounded-xl bg-n-brand text-white">
-              <MonitorSmartphone size={22} />
-            </span>
-            <h1 className="text-2xl font-semibold text-n-slate-12">Primeiro acesso</h1>
-            <p className="mt-2 text-sm text-n-slate-11">
-              Abra o WA MCP no computador onde ele está instalado para criar o primeiro administrador.
-            </p>
-          </div>
-        )}
-      </main>
+  let content;
+  if (challenge)
+    content = (
+      <MfaStep
+        token={challenge}
+        onLogin={onLogin}
+        onRestart={(message) => {
+          setChallenge(null);
+          setNotice(message);
+        }}
+      />
     );
-  }
+  else if (setup?.needsBootstrap && setup.local)
+    content = (
+      <Bootstrap
+        onSignedIn={signedIn}
+        onExists={(message) => {
+          setNotice(message);
+          setSetup({ ...setup, needsBootstrap: false });
+        }}
+      />
+    );
+  else if (setup?.needsBootstrap)
+    content = (
+      <Stack spacing={2} role="status">
+        <Typography variant="h4" component="h1">
+          Primeiro acesso
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Abra o WA MCP no computador onde ele está instalado para criar o primeiro administrador.
+        </Typography>
+      </Stack>
+    );
+  else content = <PasswordStep email={email} onEmail={setEmail} initialError={notice} onResult={signedIn} />;
 
   return (
     <C3Provider>
-      <AuthLayout
-        aside={
-          <>
-            <Typography variant="h2" color="inherit">
-              Atendimento no WhatsApp
-            </Typography>
-            <Typography variant="body1" sx={{ mt: 1, maxWidth: 420, opacity: 0.9 }}>
-              Converse com seus clientes, organize filas e acompanhe o time em um só lugar.
-            </Typography>
-          </>
-        }
-      >
-        {challenge ? (
-          <MfaStep
-            token={challenge}
-            onLogin={onLogin}
-            onRestart={(message) => {
-              setChallenge(null);
-              setNotice(message);
-            }}
-          />
-        ) : (
-          <PasswordStep email={email} onEmail={setEmail} initialError={notice} onResult={signedIn} />
-        )}
-      </AuthLayout>
+      <AuthLayout aside={ASIDE}>{content}</AuthLayout>
     </C3Provider>
   );
 }

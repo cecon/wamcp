@@ -1,6 +1,6 @@
 # Balanço da adoção do C3Theme no WhatsAppMcp
 
-> **Resumo:** a fundação está concluída e o app roda nos dois mundos com segurança — tema, tokens, modo escuro, router e chat do C3Theme integrados; 7 lotes de telas migrados (16 telas) com 220 testes verdes em todas as fases. O que falta é **cobertura de telas** (137) e as decisões de produto que destravam o padrão novo (shell e chat). Nada foi quebrado no caminho: cada mudança entrou atrás de flag ou em seção isolada, com o caminho antigo intacto.
+> **Resumo:** a fundação está concluída e o app roda nos dois mundos com segurança — tema, tokens, modo escuro, router e chat do C3Theme integrados; 8 lotes de telas migrados (17 telas) com 220 testes verdes em todas as fases. O que falta é **cobertura de telas** (136) e as decisões de produto que destravam o padrão novo (shell e chat). Nada foi quebrado no caminho: cada mudança entrou atrás de flag ou em seção isolada, com o caminho antigo intacto.
 
 ---
 
@@ -14,21 +14,21 @@
 | **Fundação**      | `C3Provider` (`injectFirst` + tokens do `agent.css` + `Notifier`), ponte de claro/escuro nos dois sentidos, stubs de MUI nos testes | [`05-fundacao.md`](05-fundacao.md)                   |
 | **Router**        | URL como fonte da navegação (deep link, F5, voltar/avançar, filtros na URL), 213 testes antigos intactos                            | [`06-router-e-shell.md`](06-router-e-shell.md)       |
 | **Shell**         | `AppLayout` com o mesmo menu, header, sino e perfil, atrás de `?c3shell`, em chunk lazy                                             | idem                                                 |
-| **Lotes de tela** | Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login e MFA                   | [`07`](07-lote-piloto.md)–[`15`](15-lote-7.md)       |
+| **Lotes de tela** | Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login, MFA e primeiro acesso  | [`07`](07-lote-piloto.md)–[`16`](16-lote-8.md)       |
 | **Chat**          | `ChatTransport` sobre a API atual + thread do `@c3theme/chat` atrás de `?c3chat`                                                    | [`10-chat-transporte.md`](10-chat-transporte.md)     |
-| **Régua**         | `pnpm progresso:c3` com `--check` no `pnpm lint`; baseline 16/153                                                                   | [`progresso.md`](progresso.md)                       |
+| **Régua**         | `pnpm progresso:c3` com `--check` no `pnpm lint`; baseline 17/153                                                                   | [`progresso.md`](progresso.md)                       |
 
 ## 2. Números
 
 | Medida                                            | Valor                                                                                                   |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Commits da adoção na branch `feat/c3theme-adocao` | 24                                                                                                      |
-| Telas migradas                                    | **16 de 153 (10%)**                                                                                     |
+| Commits da adoção na branch `feat/c3theme-adocao` | 26                                                                                                      |
+| Telas migradas                                    | **17 de 153 (11%)**                                                                                     |
 | Suíte de UI                                       | **51 arquivos / 220 testes** + 6 testes node do servidor                                                |
 | Cobertura                                         | limiares 80/80/80/70 mantidos                                                                           |
 | Testes existentes alterados                       | 1 asserção (rótulo com asterisco do MUI, lote 3); os lotes 1, 2 e 4 não mudaram nenhum                  |
 | `main` (gzip)                                     | 713,0 kB (**210,3 kB**) — MUI fora do principal; `react-router` responde por +41 kB                     |
-| Chunks lazy do C3Theme                            | `C3Provider` 314 kB (100,3 gzip) + shell 46 kB (11,4) + páginas de 0,8–10 kB + login 7,6 kB + chat 7 kB |
+| Chunks lazy do C3Theme                            | `C3Provider` 314 kB (100,3 gzip) + shell 46 kB (11,4) + páginas de 0,8–10 kB + login 6,5 kB + chat 7 kB |
 | CI local equivalente                              | `pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run build`, `pnpm run test:ui` verdes          |
 
 ## 3. O que virou padrão e o que está atrás de flag
