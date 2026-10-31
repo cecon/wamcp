@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { http, query } from '../api';
 import type { Contact, Inbox } from '../types';
 import type { ChatAgent } from '../agentChat/types';
-import { NewConversationModal } from '../contacts/NewConversationModal';
+// O modal de nova conversa usa o C3Theme (MUI): carrega em chunk próprio para o painel seguir leve.
+const NewConversationModal = lazy(() =>
+  import('../contacts/NewConversationModal').then((module) => ({ default: module.NewConversationModal })),
+);
 import { MemberAvatar } from '../settings/members/MemberAvatar';
 import { Modal } from '../ui/Overlay';
 
@@ -43,12 +46,14 @@ export function NewChatModal({ inboxes, onClose, onAgent, onConversation }: Prop
 
   if (contact)
     return (
-      <NewConversationModal
-        contact={contact}
-        inboxes={inboxes}
-        onClose={() => setContact(null)}
-        onStarted={(c) => onConversation(c.display_id)}
-      />
+      <Suspense fallback={null}>
+        <NewConversationModal
+          contact={contact}
+          inboxes={inboxes}
+          onClose={() => setContact(null)}
+          onStarted={(c) => onConversation(c.display_id)}
+        />
+      </Suspense>
     );
   const shownAgents = agents.filter((a) => matches(a.name, q));
   const item = 'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-n-alpha-1';
