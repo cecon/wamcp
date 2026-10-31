@@ -1,4 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import type { Realtime } from '../api';
 
 interface TypingEvent {
@@ -12,7 +18,7 @@ interface Props {
   currentUserId: number;
 }
 
-/** Chatwoot TypingIndicator: "<name> está digitando…" for the open conversation, gone after 10 s. */
+/** Indicador de digitação no C3Theme (lote 20): “<nome> está digitando…” some após 10 s. */
 export function TypingIndicator({ realtime, displayId, currentUserId }: Props) {
   const [typing, setTyping] = useState<{ name: string; recording: boolean } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -35,17 +41,32 @@ export function TypingIndicator({ realtime, displayId, currentUserId }: Props) {
   }, [realtime, displayId, currentUserId]);
   if (!typing) return null;
   return (
-    <p role="status" className="flex items-center gap-2 px-4 pb-1 text-xs text-n-slate-11">
-      <span className="flex gap-0.5" aria-hidden>
+    <Stack
+      component="p"
+      role="status"
+      direction="row"
+      spacing={1}
+      sx={{ alignItems: 'center', px: 2, pb: 0.5, color: 'text.secondary', m: 0 }}
+    >
+      <Box component="span" aria-hidden sx={{ display: 'flex', gap: 0.5 }}>
         {[0, 1, 2].map((i) => (
-          <span
+          <Box
             key={i}
-            className="size-1.5 animate-bounce rounded-full bg-n-slate-9"
-            style={{ animationDelay: `${i * 150}ms` }}
+            component="span"
+            className="animate-bounce"
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              bgcolor: 'text.disabled',
+              animationDelay: `${i * 150}ms`,
+            }}
           />
         ))}
-      </span>
-      {typing.name} {typing.recording ? 'está gravando áudio…' : 'está digitando…'}
-    </p>
+      </Box>
+      <Typography variant="caption" color="inherit">
+        {typing.name} {typing.recording ? 'está gravando áudio…' : 'está digitando…'}
+      </Typography>
+    </Stack>
   );
 }
