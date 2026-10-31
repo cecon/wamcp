@@ -22,7 +22,9 @@ const ContactsPage = lazy(() =>
   import('./ContactsPage').then((module) => ({ default: module.ContactsPage })),
 );
 const Reports = lazy(() => import('./Reports').then((module) => ({ default: module.Reports })));
-import { ConversationsScreen } from './conversations/ConversationsScreen';
+const ConversationsScreen = lazy(() =>
+  import('./conversations/ConversationsScreen').then((module) => ({ default: module.ConversationsScreen })),
+);
 import { AgentChatScreen } from './agentChat/AgentChatScreen';
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
@@ -113,15 +115,21 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   const content = (
     <>
       {route.page === 'conversations' && (
-        <ConversationsScreen
-          route={route}
-          user={user}
-          catalog={catalog}
-          realtime={realtime}
-          onNavigate={setRoute}
-          views={views}
-          onViewsChange={() => void reloadViews()}
-        />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <ConversationsScreen
+            route={route}
+            user={user}
+            catalog={catalog}
+            realtime={realtime}
+            onNavigate={setRoute}
+            views={views}
+            onViewsChange={() => void reloadViews()}
+          />
+        </Suspense>
       )}
       {route.page === 'agent_chat' && (
         <AgentChatScreen
