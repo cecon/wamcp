@@ -1,6 +1,6 @@
 //! Hashing and random secrets shared by the use cases (pure library calls, no I/O).
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use rand::RngCore;
+use rand::Rng;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
@@ -31,7 +31,7 @@ pub fn same_secret(a: &str, b: &str) -> bool {
 /// Whether `signature` (`sha256=<hex>`, as GitHub sends in `X-Hub-Signature-256`) signs `body`
 /// with `secret`.
 pub fn valid_hub_signature(secret: &str, body: &[u8], signature: &str) -> bool {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     let Some(hex_digest) = signature.strip_prefix("sha256=") else {
         return false;
     };

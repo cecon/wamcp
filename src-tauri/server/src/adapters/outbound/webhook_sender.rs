@@ -3,7 +3,7 @@
 use crate::application::crypto::{base64url, random_bytes};
 use crate::application::ports::{SendFailure, WebhookSender};
 use async_trait::async_trait;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::Value;
 use sha2::Sha256;
 use std::time::Duration;

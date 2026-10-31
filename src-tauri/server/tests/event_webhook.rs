@@ -4,7 +4,7 @@ mod event_webhook_support;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use event_webhook_support::{event, reason, secret, SUBSCRIPTION, URL};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use wamcp_server::adapters::outbound::event_callback::{

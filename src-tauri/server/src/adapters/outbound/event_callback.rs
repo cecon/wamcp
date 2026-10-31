@@ -5,7 +5,7 @@ use crate::application::crypto::{random_secret, same_secret};
 use crate::application::ports::{CallbackError, CallbackResponse, EventCallback};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::time::Duration;
