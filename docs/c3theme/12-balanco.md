@@ -22,7 +22,7 @@
 
 | Medida                                            | Valor                                                                                                                                                             |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Commits da adoção na branch `feat/c3theme-adocao` | 37                                                                                                                                                                |
+| Commits da adoção na branch `feat/c3theme-adocao` | 39                                                                                                                                                                |
 | Telas migradas                                    | **48 de 154 (31%)**                                                                                                                                               |
 | Suíte de UI                                       | **51 arquivos / 220 testes** + 6 testes node do servidor                                                                                                          |
 | Cobertura                                         | limiares 80/80/80/70 mantidos                                                                                                                                     |
