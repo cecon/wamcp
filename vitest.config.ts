@@ -30,6 +30,10 @@ export default defineConfig({
     server: { deps: { inline: [/@c3theme\//] } },
     // Long user-event flows (automation rules, filters) exceed 5s on a loaded machine.
     testTimeout: 60000,
+    // Telas migradas carregam o chunk do MUI na primeira abertura. Com um worker por arquivo (51) em máquina de
+    // 24 núcleos a transformação fria passava do tempo de espera e a suíte falhava de forma intermitente; limitar
+    // os workers deixa o primeiro carregamento previsível também no CI frio.
+    maxWorkers: 8,
     coverage: {
       provider: 'v8',
       include: ['src/agent/**/*.{ts,tsx}'],
