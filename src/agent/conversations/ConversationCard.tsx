@@ -1,3 +1,11 @@
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import {
   AlertTriangle,
   BellOff,
@@ -7,11 +15,11 @@ import {
   SignalMedium,
   UserRound,
 } from 'lucide-react';
+
 import { timeAgo } from '../api';
 import type { Conversation, Label } from '../types';
 import { SlaBadge } from '../sla/SlaBadge';
 import { Avatar } from '../ui/Avatar';
-import { cn } from '../ui/cn';
 import { plainMentions } from './mentions';
 
 const PRIORITY = {
@@ -32,7 +40,7 @@ interface Props {
   onCheck?: (checked: boolean) => void;
 }
 
-/** Chatwoot ConversationCard (condensed): meta row, name, preview, labels; time and unread at top-right. */
+/** Linha da lista de conversas no C3Theme (lote 16): meta, nome, prévia, etiquetas e não lidas. */
 export function ConversationCard({
   conversation: c,
   labels,
@@ -47,87 +55,132 @@ export function ConversationCard({
   const name = c.contact_name || c.contact_phone || 'Contato';
   const color = (title: string) => labels.find((l) => l.title === title)?.color || '#8B8D98';
   return (
-    <li className="group relative">
+    <Box component="li" sx={{ position: 'relative' }}>
       {onCheck && (
-        <input
-          type="checkbox"
-          aria-label={`Selecionar conversa #${c.display_id}`}
+        <Checkbox
+          size="small"
           checked={checked}
-          onChange={(e) => onCheck(e.target.checked)}
-          className={cn(
-            'absolute top-10 left-5 z-10 size-4 cursor-pointer',
-            selecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100',
-          )}
+          onChange={(event) => onCheck(event.target.checked)}
+          slotProps={{ input: { 'aria-label': `Selecionar conversa #${c.display_id}` } }}
+          sx={{
+            position: 'absolute',
+            top: 28,
+            left: 8,
+            zIndex: 10,
+            opacity: selecting ? 1 : 0,
+            transition: 'opacity .1s',
+            '.group:hover &, &:focus-within': { opacity: 1 },
+          }}
         />
       )}
-      <button
-        type="button"
+      <ButtonBase
         onClick={onSelect}
         aria-current={selected ? 'true' : undefined}
-        className={cn(
-          'relative flex w-full items-start border-b border-n-slate-3 px-3 text-left',
-          selected ? 'bg-n-slate-2' : 'hover:bg-n-alpha-1',
-        )}
+        sx={{
+          display: 'flex',
+          width: '100%',
+          alignItems: 'flex-start',
+          textAlign: 'left',
+          px: 1.5,
+          borderBottom: 1,
+          borderColor: 'divider',
+          bgcolor: selected ? 'action.selected' : 'transparent',
+          '&:hover': { bgcolor: selected ? 'action.selected' : 'action.hover' },
+        }}
       >
-        <Avatar name={name} src={c.contact_avatar_url} size={32} className="mt-8" />
-        <span className="min-w-0 flex-1 py-3">
-          <span className="ml-2 flex items-center gap-1 pr-16 text-n-slate-11">
-            <MessageCircle size={14} className="shrink-0 text-n-teal-10" />
-            <span className="text-body-main truncate">{c.inbox_name}</span>
+        <Box sx={{ mt: 4, ml: 3.5 }}>
+          <Avatar name={name} src={c.contact_avatar_url} size={32} />
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1, py: 1.5 }}>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', pr: 8, color: 'text.secondary' }}>
+            <MessageCircle size={14} style={{ flexShrink: 0 }} />
+            <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
+              {c.inbox_name}
+            </Typography>
             {c.assignee_name && (
-              <span className="ml-1 flex min-w-0 items-center gap-0.5 text-xs font-medium">
-                <UserRound size={12} className="shrink-0" />
-                <span className="truncate">{c.assignee_name}</span>
-              </span>
+              <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', minWidth: 0, ml: 0.5 }}>
+                <UserRound size={12} style={{ flexShrink: 0 }} />
+                <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 0 }} noWrap>
+                  {c.assignee_name}
+                </Typography>
+              </Stack>
             )}
             {c.muted ? (
-              <BellOff
-                size={14}
-                className="ml-auto shrink-0 text-n-slate-10"
-                aria-label="Conversa silenciada"
-              />
+              <Box component="span" sx={{ ml: 'auto', display: 'flex' }}>
+                <BellOff size={14} className="text-n-slate-10" aria-label="Conversa silenciada" />
+              </Box>
             ) : null}
             {c.priority && (
-              <span className={cn('shrink-0', !c.muted && 'ml-auto')}>{PRIORITY[c.priority]}</span>
+              <Box component="span" sx={{ flexShrink: 0, ml: c.muted ? 0 : 'auto' }}>
+                {PRIORITY[c.priority]}
+              </Box>
             )}
-          </span>
-          <span
-            className={cn(
-              'mx-2 block truncate pt-0.5 pr-16 text-sm text-n-slate-12',
-              unread ? 'font-semibold' : 'font-medium',
-            )}
-          >
+          </Stack>
+          <Typography variant="body2" noWrap sx={{ mx: 1, pt: 0.25, pr: 8, fontWeight: unread ? 600 : 500 }}>
             {name}
-          </span>
-          <span
-            className={cn(
-              'mx-2 block h-6 truncate text-sm leading-6',
-              unread ? 'font-medium text-n-slate-12' : 'text-n-slate-11',
-            )}
+          </Typography>
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{
+              mx: 1,
+              height: 24,
+              lineHeight: '24px',
+              color: unread ? 'text.primary' : 'text.secondary',
+              fontWeight: unread ? 500 : 400,
+            }}
           >
             {c.last_message ? plainMentions(c.last_message) : '—'}
-          </span>
+          </Typography>
           {(c.labels.length > 0 || hasSla) && (
-            <span className="mx-2 mt-0.5 flex h-6 items-center gap-2.5 overflow-hidden">
+            <Stack
+              direction="row"
+              spacing={1.25}
+              sx={{ mx: 1, mt: 0.25, height: 24, alignItems: 'center', overflow: 'hidden' }}
+            >
               <SlaBadge status={c.sla_status} />
-              {c.labels.map((l) => (
-                <span key={l} className="flex shrink-0 items-center gap-1.5 text-sm text-n-slate-10">
-                  <span className="size-1.5 rounded-full" style={{ background: color(l) }} />
-                  {l}
-                </span>
+              {c.labels.map((title) => (
+                <Stack
+                  key={title}
+                  direction="row"
+                  spacing={0.75}
+                  sx={{ alignItems: 'center', flexShrink: 0 }}
+                >
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color(title) }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {title}
+                  </Typography>
+                </Stack>
               ))}
-            </span>
+            </Stack>
           )}
-        </span>
-        <span className="absolute top-8 right-3 flex flex-col items-end">
-          <span className="text-xxs leading-4 text-n-slate-11">{timeAgo(c.last_activity_at)}</span>
+        </Box>
+        <Stack sx={{ position: 'absolute', top: 32, right: 12, alignItems: 'flex-end' }}>
+          <Typography variant="caption" color="text.secondary">
+            {timeAgo(c.last_activity_at)}
+          </Typography>
           {unread && (
-            <span className="mt-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-n-teal-9 px-1 text-xxs font-medium text-white">
+            <Box
+              sx={{
+                mt: 0.5,
+                display: 'flex',
+                height: 16,
+                minWidth: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 99,
+                bgcolor: 'success.main',
+                color: 'success.contrastText',
+                px: 0.5,
+                fontSize: 10,
+                fontWeight: 500,
+              }}
+            >
               {c.unread_count > 9 ? '9+' : c.unread_count}
-            </span>
+            </Box>
           )}
-        </span>
-      </button>
-    </li>
+        </Stack>
+      </ButtonBase>
+    </Box>
   );
 }
