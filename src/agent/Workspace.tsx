@@ -21,9 +21,9 @@ const SearchPage = lazy(() =>
 const ContactsPage = lazy(() =>
   import('./ContactsPage').then((module) => ({ default: module.ContactsPage })),
 );
+const Reports = lazy(() => import('./Reports').then((module) => ({ default: module.Reports })));
 import { ConversationsScreen } from './conversations/ConversationsScreen';
 import { AgentChatScreen } from './agentChat/AgentChatScreen';
-import { Reports } from './Reports';
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -167,7 +167,15 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         </Suspense>
       )}
-      {route.page === 'reports' && allowed && <Reports catalog={catalog} section={route.section} />}
+      {route.page === 'reports' && allowed && (
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <Reports catalog={catalog} section={route.section} />
+        </Suspense>
+      )}
       {route.page === 'profile' && (
         <Suspense
           fallback={

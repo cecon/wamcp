@@ -45,3 +45,7 @@ afterEach(() => {
 
 // As seções migradas carregam o chunk do MUI na primeira renderização; 3 s evita flake sem mascarar falhas.
 configure({ asyncUtilTimeout: 10000 });
+
+// Pré-carrega o pacote do C3Theme uma vez por worker. Telas lazy (login, relatórios…) transformavam o MUI
+// dentro do tempo do teste e, numa execução fria com vários workers, o primeiro `findBy` estourava.
+import '@c3theme/ui';
