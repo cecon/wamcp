@@ -22,12 +22,12 @@
 
 | Medida                                            | Valor                                                                                                                                                                               |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Commits da adoção na branch `feat/c3theme-adocao` | 49                                                                                                                                                                                  |
+| Commits da adoção na branch `feat/c3theme-adocao` | 50                                                                                                                                                                                  |
 | Telas migradas                                    | **62 de 156 (40%)**                                                                                                                                                                 |
 | Suíte de UI                                       | **51 arquivos / 220 testes** + 6 testes node do servidor                                                                                                                            |
 | Cobertura                                         | limiares 80/80/80/70 mantidos                                                                                                                                                       |
 | Testes existentes alterados                       | 1 asserção (rótulo com asterisco do MUI, lote 3); os lotes 1, 2 e 4 não mudaram nenhum                                                                                              |
-| `main` (gzip)                                     | 603,2 kB (**180,6 kB**) — MUI fora do principal; `react-router` responde por +41 kB                                                                                                 |
+| `main` (gzip)                                     | 421,9 kB (**125,6 kB**) — páginas com MUI em chunks lazy; `react-router` responde por +41 kB                                                                                        |
 | Chunks lazy do C3Theme                            | `C3Provider` 314 kB (100,3 gzip) + shell 46 kB (11,4) + páginas de 0,8–10 kB + login 6,5 kB + contatos 17 kB + relatórios 12,8 kB + conversas 78,3 kB + agente 176,4 kB + chat 7 kB |
 | CI local equivalente                              | `pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run build`, `pnpm run test:ui` verdes                                                                                      |
 
@@ -42,7 +42,7 @@
 
 ## 4. Pendências conhecidas
 
-**Telas (94):** Configurações restantes (~40: Agents/Teams/Inboxes/Webhooks/Auditoria/Roles/Engine/Schedules/Conexões/App e afins), detalhe do contato (`SidePanel`), seções internas de Perfil/Notificações, bootstrap/avisos e telas auxiliares de Relatórios/Conta. A receita está nos lotes 1–21 e a régua mede o avanço.
+**Telas (94):** Configurações restantes (~39: Agents/Teams/Inboxes/Webhooks/Roles/Engine/Schedules/Conexões/App e afins), detalhe do contato (`SidePanel`), seções internas de Perfil/Notificações, bootstrap/avisos e telas auxiliares de Relatórios/Conta. A receita está nos lotes 1–28 e a régua mede o avanço.
 
 **Decisões de produto:** virar o shell C3 para padrão; virar o thread do chat; definir se o shell passa a exigir `react-router` em telas que hoje usam `onNavigate` próprio (já compatível).
 
@@ -61,11 +61,11 @@
 
 ---
 
-## 6. Atualização final do ciclo (31/10/2026)
+## 6. Atualização final do ciclo (02/11/2026)
 
-- **Lotes 1–28 entregues em 32 rodadas**: fundação (pnpm, provider, tokens, router, shell atrás de `?c3shell`, thread atrás de `?c3chat`, régua no lint) e telas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e 4 modais), Relatórios completos e Conversas (moldura, card, cabeçalho, thread, balões, ações/anexos/corpo, digitação, filtros e menu).
-- **Régua:** 62 de 156 telas (40%), com gate no `pnpm lint`; o total cresceu de 153 para 155 porque `ConversationFilters` e o novo `ComposerToolbar` passaram a contar (não são telas novas).
-- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `a0ee846`.
-- **Bundle:** `main` 601,9 kB (gzip 180,2) — MUI sempre em chunks lazy; `ConversationsScreen` 76,6 kB, `ContactsPage` 17,5 kB, `Reports` 12,8 kB, `Login` 6,5 kB.
-- **Ainda fora:** 94 telas (`ReplyBox`/`ContactPanel`/`BulkActionBar`/`Actions`/`Participants` de Conversas; Agente de IA; ~40 de Configurações; seções de Perfil/Notificações), shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote da §4.
+- **Lotes 1–28 entregues em 32 rodadas**: fundação (pnpm, provider, tokens, router, shell atrás de `?c3shell`, thread atrás de `?c3chat`, régua no lint) e telas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e 4 modais), Relatórios completos, Conversas completas (moldura, card, cabeçalho, thread, balões, ações/anexos/corpo, digitação, filtros, menu, composer e partes), Agente de IA (lista, sessões, thread e markdown) e Registro de auditoria.
+- **Régua:** 62 de 156 telas (40%), com gate no `pnpm lint`; o total cresceu de 153 para 156 porque `ConversationFilters`, `ComposerToolbar` e `AgentChatMessages` passaram a contar (não são telas novas).
+- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + 300 linhas + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `d96f196`.
+- **Bundle:** `main` 421,9 kB (gzip 125,6) — páginas com MUI em chunks lazy; `AgentChatScreen` 177,1 kB, `ConversationsScreen` 78,3 kB, `ContactsPage` 17,5 kB, `Reports` 12,8 kB, `Login` 6,5 kB.
+- **Ainda fora:** 94 telas (detalhe do contato `SidePanel`, ~39 de Configurações, seções internas de Perfil/Notificações, bootstrap/avisos), shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote da §4.
 - **Para retomar:** dizer “continuar” (a meta amplia o limite de rodadas), rodar `pnpm progresso:c3` e seguir a receita da §5.
