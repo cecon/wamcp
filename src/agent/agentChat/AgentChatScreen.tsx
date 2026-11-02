@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Bot } from 'lucide-react';
+
 import { http, REALTIME_RECONNECTED, type Realtime } from '../api';
 import { useFetch } from '../useFetch';
 import { MemberAvatar } from '../settings/members/MemberAvatar';
-import { cn } from '../ui/cn';
 import { AgentChatThread } from './AgentChatThread';
 import {
   chatTime,
@@ -26,7 +34,7 @@ const CHECK_MS = 5000;
 const preview = (m: ChatMessage | null) =>
   !m ? 'Comece uma conversa' : m.role === 'user' ? `Você: ${m.content}` : plainText(m.content);
 
-/** Agentes: the person's private chats with AI agents, inside the app (not WhatsApp, not customers). */
+/** Agentes no C3Theme (lote 26): chats privados com os agentes de IA dentro do app. */
 export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
   const agents = useFetch<ChatAgent[]>('/agent_chats');
   const list = agents.data || [];
@@ -57,7 +65,7 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
     try {
       const opened = await http<ChatSessions>(`/agent_chats/${agent.id}/sessions`, 'POST', {});
       setPicked({ agentId: agent.id, session: opened.current });
-      setSteps((list) => list.filter((s) => s.agentId !== agent.id));
+      setSteps((current) => current.filter((s) => s.agentId !== agent.id));
       sessions.reload();
       agents.reload();
     } finally {
@@ -104,52 +112,83 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
   }, [waiting, reload, reloadThread]);
 
   return (
-    <div className="flex min-w-0 flex-1">
-      <aside
-        className={cn(
-          'flex w-full shrink-0 flex-col border-r border-n-weak md:w-80',
-          agent && 'hidden md:flex',
-        )}
+    <Box sx={{ display: 'flex', minWidth: 0, flex: 1 }}>
+      <Box
+        component="aside"
+        sx={{
+          display: agent ? { xs: 'none', md: 'flex' } : 'flex',
+          width: '100%',
+          flexShrink: 0,
+          flexDirection: 'column',
+          borderRight: 1,
+          borderColor: 'divider',
+          md: { width: 320 },
+        }}
       >
-        <header className="flex h-14 shrink-0 items-center px-4">
-          <h1 className="text-lg font-medium text-n-slate-12">Agentes</h1>
-        </header>
-        {agents.error && <p className="px-4 text-sm text-n-ruby-11">{agents.error}</p>}
-        {agents.data && list.length === 0 && (
-          <p className="px-4 text-sm text-n-slate-11">
-            Nenhum agente de IA ativo. Cadastre um em Configurações → Funcionários.
-          </p>
+        <Box
+          component="header"
+          sx={{ display: 'flex', height: 56, flexShrink: 0, alignItems: 'center', px: 2 }}
+        >
+          <Typography variant="h6" component="h1">
+            Agentes
+          </Typography>
+        </Box>
+        {agents.error && (
+          <Typography variant="body2" sx={{ px: 2, color: 'error.main' }}>
+            {agents.error}
+          </Typography>
         )}
-        <ul className="min-h-0 flex-1 overflow-y-auto">
+        {agents.data && list.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+            Nenhum agente de IA ativo. Cadastre um em Configurações → Funcionários.
+          </Typography>
+        )}
+        <Box component="ul" sx={{ minHeight: 0, flex: 1, overflowY: 'auto', listStyle: 'none', m: 0, p: 0 }}>
           {list.map((a) => (
-            <li key={a.id}>
-              <button
-                type="button"
+            <Box component="li" key={a.id}>
+              <ButtonBase
                 aria-current={a.id === agentId}
                 onClick={() => onSelect(a.id)}
-                className={cn(
-                  'flex w-full items-center gap-3 border-b border-n-weak px-4 py-3 text-left hover:bg-n-alpha-1',
-                  a.id === agentId && 'bg-n-alpha-2',
-                )}
+                sx={{
+                  display: 'flex',
+                  width: '100%',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  px: 2,
+                  py: 1.5,
+                  textAlign: 'left',
+                  bgcolor: a.id === agentId ? 'action.selected' : 'transparent',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
               >
                 <MemberAvatar choices={a.avatar} kind="ai" seed={a.id} size={40} title={a.name} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium text-n-slate-12">{a.name}</span>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                      {a.name}
+                    </Typography>
                     {a.last && (
-                      <span className="shrink-0 text-xs text-n-slate-10">{chatTime(a.last.created_at)}</span>
+                      <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0 }}>
+                        {chatTime(a.last.created_at)}
+                      </Typography>
                     )}
-                  </span>
-                  <span className="block truncate text-xs text-n-slate-11">
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
                     {a.system ? 'Sistema · ' : ''}
                     {preview(a.last)}
-                  </span>
-                </span>
-              </button>
-            </li>
+                  </Typography>
+                </Box>
+              </ButtonBase>
+            </Box>
           ))}
-        </ul>
-      </aside>
+        </Box>
+      </Box>
       {agent ? (
         <AgentChatThread
           agent={agent}
@@ -165,14 +204,25 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
           onBack={() => onSelect(undefined)}
         />
       ) : (
-        <div className="hidden flex-1 flex-col items-center justify-center gap-2 text-center md:flex">
-          <Bot size={32} className="text-n-slate-10" />
-          <p className="text-base font-medium text-n-slate-12">Converse com um agente</p>
-          <p className="max-w-sm text-sm text-n-slate-11">
+        <Stack
+          spacing={1}
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+          }}
+        >
+          <Bot size={32} style={{ color: 'var(--color-n-slate-10)' }} />
+          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+            Converse com um agente
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 384 }}>
             Peça ajuda aos seus agentes de IA aqui dentro do app. Só você vê as suas conversas.
-          </p>
-        </div>
+          </Typography>
+        </Stack>
       )}
-    </div>
+    </Box>
   );
 }

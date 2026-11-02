@@ -4,12 +4,12 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**56 de 155 telas migradas (36%)** · faltam 99
+**58 de 155 telas migradas (37%)** · faltam 97
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
 | (raiz) | 2 / 4 | 2 |
-| agentChat | 0 / 4 | 4 |
+| agentChat | 2 / 4 | 2 |
 | attributes | 0 / 2 | 2 |
 | auth | 3 / 3 | 0 |
 | chat | 3 / 3 | 0 |
@@ -37,10 +37,8 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 
 ### agentChat
 
-- `agentChat/AgentChatScreen.tsx`
 - `agentChat/AgentChatThread.tsx`
 - `agentChat/ChatMarkdown.tsx`
-- `agentChat/ChatSessionBar.tsx`
 
 ### attributes
 

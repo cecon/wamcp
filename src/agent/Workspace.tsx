@@ -25,7 +25,9 @@ const Reports = lazy(() => import('./Reports').then((module) => ({ default: modu
 const ConversationsScreen = lazy(() =>
   import('./conversations/ConversationsScreen').then((module) => ({ default: module.ConversationsScreen })),
 );
-import { AgentChatScreen } from './agentChat/AgentChatScreen';
+const AgentChatScreen = lazy(() =>
+  import('./agentChat/AgentChatScreen').then((module) => ({ default: module.AgentChatScreen })),
+);
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -132,11 +134,17 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         </Suspense>
       )}
       {route.page === 'agent_chat' && (
-        <AgentChatScreen
-          agentId={route.agentId}
-          realtime={realtime}
-          onSelect={(agentId) => setRoute({ page: 'agent_chat', agentId })}
-        />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
+          }
+        >
+          <AgentChatScreen
+            agentId={route.agentId}
+            realtime={realtime}
+            onSelect={(agentId) => setRoute({ page: 'agent_chat', agentId })}
+          />
+        </Suspense>
       )}
       {route.page === 'notifications' && (
         <Suspense
