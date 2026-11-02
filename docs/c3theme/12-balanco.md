@@ -65,7 +65,7 @@
 
 - **Lotes 1–21 entregues em 25 rodadas**: fundação (pnpm, provider, tokens, router, shell atrás de `?c3shell`, thread atrás de `?c3chat`, régua no lint) e telas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e 4 modais), Relatórios completos e Conversas (moldura, card, cabeçalho, thread, balões, ações/anexos/corpo, digitação, filtros e menu).
 - **Régua:** 50 de 155 telas (32%), com gate no `pnpm lint`; o total cresceu de 153 para 155 porque `ConversationFilters` e o novo `ComposerToolbar` passaram a contar (não são telas novas).
-- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `e469b05`.
+- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `3928869`.
 - **Bundle:** `main` 601,9 kB (gzip 180,2) — MUI sempre em chunks lazy; `ConversationsScreen` 76,6 kB, `ContactsPage` 17,5 kB, `Reports` 12,8 kB, `Login` 6,5 kB.
 - **Ainda fora:** 105 telas (`ReplyBox`/`ContactPanel`/`BulkActionBar`/`Actions`/`Participants` de Conversas; Agente de IA; ~40 de Configurações; seções de Perfil/Notificações), shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote da §4.
 - **Para retomar:** dizer “continuar” (a meta amplia o limite de rodadas), rodar `pnpm progresso:c3` e seguir a receita da §5.
