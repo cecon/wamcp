@@ -1,55 +1,149 @@
+// material-ui
+import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-/** How each Markdown element looks inside a chat bubble (raw HTML in the text is never rendered). */
+const body = { wordBreak: 'break-word', whiteSpace: 'pre-wrap' } as const;
+
+/** Each Markdown element in the C3Theme (lote 27); raw HTML never renders. */
 const COMPONENTS: Components = {
   p: ({ children }) => (
-    <p className="break-words whitespace-pre-wrap [&:not(:first-child)]:mt-2">{children}</p>
+    <Box component="p" sx={{ ...body, m: 0, '&:not(:first-of-type)': { mt: 1 } }}>
+      {children}
+    </Box>
   ),
   a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-n-blue-11 underline break-all">
+    <Link
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      sx={{ color: 'primary.main', textDecoration: 'underline', wordBreak: 'break-all' }}
+    >
       {children}
-    </a>
+    </Link>
   ),
-  ul: ({ children }) => <ul className="mt-2 list-disc space-y-1 pl-5">{children}</ul>,
-  ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5">{children}</ol>,
-  h1: ({ children }) => <h3 className="mt-3 text-base font-semibold first:mt-0">{children}</h3>,
-  h2: ({ children }) => <h3 className="mt-3 text-base font-semibold first:mt-0">{children}</h3>,
-  h3: ({ children }) => <h4 className="mt-3 font-semibold first:mt-0">{children}</h4>,
-  h4: ({ children }) => <h4 className="mt-3 font-semibold first:mt-0">{children}</h4>,
+  ul: ({ children }) => (
+    <Box component="ul" sx={{ mt: 1, pl: 2.5, m: 0, listStyle: 'disc', '& li + li': { mt: 0.5 } }}>
+      {children}
+    </Box>
+  ),
+  ol: ({ children }) => (
+    <Box component="ol" sx={{ mt: 1, pl: 2.5, m: 0, listStyle: 'decimal', '& li + li': { mt: 0.5 } }}>
+      {children}
+    </Box>
+  ),
+  h1: ({ children }) => (
+    <Box
+      component="h3"
+      sx={{ mt: 1.5, mb: 0.5, fontSize: 16, fontWeight: 600, '&:first-of-type': { mt: 0 } }}
+    >
+      {children}
+    </Box>
+  ),
+  h2: ({ children }) => (
+    <Box
+      component="h3"
+      sx={{ mt: 1.5, mb: 0.5, fontSize: 16, fontWeight: 600, '&:first-of-type': { mt: 0 } }}
+    >
+      {children}
+    </Box>
+  ),
+  h3: ({ children }) => (
+    <Box component="h4" sx={{ mt: 1.5, mb: 0.5, fontWeight: 600, '&:first-of-type': { mt: 0 } }}>
+      {children}
+    </Box>
+  ),
+  h4: ({ children }) => (
+    <Box component="h4" sx={{ mt: 1.5, mb: 0.5, fontWeight: 600, '&:first-of-type': { mt: 0 } }}>
+      {children}
+    </Box>
+  ),
   blockquote: ({ children }) => (
-    <blockquote className="mt-2 border-l-2 border-n-slate-7 pl-3 text-n-slate-11">{children}</blockquote>
+    <Box
+      component="blockquote"
+      sx={{ mt: 1, borderLeft: 2, borderColor: 'divider', pl: 1.5, color: 'text.secondary', m: 0 }}
+    >
+      {children}
+    </Box>
   ),
   code: ({ className, children }) =>
     className ? (
-      <code className={className}>{children}</code>
+      <Box component="code" className={className}>
+        {children}
+      </Box>
     ) : (
-      <code className="rounded bg-n-alpha-2 px-1 py-0.5 font-mono text-[0.85em]">{children}</code>
+      <Box
+        component="code"
+        sx={{
+          borderRadius: 0.5,
+          bgcolor: 'action.hover',
+          px: 0.5,
+          py: 0.25,
+          fontFamily: 'monospace',
+          fontSize: '0.85em',
+        }}
+      >
+        {children}
+      </Box>
     ),
   pre: ({ children }) => (
-    <pre className="mt-2 overflow-x-auto rounded-lg bg-n-alpha-2 p-3 font-mono text-xs leading-relaxed">
+    <Box
+      component="pre"
+      sx={{
+        mt: 1,
+        m: 0,
+        overflowX: 'auto',
+        borderRadius: 1,
+        bgcolor: 'action.hover',
+        p: 1.5,
+        fontFamily: 'monospace',
+        fontSize: 12,
+        lineHeight: 1.6,
+      }}
+    >
       {children}
-    </pre>
+    </Box>
   ),
   table: ({ children }) => (
-    <div className="mt-2 overflow-x-auto">
-      <table className="w-full border-collapse text-xs">{children}</table>
-    </div>
+    <Box sx={{ mt: 1, overflowX: 'auto' }}>
+      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        {children}
+      </Box>
+    </Box>
   ),
   th: ({ children }) => (
-    <th className="border border-n-weak bg-n-alpha-1 px-2 py-1 text-left font-semibold">{children}</th>
+    <Box
+      component="th"
+      sx={{
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'action.hover',
+        px: 1,
+        py: 0.5,
+        textAlign: 'left',
+        fontWeight: 600,
+      }}
+    >
+      {children}
+    </Box>
   ),
-  td: ({ children }) => <td className="border border-n-weak px-2 py-1 align-top">{children}</td>,
-  hr: () => <hr className="my-3 border-n-weak" />,
+  td: ({ children }) => (
+    <Box component="td" sx={{ border: 1, borderColor: 'divider', px: 1, py: 0.5, verticalAlign: 'top' }}>
+      {children}
+    </Box>
+  ),
+  hr: () => <Box component="hr" sx={{ my: 1.5, borderColor: 'divider', borderBottom: 0 }} />,
 };
 
-/** A chat message written in Markdown (what the agents write): lists, tables, code, links. */
+/** Mensagem do agente em Markdown no C3Theme (lote 27): listas, tabelas, código e links. */
 export function ChatMarkdown({ content }: { content: string }) {
   return (
-    <div className="min-w-0 break-words">
+    <Box sx={{ minWidth: 0, wordBreak: 'break-word' }}>
       <Markdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
         {content}
       </Markdown>
-    </div>
+    </Box>
   );
 }
