@@ -42,7 +42,7 @@
 
 ## 4. Pendências conhecidas
 
-**Telas (127):** Conversas (23), Relatórios (11), Configurações restantes (Agents/Teams/Inboxes/Webhooks/Auditoria/Roles/Engine/Schedules/Conexões/App), Agente de IA (4), detalhe do contato (`SidePanel`), Perfil/Notificações (seções internas) e bootstrap/avisos. A receita está nos lotes 1–12 e a régua mede o avanço.
+**Telas (105):** o que falta em Conversas (`ContactPanel`, `BulkActionBar`, `ConversationActions`, `ParticipantsSection`), Agente de IA (4), Configurações restantes (~40: Agents/Teams/Inboxes/Webhooks/Auditoria/Roles/Engine/Schedules/Conexões/App), detalhe do contato (`SidePanel`), seções internas de Perfil/Notificações e bootstrap/avisos. A receita está nos lotes 1–21 e a régua mede o avanço.
 
 **Decisões de produto:** virar o shell C3 para padrão; virar o thread do chat; definir se o shell passa a exigir `react-router` em telas que hoje usam `onNavigate` próprio (já compatível).
 
@@ -63,9 +63,9 @@
 
 ## 6. Atualização final do ciclo (31/10/2026)
 
-- **Lotes 1–20 entregues em 24 rodadas**: fundação (pnpm, provider, tokens, router, shell atrás de `?c3shell`, thread atrás de `?c3chat`, régua no lint) e telas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e 4 modais), Relatórios completos e Conversas (moldura, card, cabeçalho, thread, balões, ações/anexos/corpo, digitação, filtros e menu).
-- **Régua:** 48 de 154 telas (31%), com gate no `pnpm lint`; o total subiu de 153 para 154 porque o `ConversationFilters` passou a contar ao migrar (não é tela nova).
-- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `115e800`.
+- **Lotes 1–21 entregues em 25 rodadas**: fundação (pnpm, provider, tokens, router, shell atrás de `?c3shell`, thread atrás de `?c3chat`, régua no lint) e telas: Etiquetas, Respostas prontas, Macros (lista), Atributos, Conta, SLA, Perfil, Caixa de entrada, Busca, Login/MFA, primeiro acesso, Contatos (lista, formulário, notas, etiquetas, ações e 4 modais), Relatórios completos e Conversas (moldura, card, cabeçalho, thread, balões, ações/anexos/corpo, digitação, filtros e menu).
+- **Régua:** 50 de 155 telas (32%), com gate no `pnpm lint`; o total cresceu de 153 para 155 porque `ConversationFilters` e o novo `ComposerToolbar` passaram a contar (não são telas novas).
+- **Verificação final (árvore principal + worktree pnpm):** `pnpm install --frozen-lockfile`, lint (ESLint + arquitetura + régua), build e suíte UI **51 arquivos / 220 testes** em execuções repetidas — tudo verde no HEAD `e469b05`.
 - **Bundle:** `main` 601,9 kB (gzip 180,2) — MUI sempre em chunks lazy; `ConversationsScreen` 76,6 kB, `ContactsPage` 17,5 kB, `Reports` 12,8 kB, `Login` 6,5 kB.
-- **Ainda fora:** 106 telas (`ReplyBox`/`ContactPanel`/`BulkActionBar`/`Actions`/`Participants` de Conversas; Agente de IA; ~40 de Configurações; seções de Perfil/Notificações), shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote da §4.
+- **Ainda fora:** 105 telas (`ReplyBox`/`ContactPanel`/`BulkActionBar`/`Actions`/`Participants` de Conversas; Agente de IA; ~40 de Configurações; seções de Perfil/Notificações), shell C3 e thread do chat como padrão, z-index unificado e os pedidos ao pacote da §4.
 - **Para retomar:** dizer “continuar” (a meta amplia o limite de rodadas), rodar `pnpm progresso:c3` e seguir a receita da §5.
