@@ -147,7 +147,7 @@ describe('teams', () => {
   it('creates teams and opens a team page', async () => {
     const api = fakeApi({ 'POST /teams': { id: 6 } });
     const { user, onNavigate } = renderSettings('teams');
-    expect(screen.getByText(/1 membro\(s\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 membro\(s\)/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Criar novo time' }));
     const dialog = screen.getByRole('dialog', { name: 'Criar novo time' });
     await user.type(within(dialog).getByLabelText('Nome do time'), 'Vendas');
@@ -169,7 +169,7 @@ describe('teams', () => {
       'DELETE /teams/5': { ok: true },
     });
     const { user, onNavigate } = renderSettings('teams', 5);
-    expect(screen.getByRole('heading', { name: 'Financeiro' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Financeiro' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Membro Admin' })).toBeChecked());
     await user.click(screen.getByRole('switch', { name: 'Membro Maria Souza' }));
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Membro Maria Souza' })).toBeChecked());
@@ -183,10 +183,10 @@ describe('teams', () => {
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith({ page: 'settings', section: 'teams' }));
   });
 
-  it('shows the empty list', () => {
+  it('shows the empty list', async () => {
     fakeApi({});
     renderSettings('teams', undefined, { ...catalog, teams: [] });
-    expect(screen.getByText('Nenhum time ainda.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum time ainda.')).toBeInTheDocument();
   });
 });
 

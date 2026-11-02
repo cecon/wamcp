@@ -3,7 +3,6 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import type { Catalog, User } from '../types';
 import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
-import { TeamsPage } from './TeamsPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
 import { SkillsPage } from './directory/SkillsPage';
@@ -27,6 +26,7 @@ const AuditLogPage = lazy(() =>
   import('./AuditLogPage').then((module) => ({ default: module.AuditLogPage })),
 );
 const InboxesPage = lazy(() => import('./InboxesPage').then((module) => ({ default: module.InboxesPage })));
+const TeamsPage = lazy(() => import('./TeamsPage').then((module) => ({ default: module.TeamsPage })));
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -57,7 +57,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'organization':
       return <OrganizationPage catalog={catalog} />;
     case 'teams':
-      return <TeamsPage catalog={catalog} teamId={route.id} onNavigate={onNavigate} onChange={onChange} />;
+      return (
+        <LazyPage>
+          <TeamsPage catalog={catalog} teamId={route.id} onNavigate={onNavigate} onChange={onChange} />
+        </LazyPage>
+      );
     case 'inboxes':
       return (
         <LazyPage>
