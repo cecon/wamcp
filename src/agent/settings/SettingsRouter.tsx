@@ -7,7 +7,6 @@ import { TeamsPage } from './TeamsPage';
 import { InboxesPage } from './InboxesPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
-import { AuditLogPage } from './AuditLogPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
@@ -25,6 +24,9 @@ const AttributesPage = lazy(() =>
 );
 const AccountPage = lazy(() => import('./AccountPage').then((module) => ({ default: module.AccountPage })));
 const SlaPage = lazy(() => import('./SlaPage').then((module) => ({ default: module.SlaPage })));
+const AuditLogPage = lazy(() =>
+  import('./AuditLogPage').then((module) => ({ default: module.AuditLogPage })),
+);
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -95,7 +97,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'webhooks':
       return <WebhooksPage catalog={catalog} />;
     case 'audit':
-      return <AuditLogPage />;
+      return (
+        <LazyPage>
+          <AuditLogPage />
+        </LazyPage>
+      );
     case 'custom_roles':
       return <CustomRolesPage onChange={onChange} />;
     case 'connections':
