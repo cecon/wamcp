@@ -224,3 +224,44 @@ async fn the_inbox_agent_takes_a_position_with_a_comment_on_github() {
     assert!(chat.prompt.contains("Seu responsável direto é Anny"), "{}", chat.prompt);
     assert!(chat.prompt.contains("- Anny (agente de IA"), "{}", chat.prompt);
 }
+
+#[tokio::test]
+async fn the_administrator_creates_the_webhook_again_when_github_refused_it() {
+    use std::sync::atomic::Ordering;
+    let f = common::Fixture::new().await;
+    f.github.refuse_hooks.store(true, Ordering::Relaxed);
+    let admin = f.bootstrap().await;
+    let reply = admin
+        .post(
+            "/github_channels",
+            json!({ "name": "wamcp no GitHub", "repo": REPO, "token": "ghp_teste" }),
+        )
+        .await;
+    assert_eq!(reply.status, 201, "{:?}", reply.body);
+    assert_eq!(reply.body["hook_created"], false);
+    let inbox = reply.body["inbox"]["id"].as_i64().unwrap();
+    let retry = format!("/inboxes/{inbox}/github/hook");
+
+    // Still refused: the reason comes back so the administrator can fix the token.
+    let refused = admin.post(&retry, json!({})).await;
+    assert_eq!(refused.status, 200, "{:?}", refused.body);
+    assert_eq!(refused.body["hook_created"], false);
+    assert!(refused.body["hook_error"].as_str().unwrap().contains("não tem acesso"));
+
+    // With the Webhooks permission granted the hook is created with the stored secret.
+    f.github.refuse_hooks.store(false, Ordering::Relaxed);
+    let maria = f.agent(&admin, "maria@example.com", "agent", false).await;
+    assert_eq!(maria.post(&retry, json!({})).await.status, 403);
+    let created = admin.post(&retry, json!({})).await;
+    assert_eq!(created.body["hook_created"], true, "{:?}", created.body);
+    let hooks = f.github.hooks.lock().clone();
+    assert_eq!(hooks.len(), 1);
+    assert!(hooks[0].1.ends_with(&format!("/api/github/{inbox}/webhook")));
+    assert_eq!(hooks[0].2, created.body["webhook_secret"].as_str().unwrap());
+    let setup = admin.get(&format!("/inboxes/{inbox}/github")).await.body;
+    assert_eq!(setup["hook_created"], true);
+
+    // Once created, trying again does not add a second hook.
+    admin.post(&retry, json!({})).await;
+    assert_eq!(f.github.hooks.lock().len(), 1);
+}
