@@ -4,7 +4,7 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**62 de 156 telas migradas (40%)** · faltam 94
+**64 de 156 telas migradas (41%)** · faltam 92
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
@@ -22,7 +22,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 | profile | 1 / 7 | 6 |
 | reports | 8 / 9 | 1 |
 | search | 1 / 3 | 2 |
-| settings | 9 / 63 | 54 |
+| settings | 11 / 63 | 52 |
 | shortcuts | 0 / 1 | 1 |
 | sidebar | 0 / 3 | 3 |
 | sla | 0 / 2 | 2 |
@@ -123,9 +123,7 @@ usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do 
 - `settings/github/GithubSetup.tsx`
 - `settings/github/WebhookInstructions.tsx`
 - `settings/InboxAgentSelect.tsx`
-- `settings/InboxAutomation.tsx`
 - `settings/InboxesPage.tsx`
-- `settings/InboxLimit.tsx`
 - `settings/MacroEditor.tsx`
 - `settings/members/AvatarEditor.tsx`
 - `settings/members/MemberAvatar.tsx`

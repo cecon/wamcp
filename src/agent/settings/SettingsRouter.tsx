@@ -4,7 +4,6 @@ import type { Catalog, User } from '../types';
 import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
 import { TeamsPage } from './TeamsPage';
-import { InboxesPage } from './InboxesPage';
 import { AutomationPage } from './AutomationPage';
 import { WebhooksPage } from './WebhooksPage';
 import { SkillsPage } from './directory/SkillsPage';
@@ -27,6 +26,7 @@ const SlaPage = lazy(() => import('./SlaPage').then((module) => ({ default: modu
 const AuditLogPage = lazy(() =>
   import('./AuditLogPage').then((module) => ({ default: module.AuditLogPage })),
 );
+const InboxesPage = lazy(() => import('./InboxesPage').then((module) => ({ default: module.InboxesPage })));
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -59,7 +59,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'teams':
       return <TeamsPage catalog={catalog} teamId={route.id} onNavigate={onNavigate} onChange={onChange} />;
     case 'inboxes':
-      return <InboxesPage catalog={catalog} inboxId={route.id} onNavigate={onNavigate} onChange={onChange} />;
+      return (
+        <LazyPage>
+          <InboxesPage catalog={catalog} inboxId={route.id} onNavigate={onNavigate} onChange={onChange} />
+        </LazyPage>
+      );
     case 'labels':
       return (
         <LazyPage>
@@ -109,7 +113,9 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return route.connectionId ? (
         <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
       ) : (
-        <InboxesPage catalog={catalog} onNavigate={onNavigate} onChange={onChange} />
+        <LazyPage>
+          <InboxesPage catalog={catalog} onNavigate={onNavigate} onChange={onChange} />
+        </LazyPage>
       );
     case 'engine':
       return <EnginePage />;

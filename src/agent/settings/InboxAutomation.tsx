@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../api';
 import type { Inbox, WorkingDay } from '../types';
-import { Button } from '../ui/Button';
 import { Toggle } from '../ui/Settings';
 import { useAction } from './useAction';
 
@@ -25,7 +33,7 @@ interface Props {
   onChange: () => Promise<void>;
 }
 
-/** Inbox business hours (Chatwoot "Business Hours" tab) plus greeting, out-of-office and CSAT. */
+/** Horário e mensagens da caixa no C3Theme (lote 29): saudação, expediente, ausência e CSAT. */
 export function InboxAutomation({ inbox, onChange }: Props) {
   const [form, setForm] = useState({
     greeting_enabled: Boolean(inbox.greeting_enabled),
@@ -52,8 +60,8 @@ export function InboxAutomation({ inbox, onChange }: Props) {
     setDays((list) => list.map((d, i) => (i === index ? { ...d, ...patch } : d)));
 
   return (
-    <form
-      className="flex flex-col gap-2"
+    <Box
+      component="form"
       onSubmit={(e) => {
         e.preventDefault();
         setSaved(false);
@@ -71,6 +79,7 @@ export function InboxAutomation({ inbox, onChange }: Props) {
           setSaved(true);
         });
       }}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
     >
       <Toggle
         label="Saudação"
@@ -78,102 +87,123 @@ export function InboxAutomation({ inbox, onChange }: Props) {
         checked={form.greeting_enabled}
         onChange={(v) => setForm({ ...form, greeting_enabled: v })}
       />
-      <label>
-        <span className="field-label">Texto da saudação</span>
-        <textarea
-          className="field"
-          rows={2}
-          maxLength={1000}
-          value={form.greeting_message}
-          onChange={(e) => setForm({ ...form, greeting_message: e.target.value })}
-        />
-      </label>
+      <TextField
+        label="Texto da saudação"
+        multiline
+        minRows={2}
+        value={form.greeting_message}
+        onChange={(e) => setForm({ ...form, greeting_message: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 1000 } }}
+      />
       <Toggle
         label="Horário de atendimento"
         hint="Fora do horário, o contato recebe a mensagem de ausência."
         checked={form.working_hours_enabled}
         onChange={(v) => setForm({ ...form, working_hours_enabled: v })}
       />
-      <label>
-        <span className="field-label">Fuso horário</span>
-        <input
-          className="field"
-          maxLength={64}
-          value={form.timezone}
-          onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-        />
-      </label>
-      <table className="my-2 w-full divide-y divide-n-weak text-sm">
-        <tbody className="divide-y divide-n-weak">
+      <TextField
+        label="Fuso horário"
+        size="small"
+        value={form.timezone}
+        onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 64 } }}
+      />
+      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', my: 1, fontSize: 14 }}>
+        <Box component="tbody">
           {days.map((d, i) => (
-            <tr key={d.day_of_week}>
-              <td className="py-2 pr-4 font-medium text-n-slate-12">{DAYS[d.day_of_week]}</td>
-              <td className="py-2 pr-4">
-                <label className="flex items-center gap-2 text-n-slate-11">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-n-brand"
-                    aria-label={`Aberto ${DAYS[d.day_of_week]}`}
+            <Box component="tr" key={d.day_of_week} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Box component="td" sx={{ py: 1, pr: 2, fontWeight: 500 }}>
+                {DAYS[d.day_of_week]}
+              </Box>
+              <Box component="td" sx={{ py: 1, pr: 2 }}>
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                  <Checkbox
+                    size="small"
                     checked={!d.closed_all_day}
                     onChange={(e) => setDay(i, { closed_all_day: !e.target.checked })}
+                    slotProps={{ input: { 'aria-label': `Aberto ${DAYS[d.day_of_week]}` } }}
                   />
                   Aberto
-                </label>
-              </td>
-              <td className="py-2 pr-2">
-                <input
+                </Stack>
+              </Box>
+              <Box component="td" sx={{ py: 1, pr: 1 }}>
+                <Box
+                  component="input"
                   type="time"
-                  className="field !h-8 !w-28 !py-1"
                   aria-label={`Abre ${DAYS[d.day_of_week]}`}
                   value={toTime(d.open_minutes)}
                   disabled={Boolean(d.closed_all_day)}
                   onChange={(e) => setDay(i, { open_minutes: toMinutes(e.target.value) })}
+                  sx={{
+                    height: 32,
+                    width: 112,
+                    borderRadius: 1,
+                    border: 1,
+                    borderColor: 'divider',
+                    px: 1,
+                    fontSize: 14,
+                  }}
                 />
-              </td>
-              <td className="py-2">
-                <input
+              </Box>
+              <Box component="td" sx={{ py: 1 }}>
+                <Box
+                  component="input"
                   type="time"
-                  className="field !h-8 !w-28 !py-1"
                   aria-label={`Fecha ${DAYS[d.day_of_week]}`}
                   value={toTime(d.close_minutes)}
                   disabled={Boolean(d.closed_all_day)}
                   onChange={(e) => setDay(i, { close_minutes: toMinutes(e.target.value) })}
+                  sx={{
+                    height: 32,
+                    width: 112,
+                    borderRadius: 1,
+                    border: 1,
+                    borderColor: 'divider',
+                    px: 1,
+                    fontSize: 14,
+                  }}
                 />
-              </td>
-            </tr>
+              </Box>
+            </Box>
           ))}
-        </tbody>
-      </table>
-      <label>
-        <span className="field-label">Mensagem de ausência</span>
-        <textarea
-          className="field"
-          rows={2}
-          maxLength={1000}
-          value={form.out_of_office_message}
-          onChange={(e) => setForm({ ...form, out_of_office_message: e.target.value })}
-        />
-      </label>
+        </Box>
+      </Box>
+      <TextField
+        label="Mensagem de ausência"
+        multiline
+        minRows={2}
+        value={form.out_of_office_message}
+        onChange={(e) => setForm({ ...form, out_of_office_message: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 1000 } }}
+      />
       <Toggle
         label="Pesquisa de satisfação (CSAT)"
         hint="Ao resolver, pede uma nota de 1 a 5 pelo WhatsApp."
         checked={form.csat_survey_enabled}
         onChange={(v) => setForm({ ...form, csat_survey_enabled: v })}
       />
-      <label>
-        <span className="field-label">Mensagem da pesquisa CSAT</span>
-        <textarea
-          className="field"
-          rows={2}
-          maxLength={1000}
-          placeholder="Texto enviado com o pedido de nota (vazio usa a mensagem padrão)."
-          value={form.csat_survey_message}
-          onChange={(e) => setForm({ ...form, csat_survey_message: e.target.value })}
-        />
-      </label>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      {saved && <p className="text-sm text-n-teal-11">Configurações salvas.</p>}
-      <Button type="submit" disabled={busy} className="self-start" label="Salvar mensagens automáticas" />
-    </form>
+      <TextField
+        label="Mensagem da pesquisa CSAT"
+        multiline
+        minRows={2}
+        placeholder="Texto enviado com o pedido de nota (vazio usa a mensagem padrão)."
+        value={form.csat_survey_message}
+        onChange={(e) => setForm({ ...form, csat_survey_message: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 1000 } }}
+      />
+      {error && (
+        <Typography variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+      {saved && (
+        <Typography variant="body2" sx={{ color: 'success.main' }}>
+          Configurações salvas.
+        </Typography>
+      )}
+      <Button type="submit" variant="contained" disabled={busy} sx={{ alignSelf: 'flex-start' }}>
+        Salvar mensagens automáticas
+      </Button>
+    </Box>
   );
 }
