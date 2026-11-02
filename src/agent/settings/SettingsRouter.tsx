@@ -4,7 +4,6 @@ import type { Catalog, User } from '../types';
 import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
 import { AutomationPage } from './AutomationPage';
-import { WebhooksPage } from './WebhooksPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
@@ -27,6 +26,9 @@ const AuditLogPage = lazy(() =>
 );
 const InboxesPage = lazy(() => import('./InboxesPage').then((module) => ({ default: module.InboxesPage })));
 const TeamsPage = lazy(() => import('./TeamsPage').then((module) => ({ default: module.TeamsPage })));
+const WebhooksPage = lazy(() =>
+  import('./WebhooksPage').then((module) => ({ default: module.WebhooksPage })),
+);
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
@@ -103,7 +105,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'webhooks':
-      return <WebhooksPage catalog={catalog} />;
+      return (
+        <LazyPage>
+          <WebhooksPage catalog={catalog} />
+        </LazyPage>
+      );
     case 'audit':
       return (
         <LazyPage>
