@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { UserPlus, X } from 'lucide-react';
+
 import { http } from '../api';
 import type { Catalog, Conversation, User } from '../types';
 import { Avatar } from '../ui/Avatar';
-import { Button } from '../ui/Button';
-import { Dropdown, MenuItem } from '../ui/Overlay';
 
 interface Props {
   conversation: Conversation;
@@ -13,9 +21,10 @@ interface Props {
   onError: (message: string) => void;
 }
 
-/** Chatwoot "Participantes da conversa": agents who follow the conversation, with join/leave. */
+/** Participantes da conversa no C3Theme (lote 23): agentes que acompanham, com entrar/sair e adicionar. */
 export function ParticipantsSection({ conversation: c, user, catalog, onError }: Props) {
-  const [participants, setParticipants] = useState<User[]>([]);
+  const [participants, setParticipants] = useState<User[]>([]),
+    [adding, setAdding] = useState(false);
   const path = `/conversations/${c.display_id}/participants`;
   useEffect(() => {
     void http<User[]>(path)
@@ -34,67 +43,76 @@ export function ParticipantsSection({ conversation: c, user, catalog, onError }:
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-n-slate-11">
+    <Stack spacing={1.5}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="body2" color="text.secondary">
           {participants.length} participante{participants.length === 1 ? '' : 's'}
-        </span>
-        <button
-          type="button"
-          className="text-xs font-medium text-n-blue-11 hover:underline"
+        </Typography>
+        <Button
+          size="small"
+          variant="text"
           onClick={() => save(joined ? ids.filter((id) => id !== user.id) : [...ids, user.id])}
+          sx={{ fontSize: 12, textTransform: 'none' }}
         >
           {joined ? 'Deixar de participar' : 'Participar'}
-        </button>
-      </div>
-      <ul className="flex flex-col gap-1">
+        </Button>
+      </Stack>
+      <Box
+        component="ul"
+        sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, listStyle: 'none', m: 0, p: 0 }}
+      >
         {participants.map((p) => (
-          <li key={p.id} className="flex items-center gap-2 text-sm text-n-slate-12">
+          <Stack component="li" key={p.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Avatar name={p.name} size={24} />
-            <span className="flex-1 truncate">{p.name}</span>
-            <Button
-              color="slate"
-              variant="ghost"
-              size="xs"
-              icon={X}
+            <Typography variant="body2" noWrap sx={{ flex: 1 }}>
+              {p.name}
+            </Typography>
+            <IconButton
+              size="small"
               aria-label={`Remover participante ${p.name}`}
               onClick={() => save(ids.filter((id) => id !== p.id))}
-            />
-          </li>
+            >
+              <X size={14} />
+            </IconButton>
+          </Stack>
         ))}
-      </ul>
-      <Dropdown
-        align="start"
-        className="max-h-60 w-56 overflow-y-auto"
-        trigger={({ toggle }) => (
-          <Button
-            color="slate"
-            variant="faded"
-            size="xs"
-            icon={UserPlus}
-            label="Adicionar participante"
-            className="self-start"
-            onClick={toggle}
-          />
-        )}
+      </Box>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<UserPlus size={14} />}
+        onClick={() => setAdding(true)}
+        sx={{ alignSelf: 'flex-start' }}
       >
-        {(close) =>
-          available.length === 0 ? (
-            <p className="p-2 text-sm text-n-slate-11">Nenhum agente disponível.</p>
+        Adicionar participante
+      </Button>
+      {adding && (
+        <Box
+          role="menu"
+          sx={{ border: 1, borderColor: 'divider', borderRadius: 1, maxHeight: 240, overflowY: 'auto' }}
+        >
+          {available.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+              Nenhum agente disponível.
+            </Typography>
           ) : (
             available.map((a) => (
-              <MenuItem
+              <Button
                 key={a.id}
-                label={a.name}
+                role="menuitem"
+                fullWidth
                 onClick={() => {
-                  close();
+                  setAdding(false);
                   save([...ids, a.id]);
                 }}
-              />
+                sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+              >
+                {a.name}
+              </Button>
             ))
-          )
-        }
-      </Dropdown>
-    </div>
+          )}
+        </Box>
+      )}
+    </Stack>
   );
 }
