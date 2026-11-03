@@ -12,6 +12,7 @@ import { Bot } from 'lucide-react';
 import { http, REALTIME_RECONNECTED, type Realtime } from '../api';
 import { useFetch } from '../useFetch';
 import { MemberAvatar } from '../settings/members/MemberAvatar';
+import { AgentChatC3 } from './AgentChatC3';
 import { AgentChatThread } from './AgentChatThread';
 import {
   chatTime,
@@ -39,6 +40,8 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
   const agents = useFetch<ChatAgent[]>('/agent_chats');
   const list = agents.data || [];
   const agent = list.find((a) => a.id === agentId);
+  // Frente nova do chat no AssistantPanel do C3Theme (0.3+), atrás de flag até a paridade ser fechada.
+  const c3Assistant = new URLSearchParams(window.location.search).has('c3assistant');
   // What each agent is doing on its answer (`agent_chat.progress`), until the answer arrives.
   const [steps, setSteps] = useState<{ agentId: number; step: ChatStep }[]>([]);
   const sessions = useFetch<ChatSessions>(agent ? `/agent_chats/${agent.id}/sessions` : null);
@@ -59,6 +62,14 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
     return all.filter((m, i) => all.findIndex((n) => n.id === m.id) === i).sort((a, b) => a.id - b.id);
   }, [thread.data, live, agentId, shown]);
   const [starting, setStarting] = useState(false);
+  /** Envio usado pela frente `?c3assistant`; a thread antiga envia por conta própria. */
+  const sendText = async (text: string) => {
+    if (!agent) return;
+    const message = await http<ChatMessage>(`/agent_chats/${agent.id}/messages`, 'POST', { content: text });
+    setLive((current) => [...current, message]);
+    sessions.reload();
+    agents.reload();
+  };
   const startSession = async () => {
     if (!agent || starting) return;
     setStarting(true);
@@ -190,19 +201,34 @@ export function AgentChatScreen({ agentId, realtime, onSelect }: Props) {
         </Box>
       </Box>
       {agent ? (
-        <AgentChatThread
-          agent={agent}
-          messages={messages}
-          steps={steps.filter((s) => s.agentId === agent.id).map((s) => s.step)}
-          sessions={sessions.data}
-          viewing={shown ?? 0}
-          onView={(session) => setPicked({ agentId: agent.id, session })}
-          onNewSession={startSession}
-          starting={starting}
-          error={thread.error}
-          onSent={(m) => setLive((current) => [...current, m])}
-          onBack={() => onSelect(undefined)}
-        />
+        c3Assistant ? (
+          <AgentChatC3
+            agent={agent}
+            messages={messages}
+            steps={steps.filter((s) => s.agentId === agent.id).map((s) => s.step)}
+            sessions={sessions.data}
+            viewing={shown ?? 0}
+            onView={(session) => setPicked({ agentId: agent.id, session })}
+            onNewSession={startSession}
+            starting={starting}
+            onSend={sendText}
+            onBack={() => onSelect(undefined)}
+          />
+        ) : (
+          <AgentChatThread
+            agent={agent}
+            messages={messages}
+            steps={steps.filter((s) => s.agentId === agent.id).map((s) => s.step)}
+            sessions={sessions.data}
+            viewing={shown ?? 0}
+            onView={(session) => setPicked({ agentId: agent.id, session })}
+            onNewSession={startSession}
+            starting={starting}
+            error={thread.error}
+            onSent={(m) => setLive((current) => [...current, m])}
+            onBack={() => onSelect(undefined)}
+          />
+        )
       ) : (
         <Stack
           spacing={1}

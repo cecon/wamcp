@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ComponentType, type ReactNode } from 'react';
 
 // material-ui
 import Box from '@mui/material/Box';
@@ -10,6 +10,18 @@ import { useDraft, useMessageWindow, type Author } from '@c3theme/chat/core';
 import C3Provider from '../c3/C3Provider';
 import { formatWhatsApp } from '../conversations/whatsappFormat';
 import { createChatTransport } from './c3Transport';
+
+/** Props extras do Composer 0.3+ (Parar/dica); o pacote antigo ignora props desconhecidas. */
+type ComposerC3Props = {
+  value: string;
+  onChange: (text: string) => void;
+  onSend: (text: string, files: File[]) => void;
+  disabled?: boolean;
+  busy?: boolean;
+  onStop?: () => void;
+  hint?: ReactNode;
+};
+const ComposerC3 = Composer as unknown as ComponentType<ComposerC3Props>;
 
 interface Props {
   displayId: number;
@@ -60,7 +72,7 @@ export function C3Thread({
             empty="Nenhuma mensagem ainda."
           />
         </Box>
-        <Composer
+        <ComposerC3
           value={draft.text}
           onChange={draft.setText}
           onSend={(text, files) => {
@@ -68,6 +80,9 @@ export function C3Thread({
             draft.clear();
           }}
           disabled={disabled}
+          busy={Boolean((window as { generating?: boolean }).generating)}
+          onStop={(window as { stop?: () => void }).stop}
+          hint="Enter envia · Shift+Enter quebra a linha"
         />
       </Box>
     </C3Provider>
