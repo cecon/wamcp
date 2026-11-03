@@ -96,14 +96,52 @@ impl GithubApi for HttpGithub {
             .await?;
         Ok(comment["html_url"].as_str().unwrap_or_default().to_string())
     }
+
+    async fn api(&self, token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
+        let Ok(method) = reqwest::Method::from_bytes(method.as_bytes()) else {
+            return fail("Método HTTP inválido");
+        };
+        self.call(token, method, path, body).await
+    }
+
+    async fn job_log(&self, token: &str, repo: &str, job_id: u64) -> Result<String> {
+        // GitHub answers with a redirect to a short-lived download address (no token goes there).
+        let response = self
+            .client
+            .get(format!("{API}/repos/{repo}/actions/jobs/{job_id}/logs"))
+            .bearer_auth(token)
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .await;
+        let Ok(response) = response else {
+            return fail("Não foi possível falar com o GitHub");
+        };
+        let location = response
+            .headers()
+            .get(reqwest::header::LOCATION)
+            .and_then(|l| l.to_str().ok())
+            .map(String::from);
+        let Some(location) = location.filter(|_| response.status().is_redirection()) else {
+            let status = response.status().as_u16();
+            return fail_with(format!("O GitHub não entregou o log do job ({status})"), 422);
+        };
+        let log = self.client.get(location).send().await;
+        match log {
+            Ok(log) if log.status().is_success() => Ok(log.text().await.unwrap_or_default()),
+            _ => fail("Não foi possível baixar o log do job"),
+        }
+    }
 }
 
-/// Records what would reach GitHub. `refuse_hooks` simulates a token without webhook permission.
+/// Records what would reach GitHub. `refuse_hooks` simulates a token without webhook permission;
+/// `answers` holds what `api` and `job_log` return, by `"GET /repos/…"` or `"LOG <job id>"`.
 #[derive(Default)]
 pub struct MemoryGithub {
     pub comments: Mutex<Vec<(String, u64, String)>>,
     pub hooks: Mutex<Vec<(String, String, String)>>,
     pub refuse_hooks: std::sync::atomic::AtomicBool,
+    pub calls: Mutex<Vec<(String, String, Value)>>,
+    pub answers: Mutex<std::collections::HashMap<String, Value>>,
 }
 
 #[async_trait]
@@ -131,5 +169,18 @@ impl GithubApi for MemoryGithub {
     async fn comment(&self, _token: &str, repo: &str, number: u64, body: &str) -> Result<String> {
         self.comments.lock().push((repo.into(), number, body.into()));
         Ok(format!("https://github.com/{repo}/issues/{number}#issuecomment-1"))
+    }
+
+    async fn api(&self, _token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
+        self.calls
+            .lock()
+            .push((method.into(), path.into(), body.unwrap_or(Value::Null)));
+        let answer = self.answers.lock().get(&format!("{method} {path}")).cloned();
+        Ok(answer.unwrap_or(Value::Null))
+    }
+
+    async fn job_log(&self, _token: &str, _repo: &str, job_id: u64) -> Result<String> {
+        let log = self.answers.lock().get(&format!("LOG {job_id}")).cloned();
+        Ok(log.and_then(|l| l.as_str().map(String::from)).unwrap_or_default())
     }
 }

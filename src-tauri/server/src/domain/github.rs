@@ -45,6 +45,8 @@ pub struct GithubEvent {
     /// The GitHub login that caused the event.
     pub sender: String,
     pub text: String,
+    /// `event.action` (`pull_request.closed`), or the event alone (`push`).
+    pub kind: String,
 }
 
 pub fn activity_source(repo: &str) -> String {
@@ -122,7 +124,8 @@ pub fn marked(text: &str) -> String {
 /// Reads one webhook delivery. `None` when the channel ignores it: an event or action it does not
 /// follow, or the echo of a comment the app posted (it would answer itself).
 pub fn parse(event: &str, payload: &Value) -> Option<GithubEvent> {
-    if text(payload, &["comment", "body"]).contains(COMMENT_MARK) {
+    let bodies = [text(payload, &["comment", "body"]), text(payload, &["review", "body"])];
+    if bodies.iter().any(|b| b.contains(COMMENT_MARK)) {
         return None;
     }
     let sender = text(payload, &["sender", "login"]).to_string();
@@ -159,6 +162,14 @@ pub fn parse(event: &str, payload: &Value) -> Option<GithubEvent> {
                     format!("{who} mesclou o PR #{number}.")
                 }
                 "closed" => format!("{who} fechou o PR #{number} sem mesclar."),
+                "review_requested" => format!(
+                    "{who} pediu a revisão de @{} no PR #{number}.",
+                    text(payload, &["requested_reviewer", "login"])
+                ),
+                "assigned" => format!(
+                    "{who} atribuiu o PR #{number} a @{}.",
+                    text(payload, &["assignee", "login"])
+                ),
                 _ => return None,
             };
             (thread, line)
@@ -192,9 +203,14 @@ pub fn parse(event: &str, payload: &Value) -> Option<GithubEvent> {
                 "opened" => "abriu a issue",
                 "reopened" => "reabriu a issue",
                 "closed" => "fechou a issue",
+                "assigned" => "atribuiu a issue",
                 _ => return None,
             };
-            let head = format!("{who} {verb}: {}", clip(text(payload, &["issue", "title"])));
+            let to = match text(payload, &["assignee", "login"]) {
+                login if action == "assigned" => format!(" para @{login}"),
+                _ => String::new(),
+            };
+            let head = format!("{who} {verb}{to}: {}", clip(text(payload, &["issue", "title"])));
             let body = if action == "opened" {
                 text(payload, &["issue", "body"])
             } else {
@@ -252,7 +268,16 @@ pub fn parse(event: &str, payload: &Value) -> Option<GithubEvent> {
         }
         _ => return None,
     };
-    Some(GithubEvent { thread, sender, text })
+    let kind = match action {
+        "" => event.to_string(),
+        _ => format!("{event}.{action}"),
+    };
+    Some(GithubEvent {
+        thread,
+        sender,
+        text,
+        kind,
+    })
 }
 
 /// The prompt for an agent of a GitHub inbox: its instructions and the thread's events so far.

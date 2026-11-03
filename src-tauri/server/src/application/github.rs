@@ -153,9 +153,11 @@ impl HelpdeskService {
             return Ok(None);
         }
         let inbox = self.core.inbox(inbox_id)?;
-        self.core.commit(Some(&Actor::contact()), |events| {
-            self.store_github(&inbox, delivery, &parsed, events)
-        })
+        self.core
+            .commit(Some(&Actor::contact()), |events| match self.take_github_echo(&parsed) {
+                true => self.note_github_echo(&inbox, &parsed, events).map(|_| None),
+                false => self.store_github(&inbox, delivery, &parsed, events),
+            })
     }
 
     fn github_contact(&self, inbox: &Inbox, event: &GithubEvent, events: &mut Events) -> Result<ContactInbox> {
