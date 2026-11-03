@@ -97,6 +97,7 @@ pub fn public_router(state: AppState) -> Router {
     if state.support.is_some() {
         router = router
             .route("/mcp-system", any(super::mcp::system::endpoint))
+            .route("/mcp-github", any(super::mcp::github::endpoint))
             .nest("/api/v1", helpdesk_api(&state))
             .route("/engine/mcp", post(super::mcp_engine::endpoint))
             .merge(accounts::bootstrap_routes())

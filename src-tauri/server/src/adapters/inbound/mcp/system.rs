@@ -21,7 +21,16 @@ fn tool_list() -> Value {
     json!({ "tools": tools })
 }
 
-fn answer(id: Value, result: std::result::Result<Value, (i64, String)>) -> Value {
+/// Runtimes on this computer only: never through the tunnel, never from a browser.
+pub(super) fn from_this_computer(peer: &Peer, headers: &HeaderMap) -> bool {
+    let local = peer.0.is_none_or(|p| p.ip().is_loopback());
+    let proxied = ["cf-connecting-ip", "x-forwarded-for"]
+        .iter()
+        .any(|h| headers.contains_key(*h));
+    local && !proxied && !headers.contains_key(header::ORIGIN)
+}
+
+pub(super) fn answer(id: Value, result: std::result::Result<Value, (i64, String)>) -> Value {
     match result {
         Ok(result) => json!({ "jsonrpc": "2.0", "id": id, "result": result }),
         Err((code, message)) => json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } }),
@@ -64,11 +73,7 @@ pub async fn endpoint(
     headers: HeaderMap,
     bytes: Bytes,
 ) -> Response {
-    let local = peer.0.is_none_or(|p| p.ip().is_loopback());
-    let proxied = ["cf-connecting-ip", "x-forwarded-for"]
-        .iter()
-        .any(|h| headers.contains_key(*h));
-    if !local || proxied || headers.contains_key(header::ORIGIN) {
+    if !from_this_computer(&peer, &headers) {
         return StatusCode::NOT_FOUND.into_response();
     }
     let token = bearer(&headers).unwrap_or_default();
