@@ -103,7 +103,7 @@ impl GithubApi for HttpGithub {
 pub struct MemoryGithub {
     pub comments: Mutex<Vec<(String, u64, String)>>,
     pub hooks: Mutex<Vec<(String, String, String)>>,
-    pub refuse_hooks: bool,
+    pub refuse_hooks: std::sync::atomic::AtomicBool,
 }
 
 #[async_trait]
@@ -120,7 +120,7 @@ impl GithubApi for MemoryGithub {
     }
 
     async fn create_hook(&self, _token: &str, repo: &str, url: &str, secret: &str, _events: &[&str]) -> Result<i64> {
-        if self.refuse_hooks {
+        if self.refuse_hooks.load(std::sync::atomic::Ordering::Relaxed) {
             return fail_with("O token não tem acesso a isso no GitHub (Resource not accessible)", 422);
         }
         let mut hooks = self.hooks.lock();
