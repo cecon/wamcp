@@ -5,7 +5,6 @@ import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { OrganizationPage } from './members/OrganizationPage';
-import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
 import { EnginePage } from './engine/EnginePage';
@@ -30,6 +29,9 @@ const WebhooksPage = lazy(() =>
 );
 const AutomationPage = lazy(() =>
   import('./AutomationPage').then((module) => ({ default: module.AutomationPage })),
+);
+const CustomRolesPage = lazy(() =>
+  import('./roles/CustomRolesPage').then((module) => ({ default: module.CustomRolesPage })),
 );
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
@@ -123,7 +125,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'custom_roles':
-      return <CustomRolesPage onChange={onChange} />;
+      return (
+        <LazyPage>
+          <CustomRolesPage onChange={onChange} />
+        </LazyPage>
+      );
     case 'connections':
       // WhatsApp connections are listed with the other channels; this page is one connection.
       return route.connectionId ? (
