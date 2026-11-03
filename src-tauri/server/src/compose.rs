@@ -94,6 +94,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         storage: ports.storage.clone(),
         github: ports.github.clone(),
         secrets: ports.secrets.clone(),
+        github_runs: Default::default(),
     };
     let notifications = NotificationService { core: core.clone() };
     let webhooks = WebhookService {

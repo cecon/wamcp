@@ -1,6 +1,6 @@
 //! Time-based one-time passwords (RFC 6238: HMAC-SHA1, 30-second steps, 6 digits), as used by
 //! authenticator apps, and the base32 secrets they scan.
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha1::Sha1;
 
 pub const STEP_SECONDS: i64 = 30;

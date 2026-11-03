@@ -14,6 +14,7 @@ pub mod error;
 pub mod events;
 pub mod filters;
 pub mod github;
+pub mod github_tools;
 pub mod helpdesk;
 pub mod llm;
 pub mod media;

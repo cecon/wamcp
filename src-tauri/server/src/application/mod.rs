@@ -24,6 +24,7 @@ pub mod engine;
 pub mod event_bus;
 pub mod events;
 pub mod github;
+pub mod github_agent;
 pub mod helpdesk;
 mod ingestion;
 pub mod llm_bots;

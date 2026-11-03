@@ -31,6 +31,10 @@ pub fn webhook_path(inbox_id: i64) -> String {
     format!("/api/github/{inbox_id}/webhook")
 }
 
+fn webhook_url(public_url: &str, inbox_id: i64) -> String {
+    format!("{}{}", public_url.trim_end_matches('/'), webhook_path(inbox_id))
+}
+
 impl HelpdeskService {
     /// Connects `owner/repo` as a new inbox (administrators). The token is checked against GitHub
     /// and stored encrypted, as is the webhook secret.
@@ -64,18 +68,11 @@ impl HelpdeskService {
             let inbox = self.core.repo.create_github_inbox(name, &channel)?;
             Ok(inbox)
         })?;
-        let webhook_url = format!("{}{}", public_url.trim_end_matches('/'), webhook_path(inbox.id));
-        let (hook_created, hook_error) = match self
-            .github
-            .create_hook(token, repo, &webhook_url, &secret, &EVENTS)
-            .await
-        {
-            Ok(hook_id) => {
-                self.core.repo.set_github_hook(inbox.id, hook_id)?;
-                (true, None)
-            }
-            Err(error) => (false, Some(error.to_string())),
-        };
+        let webhook_url = webhook_url(public_url, inbox.id);
+        let hook_error = self
+            .create_github_hook(inbox.id, token, repo, &webhook_url, &secret)
+            .await?;
+        let hook_created = hook_error.is_none();
         Ok(GithubConnection {
             inbox,
             webhook_url,
@@ -84,6 +81,46 @@ impl HelpdeskService {
             hook_created,
             hook_error,
         })
+    }
+
+    /// Creates the repository webhook and records it; `Some(reason)` when GitHub refuses (usually a
+    /// token without the Webhooks permission), so the administrator can fix it and try again.
+    async fn create_github_hook(
+        &self,
+        inbox_id: i64,
+        token: &str,
+        repo: &str,
+        url: &str,
+        secret: &str,
+    ) -> Result<Option<String>> {
+        match self.github.create_hook(token, repo, url, secret, &EVENTS).await {
+            Ok(hook_id) => {
+                self.core.repo.set_github_hook(inbox_id, hook_id)?;
+                Ok(None)
+            }
+            Err(error) => Ok(Some(error.to_string())),
+        }
+    }
+
+    /// Tries again to create the webhook of a GitHub inbox that has none (administrators), with the
+    /// stored token. Answers the setup, with `hook_error` when GitHub still refuses.
+    pub async fn retry_github_hook(&self, actor: &Actor, inbox_id: i64, public_url: &str) -> Result<Value> {
+        let mut setup = self.github_setup(actor, inbox_id, public_url)?;
+        if setup["hook_created"] == true {
+            return Ok(setup);
+        }
+        let Some(channel) = self.core.repo.github_channel(inbox_id)? else {
+            return fail_with("Canal do GitHub não encontrado", 404);
+        };
+        let token = self.secrets.open(&channel.token)?;
+        let secret = self.secrets.open(&channel.webhook_secret)?;
+        let url = webhook_url(public_url, inbox_id);
+        let hook_error = self
+            .create_github_hook(inbox_id, &token, &channel.repo, &url, &secret)
+            .await?;
+        setup["hook_created"] = json!(hook_error.is_none());
+        setup["hook_error"] = json!(hook_error);
+        Ok(setup)
     }
 
     /// One webhook delivery. Unsigned or wrongly signed deliveries are refused (401); events the
@@ -116,9 +153,11 @@ impl HelpdeskService {
             return Ok(None);
         }
         let inbox = self.core.inbox(inbox_id)?;
-        self.core.commit(Some(&Actor::contact()), |events| {
-            self.store_github(&inbox, delivery, &parsed, events)
-        })
+        self.core
+            .commit(Some(&Actor::contact()), |events| match self.take_github_echo(&parsed) {
+                true => self.note_github_echo(&inbox, &parsed, events).map(|_| None),
+                false => self.store_github(&inbox, delivery, &parsed, events),
+            })
     }
 
     fn github_contact(&self, inbox: &Inbox, event: &GithubEvent, events: &mut Events) -> Result<ContactInbox> {
@@ -243,7 +282,7 @@ impl HelpdeskService {
         Ok(json!({
             "repo": channel.repo,
             "account": channel.own_login,
-            "webhook_url": format!("{}{}", public_url.trim_end_matches('/'), webhook_path(inbox_id)),
+            "webhook_url": webhook_url(public_url, inbox_id),
             "webhook_secret": self.secrets.open(&channel.webhook_secret)?,
             "events": EVENTS,
             "hook_created": channel.hook_id.is_some(),

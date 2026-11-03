@@ -6,6 +6,7 @@
 //! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
 mod chat;
+mod github_tools;
 mod scheduled;
 
 use super::event_bus::Envelope;
@@ -235,7 +236,9 @@ impl LlmBotService {
             }
             None => build_prompt(&inbox.name, Some(&request.prompt), &messages),
         };
-        let completion = self.llm.complete(&request).await?;
+        let (completion, forwarded) = self
+            .complete_for(&inbox, &conversation, request, responder.agent_id)
+            .await?;
         self.record(&responder, Some(conversation.id), None, completion.usage);
         let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
@@ -251,7 +254,7 @@ impl LlmBotService {
                 .reply(&actor, conversation.display_id, &answer.reply, false)
                 .await?;
         }
-        if answer.handoff {
+        if answer.handoff || forwarded {
             self.helpdesk
                 .toggle_status(&actor, conversation.display_id, "open", None)?;
         }

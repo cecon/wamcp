@@ -21,6 +21,8 @@ pub struct HelpdeskService {
     pub github: Arc<dyn GithubApi>,
     /// Opens the sealed GitHub tokens and webhook secrets.
     pub secrets: Arc<dyn SecretBox>,
+    /// The AI agent's runs on GitHub conversations and the echoes of its actions.
+    pub github_runs: super::github_agent::GithubRuns,
 }
 
 /// A contact with the conversations the actor may see.

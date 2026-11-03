@@ -40,6 +40,19 @@ async fn setup(State(state): State<AppState>, current: CurrentUser, Path(inbox):
     ok(setup)
 }
 
+async fn retry_hook(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(inbox): Path<String>,
+) -> ApiResult<Response> {
+    let setup = state
+        .support()
+        .helpdesk
+        .retry_github_hook(&current.actor(), id(&inbox)?, &state.public_url)
+        .await?;
+    ok(setup)
+}
+
 fn header<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
     headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default()
 }
@@ -69,6 +82,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/github_channels", post(connect))
         .route("/inboxes/{id}/github", get(setup))
+        .route("/inboxes/{id}/github/hook", post(retry_hook))
 }
 
 /// Mounted outside `/api/v1`: GitHub calls it from its servers.

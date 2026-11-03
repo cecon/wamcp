@@ -81,7 +81,7 @@ async fn webhook_sender_signs_timestamp_and_body_with_hmac_sha256() {
 
 #[test]
 fn webhook_signature_is_the_hex_hmac_of_timestamp_dot_body() {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     let mut mac = Hmac::<sha2::Sha256>::new_from_slice(b"s3cret").expect("key");
     mac.update(br#"1700000000.{"a":1}"#);
     assert_eq!(

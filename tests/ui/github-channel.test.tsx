@@ -51,4 +51,27 @@ describe('GitHub channel', () => {
     expect(screen.getByText('@wamcp-bot')).toBeInTheDocument();
     expect(screen.getByText('O webhook foi criado no GitHub pelo app.')).toBeInTheDocument();
   });
+
+  it('creates the missing webhook again and shows why GitHub refused it', async () => {
+    let refuse = true;
+    const api = fakeApi({
+      'GET /inboxes/4/github': { ...webhook, repo: 'cecon/C3Theme', account: 'cecon', hook_created: false },
+      'POST /inboxes/4/github/hook': () => ({
+        ...webhook,
+        repo: 'cecon/C3Theme',
+        account: 'cecon',
+        hook_created: !refuse,
+        hook_error: refuse ? 'O token não tem acesso a isso no GitHub (Resource not accessible)' : null,
+      }),
+    });
+    render(<GithubSetup inboxId={4} />);
+    const user = userEvent.setup();
+    expect(await screen.findByText(/nenhum evento chega a esta caixa/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Criar webhook' }));
+    expect(await screen.findByText(/Resource not accessible/)).toBeInTheDocument();
+    refuse = false;
+    await user.click(screen.getByRole('button', { name: 'Criar webhook' }));
+    expect(await screen.findByText('O webhook foi criado no GitHub pelo app.')).toBeInTheDocument();
+    expect(api.called('POST', '/inboxes/4/github/hook')).toHaveLength(2);
+  });
 });
