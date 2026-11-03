@@ -33,8 +33,8 @@
     "coverage:server": "cargo llvm-cov --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features --fail-under-lines 80"
   },
   "dependencies": {
-    "@c3theme/chat": "github:cecon/C3Theme#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/chat",
-    "@c3theme/ui": "github:cecon/C3Theme#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui",
+    "@c3theme/chat": "github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat",
+    "@c3theme/ui": "github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

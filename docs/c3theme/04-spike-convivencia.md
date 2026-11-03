@@ -1,6 +1,6 @@
 # Spike de convivência — C3Theme rodando dentro do WhatsAppMcp (Fase 1)
 
-> **O que foi feito:** o `@c3theme/ui` + `@c3theme/chat` do `origin/main` do C3Theme (`8744b8f`, 30/10/2026) foram instalados no app e montados numa rota de desenvolvimento (`/?c3spike`) para responder, com medição, as quatro perguntas que bloqueavam a adoção: preflight × `CssBaseline`, dois dark modes, z-index/portais e custo de bundle. O app real continua intocado quando o parâmetro não está na URL.
+> **O que foi feito:** o `@c3theme/ui` + `@c3theme/chat` do `origin/main` do C3Theme (`8744b8f`, 30/10/2026; atualizado depois para `e88cf03`, 02/11 — ver [41](41-atualizacao-chat-0.3.md)) foram instalados no app e montados numa rota de desenvolvimento (`/?c3spike`) para responder, com medição, as quatro perguntas que bloqueavam a adoção: preflight × `CssBaseline`, dois dark modes, z-index/portais e custo de bundle. O app real continua intocado quando o parâmetro não está na URL.
 >
 > **Resultado:** funciona. Shell, chat virtualizado e composer do pacote renderizam ao lado do Tailwind, com os tokens do app aplicados ao tema, sem erro de console, com o build, o lint e as suítes de teste verdes (após três correções de integração descritas abaixo).
 

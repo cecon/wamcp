@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@c3theme/chat':
-        specifier: github:cecon/C3Theme#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/chat
-        version: git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/chat(@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617))(@mui/material@9.5.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-intl@12.1.6(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)
+        specifier: github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat
+        version: git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat(@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617))(@mui/material@9.5.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-intl@12.1.6(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)
       '@c3theme/ui':
-        specifier: github:cecon/C3Theme#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui
-        version: git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)
+        specifier: github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui
+        version: git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)
       '@emotion/cache':
         specifier: ^11.14.0
         version: 11.14.0
@@ -231,9 +231,9 @@ packages:
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
-  '@c3theme/chat@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/chat':
-    resolution: {commit: 8744b8fee317fc07e2a5131f00a206f8202a2f30, path: packages/chat, repo: git@github.com:cecon/C3Theme.git, type: git}
-    version: 0.1.0
+  '@c3theme/chat@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat':
+    resolution: {commit: e88cf032e5ce881730be768c6468ff72d360f511, path: packages/chat, repo: git@github.com:cecon/C3Theme.git, type: git}
+    version: 0.3.0
     peerDependencies:
       '@c3theme/ui': ^0.1.0
       '@mui/material': ^9.4.0
@@ -250,8 +250,8 @@ packages:
       react-intl:
         optional: true
 
-  '@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui':
-    resolution: {commit: 8744b8fee317fc07e2a5131f00a206f8202a2f30, path: packages/ui, repo: git@github.com:cecon/C3Theme.git, type: git}
+  '@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui':
+    resolution: {commit: e88cf032e5ce881730be768c6468ff72d360f511, path: packages/ui, repo: git@github.com:cecon/C3Theme.git, type: git}
     version: 0.1.0
     peerDependencies:
       '@emotion/cache': ^11.14.0
@@ -2688,18 +2688,18 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@c3theme/chat@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/chat(@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617))(@mui/material@9.5.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-intl@12.1.6(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)':
+  '@c3theme/chat@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat(@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617))(@mui/material@9.5.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-intl@12.1.6(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@tanstack/react-virtual': 3.14.24(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       iconsax-reactjs: 0.0.8(react@19.3.1)
       react: 19.3.1
     optionalDependencies:
-      '@c3theme/ui': git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)
+      '@c3theme/ui': git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)
       '@mui/material': 9.5.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-dom: 19.3.1(react@19.3.1)
       react-intl: 12.1.6(@types/react@19.3.0)(react@19.3.1)
 
-  '@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#8744b8fee317fc07e2a5131f00a206f8202a2f30&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)':
+  '@c3theme/ui@git+https://git@github.com:cecon/C3Theme.git#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui(6125a4ff60fa50389fa2cdf0ee6c7617)':
     dependencies:
       '@emotion/cache': 11.14.0
       '@emotion/react': 11.14.0(@types/react@19.3.0)(react@19.3.1)
