@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
 import { connectRealtime, http, type Realtime } from './api';
 import type { AppNotification, Availability, Catalog, User } from './types';
 import { useRoute } from './navigation/useRoute';
@@ -36,6 +41,15 @@ import { ShortcutsModal } from './shortcuts/ShortcutsModal';
 import { useHotkeys } from './shortcuts/hotkeys';
 import { isDesktop } from './desktop/tauri';
 import { UpdateNotice } from './desktop/UpdateNotice';
+
+/** Fallback das páginas/chunks carregados sob demanda. */
+const Loading = () => (
+  <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+    <Typography variant="body2" color="text.secondary">
+      Carregando…
+    </Typography>
+  </Box>
+);
 
 interface Props {
   user: User;
@@ -117,11 +131,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   const content = (
     <>
       {route.page === 'conversations' && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <ConversationsScreen
             route={route}
             user={user}
@@ -134,11 +144,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         </Suspense>
       )}
       {route.page === 'agent_chat' && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <AgentChatScreen
             agentId={route.agentId}
             realtime={realtime}
@@ -147,21 +153,13 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         </Suspense>
       )}
       {route.page === 'notifications' && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
         </Suspense>
       )}
       {!allowed && <NoAccess />}
       {route.page === 'contacts' && allowed && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <ContactsPage
             user={user}
             catalog={catalog}
@@ -172,11 +170,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         </Suspense>
       )}
       {route.page === 'search' && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <SearchPage
             onOpenConversation={openConversation}
             onOpenContact={(contactId) => setRoute({ page: 'contacts', contactId })}
@@ -184,20 +178,12 @@ export function Workspace({ user, onUser, onLogout }: Props) {
         </Suspense>
       )}
       {route.page === 'reports' && allowed && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <Reports catalog={catalog} section={route.section} />
         </Suspense>
       )}
       {route.page === 'profile' && (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <ProfilePage user={user} />
         </Suspense>
       )}
@@ -216,11 +202,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   return (
     <>
       {c3Shell ? (
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center text-n-slate-11">Carregando…</div>
-          }
-        >
+        <Suspense fallback={<Loading />}>
           <C3Workspace
             user={user}
             catalog={catalog}
@@ -238,7 +220,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           </C3Workspace>
         </Suspense>
       ) : (
-        <div className="flex h-full overflow-hidden text-n-slate-12">
+        <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden', color: 'text.primary' }}>
           <Sidebar
             user={user}
             catalog={catalog}
@@ -252,8 +234,21 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             onShortcuts={() => setShortcuts(true)}
             bell={bell}
           />
-          <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-n-surface-1">{content}</main>
-        </div>
+          <Box
+            component="main"
+            sx={{
+              display: 'flex',
+              height: '100%',
+              minHeight: 0,
+              minWidth: 0,
+              flex: 1,
+              overflow: 'hidden',
+              bgcolor: 'background.default',
+            }}
+          >
+            {content}
+          </Box>
+        </Box>
       )}
       {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
       {isDesktop() && <UpdateNotice />}

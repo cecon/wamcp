@@ -1,4 +1,5 @@
-import { small } from './ruleOptions';
+// material-ui
+import TextField from '@mui/material/TextField';
 
 interface ValueProps {
   id: string;
@@ -8,34 +9,39 @@ interface ValueProps {
   onChange: (value: string) => void;
 }
 
+/** Valor de uma condição/ação: select quando há opções, texto ou textarea quando é livre (mesmos `aria-label`). */
 export function ValueInput({ id, value, options, multiline, onChange }: ValueProps) {
   if (options)
     return (
-      <select aria-label={id} className={small} value={value} onChange={(e) => onChange(e.target.value)}>
+      <TextField
+        select
+        size="small"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        slotProps={{
+          select: { native: true },
+          inputLabel: { shrink: true },
+          htmlInput: { 'aria-label': id },
+        }}
+        sx={{ minWidth: 160 }}
+      >
         <option value="">Selecione…</option>
-        {options.map(([v, label]) => (
-          <option key={v} value={v}>
+        {options.map(([optionValue, label]) => (
+          <option key={optionValue} value={optionValue}>
             {label}
           </option>
         ))}
-      </select>
+      </TextField>
     );
-  return multiline ? (
-    <textarea
-      aria-label={id}
-      className="field basis-full"
+  return (
+    <TextField
+      size="small"
+      multiline={multiline}
+      minRows={multiline ? 2 : undefined}
       value={value}
-      rows={2}
-      maxLength={4096}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  ) : (
-    <input
-      aria-label={id}
-      className={small}
-      value={value}
-      maxLength={200}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(event) => onChange(event.target.value)}
+      slotProps={{ htmlInput: { 'aria-label': id, maxLength: multiline ? 4096 : 200 } }}
+      sx={multiline ? { flexBasis: '100%' } : { minWidth: 160 }}
     />
   );
 }

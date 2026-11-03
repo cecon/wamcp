@@ -4,164 +4,28 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**69 de 157 telas migradas (44%)** · faltam 88
+**161 de 161 telas migradas (100%)** · faltam 0
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
-| (raiz) | 2 / 4 | 2 |
+| (raiz) | 4 / 4 | 0 |
 | agentChat | 6 / 6 | 0 |
-| attributes | 0 / 2 | 2 |
+| attributes | 2 / 2 | 0 |
 | auth | 3 / 3 | 0 |
 | chat | 3 / 3 | 0 |
-| contacts | 8 / 10 | 2 |
-| conversations | 22 / 25 | 3 |
-| desktop | 0 / 1 | 1 |
-| filters | 0 / 3 | 3 |
-| macros | 0 / 1 | 1 |
-| notifications | 0 / 3 | 3 |
-| profile | 1 / 7 | 6 |
-| reports | 8 / 9 | 1 |
-| search | 1 / 3 | 2 |
-| settings | 15 / 63 | 48 |
-| shortcuts | 0 / 1 | 1 |
-| sidebar | 0 / 3 | 3 |
-| sla | 0 / 2 | 2 |
-| ui | 0 / 8 | 8 |
+| contacts | 10 / 10 | 0 |
+| conversations | 25 / 25 | 0 |
+| desktop | 1 / 1 | 0 |
+| filters | 3 / 3 | 0 |
+| macros | 1 / 1 | 0 |
+| notifications | 3 / 3 | 0 |
+| profile | 7 / 7 | 0 |
+| reports | 9 / 9 | 0 |
+| search | 3 / 3 | 0 |
+| settings | 66 / 66 | 0 |
+| shortcuts | 1 / 1 | 0 |
+| sidebar | 4 / 4 | 0 |
+| sla | 2 / 2 | 0 |
+| ui | 8 / 8 | 0 |
 
 ## O que falta, por pasta
-
-### (raiz)
-
-- `AgentApp.tsx`
-- `Workspace.tsx`
-
-### attributes
-
-- `attributes/AttributeInput.tsx`
-- `attributes/AttributesSection.tsx`
-
-### contacts
-
-- `contacts/ContactDetail.tsx`
-- `contacts/ContactsToolbar.tsx`
-
-### conversations
-
-- `conversations/ConversationsScreen.tsx`
-- `conversations/NewChatModal.tsx`
-- `conversations/whatsappFormat.tsx`
-
-### desktop
-
-- `desktop/UpdateNotice.tsx`
-
-### filters
-
-- `filters/ConditionRow.tsx`
-- `filters/FilterModal.tsx`
-- `filters/SavedViewControls.tsx`
-
-### macros
-
-- `macros/MacroRunner.tsx`
-
-### notifications
-
-- `notifications/NotificationBell.tsx`
-- `notifications/NotificationItem.tsx`
-- `notifications/NotificationList.tsx`
-
-### profile
-
-- `profile/BackupCodes.tsx`
-- `profile/MfaModals.tsx`
-- `profile/MfaSection.tsx`
-- `profile/NotificationPreferences.tsx`
-- `profile/qr/QrCode.tsx`
-- `profile/SessionsSection.tsx`
-
-### reports
-
-- `reports/CsatResponses.tsx`
-
-### search
-
-- `search/Highlight.tsx`
-- `search/SearchResults.tsx`
-
-### settings
-
-- `settings/ActionsEditor.tsx`
-- `settings/AgentModal.tsx`
-- `settings/app/AppSettingsPage.tsx`
-- `settings/ConditionsEditor.tsx`
-- `settings/connections/AuditList.tsx`
-- `settings/connections/ChatGptLink.tsx`
-- `settings/connections/ConnectionDetailPage.tsx`
-- `settings/connections/ConnectionsPage.tsx`
-- `settings/connections/ConnectionStatus.tsx`
-- `settings/connections/HistoryMessages.tsx`
-- `settings/connections/HistoryViewer.tsx`
-- `settings/connections/McpAccess.tsx`
-- `settings/connections/PairingPanel.tsx`
-- `settings/DeliveriesPanel.tsx`
-- `settings/directory/AccessSection.tsx`
-- `settings/directory/AgentRosterModal.tsx`
-- `settings/directory/CredentialsPanel.tsx`
-- `settings/directory/RosterSection.tsx`
-- `settings/directory/RuntimeSelect.tsx`
-- `settings/directory/SkillModal.tsx`
-- `settings/directory/SkillPicker.tsx`
-- `settings/directory/SkillsPage.tsx`
-- `settings/engine/ActivityPanel.tsx`
-- `settings/engine/AskModal.tsx`
-- `settings/engine/EnginePage.tsx`
-- `settings/engine/PermissionsPanel.tsx`
-- `settings/engine/StatusPill.tsx`
-- `settings/github/ConnectGithubModal.tsx`
-- `settings/github/GithubSetup.tsx`
-- `settings/github/WebhookInstructions.tsx`
-- `settings/InboxAgentSelect.tsx`
-- `settings/InboxesPage.tsx`
-- `settings/MacroEditor.tsx`
-- `settings/members/AvatarEditor.tsx`
-- `settings/members/MemberAvatar.tsx`
-- `settings/members/MemberCard.tsx`
-- `settings/members/MemberDetail.tsx`
-- `settings/members/OrganizationPage.tsx`
-- `settings/members/SalaryRatesForm.tsx`
-- `settings/members/UsageChart.tsx`
-- `settings/roles/CustomRoleModal.tsx`
-- `settings/RuleEditor.tsx`
-- `settings/schedules/RunHistory.tsx`
-- `settings/schedules/ScheduleEditor.tsx`
-- `settings/schedules/SchedulesPage.tsx`
-- `settings/SettingsRouter.tsx`
-- `settings/SlaModal.tsx`
-- `settings/ValueInput.tsx`
-
-### shortcuts
-
-- `shortcuts/ShortcutsModal.tsx`
-
-### sidebar
-
-- `sidebar/ProfileMenu.tsx`
-- `sidebar/Sidebar.tsx`
-- `sidebar/SidebarParts.tsx`
-
-### sla
-
-- `sla/SlaBadge.tsx`
-- `sla/SlaSection.tsx`
-
-### ui
-
-- `ui/Accordion.tsx`
-- `ui/Avatar.tsx`
-- `ui/Button.tsx`
-- `ui/Confirm.tsx`
-- `ui/NoAccess.tsx`
-- `ui/Overlay.tsx`
-- `ui/SecretField.tsx`
-- `ui/Settings.tsx`

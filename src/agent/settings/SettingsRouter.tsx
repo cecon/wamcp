@@ -1,14 +1,11 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
 import type { Catalog, User } from '../types';
 import type { Route } from '../route';
-import { AgentsPage } from './AgentsPage';
-import { SkillsPage } from './directory/SkillsPage';
-import { OrganizationPage } from './members/OrganizationPage';
-import { ConnectionsPage } from './connections/ConnectionsPage';
-import { AppSettingsPage } from './app/AppSettingsPage';
-import { EnginePage } from './engine/EnginePage';
-import { SchedulesPage } from './schedules/SchedulesPage';
 
 // Telas migradas para o C3Theme: o chunk do MUI só carrega quando a seção abre.
 const LabelsPage = lazy(() => import('./LabelsPage').then((module) => ({ default: module.LabelsPage })));
@@ -33,11 +30,40 @@ const AutomationPage = lazy(() =>
 const CustomRolesPage = lazy(() =>
   import('./roles/CustomRolesPage').then((module) => ({ default: module.CustomRolesPage })),
 );
+const ConnectionsPage = lazy(() =>
+  import('./connections/ConnectionsPage').then((module) => ({ default: module.ConnectionsPage })),
+);
+const EnginePage = lazy(() =>
+  import('./engine/EnginePage').then((module) => ({ default: module.EnginePage })),
+);
+const SchedulesPage = lazy(() =>
+  import('./schedules/SchedulesPage').then((module) => ({ default: module.SchedulesPage })),
+);
+const AppSettingsPage = lazy(() =>
+  import('./app/AppSettingsPage').then((module) => ({ default: module.AppSettingsPage })),
+);
+const AgentsPage = lazy(() => import('./AgentsPage').then((module) => ({ default: module.AgentsPage })));
+const SkillsPage = lazy(() =>
+  import('./directory/SkillsPage').then((module) => ({ default: module.SkillsPage })),
+);
+const OrganizationPage = lazy(() =>
+  import('./members/OrganizationPage').then((module) => ({ default: module.OrganizationPage })),
+);
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
 function LazyPage({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-n-slate-11">Carregando…</div>}>{children}</Suspense>
+    <Suspense
+      fallback={
+        <Box sx={{ p: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Carregando…
+          </Typography>
+        </Box>
+      }
+    >
+      {children}
+    </Suspense>
   );
 }
 
@@ -59,9 +85,17 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'agents':
-      return <AgentsPage user={user} catalog={catalog} onChange={onChange} />;
+      return (
+        <LazyPage>
+          <AgentsPage user={user} catalog={catalog} onChange={onChange} />
+        </LazyPage>
+      );
     case 'organization':
-      return <OrganizationPage catalog={catalog} />;
+      return (
+        <LazyPage>
+          <OrganizationPage catalog={catalog} />
+        </LazyPage>
+      );
     case 'teams':
       return (
         <LazyPage>
@@ -99,7 +133,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'skills':
-      return <SkillsPage />;
+      return (
+        <LazyPage>
+          <SkillsPage />
+        </LazyPage>
+      );
     case 'macros':
       return (
         <LazyPage>
@@ -133,17 +171,31 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
     case 'connections':
       // WhatsApp connections are listed with the other channels; this page is one connection.
       return route.connectionId ? (
-        <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
+        <LazyPage>
+          <ConnectionsPage connectionId={route.connectionId} onNavigate={onNavigate} onChange={onChange} />
+        </LazyPage>
       ) : (
         <LazyPage>
           <InboxesPage catalog={catalog} onNavigate={onNavigate} onChange={onChange} />
         </LazyPage>
       );
     case 'engine':
-      return <EnginePage />;
+      return (
+        <LazyPage>
+          <EnginePage />
+        </LazyPage>
+      );
     case 'schedules':
-      return <SchedulesPage />;
+      return (
+        <LazyPage>
+          <SchedulesPage />
+        </LazyPage>
+      );
     case 'app':
-      return <AppSettingsPage />;
+      return (
+        <LazyPage>
+          <AppSettingsPage />
+        </LazyPage>
+      );
   }
 }

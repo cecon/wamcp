@@ -1,5 +1,10 @@
+// material-ui
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+
+// third-party
 import { Copy } from 'lucide-react';
-import { Button } from './Button';
 
 interface Props {
   label: string;
@@ -7,22 +12,22 @@ interface Props {
   copyLabel: string;
 }
 
-/** Read-only secret (webhook signing secret, bot access token) with a copy button. */
+/** Segredo somente leitura (assinatura de webhook, token do bot) com botão de copiar. */
 export function SecretField({ label, secret, copyLabel }: Props) {
   return (
-    <label>
-      <span className="field-label">{label}</span>
-      <span className="flex gap-2">
-        <input className="field font-mono" readOnly value={secret} aria-label={label} />
-        <Button
-          color="slate"
-          variant="faded"
-          size="md"
-          icon={Copy}
-          aria-label={copyLabel}
-          onClick={() => void navigator.clipboard?.writeText(secret)}
+    <Stack spacing={0.5}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <TextField
+          size="small"
+          label={label}
+          value={secret}
+          fullWidth
+          slotProps={{ htmlInput: { readOnly: true, 'aria-label': label, sx: { fontFamily: 'monospace' } } }}
         />
-      </span>
-    </label>
+        <IconButton aria-label={copyLabel} onClick={() => void navigator.clipboard?.writeText(secret)}>
+          <Copy size={16} />
+        </IconButton>
+      </Stack>
+    </Stack>
   );
 }

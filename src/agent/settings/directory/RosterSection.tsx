@@ -1,18 +1,25 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { Bot, UserRound } from 'lucide-react';
+
 import { http } from '../../api';
 import type { RosterAgent, RosterKind, SalarySheet, Skill } from '../../adminTypes';
 import type { Catalog, User } from '../../types';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
 import { ConfirmModal } from '../../ui/Confirm';
-import { SettingsHeader } from '../../ui/Settings';
 import { AgentModal } from '../AgentModal';
-import { AgentRosterModal } from './AgentRosterModal';
 import { useCustomRoles } from '../roles/useCustomRoles';
+import { SettingsC3Error, SettingsC3Header } from '../c3/SettingsC3';
 import { MemberCard } from '../members/MemberCard';
 import { MemberDetail } from '../members/MemberDetail';
 import { brl } from '../members/format';
+import { AgentRosterModal } from './AgentRosterModal';
 
 interface Props {
   user: User;
@@ -64,51 +71,74 @@ export function RosterSection({ user, catalog, onChange }: Props) {
 
   return (
     <>
-      <SettingsHeader
+      <SettingsC3Header
         title="Funcionários"
         description="Pessoas e agentes de IA, com as mesmas funções: coordenadores delegam; operadores, suporte dev e QA executam com as suas skills. O perfil de cada um define as permissões e a função. Pessoas ocupam um assento fixo; o salário de um agente de IA começa o mês em zero e cresce com o custo dos tokens das suas tarefas."
         search={{ value: search, onChange: setSearch, placeholder: 'Buscar funcionário' }}
         count={`${agents.length} agente${agents.length === 1 ? '' : 's'}`}
         action={
-          <div className="flex gap-2">
+          <Stack direction="row" spacing={1}>
             <Button
-              icon={UserRound}
-              label="Adicionar pessoa"
+              variant="contained"
+              startIcon={<UserRound size={16} />}
               onClick={() => setEditing({ agent: null, kind: 'human' })}
-            />
+            >
+              Adicionar pessoa
+            </Button>
             <Button
-              icon={Bot}
-              label="Adicionar agente de IA"
+              variant="contained"
+              startIcon={<Bot size={16} />}
               onClick={() => setEditing({ agent: null, kind: 'ai' })}
-            />
-          </div>
+            >
+              Adicionar agente de IA
+            </Button>
+          </Stack>
         }
       />
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Filtrar" className="flex gap-1">
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}
+      >
+        <Stack direction="row" spacing={0.5} role="group" aria-label="Filtrar">
           {FILTERS.map((f) => (
             <Button
               key={f.value}
-              color="slate"
-              variant={filter === f.value ? 'solid' : 'faded'}
-              label={f.label}
+              size="small"
+              variant={filter === f.value ? 'contained' : 'outlined'}
               aria-pressed={filter === f.value}
               onClick={() => setFilter(f.value)}
-            />
+            >
+              {f.label}
+            </Button>
           ))}
-        </div>
+        </Stack>
         {sheet && (
-          <p className="text-sm text-n-slate-11" aria-label="Folha do mês">
+          <Typography component="p" variant="body2" color="text.secondary" aria-label="Folha do mês">
             Folha de {sheet.month.split('-').reverse().join('/')}:{' '}
-            <strong className="text-n-slate-12">{brl(total())}</strong> · pessoas {brl(total('human'))} · IA{' '}
-            {brl(total('ai'))} até agora
-          </p>
+            <Box component="strong" sx={{ color: 'var(--color-n-slate-12)' }}>
+              {brl(total())}
+            </Box>{' '}
+            · pessoas {brl(total('human'))} · IA {brl(total('ai'))} até agora
+          </Typography>
         )}
-      </div>
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-        <div className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
-          {shown.length === 0 && <p className="py-20 text-center text-n-slate-12">Nenhum agente.</p>}
+      </Stack>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: { xl: 'flex-start' } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            flex: 1,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(15rem, 1fr))',
+            gap: 1.5,
+            alignContent: 'start',
+          }}
+        >
+          {shown.length === 0 && (
+            <Typography component="p" sx={{ py: 10, textAlign: 'center', gridColumn: '1 / -1' }}>
+              Nenhum agente.
+            </Typography>
+          )}
           {shown.map((agent) => (
             <MemberCard
               key={agent.id}
@@ -122,9 +152,17 @@ export function RosterSection({ user, catalog, onChange }: Props) {
               onDelete={agent.user_id === user.id || agent.system ? undefined : () => setRemoving(agent)}
             />
           ))}
-        </div>
+        </Box>
         {detail && (
-          <div className="xl:sticky xl:top-0 xl:w-[24rem]">
+          <Box
+            sx={{
+              position: { xl: 'sticky' },
+              top: 0,
+              width: { xl: '24rem' },
+              flexShrink: 0,
+              alignSelf: 'flex-start',
+            }}
+          >
             <MemberDetail
               agent={detail}
               roster={agents}
@@ -136,9 +174,9 @@ export function RosterSection({ user, catalog, onChange }: Props) {
               onClose={() => setSelected(null)}
               onChanged={() => void changed()}
             />
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
       {editing && (
         <AgentRosterModal
           agent={editing.agent}

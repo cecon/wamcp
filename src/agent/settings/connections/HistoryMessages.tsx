@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+
 import { http, query } from '../../api';
-import { Button } from '../../ui/Button';
-import { cn } from '../../ui/cn';
 import type { HistoryMessage } from './model';
 
 const PAGE_SIZE = 50;
@@ -53,43 +58,94 @@ export function HistoryMessages({ base, jid, title }: Props) {
     }
   }
   return (
-    <section className="flex min-h-0 flex-col" aria-label={`Mensagens de ${title}`}>
-      <header className="border-b border-n-weak px-4 py-3">
-        <p className="text-heading-3 text-n-slate-12">{title}</p>
-        <p className="text-xs text-n-slate-11">{jid}</p>
-      </header>
-      <div className="flex max-h-[28rem] min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-n-surface-2 p-4">
+    <Box
+      component="section"
+      aria-label={`Mensagens de ${title}`}
+      sx={{ display: 'flex', minHeight: 0, flexDirection: 'column' }}
+    >
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2, py: 1.5 }}>
+        <Typography component="p" variant="h6">
+          {title}
+        </Typography>
+        <Typography component="p" variant="caption" color="text.secondary">
+          {jid}
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          maxHeight: '28rem',
+          minHeight: 0,
+          flex: 1,
+          flexDirection: 'column',
+          gap: 1,
+          overflowY: 'auto',
+          bgcolor: 'var(--color-n-surface-2)',
+          p: 2,
+        }}
+      >
         {error && (
-          <p role="alert" className="text-sm text-n-ruby-11">
+          <Alert severity="error" sx={{ fontSize: 14 }}>
             {error}
-          </p>
+          </Alert>
         )}
         {more && (
           <Button
-            color="slate"
-            className="self-center"
-            label={busy ? 'Carregando…' : 'Carregar anteriores'}
+            size="small"
+            variant="outlined"
             disabled={busy}
             onClick={() => void older()}
-          />
-        )}
-        {messages?.length === 0 && <p className="text-sm text-n-slate-11">Nenhuma mensagem sincronizada.</p>}
-        {messages?.map((m) => (
-          <div
-            key={m.id}
-            className={cn(
-              'max-w-[75%] rounded-xl px-3 py-2 text-sm',
-              m.from_me ? 'self-end bg-n-solid-blue text-n-slate-12' : 'self-start bg-n-solid-1',
-            )}
+            sx={{ alignSelf: 'center' }}
           >
-            {!m.from_me && m.sender && <p className="text-xs font-medium text-n-slate-11">{m.sender}</p>}
-            <p className="break-words whitespace-pre-wrap text-n-slate-12">{m.body}</p>
-            <time className="mt-1 block text-right text-xxs text-n-slate-10">
+            {busy ? 'Carregando…' : 'Carregar anteriores'}
+          </Button>
+        )}
+        {messages?.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Nenhuma mensagem sincronizada.
+          </Typography>
+        )}
+        {messages?.map((m) => (
+          <Box
+            key={m.id}
+            sx={{
+              maxWidth: '75%',
+              borderRadius: 2.5,
+              px: 1.5,
+              py: 1,
+              fontSize: 14,
+              alignSelf: m.from_me ? 'flex-end' : 'flex-start',
+              bgcolor: m.from_me ? 'var(--color-n-solid-blue)' : 'var(--color-n-solid-1)',
+              color: 'var(--color-n-slate-12)',
+            }}
+          >
+            {!m.from_me && m.sender && (
+              <Typography
+                component="p"
+                variant="caption"
+                sx={{ fontWeight: 500, color: 'var(--color-n-slate-11)' }}
+              >
+                {m.sender}
+              </Typography>
+            )}
+            <Typography component="p" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {m.body}
+            </Typography>
+            <Box
+              component="time"
+              sx={{
+                display: 'block',
+                mt: 0.5,
+                textAlign: 'right',
+                fontSize: '0.625rem',
+                color: 'var(--color-n-slate-10)',
+              }}
+            >
               {new Date(m.ts * 1000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-            </time>
-          </div>
+            </Box>
+          </Box>
         ))}
-      </div>
-    </section>
+      </Box>
+    </Box>
   );
 }
