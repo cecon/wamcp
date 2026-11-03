@@ -53,6 +53,19 @@ async fn retry_hook(
     ok(setup)
 }
 
+async fn deliveries(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(inbox): Path<String>,
+) -> ApiResult<Response> {
+    let deliveries = state
+        .support()
+        .helpdesk
+        .github_deliveries(&current.actor(), id(&inbox)?)
+        .await?;
+    ok(deliveries)
+}
+
 fn header<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
     headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default()
 }
@@ -83,6 +96,7 @@ pub fn routes() -> Router<AppState> {
         .route("/github_channels", post(connect))
         .route("/inboxes/{id}/github", get(setup))
         .route("/inboxes/{id}/github/hook", post(retry_hook))
+        .route("/inboxes/{id}/github/deliveries", get(deliveries))
 }
 
 /// Mounted outside `/api/v1`: GitHub calls it from its servers.

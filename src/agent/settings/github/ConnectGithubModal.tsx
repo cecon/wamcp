@@ -1,5 +1,3 @@
-import { useState, type FormEvent } from 'react';
-
 // material-ui
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -12,14 +10,18 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
+import { useState, type FormEvent } from 'react';
 import { http } from '../../api';
 import type { Inbox } from '../../types';
 import { useAction } from '../useAction';
+import { GithubChecks, type GithubCheck } from './GithubChecks';
+import { GithubDeliveries } from './GithubDeliveries';
 import { WebhookInstructions, type GithubWebhook } from './WebhookInstructions';
 
 interface Connection extends GithubWebhook {
   inbox: Inbox;
   hook_error: string | null;
+  checks?: GithubCheck[];
 }
 
 interface Props {
@@ -27,9 +29,16 @@ interface Props {
   onConnected: () => Promise<void>;
 }
 
+/** Troca o resultado do webhook mantendo os passos de token/repositório já executados. */
+function withWebhook(checks: GithubCheck[] | undefined, ok: boolean, detail: string): GithubCheck[] {
+  const rest = (checks || []).filter((c) => c.step !== 'webhook');
+  return [...rest, { step: 'webhook', ok, detail }];
+}
+
 /**
  * Connects a GitHub repository as an inbox: its events become conversations the inbox's agent answers.
- * Usa o `Dialog` do MUI direto (e não o `ActionDialog`): este modal também é montado fora do `C3Provider` nos testes.
+ * Mostra na hora o que aconteceu (token → repositório → webhook), permite tentar criar o webhook de
+ * novo com o token guardado e já lista as entregas do GitHub.
  */
 export function ConnectGithubModal({ onClose, onConnected }: Props) {
   const [name, setName] = useState(''),
@@ -38,20 +47,61 @@ export function ConnectGithubModal({ onClose, onConnected }: Props) {
     [done, setDone] = useState<Connection | null>(null);
   const { error, busy, run } = useAction();
 
+  async function retryHook() {
+    if (!done) return;
+    await run(async () => {
+      const setup = await http<GithubWebhook & { hook_error?: string | null; account?: string | null }>(
+        `/inboxes/${done.inbox.id}/github/hook`,
+        'POST',
+        {},
+      );
+      setDone({
+        ...done,
+        ...setup,
+        hook_error: setup.hook_error ?? null,
+        checks: withWebhook(done.checks, setup.hook_created, setup.hook_error || 'Criado no repositório'),
+      });
+      await onConnected();
+    });
+  }
+
   if (done)
     return (
       <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
         <DialogTitle>Repositório conectado</DialogTitle>
         <DialogContent>
-          {done.hook_created ? (
-            <Typography variant="body2">
-              Criamos o webhook em <strong>{done.repo ?? repo}</strong>. Pull requests, issues, falhas de
-              Actions e pushes na main já chegam na caixa <strong>{done.inbox.name}</strong>. Escolha nela o
-              agente de IA que vai se posicionar.
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              O que aconteceu ao conectar <strong>{done.inbox.name}</strong>:
             </Typography>
-          ) : (
-            <WebhookInstructions webhook={done} reason={done.hook_error} />
-          )}
+            {done.checks && <GithubChecks checks={done.checks} />}
+            {done.hook_created ? (
+              <>
+                <Typography variant="body2">
+                  Criamos o webhook em <strong>{done.repo ?? repo}</strong>. Pull requests, issues, falhas de
+                  Actions e pushes na main já chegam na caixa <strong>{done.inbox.name}</strong>. Escolha nela
+                  o agente de IA que vai se posicionar.
+                </Typography>
+                <GithubDeliveries inboxId={done.inbox.id} />
+              </>
+            ) : (
+              <>
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'warning.main' }}>
+                  O webhook não foi criado: nenhum evento chega a esta caixa até ele existir.
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Button variant="outlined" disabled={busy} onClick={() => void retryHook()}>
+                    {busy ? 'Criando…' : 'Tentar criar webhook de novo'}
+                  </Button>
+                  <Typography variant="caption" color="text.secondary">
+                    Usa o token que você acabou de salvar.
+                  </Typography>
+                </Stack>
+                {error && <Alert severity="error">{error}</Alert>}
+                <WebhookInstructions webhook={done} reason={done.hook_error} />
+              </>
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={onClose}>Fechar</Button>

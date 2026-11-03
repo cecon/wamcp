@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
+import { GithubDeliveries } from './GithubDeliveries';
 import type { GithubWebhook } from './WebhookInstructions';
 import { WebhookInstructions } from './WebhookInstructions';
 
@@ -16,7 +17,7 @@ interface Setup extends GithubWebhook {
   hook_error?: string | null;
 }
 
-/** The GitHub side of a GitHub inbox: repository, account that comments and the webhook. */
+/** The GitHub side of a GitHub inbox: repository, account that comments, the webhook and its deliveries. */
 export function GithubSetup({ inboxId }: { inboxId: number }) {
   const setup = useFetch<Setup>(`/inboxes/${inboxId}/github`);
   const [retried, setRetried] = useState<Setup | null>(null);
@@ -43,9 +44,12 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
           )}
         </Typography>
         {hook_created ? (
-          <Typography variant="body2" color="text.secondary">
-            O webhook foi criado no GitHub pelo app.
-          </Typography>
+          <>
+            <Typography variant="body2" color="text.secondary">
+              O webhook foi criado no GitHub pelo app.
+            </Typography>
+            <GithubDeliveries inboxId={inboxId} />
+          </>
         ) : (
           <>
             <Typography variant="body2" sx={{ fontWeight: 500, color: 'warning.main' }}>

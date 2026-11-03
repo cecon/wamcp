@@ -97,6 +97,11 @@ impl GithubApi for HttpGithub {
         Ok(comment["html_url"].as_str().unwrap_or_default().to_string())
     }
 
+    async fn hook_deliveries(&self, token: &str, repo: &str, hook_id: i64) -> Result<Value> {
+        let path = format!("/repos/{repo}/hooks/{hook_id}/deliveries?per_page=20");
+        self.call(token, reqwest::Method::GET, &path, None).await
+    }
+
     async fn api(&self, token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
         let Ok(method) = reqwest::Method::from_bytes(method.as_bytes()) else {
             return fail("Método HTTP inválido");
@@ -169,6 +174,11 @@ impl GithubApi for MemoryGithub {
     async fn comment(&self, _token: &str, repo: &str, number: u64, body: &str) -> Result<String> {
         self.comments.lock().push((repo.into(), number, body.into()));
         Ok(format!("https://github.com/{repo}/issues/{number}#issuecomment-1"))
+    }
+
+    async fn hook_deliveries(&self, _token: &str, repo: &str, hook_id: i64) -> Result<Value> {
+        let key = format!("GET /repos/{repo}/hooks/{hook_id}/deliveries");
+        Ok(self.answers.lock().get(&key).cloned().unwrap_or_else(|| json!([])))
     }
 
     async fn api(&self, _token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {

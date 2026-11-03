@@ -101,6 +101,14 @@ O backend embutido escuta em uma única porta (`0.0.0.0:17382`) com o app web, a
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
 
+## Canal do GitHub
+
+Em **Configurações → Canais**, conecte um repositório GitHub com um token fine-grained que tenha escrita em **Issues**, **Pull requests** e **Webhooks**. O app cria a caixa de entrada e o webhook no repositório; ao conectar, a tela mostra **o que aconteceu** passo a passo (token autenticado, repositório acessível e webhook criado ou o motivo exato da recusa), com a URL/segredo para cadastrar à mão se necessário.
+
+Se o token não puder criar o webhook, use **Tentar criar webhook de novo** (com o token já salvo) ou cadastre-o no GitHub em **Settings → Webhooks → Add webhook** com a URL e o segredo mostrados. Enquanto o webhook não existir, nenhum evento chega — o app avisa isso na própria tela do canal.
+
+As **entregas do GitHub** (o `ping` de teste e cada evento, com o status HTTP respondido) aparecem na conexão e na tela do canal, com botão **Atualizar**; assim dá para ver na hora se o repositório está entregando. Os eventos acompanhados são `pull_request`, `pull_request_review`, `pull_request_review_comment`, `issues`, `issue_comment`, `workflow_run` e `push`.
+
 ## Eventos no ChatGPT
 
 O servidor oferece `message.created` para novas mensagens recebidas, com filtro opcional por conversa e entrega HTTPS assinada. A assinatura é criada pelo ChatGPT somente quando o usuário pede monitoramento; a atualização não ativa automações por conta própria. Consulte [MCP_EVENTS.md](MCP_EVENTS.md) para limites, segurança e o teste completo após atualizar e reescanear o plugin.

@@ -1,107 +1,18 @@
 //! The GitHub channel: connecting a repository (token, webhook), turning its webhook deliveries
 //! into conversations of the `github` inbox, and posting replies back as comments.
 use super::core::Events;
-use super::crypto::{random_secret, valid_hub_signature};
+use super::crypto::valid_hub_signature;
+use super::github_connect::webhook_url;
 use super::helpdesk::HelpdeskService;
 use super::ports::SendRequest;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail_with, Result};
-use crate::domain::github::{self, comment_target, marked, parse, valid_repo, GithubEvent, EVENTS, GITHUB};
+use crate::domain::github::{self, comment_target, marked, parse, GithubEvent, EVENTS, GITHUB};
 use crate::domain::helpdesk::{initial_status, route_incoming, Route};
-use crate::domain::model::{
-    ContactChanges, ContactInbox, ConversationChanges as Changes, GithubChannel, Inbox, Message, NewMessage,
-};
-use serde::Serialize;
+use crate::domain::model::{ContactChanges, ContactInbox, ConversationChanges as Changes, Inbox, Message, NewMessage};
 use serde_json::{json, Value};
 
-/// What the administrator needs after connecting: the inbox and the webhook, created by the app or
-/// to be added by hand on GitHub when the token cannot create it.
-#[derive(Debug, Serialize)]
-pub struct GithubConnection {
-    pub inbox: Inbox,
-    pub webhook_url: String,
-    pub webhook_secret: String,
-    pub events: Vec<&'static str>,
-    pub hook_created: bool,
-    pub hook_error: Option<String>,
-}
-
-/// Path of a GitHub inbox's webhook, under the app's public address.
-pub fn webhook_path(inbox_id: i64) -> String {
-    format!("/api/github/{inbox_id}/webhook")
-}
-
-fn webhook_url(public_url: &str, inbox_id: i64) -> String {
-    format!("{}{}", public_url.trim_end_matches('/'), webhook_path(inbox_id))
-}
-
 impl HelpdeskService {
-    /// Connects `owner/repo` as a new inbox (administrators). The token is checked against GitHub
-    /// and stored encrypted, as is the webhook secret.
-    pub async fn connect_github(
-        &self,
-        actor: &Actor,
-        name: &str,
-        repo: &str,
-        token: &str,
-        public_url: &str,
-    ) -> Result<GithubConnection> {
-        if !actor.is_admin() {
-            return fail_with("Apenas administradores conectam canais", 403);
-        }
-        let (name, repo, token) = (name.trim(), repo.trim().trim_matches('/'), token.trim());
-        if name.is_empty() || name.chars().count() > 80 || !valid_repo(repo) || token.is_empty() || token.len() > 400 {
-            return fail_with("Informe nome, repositório (dono/nome) e token", 422);
-        }
-        let own_login = self.github.login(token).await?;
-        self.github.repository(token, repo).await?;
-        let secret = random_secret();
-        let channel = GithubChannel {
-            inbox_id: 0,
-            repo: repo.to_string(),
-            token: self.secrets.seal(token)?,
-            webhook_secret: self.secrets.seal(&secret)?,
-            own_login: Some(own_login).filter(|l| !l.is_empty()),
-            hook_id: None,
-        };
-        let inbox = self.core.commit(Some(actor), |_| {
-            let inbox = self.core.repo.create_github_inbox(name, &channel)?;
-            Ok(inbox)
-        })?;
-        let webhook_url = webhook_url(public_url, inbox.id);
-        let hook_error = self
-            .create_github_hook(inbox.id, token, repo, &webhook_url, &secret)
-            .await?;
-        let hook_created = hook_error.is_none();
-        Ok(GithubConnection {
-            inbox,
-            webhook_url,
-            webhook_secret: secret,
-            events: EVENTS.to_vec(),
-            hook_created,
-            hook_error,
-        })
-    }
-
-    /// Creates the repository webhook and records it; `Some(reason)` when GitHub refuses (usually a
-    /// token without the Webhooks permission), so the administrator can fix it and try again.
-    async fn create_github_hook(
-        &self,
-        inbox_id: i64,
-        token: &str,
-        repo: &str,
-        url: &str,
-        secret: &str,
-    ) -> Result<Option<String>> {
-        match self.github.create_hook(token, repo, url, secret, &EVENTS).await {
-            Ok(hook_id) => {
-                self.core.repo.set_github_hook(inbox_id, hook_id)?;
-                Ok(None)
-            }
-            Err(error) => Ok(Some(error.to_string())),
-        }
-    }
-
     /// Tries again to create the webhook of a GitHub inbox that has none (administrators), with the
     /// stored token. Answers the setup, with `hook_error` when GitHub still refuses.
     pub async fn retry_github_hook(&self, actor: &Actor, inbox_id: i64, public_url: &str) -> Result<Value> {
@@ -121,6 +32,40 @@ impl HelpdeskService {
         setup["hook_created"] = json!(hook_error.is_none());
         setup["hook_error"] = json!(hook_error);
         Ok(setup)
+    }
+
+    /// What GitHub sent to the channel's webhook, with the HTTP status of each delivery
+    /// (administrators). Empty while no webhook exists: the UI explains how to create it.
+    pub async fn github_deliveries(&self, actor: &Actor, inbox_id: i64) -> Result<Value> {
+        if !actor.is_admin() {
+            return fail_with("Apenas administradores veem as entregas do canal", 403);
+        }
+        let Some(channel) = self.core.repo.github_channel(inbox_id)? else {
+            return fail_with("Canal do GitHub não encontrado", 404);
+        };
+        let Some(hook_id) = channel.hook_id else {
+            return Ok(json!({ "hook_created": false, "deliveries": [] }));
+        };
+        let token = self.secrets.open(&channel.token)?;
+        let raw = self.github.hook_deliveries(&token, &channel.repo, hook_id).await?;
+        let deliveries: Vec<Value> = raw
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .map(|d| {
+                json!({
+                    "id": d["id"],
+                    "event": d["event"],
+                    "action": d["action"],
+                    "status": d["status_code"],
+                    "duration_ms": d["duration"],
+                    "delivered_at": d["delivered_at"],
+                    "redelivery": d["redelivery"],
+                })
+            })
+            .collect();
+        Ok(json!({ "hook_created": true, "deliveries": deliveries }))
     }
 
     /// One webhook delivery. Unsigned or wrongly signed deliveries are refused (401); events the

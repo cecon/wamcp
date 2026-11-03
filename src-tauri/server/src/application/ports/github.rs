@@ -22,6 +22,8 @@ pub trait GithubApi: Send + Sync {
     async fn create_hook(&self, token: &str, repo: &str, url: &str, secret: &str, events: &[&str]) -> Result<i64>;
     /// Comments on a pull request or issue; returns the comment's URL.
     async fn comment(&self, token: &str, repo: &str, number: u64, body: &str) -> Result<String>;
+    /// The latest deliveries GitHub attempted for `hook_id` (what it sent and its HTTP status).
+    async fn hook_deliveries(&self, token: &str, repo: &str, hook_id: i64) -> Result<Value>;
     /// Any call of the REST API: `method` is GET, POST, PUT, PATCH or DELETE and `path` starts at
     /// `/repos/…`. Answers the response body (`null` when GitHub sends none).
     async fn api(&self, token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value>;

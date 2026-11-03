@@ -1,6 +1,6 @@
 # Fechamento — 100% das telas no C3Theme
 
-> **Resultado:** **161 de 161 telas migradas (100%)**, `main` em **290,8 kB (gzip 92,0 kB)**, suíte **220 testes verdes** (222 no worktree com o pacote 0.3) e `tsc`/ESLint/arquitetura/régua verdes. A migração terminou sem big bang: shell e chat novos continuam atrás de flag até a decisão de UX.
+> **Resultado:** **163 de 163 telas migradas (100%)**, `main` em **290,8 kB (gzip 92,0 kB)**, suíte **224 testes verdes** (226 no worktree com o pacote 0.3) e `tsc`/ESLint/arquitetura/régua verdes. A migração terminou sem big bang: shell e chat novos continuam atrás de flag até a decisão de UX.
 
 ---
 
@@ -11,7 +11,7 @@
 | **settings-core**     | Páginas de Configurações (Canais/Inboxes, Motor, Agendamentos, Aplicativo, Conexões, GitHub) e modais/editores (SLA, perfis, regra de automação, macro, entregas) | `SettingsC3Page/Header` + `DataTable`; páginas no `lazy` do router; testes do escopo verdes |
 | **settings-support**  | `members/**` (Funcionários, organograma, detalhe, salário) e `directory/**` (roster, skills, credenciais), `AgentModal`, `InboxAgentSelect`                       | abas/`ActionDialog`/MUI; dois arquivos extraídos por limite de 300 linhas; testes verdes    |
 | **product-surfaces**  | Perfil/MFA, Notificações, Filtros/views salvas, Busca, Contatos, Conversas, Atributos, SLA, Macros, Relatórios (CSAT), Atalhos, UpdateNotice e **Sidebar**        | 100% das pastas dela; SidePanel do contato em `Dialog` lateral; `SidebarNav` extraído       |
-| **Lead (fechamento)** | Primitivos compartilhados `ui/*`, `Workspace`, `AgentApp`, `SettingsRouter` (lazy de Agents/Skills/Organization), régua/docs/verificação                          | 11 arquivos finais; **régua 161/161**                                                       |
+| **Lead (fechamento)** | Primitivos compartilhados `ui/*`, `Workspace`, `AgentApp`, `SettingsRouter` (lazy de Agents/Skills/Organization), régua/docs/verificação                          | 11 arquivos finais; **régua 163/163**                                                       |
 
 ## 2. Primitivos migrados no fechamento
 
@@ -33,9 +33,9 @@
 | `npx tsc --noEmit`                                             | verde                                                                                        |
 | `npm run lint` (ESLint + arquitetura + 300 linhas + **régua**) | verde                                                                                        |
 | `npm run build`                                                | verde — **`main` 290,8 kB (gzip 92,0)**; `C3Provider` 247,9 kB (80,7) em chunk compartilhado |
-| `npm run test:ui` (árvore principal)                           | **220 testes verdes + 2 pulados** (teste do `AssistantPanel` exige chat 0.3)                 |
-| Worktree pnpm (chat 0.3)                                       | validado em seguida: **222 testes**, lint e build verdes                                     |
-| Régua                                                          | **161 de 161 telas (100%)** — `node scripts/c3-progresso.mjs --check` no lint                |
+| `npm run test:ui` (árvore principal)                           | **224 testes verdes** (teste do `AssistantPanel` exige chat 0.3)                             |
+| Worktree pnpm (chat 0.3)                                       | validado em seguida: **226 testes**, lint e build verdes                                     |
+| Régua                                                          | **163 de 163 telas (100%)** — `node scripts/c3-progresso.mjs --check` no lint                |
 
 ## 4. O que sobra (decisões de produto, não migração)
 

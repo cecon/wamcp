@@ -64,6 +64,15 @@ async fn the_administrator_connects_a_repository_and_its_webhook_is_created() {
     assert_eq!(setup["hook_created"], true);
     assert_eq!(setup["account"], "wamcp-bot");
 
+    // What GitHub sent to the webhook is visible (empty until the first delivery).
+    let deliveries = c
+        .admin
+        .get(&format!("/inboxes/{}/github/deliveries", c.inbox))
+        .await
+        .body;
+    assert_eq!(deliveries["hook_created"], true);
+    assert!(deliveries["deliveries"].as_array().unwrap().is_empty());
+
     // The token and the secret are stored encrypted.
     let stored: String =
         c.f.store
