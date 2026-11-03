@@ -3,7 +3,6 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import type { Catalog, User } from '../types';
 import type { Route } from '../route';
 import { AgentsPage } from './AgentsPage';
-import { AutomationPage } from './AutomationPage';
 import { SkillsPage } from './directory/SkillsPage';
 import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
@@ -28,6 +27,9 @@ const InboxesPage = lazy(() => import('./InboxesPage').then((module) => ({ defau
 const TeamsPage = lazy(() => import('./TeamsPage').then((module) => ({ default: module.TeamsPage })));
 const WebhooksPage = lazy(() =>
   import('./WebhooksPage').then((module) => ({ default: module.WebhooksPage })),
+);
+const AutomationPage = lazy(() =>
+  import('./AutomationPage').then((module) => ({ default: module.AutomationPage })),
 );
 
 /** Carrega a seção migrada mantendo o resto da página montado. */
@@ -89,7 +91,11 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
         </LazyPage>
       );
     case 'automation':
-      return <AutomationPage catalog={catalog} />;
+      return (
+        <LazyPage>
+          <AutomationPage catalog={catalog} />
+        </LazyPage>
+      );
     case 'skills':
       return <SkillsPage />;
     case 'macros':
