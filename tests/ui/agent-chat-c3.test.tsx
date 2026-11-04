@@ -87,8 +87,7 @@ describeC3('chat do Agente de IA no AssistantPanel (?c3assistant)', () => {
       'GET /agent_chats': [agent(3, 'Anny')],
       'GET /agent_chats/3/sessions': { current: 1, token_limit: 500_000, sessions: [session(1)] },
       'GET /agent_chats/3/messages': [],
-      'POST /agent_chats/3/messages': (body) =>
-        message(10, 'user', (body as { content: string }).content),
+      'POST /agent_chats/3/messages': (body) => message(10, 'user', (body as { content: string }).content),
     });
     const { realtime, emit } = fakeRealtime();
     const user = userEvent.setup();

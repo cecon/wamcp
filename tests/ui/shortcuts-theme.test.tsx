@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AgentApp from '../../src/agent/AgentApp';
+// Tema/menu do perfil sÃ£o do shell antigo (o C3Theme tem o prÃ³prio modo claro/escuro): estes testes o exercitam.
+const legacyShell = () => window.history.replaceState({}, '', '/?shelllegacy');
 import { matches } from '../../src/agent/shortcuts/hotkeys';
 import { applyTheme, getTheme, setTheme } from '../../src/agent/theme/theme';
 import { fakeApi } from './fake-api';
@@ -19,6 +21,7 @@ const routes = () => ({
 });
 
 async function openApp() {
+  legacyShell();
   const api = fakeApi(routes());
   const user = userEvent.setup();
   render(<AgentApp />);

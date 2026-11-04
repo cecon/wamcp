@@ -9,10 +9,11 @@ import type { AppNotification, Availability, Catalog, User } from './types';
 import { useRoute } from './navigation/useRoute';
 import { canOpen } from './permissions';
 import { NoAccess } from './ui/NoAccess';
-import { Sidebar } from './sidebar/Sidebar';
 
 // O shell do C3Theme (MUI/Emotion) entra em chunk separado para o shell atual continuar leve até a troca do padrão.
 const C3Workspace = lazy(() => import('./shell/C3Workspace'));
+// Shell antigo atrÃ¡s de ?shelllegacy (rollback/comparaÃ§Ã£o): chunk lazy para nÃ£o pesar no padrÃ£o.
+const LegacyWorkspace = lazy(() => import('./shell/LegacyWorkspace'));
 // Páginas já migradas para o C3Theme carregam o chunk do MUI só quando abertas.
 const NotificationsPage = lazy(() =>
   import('./NotificationsPage').then((module) => ({ default: module.NotificationsPage })),
@@ -59,7 +60,7 @@ interface Props {
 
 /** Chatwoot Dashboard.vue: sidebar + main router view. */
 export function Workspace({ user, onUser, onLogout }: Props) {
-  const [route, setRoute] = useRoute(['c3shell']),
+  const [route, setRoute] = useRoute(['c3shell', 'shelllegacy']),
     [online, setOnline] = useState(false),
     [catalog, setCatalog] = useState<Catalog>({ inboxes: [], agents: [], teams: [], labels: [] }),
     [unread, setUnread] = useState(0),
@@ -121,9 +122,8 @@ export function Workspace({ user, onUser, onLogout }: Props) {
     { keys: 'mod+k', run: () => setRoute({ page: 'search' }) },
   ]);
 
-  // Troca do shell em curso (Fase 2): `?c3shell` monta o AppLayout do C3Theme; o padrão continua o sidebar atual
-  // até a decisão de UX/testes da próxima rodada.
-  const c3Shell = new URLSearchParams(window.location.search).has('c3shell');
+  // Padrão: AppLayout do C3Theme (header e menu do pacote). `?shelllegacy` monta o shell antigo para rollback.
+  const legacyShell = new URLSearchParams(window.location.search).has('shelllegacy');
   const bell = (
     <NotificationBell realtime={realtime} unread={unread} onUnread={setUnread} onOpen={openConversation} />
   );
@@ -201,8 +201,24 @@ export function Workspace({ user, onUser, onLogout }: Props) {
 
   return (
     <>
-      {c3Shell ? (
-        <Suspense fallback={<Loading />}>
+      <Suspense fallback={<Loading />}>
+        {legacyShell ? (
+          <LegacyWorkspace
+            user={user}
+            catalog={catalog}
+            views={views}
+            route={route}
+            unread={unread}
+            online={online}
+            onNavigate={setRoute}
+            onAvailability={setAvailability}
+            onLogout={() => void logout()}
+            onShortcuts={() => setShortcuts(true)}
+            bell={bell}
+          >
+            {content}
+          </LegacyWorkspace>
+        ) : (
           <C3Workspace
             user={user}
             catalog={catalog}
@@ -218,38 +234,8 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           >
             {content}
           </C3Workspace>
-        </Suspense>
-      ) : (
-        <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden', color: 'text.primary' }}>
-          <Sidebar
-            user={user}
-            catalog={catalog}
-            views={views}
-            route={route}
-            unread={unread}
-            online={online}
-            onNavigate={setRoute}
-            onAvailability={setAvailability}
-            onLogout={() => void logout()}
-            onShortcuts={() => setShortcuts(true)}
-            bell={bell}
-          />
-          <Box
-            component="main"
-            sx={{
-              display: 'flex',
-              height: '100%',
-              minHeight: 0,
-              minWidth: 0,
-              flex: 1,
-              overflow: 'hidden',
-              bgcolor: 'background.default',
-            }}
-          >
-            {content}
-          </Box>
-        </Box>
-      )}
+        )}
+      </Suspense>
       {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
       {isDesktop() && <UpdateNotice />}
     </>

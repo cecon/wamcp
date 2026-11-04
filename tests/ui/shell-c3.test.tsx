@@ -9,17 +9,13 @@ import { fakeApi } from './fake-api';
 import { workspaceRoutes } from './fixtures';
 import { summary } from './report-fixtures';
 
-/** Liga o shell novo do C3Theme (Fase 2) pela mesma flag usada no navegador. */
-function enableC3Shell() {
-  window.history.replaceState({}, '', '/?c3shell');
-}
+// O AppLayout do C3Theme agora é o padrão; o shell antigo fica atrás de ?shelllegacy.
 
 afterEach(() => window.history.replaceState({}, '', '/'));
 
-describe('shell C3 (?c3shell)', () => {
+describe('shell C3 (padrão)', () => {
   it('monta o AppLayout com menu, badge de não lidas, busca e navegação por link', async () => {
     fakeApi({ ...workspaceRoutes(), 'GET /reports/summary_v2': summary, 'GET /reports': [] });
-    enableC3Shell();
     const user = userEvent.setup();
     render(<AgentApp />);
 
@@ -41,7 +37,6 @@ describe('shell C3 (?c3shell)', () => {
 
   it('mantém as páginas de Configurações acessíveis pelo menu do pacote', async () => {
     fakeApi({ ...workspaceRoutes(), 'GET /account': { id: 1, name: 'Loja', locale: 'pt-BR', settings: {} } });
-    enableC3Shell();
     const user = userEvent.setup();
     render(<AgentApp />);
 
@@ -50,5 +45,16 @@ describe('shell C3 (?c3shell)', () => {
     await user.click(within(nav).getByRole('button', { name: 'Configurações' }));
     await user.click(within(nav).getByRole('link', { name: 'Configurações da conta' }));
     expect(await screen.findByLabelText('Nome da conta')).toHaveValue('Loja');
+  });
+
+  it('mantém o shell antigo disponível em ?shelllegacy', async () => {
+    window.history.replaceState({}, '', '/?shelllegacy');
+    fakeApi(workspaceRoutes());
+    render(<AgentApp />);
+    expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation');
+    // No shell antigo o menu ainda usa botões (o AppLayout usa links).
+    expect(within(nav).getByRole('button', { name: 'Configurações' })).toBeInTheDocument();
+    window.history.replaceState({}, '', '/');
   });
 });

@@ -1,6 +1,6 @@
 # Fechamento — 100% das telas no C3Theme
 
-> **Resultado:** **163 de 163 telas migradas (100%)**, `main` em **290,8 kB (gzip 92,0 kB)**, suíte **224 testes verdes** (226 no worktree com o pacote 0.3) e `tsc`/ESLint/arquitetura/régua verdes. A migração terminou sem big bang: shell e chat novos continuam atrás de flag até a decisão de UX.
+> **Resultado:** **164 de 164 telas migradas (100%)**, `main` em **255,7 kB (gzip 81,7 kB)**, suíte **225 testes verdes** (226 no worktree com o pacote 0.3) e `tsc`/ESLint/arquitetura/régua verdes. A migração terminou sem big bang: shell e chat novos continuam atrás de flag até a decisão de UX.
 
 ---
 
@@ -32,14 +32,14 @@
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `npx tsc --noEmit`                                             | verde                                                                                        |
 | `npm run lint` (ESLint + arquitetura + 300 linhas + **régua**) | verde                                                                                        |
-| `npm run build`                                                | verde — **`main` 290,8 kB (gzip 92,0)**; `C3Provider` 247,9 kB (80,7) em chunk compartilhado |
-| `npm run test:ui` (árvore principal)                           | **224 testes verdes** (teste do `AssistantPanel` exige chat 0.3)                             |
+| `npm run build`                                                | verde — **`main` 255,7 kB (gzip 81,7)**; `C3Provider` 247,9 kB (80,7) em chunk compartilhado |
+| `npm run test:ui` (árvore principal)                           | **225 testes verdes** (teste do `AssistantPanel` exige chat 0.3)                             |
 | Worktree pnpm (chat 0.3)                                       | validado em seguida: **226 testes**, lint e build verdes                                     |
-| Régua                                                          | **163 de 163 telas (100%)** — `node scripts/c3-progresso.mjs --check` no lint                |
+| Régua                                                          | **164 de 164 telas (100%)** — `node scripts/c3-progresso.mjs --check` no lint                |
 
 ## 4. O que sobra (decisões de produto, não migração)
 
-1. **Virar os padrões**: `?c3shell` (AppLayout) e `?c3assistant`/`?c3chat` (chat novo) continuam opt-in; a troca de default pede adaptação dos testes de shell/chat antigos e aprovação de UX. O código dos dois lados está pronto.
+1. **Padrões**: o **shell AppLayout do C3Theme (com header) já é o padrão**; o shell antigo fica em `?shelllegacy`. O chat novo (`?c3assistant`/`?c3chat`) continua opt-in até a aprovação de UX.
 2. **Unificar `z-index`** com o `Z_INDEX` do pacote (quando exportado) e revisar os overlays próprios.
 3. **Pedidos ao C3Theme** já mapeados (tokens/`useColorMode`/`Z_INDEX` exportados, `injectFirst` embutido, imports `.js`, `NavItem` com `aria-current`).
 4. **Ambiente**: `C3THEME_TOKEN` no CI, `pnpm install` local e remoção dos worktrees de validação.
