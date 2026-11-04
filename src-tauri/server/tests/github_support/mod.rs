@@ -1,4 +1,5 @@
 //! A connected GitHub channel and the webhook deliveries the tests send to it.
+#![allow(dead_code)]
 use crate::common::{self, Fixture};
 use axum::body::Body;
 use axum::http::Request;

@@ -35,4 +35,11 @@ impl GithubRepo for SqliteStore {
                    WHERE id=(SELECT channel_id FROM inboxes WHERE id=? AND channel_type='github')";
         self.exec(sql, vec![int(hook_id), int(inbox_id)]).map(|_| ())
     }
+
+    fn github_channels(&self) -> Result<Vec<GithubChannel>> {
+        let sql = "SELECT i.id AS inbox_id,g.repo,g.token,g.webhook_secret,g.own_login,g.hook_id
+                   FROM inboxes i JOIN channel_github g ON g.id=i.channel_id
+                   WHERE i.channel_type='github' ORDER BY i.id";
+        self.rows(sql, vec![], PLAIN)
+    }
 }

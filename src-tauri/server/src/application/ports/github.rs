@@ -9,6 +9,8 @@ pub trait GithubRepo {
     fn create_github_inbox(&self, name: &str, channel: &GithubChannel) -> Result<Inbox>;
     fn github_channel(&self, inbox_id: i64) -> Result<Option<GithubChannel>>;
     fn set_github_hook(&self, inbox_id: i64, hook_id: i64) -> Result<()>;
+    /// Every GitHub inbox's channel.
+    fn github_channels(&self) -> Result<Vec<GithubChannel>>;
 }
 
 /// The GitHub REST API, called with the channel's token.
