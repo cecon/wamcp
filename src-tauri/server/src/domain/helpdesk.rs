@@ -102,6 +102,13 @@ pub fn route_own_message(latest: Option<&Conversation>) -> Route {
     }
 }
 
+/// Whether the inbox's bot still answers: a `pending` conversation, or an `open` one nobody took yet.
+/// The channel's AI agent keeps serving after a handoff while there is no human assignee, so new
+/// messages do not sit in an orphan conversation.
+pub fn bot_answers(conversation: &Conversation) -> bool {
+    conversation.status == "pending" || (conversation.status == "open" && conversation.assignee_id.is_none())
+}
+
 /// Bots handle new conversations in `pending` until they hand off to a human.
 pub fn initial_status(has_bot: bool) -> &'static str {
     if has_bot {

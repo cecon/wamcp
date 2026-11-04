@@ -16,6 +16,7 @@ use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::github;
+use crate::domain::helpdesk::bot_answers;
 use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
@@ -126,7 +127,7 @@ impl LlmBotService {
             return true;
         }
         let inbox = core.inbox(conversation.inbox_id);
-        conversation.status == "pending" && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
+        bot_answers(&conversation) && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
     }
 
     /// Who answers the inbox: its AI agent (when it may answer customers), else its `llm` bot. The
@@ -216,7 +217,7 @@ impl LlmBotService {
             return self.answer_admin(&conversation, &agent, admin).await;
         }
         let inbox = core.inbox(conversation.inbox_id)?;
-        let Some(responder) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
+        let Some(responder) = self.responder(&inbox)?.filter(|_| bot_answers(&conversation)) else {
             return Ok(());
         };
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
@@ -245,7 +246,7 @@ impl LlmBotService {
         };
         // A person may have taken the conversation while the model was thinking.
         let current = core.repo.conversation_by_id(conversation_id)?;
-        if current.is_none_or(|c| c.status != "pending") {
+        if current.is_none_or(|c| !bot_answers(&c)) {
             return Ok(());
         }
         let actor = Actor::Bot { inbox_id: inbox.id };
