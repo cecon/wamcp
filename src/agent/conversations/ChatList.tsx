@@ -71,14 +71,12 @@ export function ChatList({
       sx={{
         display: 'flex',
         height: '100%',
-        width: '100%',
         flexShrink: 0,
         flexDirection: 'column',
         bgcolor: 'background.paper',
         borderRight: { md: 1 },
         borderColor: 'divider',
-        md: { width: 340 },
-        '2xl': { width: 412 },
+        width: { xs: '100%', md: 340, xl: 412 },
       }}
     >
       <ChatListHeader

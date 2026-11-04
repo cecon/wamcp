@@ -218,7 +218,12 @@ export function C3Shell({
       }
     >
       {fillHeight ? (
-        <FillHeight sx={{ bgcolor: 'background.paper' }}>{children}</FillHeight>
+        <FillHeight sx={{ bgcolor: 'background.paper' }}>
+          {/* `data-full-bleed`: o AppLayout tem padding próprio; estas telas ocupam a área toda (CSS global). */}
+          <Box data-full-bleed sx={{ display: 'flex', flex: 1, minWidth: 0, minHeight: 0 }}>
+            {children}
+          </Box>
+        </FillHeight>
       ) : (
         <Box sx={{ bgcolor: 'background.paper', minHeight: '100%' }}>{children}</Box>
       )}

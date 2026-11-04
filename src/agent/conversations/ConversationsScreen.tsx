@@ -74,11 +74,12 @@ export function ConversationsScreen({
   ]);
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', width: '100%' }}>
+    <Box sx={{ display: 'flex', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden' }}>
       <Box
         sx={{
           height: '100%',
           width: { xs: '100%', md: 'auto' },
+          flexShrink: 0,
           display: displayId ? { xs: 'none', md: 'block' } : 'block',
         }}
       >

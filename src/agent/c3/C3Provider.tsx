@@ -11,7 +11,12 @@ import { useTheme as useAppTheme } from '../theme/theme';
 import { C3_TOKENS } from './tokens';
 
 const BRANDING: Partial<Branding> = { name: 'WhatsAppMcp', homePath: '/app/' };
-const DEFAULT_CONFIG = { brand: 'blue', locale: 'pt-BR' } as const satisfies Partial<UiConfig>;
+// container: false: a mesa de atendimento usa a largura toda (o AppLayout não centraliza em 1440px).
+const DEFAULT_CONFIG = {
+  brand: 'blue',
+  locale: 'pt-BR',
+  container: false,
+} as const satisfies Partial<UiConfig>;
 
 /**
  * Um só dono do claro/escuro: o app escreve `data-theme` no `<html>` (o Tailwind depende dele) e o MUI passa a
