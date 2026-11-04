@@ -13,6 +13,7 @@ import { Plus, X } from 'lucide-react';
 import { http } from '../api';
 import type { Catalog, Conversation, User } from '../types';
 import { PRIORITY_LABEL } from '../labels';
+import { useFetch } from '../useFetch';
 
 interface Props {
   conversation: Conversation;
@@ -43,6 +44,11 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
   const agents = catalog.agents.filter(
     (a) => a.active && (a.role === 'administrator' || a.inbox_ids?.includes(c.inbox_id)),
   );
+  // O agente de IA é da caixa, não um “agente atribuído” humano: mostramos quem está atendendo
+  // automaticamente enquanto ninguém assume a conversa.
+  const aiAgentId = catalog.inboxes.find((inbox) => inbox.id === c.inbox_id)?.ai_agent_id ?? null;
+  const directory = useFetch<{ id: number; name: string }[]>(aiAgentId ? '/agent_directory' : null);
+  const aiAgent = aiAgentId ? directory.data?.find((agent) => agent.id === aiAgentId) : undefined;
   const available = catalog.labels.filter((l) => !c.labels.includes(l.title));
   const setLabels = (labels: string[]) => run(http(`${path}/labels`, 'POST', { labels }));
   const color = (title: string) => catalog.labels.find((l) => l.title === title)?.color || '#8B8D98';
@@ -88,6 +94,11 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
             </option>
           ))}
         </Box>
+        {!c.assignee_id && aiAgent && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            IA da caixa: <strong>{aiAgent.name}</strong> responde automaticamente até um humano assumir.
+          </Typography>
+        )}
       </Box>
       <Box>
         <Typography component="label" variant="body2" sx={{ display: 'block', mb: 0.5 }}>
