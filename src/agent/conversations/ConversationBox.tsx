@@ -2,12 +2,9 @@ import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react'
 
 // material-ui
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 // third-party
-import { History } from 'lucide-react';
 
 import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
@@ -16,6 +13,7 @@ import { ConversationMenu } from './ConversationMenu';
 import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
+import { ConversationHistory } from './ConversationHistory';
 import { TypingIndicator } from './TypingIndicator';
 import { useConversationShortcuts } from './useConversationShortcuts';
 
@@ -57,6 +55,9 @@ export function ConversationBox({
   const bottom = useRef<HTMLDivElement>(null);
   const path = `/conversations/${displayId}`;
   const c3Chat = new URLSearchParams(window.location.search).has('c3chat');
+  // O histórico bruto é do WhatsApp; um canal GitHub não tem esse histórico (o repositório é a fonte).
+  const inboxChannel = catalog.inboxes.find((i) => i.id === conversation?.inbox_id);
+  const whatsapp = inboxChannel?.channel_type !== 'github';
 
   const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
   const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
@@ -206,59 +207,13 @@ export function ConversationBox({
         ) : (
           <>
             <Box sx={{ flex: 1, overflowY: 'auto', pb: 2 }}>
-              <Stack direction="row" spacing={1} sx={{ justifyContent: 'center', py: 1.5 }}>
-                {older && (
-                  <Button size="small" variant="outlined" onClick={() => void loadOlder()}>
-                    Mensagens anteriores
-                  </Button>
-                )}
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<History size={14} />}
-                  onClick={() => void loadHistory()}
-                >
-                  Histórico do WhatsApp
-                </Button>
-              </Stack>
-              {history && (
-                <Box
-                  aria-label="Histórico do WhatsApp"
-                  sx={{
-                    mx: 2,
-                    mb: 1.5,
-                    borderRadius: 2,
-                    border: 1,
-                    borderStyle: 'dashed',
-                    borderColor: 'divider',
-                    p: 1.5,
-                  }}
-                >
-                  {history.length === 0 && (
-                    <Typography variant="body2" color="text.secondary">
-                      Sem histórico anterior sincronizado.
-                    </Typography>
-                  )}
-                  {history.map((h) => (
-                    <Stack
-                      key={h.id}
-                      direction="row"
-                      spacing={1.5}
-                      sx={{ justifyContent: 'space-between', py: 0.25 }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{ color: h.from_me ? 'primary.main' : 'text.primary' }}
-                      >
-                        {h.body}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                        {new Date(h.ts * 1000).toLocaleString('pt-BR')}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Box>
-              )}
+              <ConversationHistory
+                older={older}
+                onOlder={() => void loadOlder()}
+                whatsapp={whatsapp}
+                history={history}
+                onLoad={() => void loadHistory()}
+              />
               <MessageList
                 messages={messages}
                 path={path}
