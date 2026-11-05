@@ -234,7 +234,14 @@ pub fn steps() -> Vec<String> {
            created TEXT NOT NULL);
          ALTER TABLE channel_github ADD COLUMN installation_id INTEGER;"
             .into(),
-        // v38: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
+        // v38: o agente de IA da caixa é o responsável enquanto atende; ao passar para um humano,
+        // o `assignee_id` humano assume e o agente é limpo.
+        "ALTER TABLE conversations ADD COLUMN assignee_agent_id INTEGER REFERENCES agents(id);
+         UPDATE conversations SET assignee_agent_id=(SELECT ai_agent_id FROM inboxes WHERE id=conversations.inbox_id)
+           WHERE assignee_id IS NULL AND status IN ('open','pending');
+         CREATE INDEX conversations_assignee_agent ON conversations(assignee_agent_id);"
+            .into(),
+        // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
         // a volta do GitHub
         "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
     ]
