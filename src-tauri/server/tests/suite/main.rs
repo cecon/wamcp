@@ -61,6 +61,7 @@ mod github_app;
 mod github_channel;
 mod github_events;
 mod github_redelivery;
+mod github_repeats;
 mod helpdesk_api;
 mod helpdesk_api_assignment;
 mod helpdesk_api_conversations;

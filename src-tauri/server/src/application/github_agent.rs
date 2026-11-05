@@ -39,6 +39,8 @@ pub struct GithubRunState {
     echoes: Vec<(String, String, i64)>,
     /// Installation tokens of the GitHub App: installation → (token, valid until).
     pub(crate) tokens: HashMap<i64, (String, i64)>,
+    /// Workflows failing on a branch, already reported to the agent: `inbox|workflow|branch`.
+    pub(crate) failing: std::collections::HashSet<String>,
 }
 
 pub type GithubRuns = Arc<Mutex<GithubRunState>>;

@@ -28,6 +28,7 @@ pub mod github_agent;
 pub mod github_app;
 pub mod github_app_hook;
 pub mod github_redelivery;
+pub mod github_repeats;
 pub mod github_setup;
 pub mod helpdesk;
 mod ingestion;
