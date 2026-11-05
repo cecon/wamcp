@@ -8,6 +8,7 @@ import { WebhookInstructions } from './WebhookInstructions';
 interface Setup extends GithubWebhook {
   account: string | null;
   hook_error?: string | null;
+  via_app?: boolean;
 }
 
 /** The GitHub side of a GitHub inbox: repository, account that comments and the webhook. */
@@ -30,7 +31,11 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
           </>
         )}
       </p>
-      {hook_created ? (
+      {current.via_app ? (
+        <p className="text-sm text-n-slate-11">
+          Conectado pelo GitHub App: os eventos chegam pelo webhook do App.
+        </p>
+      ) : hook_created ? (
         <p className="text-sm text-n-slate-11">O webhook foi criado no GitHub pelo app.</p>
       ) : (
         <>

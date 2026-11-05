@@ -20,6 +20,7 @@ mod custom_data;
 mod engine;
 pub mod error;
 mod github;
+mod github_app;
 pub mod input;
 mod macros;
 mod message_actions;
@@ -78,6 +79,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(agent_chats::routes())
         .merge(agent_schedules::routes())
         .merge(github::routes())
+        .merge(github_app::routes())
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
         .merge(roles::routes())
@@ -102,6 +104,7 @@ pub fn public_router(state: AppState) -> Router {
             .route("/engine/mcp", post(super::mcp_engine::endpoint))
             .merge(accounts::bootstrap_routes())
             .merge(github::webhook_routes())
+            .merge(github_app::public_routes())
             .merge(web_app::routes());
     }
     router

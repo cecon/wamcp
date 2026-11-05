@@ -50,7 +50,41 @@ impl HelpdeskService {
                 Err(error) => tracing::warn!(%error, repo = %channel.repo, "entregas do GitHub não recuperadas"),
             }
         }
+        match self.redeliver_app().await {
+            Ok(count) => asked += count,
+            Err(error) => tracing::warn!(%error, "entregas do GitHub App não recuperadas"),
+        }
         Ok(asked)
+    }
+
+    /// The same for the GitHub App's webhook, which serves every repository it is installed on.
+    async fn redeliver_app(&self) -> Result<usize> {
+        if self.core.repo.github_app()?.is_none() {
+            return Ok(0);
+        }
+        let list = self.app_call("GET", "/app/hook/deliveries?per_page=100").await?;
+        let deliveries = list.as_array().cloned().unwrap_or_default();
+        let inboxes: Vec<i64> = self
+            .core
+            .repo
+            .github_channels()?
+            .into_iter()
+            .filter(|c| c.installation_id.is_some())
+            .map(|c| c.inbox_id)
+            .collect();
+        let repo = &self.core.repo;
+        let stored = |guid: &str| {
+            let source = format!("github:{guid}");
+            inboxes
+                .iter()
+                .any(|inbox| repo.message_by_source(*inbox, &source).is_ok_and(|m| m.is_some()))
+        };
+        let ids = to_redeliver(&deliveries, stored);
+        for id in &ids {
+            self.app_call("POST", &format!("/app/hook/deliveries/{id}/attempts"))
+                .await?;
+        }
+        Ok(ids.len())
     }
 
     /// The periodic job: a minute after start (the tunnel comes up after the server), then every

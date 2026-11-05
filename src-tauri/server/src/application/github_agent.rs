@@ -37,6 +37,10 @@ pub struct GithubRunState {
     runs: HashMap<String, GithubRun>,
     /// Events the agent's own actions will cause: (`owner/repo#12`, `pull_request.closed`, until).
     echoes: Vec<(String, String, i64)>,
+    /// GitHub App manifests on their way to GitHub: state → (until, organization or the account).
+    pub(crate) manifests: HashMap<String, (i64, Option<String>)>,
+    /// Installation tokens of the GitHub App: installation → (token, valid until).
+    pub(crate) tokens: HashMap<i64, (String, i64)>,
 }
 
 pub type GithubRuns = Arc<Mutex<GithubRunState>>;
@@ -112,7 +116,7 @@ impl HelpdeskService {
         };
         let api = actions::Api {
             helpdesk: self,
-            token: self.secrets.open(&channel.token)?,
+            token: self.github_token(&channel).await?,
             repo: channel.repo,
         };
         let number = || match args["number"]

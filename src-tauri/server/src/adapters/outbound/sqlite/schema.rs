@@ -227,5 +227,12 @@ pub fn steps() -> Vec<String> {
          CREATE INDEX agent_chat_messages_session ON agent_chat_messages(chat_id,session,id);
          UPDATE llm_usage SET run_ref=run_ref||':1' WHERE run_ref GLOB 'agent_chat:[0-9]*' AND run_ref NOT GLOB '*:*:*';"
             .into(),
+        // v37: o GitHub App criado pelo próprio app (uma identidade `nome[bot]` para o agente); os
+        // repositórios em que ele é instalado viram caixas GitHub com tokens de instalação
+        "CREATE TABLE github_app(id INTEGER PRIMARY KEY CHECK(id=1),app_id INTEGER NOT NULL,slug TEXT NOT NULL,
+           html_url TEXT NOT NULL,owner TEXT,private_key TEXT NOT NULL,webhook_secret TEXT NOT NULL,
+           created TEXT NOT NULL);
+         ALTER TABLE channel_github ADD COLUMN installation_id INTEGER;"
+            .into(),
     ]
 }
