@@ -254,55 +254,15 @@ impl App {
         }
     }
 
-    /// Periodic jobs: snoozes, auto-resolve and SLAs (60 s), webhooks (10 s), missed GitHub deliveries (10 min), MCP events (1 s).
+    /// Periodic jobs: snoozes, auto-resolve and SLAs, webhooks, schedules, GitHub deliveries, AI watchdog and MCP events.
     pub fn start_jobs(&self) -> Vec<JoinHandle<()>> {
-        let support = self.state.support().clone();
-        let helpdesk = support.helpdesk.clone();
-        let snoozes = tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(Duration::from_secs(60));
-            loop {
-                ticker.tick().await;
-                let _ = helpdesk.wake_snoozed();
-                let _ = helpdesk.auto_resolve().await;
-                let _ = helpdesk.check_slas();
-            }
-        });
-        let webhooks = support.webhooks.clone();
-        let deliveries = tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(Duration::from_secs(10));
-            loop {
-                ticker.tick().await;
-                let _ = webhooks.deliver_due().await;
-            }
-        });
-        let schedules = support.schedules.clone();
-        let scheduler = tokio::spawn(async move {
-            let _ = schedules.recover();
-            let mut ticker = tokio::time::interval(Duration::from_secs(30));
-            loop {
-                ticker.tick().await;
-                let _ = schedules.run_due();
-            }
-        });
-        let mut jobs = vec![
-            snoozes,
-            deliveries,
-            scheduler,
-            support.helpdesk.spawn_github_redelivery(),
-        ];
-        jobs.extend(AiWatchdog::spawn_optional(
+        let support = self.state.support();
+        crate::application::jobs::start(
             support.helpdesk.clone(),
+            support.webhooks.clone(),
+            support.schedules.clone(),
             self.llm_bots.clone(),
-        ));
-        if let Some(events) = self.state.events.clone() {
-            jobs.push(tokio::spawn(async move {
-                let mut ticker = tokio::time::interval(Duration::from_secs(1));
-                loop {
-                    ticker.tick().await;
-                    events.flush().await;
-                }
-            }));
-        }
-        jobs
+            self.state.events.clone(),
+        )
     }
 }

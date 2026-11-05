@@ -229,7 +229,6 @@ impl ConversationRepo for SqliteStore {
             all: self.count(&base, args)?,
         })
     }
-
     fn stalled_ai_conversations(&self, stale_before: i64, limit: i64) -> Result<Vec<i64>> {
         self.ids(
             "SELECT c.id FROM conversations c

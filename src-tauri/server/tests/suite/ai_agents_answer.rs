@@ -277,7 +277,6 @@ async fn ai_is_responsible_and_hands_off_to_a_human_when_it_cannot_solve() {
     s.write("IN1", "Oi").await;
     let ana = s.agent(ai(&p, "Ana", "operator")).await;
     assert_eq!(s.connect(Some(ana)).await.status, 200);
-    // Entrega a conversa para a IA (status pending) e ela responde.
     let handed = s
         .admin
         .post("/conversations/1/toggle_status", json!({ "status": "pending" }))
@@ -285,7 +284,6 @@ async fn ai_is_responsible_and_hands_off_to_a_human_when_it_cannot_solve() {
     assert_eq!(handed.status, 200, "{:?}", handed.body);
     s.f.settle().await;
 
-    // A IA atendeu: ela é a responsável, não "não atribuída".
     let c = s.admin.get("/conversations/1").await.body;
     assert_eq!(c["assignee_agent_name"], "Ana", "{c:?}");
     assert!(c["assignee_agent_id"].as_i64().is_some());

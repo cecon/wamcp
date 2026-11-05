@@ -33,6 +33,7 @@ pub mod github_setup;
 mod handoff;
 pub mod helpdesk;
 mod ingestion;
+pub mod jobs;
 pub mod llm_bots;
 pub mod macros;
 mod message_actions;
