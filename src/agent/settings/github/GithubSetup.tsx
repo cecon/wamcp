@@ -8,16 +8,17 @@ import { useState } from 'react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
-import { GithubDeliveries } from './GithubDeliveries';
 import type { GithubWebhook } from './WebhookInstructions';
 import { WebhookInstructions } from './WebhookInstructions';
 
 interface Setup extends GithubWebhook {
   account: string | null;
   hook_error?: string | null;
+  /** Canal conectado pelo GitHub App (sem webhook de repositório próprio). */
+  via_app?: boolean;
 }
 
-/** The GitHub side of a GitHub inbox: repository, account that comments, the webhook and its deliveries. */
+/** O lado GitHub de uma caixa de entrada: repositório, conta que comenta e o webhook. */
 export function GithubSetup({ inboxId }: { inboxId: number }) {
   const setup = useFetch<Setup>(`/inboxes/${inboxId}/github`);
   const [retried, setRetried] = useState<Setup | null>(null);
@@ -43,13 +44,14 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
             </>
           )}
         </Typography>
-        {hook_created ? (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              O webhook foi criado no GitHub pelo app.
-            </Typography>
-            <GithubDeliveries inboxId={inboxId} />
-          </>
+        {current.via_app ? (
+          <Typography variant="body2" color="text.secondary">
+            Conectado pelo GitHub App: os eventos chegam pelo webhook do App.
+          </Typography>
+        ) : hook_created ? (
+          <Typography variant="body2" color="text.secondary">
+            O webhook foi criado no GitHub pelo app.
+          </Typography>
         ) : (
           <>
             <Typography variant="body2" sx={{ fontWeight: 500, color: 'warning.main' }}>

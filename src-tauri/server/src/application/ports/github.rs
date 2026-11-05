@@ -1,5 +1,5 @@
 use crate::domain::error::Result;
-use crate::domain::model::{GithubChannel, Inbox};
+use crate::domain::model::{GithubApp, GithubChannel, Inbox};
 use async_trait::async_trait;
 use serde_json::Value;
 
@@ -9,6 +9,15 @@ pub trait GithubRepo {
     fn create_github_inbox(&self, name: &str, channel: &GithubChannel) -> Result<Inbox>;
     fn github_channel(&self, inbox_id: i64) -> Result<Option<GithubChannel>>;
     fn set_github_hook(&self, inbox_id: i64, hook_id: i64) -> Result<()>;
+    /// Every GitHub inbox's channel.
+    fn github_channels(&self) -> Result<Vec<GithubChannel>>;
+    /// The channel of `owner/repo` (GitHub's case is not always the one typed).
+    fn github_channel_by_repo(&self, repo: &str) -> Result<Option<GithubChannel>>;
+    /// Links a channel to an installation of the GitHub App, or unlinks it with `None`.
+    fn set_github_installation(&self, inbox_id: i64, installation_id: Option<i64>) -> Result<()>;
+    fn github_app(&self) -> Result<Option<GithubApp>>;
+    /// Stores the GitHub App, replacing the previous one.
+    fn save_github_app(&self, app: &GithubApp) -> Result<()>;
 }
 
 /// The GitHub REST API, called with the channel's token.
@@ -22,11 +31,13 @@ pub trait GithubApi: Send + Sync {
     async fn create_hook(&self, token: &str, repo: &str, url: &str, secret: &str, events: &[&str]) -> Result<i64>;
     /// Comments on a pull request or issue; returns the comment's URL.
     async fn comment(&self, token: &str, repo: &str, number: u64, body: &str) -> Result<String>;
-    /// The latest deliveries GitHub attempted for `hook_id` (what it sent and its HTTP status).
-    async fn hook_deliveries(&self, token: &str, repo: &str, hook_id: i64) -> Result<Value>;
     /// Any call of the REST API: `method` is GET, POST, PUT, PATCH or DELETE and `path` starts at
     /// `/repos/…`. Answers the response body (`null` when GitHub sends none).
     async fn api(&self, token: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value>;
+    /// Exchanges the code of a GitHub App manifest for the App (id, slug, pem, webhook_secret…).
+    async fn convert_manifest(&self, code: &str) -> Result<Value>;
+    /// A call of the REST API as the GitHub App itself (a JWT signed with its private key, PEM).
+    async fn app_api(&self, app_id: i64, pem: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value>;
     /// The plain-text log of one GitHub Actions job.
     async fn job_log(&self, token: &str, repo: &str, job_id: u64) -> Result<String>;
 }

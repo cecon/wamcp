@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectGithubModal } from '../../src/agent/settings/github/ConnectGithubModal';
+import { GithubAppPanel } from '../../src/agent/settings/github/GithubAppPanel';
 import { GithubSetup } from '../../src/agent/settings/github/GithubSetup';
 import { fakeApi } from './fake-api';
 
@@ -45,19 +46,11 @@ describe('GitHub channel', () => {
   it('shows the repository and the account that comments', async () => {
     fakeApi({
       'GET /inboxes/4/github': { ...webhook, repo: 'cecon/wamcp', account: 'wamcp-bot', hook_created: true },
-      'GET /inboxes/4/github/deliveries': {
-        hook_created: true,
-        deliveries: [
-          { id: 1, event: 'ping', action: null, status: 204, delivered_at: '2026-11-03T10:00:00Z' },
-        ],
-      },
     });
     render(<GithubSetup inboxId={4} />);
     expect(await screen.findByText('cecon/wamcp')).toBeInTheDocument();
     expect(screen.getByText('@wamcp-bot')).toBeInTheDocument();
     expect(screen.getByText('O webhook foi criado no GitHub pelo app.')).toBeInTheDocument();
-    expect(await screen.findByText('ping')).toBeInTheDocument();
-    expect(screen.getByText('HTTP 204')).toBeInTheDocument();
   });
 
   it('creates the missing webhook again and shows why GitHub refused it', async () => {
@@ -71,12 +64,6 @@ describe('GitHub channel', () => {
         hook_created: !refuse,
         hook_error: refuse ? 'O token não tem acesso a isso no GitHub (Resource not accessible)' : null,
       }),
-      'GET /inboxes/4/github/deliveries': {
-        hook_created: true,
-        deliveries: [
-          { id: 1, event: 'ping', action: null, status: 204, delivered_at: '2026-11-03T10:00:00Z' },
-        ],
-      },
     });
     render(<GithubSetup inboxId={4} />);
     const user = userEvent.setup();
@@ -89,54 +76,55 @@ describe('GitHub channel', () => {
     expect(api.called('POST', '/inboxes/4/github/hook')).toHaveLength(2);
   });
 
-  it('shows everything that happened when the channel is created and retries the webhook', async () => {
+  it('starts the GitHub App from a manifest and links to GitHub', async () => {
     const api = fakeApi({
-      'POST /github_channels': {
-        ...webhook,
-        repo: 'cecon/wamcp',
-        inbox: { id: 4, name: 'wamcp no GitHub' },
-        hook_created: false,
-        hook_error: 'O token não tem acesso a isso no GitHub (Resource not accessible)',
-        checks: [
-          { step: 'token', ok: true, detail: '@wamcp-bot' },
-          { step: 'repository', ok: true, detail: 'cecon/wamcp' },
-          {
-            step: 'webhook',
-            ok: false,
-            detail: 'O token não tem acesso a isso no GitHub (Resource not accessible)',
-          },
-        ],
-      },
-      'POST /inboxes/4/github/hook': () => ({
-        ...webhook,
-        repo: 'cecon/wamcp',
-        hook_created: true,
-        hook_error: null,
-      }),
-      'GET /inboxes/4/github/deliveries': {
-        hook_created: true,
-        deliveries: [
-          { id: 1, event: 'ping', action: null, status: 204, delivered_at: '2026-11-03T10:00:00Z' },
-        ],
+      'GET /github_app': { app: null, repos: [] },
+      'POST /github_app': { url: 'https://wamcp.cappyfy.com/api/github/app/new?state=abc' },
+    });
+    render(<GithubAppPanel />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText(/Organização/), 'minha-empresa');
+    await user.click(screen.getByRole('button', { name: 'Criar GitHub App' }));
+    const open = await screen.findByRole('link', { name: 'Abrir o GitHub para criar o App' });
+    expect(open).toHaveAttribute('href', 'https://wamcp.cappyfy.com/api/github/app/new?state=abc');
+    expect(open).toHaveAttribute('target', '_blank');
+    expect(api.called('POST', '/github_app')[0].body).toEqual({ owner: 'minha-empresa' });
+  });
+
+  it('shows the App, where to install it and the repositories it serves', async () => {
+    fakeApi({
+      'GET /github_app': {
+        app: {
+          slug: 'wamcp-agente',
+          owner: 'cecon',
+          html_url: 'https://github.com/apps/wamcp-agente',
+          install_url: 'https://github.com/apps/wamcp-agente/installations/new',
+        },
+        repos: [{ inbox_id: 2, repo: 'cecon/C3Theme' }],
       },
     });
-    const onConnected = vi.fn(async () => {});
-    render(<ConnectGithubModal onClose={vi.fn()} onConnected={onConnected} />);
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Nome da caixa'), 'wamcp no GitHub');
-    await user.type(screen.getByLabelText('Repositório'), 'cecon/wamcp');
-    await user.type(screen.getByLabelText('Token do GitHub'), 'github_pat_x');
-    await user.click(screen.getByRole('button', { name: 'Conectar' }));
+    render(<GithubAppPanel />);
+    expect(await screen.findByText('@wamcp-agente[bot]')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Instalar ou escolher/ })).toHaveAttribute(
+      'href',
+      'https://github.com/apps/wamcp-agente/installations/new',
+    );
+    expect(screen.getByText('Repositórios: cecon/C3Theme')).toBeInTheDocument();
+  });
 
-    expect(await screen.findByText(/Token autenticado como @wamcp-bot/)).toBeInTheDocument();
-    expect(screen.getByText(/Repositório cecon\/wamcp acessível/)).toBeInTheDocument();
-    expect(screen.getByText(/Webhook não criado:/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Tentar criar webhook de novo' }));
-    expect(await screen.findByText('Webhook criado e assinando as entregas')).toBeInTheDocument();
-    expect(await screen.findByText('ping')).toBeInTheDocument();
-    expect(screen.getByText('HTTP 204')).toBeInTheDocument();
-    expect(api.called('POST', '/inboxes/4/github/hook')).toHaveLength(1);
-    expect(onConnected).toHaveBeenCalledTimes(2);
+  it('says when an inbox comes through the GitHub App', async () => {
+    fakeApi({
+      'GET /inboxes/2/github': {
+        ...webhook,
+        webhook_secret: '',
+        repo: 'cecon/C3Theme',
+        account: 'wamcp-agente[bot]',
+        hook_created: true,
+        via_app: true,
+      },
+    });
+    render(<GithubSetup inboxId={2} />);
+    expect(await screen.findByText(/Conectado pelo GitHub App/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Criar webhook' })).not.toBeInTheDocument();
   });
 });

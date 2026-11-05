@@ -253,7 +253,7 @@ impl App {
         }
     }
 
-    /// Periodic jobs: snooze wake-ups, auto-resolve and SLA checks (60 s), webhook deliveries (10 s) and MCP events (1 s).
+    /// Periodic jobs: snoozes, auto-resolve and SLAs (60 s), webhooks (10 s), missed GitHub deliveries (10 min), MCP events (1 s).
     pub fn start_jobs(&self) -> Vec<JoinHandle<()>> {
         let support = self.state.support().clone();
         let helpdesk = support.helpdesk.clone();
@@ -284,7 +284,8 @@ impl App {
                 let _ = schedules.run_due();
             }
         });
-        let mut jobs = vec![snoozes, deliveries, scheduler];
+        let github = support.helpdesk.spawn_github_redelivery();
+        let mut jobs = vec![snoozes, deliveries, scheduler, github];
         if let Some(events) = self.state.events.clone() {
             jobs.push(tokio::spawn(async move {
                 let mut ticker = tokio::time::interval(Duration::from_secs(1));

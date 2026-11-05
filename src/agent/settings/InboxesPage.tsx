@@ -17,6 +17,7 @@ import { Panel } from '@c3theme/ui';
 import type { Catalog } from '../types';
 import type { Route } from '../route';
 import { ConnectGithubModal } from './github/ConnectGithubModal';
+import { GithubAppPanel } from './github/GithubAppPanel';
 import { NewConnectionModal } from './connections/ConnectionsPage';
 import { InboxDetail } from './InboxDetail';
 import { channelLine } from './channelLine';
@@ -62,6 +63,7 @@ export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
           </Stack>
         }
       />
+      <GithubAppPanel />
       <Panel flush>
         {catalog.inboxes.length === 0 ? (
           <Typography variant="body2" sx={{ py: 8, textAlign: 'center' }}>
