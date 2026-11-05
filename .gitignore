@@ -11,3 +11,8 @@ playwright-report/
 test-results/
 .kanbots/
 .kodra/
+
+# Worktrees/estado local de ferramentas e artefatos de diagnóstico
+.claude/
+.tmp-*
+.c3theme/

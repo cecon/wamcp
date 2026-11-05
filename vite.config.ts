@@ -6,6 +6,21 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [react(), tailwindcss()],
+  // Os pacotes do C3Theme entram linkados (workspace/file:) e têm o próprio React/Router/Intl no monorepo; sem o
+  // dedupe cada cópia traz um contexto próprio e os hooks quebram (React nulo ou useLocation fora do <Router>).
+  resolve: {
+    dedupe: [
+      'react',
+      'react-dom',
+      'react-router',
+      'react-intl',
+      '@mui/material',
+      '@emotion/react',
+      '@emotion/styled',
+      '@tanstack/react-table',
+      '@tanstack/react-virtual',
+    ],
+  },
   // One app for everyone: the backend serves this build at /app/ to the Tauri window and to browsers
   // on the network, so asset URLs stay relative.
   base: './',

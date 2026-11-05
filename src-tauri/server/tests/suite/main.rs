@@ -7,6 +7,8 @@ mod engine_support;
 mod event_webhook_support;
 mod events_support;
 mod github_support;
+
+mod github_handoff;
 mod helpdesk_support;
 mod mcp_support;
 mod media_support;

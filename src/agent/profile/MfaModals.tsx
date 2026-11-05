@@ -1,11 +1,21 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Copy } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { MfaSetup } from '../accountTypes';
 import { useAction } from '../settings/useAction';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
 import { copyText } from './browser';
 import { QrCode } from './qr/QrCode';
 
@@ -22,19 +32,22 @@ export function CodeInput({
   backup?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="field-label">{label}</span>
-      <input
-        className="field font-mono tracking-widest"
-        value={value}
-        required
-        inputMode={backup ? 'text' : 'numeric'}
-        autoComplete="one-time-code"
-        maxLength={backup ? 20 : 6}
-        placeholder="000000"
-        onChange={(e) => onChange(backup ? e.target.value : e.target.value.replace(/\D/g, ''))}
-      />
-    </label>
+    <TextField
+      label={label}
+      size="small"
+      fullWidth
+      value={value}
+      onChange={(event) => onChange(backup ? event.target.value : event.target.value.replace(/\D/g, ''))}
+      slotProps={{
+        htmlInput: {
+          inputMode: backup ? 'text' : 'numeric',
+          autoComplete: 'one-time-code',
+          maxLength: backup ? 20 : 6,
+          placeholder: '000000',
+        },
+      }}
+      sx={{ '& input': { fontFamily: 'monospace', letterSpacing: '0.12em' } }}
+    />
   );
 }
 
@@ -49,60 +62,71 @@ export function MfaSetupModal({ setup, onClose, onEnabled }: SetupProps) {
   const [code, setCode] = useState(''),
     [copied, setCopied] = useState(false);
   const { error, busy, run } = useAction();
+  const submit = () => {
+    if (code.length !== 6) return;
+    void run(async () => {
+      const result = await http<{ backup_codes: string[] }>('/profile/mfa/verify', 'POST', { code });
+      onEnabled(result.backup_codes);
+    });
+  };
+
   return (
-    <Modal
+    <ActionDialog
+      open
       title="Ativar verificação em duas etapas"
       description="Use o Google Authenticator, Authy ou qualquer aplicativo compatível com TOTP."
+      confirmLabel="Verificar e ativar"
+      backLabel="Cancelar"
+      loading={busy}
+      error={error}
       onClose={onClose}
+      onConfirm={submit}
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            const result = await http<{ backup_codes: string[] }>('/profile/mfa/verify', 'POST', { code });
-            onEnabled(result.backup_codes);
-          });
-        }}
-      >
-        <p className="text-sm font-medium text-n-slate-12">
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
           1. Escaneie o QR Code com o aplicativo autenticador
-        </p>
-        <div className="flex justify-center">
+        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
           <QrCode value={setup.otpauth_uri} label="QR Code para o aplicativo autenticador" />
-        </div>
-        <div>
-          <p className="text-sm text-n-slate-11">
+        </Box>
+        <Box>
+          <Typography variant="body2" color="text.secondary">
             Não consegue escanear? Digite a chave secreta manualmente:
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <code
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center' }}>
+            <Box
+              component="code"
               aria-label="Chave secreta"
-              className="flex-1 rounded-lg bg-n-alpha-1 px-3 py-2 font-mono text-sm break-all"
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                borderRadius: 1,
+                bgcolor: 'var(--color-n-alpha-1)',
+                px: 1.5,
+                py: 1,
+                fontFamily: 'monospace',
+                fontSize: 14,
+                overflowWrap: 'anywhere',
+              }}
             >
               {setup.secret}
-            </code>
+            </Box>
             <Button
-              color="slate"
-              variant="faded"
-              icon={Copy}
-              label={copied ? 'Copiada' : 'Copiar'}
+              variant="outlined"
+              size="small"
+              startIcon={<Copy size={14} />}
               onClick={() => void copyText(setup.secret).then(setCopied)}
-            />
-          </div>
-        </div>
-        <p className="text-sm font-medium text-n-slate-12">
+            >
+              {copied ? 'Copiada' : 'Copiar'}
+            </Button>
+          </Stack>
+        </Box>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
           2. Informe o código de 6 dígitos gerado pelo aplicativo
-        </p>
+        </Typography>
         <CodeInput label="Código de verificação" value={code} onChange={setCode} />
-        <ModalFooter
-          busy={busy || code.length !== 6}
-          submit="Verificar e ativar"
-          onCancel={onClose}
-          error={error}
-        />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }
 
@@ -117,35 +141,35 @@ export function DisableMfaModal({ onClose, onDisabled }: DisableProps) {
     [code, setCode] = useState('');
   const { error, busy, run } = useAction();
   return (
-    <Modal
+    <ActionDialog
+      open
       title="Desativar verificação em duas etapas"
       description="Informe sua senha e um código de verificação (ou de recuperação) para desativar."
+      confirmLabel="Desativar"
+      backLabel="Cancelar"
+      tone="danger"
+      loading={busy}
+      error={error}
       onClose={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          await http('/profile/mfa', 'DELETE', { password, code });
+          onDisabled();
+        })
+      }
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            await http('/profile/mfa', 'DELETE', { password, code });
-            onDisabled();
-          });
-        }}
-      >
-        <label className="block">
-          <span className="field-label">Senha</span>
-          <input
-            className="field"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <TextField
+          label="Senha"
+          size="small"
+          fullWidth
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          slotProps={{ htmlInput: { autoComplete: 'current-password' } }}
+        />
         <CodeInput label="Código de verificação" value={code} onChange={setCode} backup />
-        <ModalFooter busy={busy} submit="Desativar" onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }

@@ -1,34 +1,46 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { Panel, SelectField } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { Account, Locale } from '../parityTypes';
 import { useFetch } from '../useFetch';
-import { Button } from '../ui/Button';
-import { SettingsHeader, SettingsPage, Toggle } from '../ui/Settings';
 import { useAction } from './useAction';
 import { SalaryRatesForm } from './members/SalaryRatesForm';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 const LOCALES: Record<Locale, string> = { 'pt-BR': 'Português (Brasil)', en: 'English', es: 'Español' };
-const HEADER = {
-  title: 'Configurações da conta',
-  description:
-    'Nome, idioma, resolução automática de conversas inativas e os valores do salário digital desta conta.',
-};
 
-/** Chatwoot account settings: general settings and auto-resolve of inactive conversations. */
+/** Configurações → Conta no C3Theme (lote 4): formulário geral + resolução automática; salários seguem no app. */
 export function AccountPage() {
   const { data, error } = useFetch<Account>('/account');
   return (
-    <SettingsPage>
-      <SettingsHeader {...HEADER} />
+    <SettingsC3Page>
+      <SettingsC3Header
+        title="Configurações da conta"
+        description="Nome, idioma, resolução automática de conversas inativas e os valores do salário digital desta conta."
+      />
       {data ? (
         <>
           <AccountForm account={data} />
           <SalaryRatesForm account={data} />
         </>
       ) : (
-        <p className="text-sm text-n-slate-11">{error || 'Carregando…'}</p>
+        <Typography variant="body2" color="text.secondary">
+          {error || 'Carregando…'}
+        </Typography>
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }
 
@@ -47,82 +59,86 @@ function AccountForm({ account }: { account: Account }) {
     setSaved(false);
     setForm({ ...form, ...patch });
   };
+
   return (
-    <form
-      className="flex max-w-2xl flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void run(async () => {
-          await http('/account', 'PATCH', {
-            name: form.name.trim(),
-            locale: form.locale,
-            auto_resolve_duration: form.autoResolve ? Number(form.days) : null,
-            auto_resolve_message: form.message.trim() || null,
+    <Panel>
+      <Box
+        component="form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void run(async () => {
+            await http('/account', 'PATCH', {
+              name: form.name.trim(),
+              locale: form.locale,
+              auto_resolve_duration: form.autoResolve ? Number(form.days) : null,
+              auto_resolve_message: form.message.trim() || null,
+            });
+            setSaved(true);
           });
-          setSaved(true);
-        });
-      }}
-    >
-      <label>
-        <span className="field-label">Nome da conta</span>
-        <input
-          className="field"
-          required
-          maxLength={120}
+        }}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }}
+      >
+        <TextField
+          label="Nome da conta"
+          size="small"
           value={form.name}
-          onChange={(e) => set({ name: e.target.value })}
+          onChange={(event) => set({ name: event.target.value })}
+          slotProps={{ htmlInput: { required: true, maxLength: 120 } }}
         />
-      </label>
-      <label>
-        <span className="field-label">Idioma</span>
-        <select
-          className="field"
+        <SelectField
+          native
+          label="Idioma"
+          size="small"
           value={form.locale}
-          onChange={(e) => set({ locale: e.target.value as Locale })}
-        >
-          {Object.entries(LOCALES).map(([id, label]) => (
-            <option key={id} value={id}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="border-t border-n-weak pt-2">
-        <Toggle
-          label="Resolver conversas inativas automaticamente"
-          hint="Conversas abertas ou pendentes sem atividade são resolvidas após o período definido."
-          checked={form.autoResolve}
-          onChange={(autoResolve) => set({ autoResolve })}
+          onChange={(value) => value && set({ locale: value as Locale })}
+          options={Object.entries(LOCALES).map(([value, label]) => ({ value, label }))}
         />
-      </div>
-      {form.autoResolve && (
-        <label>
-          <span className="field-label">Dias de inatividade</span>
-          <input
-            className="field"
-            type="number"
-            min={1}
-            max={999}
-            required
-            value={form.days}
-            onChange={(e) => set({ days: e.target.value })}
+        <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={form.autoResolve}
+                onChange={(event) => set({ autoResolve: event.target.checked })}
+              />
+            }
+            label="Resolver conversas inativas automaticamente"
           />
-        </label>
-      )}
-      <label>
-        <span className="field-label">Mensagem da resolução automática</span>
-        <textarea
-          className="field"
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            Conversas abertas ou pendentes sem atividade são resolvidas após o período definido.
+          </Typography>
+        </Box>
+        {form.autoResolve && (
+          <TextField
+            label="Dias de inatividade"
+            size="small"
+            type="number"
+            value={form.days}
+            onChange={(event) => set({ days: event.target.value })}
+            slotProps={{ htmlInput: { min: 1, max: 999, required: true } }}
+          />
+        )}
+        <TextField
+          label="Mensagem da resolução automática"
+          size="small"
+          multiline
           rows={3}
-          maxLength={1000}
-          placeholder="Enviada ao contato quando a conversa é resolvida por inatividade (opcional)."
           value={form.message}
-          onChange={(e) => set({ message: e.target.value })}
+          placeholder="Enviada ao contato quando a conversa é resolvida por inatividade (opcional)."
+          onChange={(event) => set({ message: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 1000 } }}
         />
-      </label>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      {saved && <p className="text-sm text-n-teal-11">Configurações da conta salvas.</p>}
-      <Button type="submit" size="md" className="self-start" disabled={busy} label="Salvar alterações" />
-    </form>
+        {error && <SettingsC3Error>{error}</SettingsC3Error>}
+        {saved && (
+          <Typography variant="body2" sx={{ color: 'success.main' }}>
+            Configurações da conta salvas.
+          </Typography>
+        )}
+        <Stack direction="row">
+          <Button type="submit" variant="contained" disabled={busy}>
+            Salvar alterações
+          </Button>
+        </Stack>
+      </Box>
+    </Panel>
   );
 }

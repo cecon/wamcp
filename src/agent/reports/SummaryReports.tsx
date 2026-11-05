@@ -1,4 +1,9 @@
 import type { ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
 import type { BotMetrics, SlaMetrics } from '../parityTypes';
 import { useFetch } from '../useFetch';
 import { formatNumber, formatPercent } from './metrics';
@@ -13,7 +18,7 @@ interface Props<T> {
   stats: (data: T | null) => { label: string; value: ReactNode }[];
 }
 
-/** A report made only of metric cards for the period (Chatwoot BotMetrics / SLA metrics). */
+/** Relatório só de cards de métrica no C3Theme (lote 13): BotMetrics / métricas de SLA. */
 function CardsReport<T>({ title, description, path, stats }: Props<T>) {
   const { period, range, setPeriod } = useReportPeriod();
   const { data, error } = useFetch<T>(path(range));
@@ -23,13 +28,21 @@ function CardsReport<T>({ title, description, path, stats }: Props<T>) {
       error={error}
       filters={<ReportFilters period={period} onChange={setPeriod} grouping={false} />}
     >
-      <p className="text-body-main -mt-2 text-n-slate-11">{description}</p>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: -1 }}>
+        {description}
+      </Typography>
       <ReportCard>
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(5, 1fr)' },
+            gap: 3,
+          }}
+        >
           {stats(data).map((s) => (
             <Stat key={s.label} label={s.label} value={s.value} />
           ))}
-        </div>
+        </Box>
       </ReportCard>
     </ReportLayout>
   );

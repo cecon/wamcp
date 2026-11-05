@@ -1,32 +1,68 @@
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
+
 import { useFetch } from '../../useFetch';
-import { Cell, Table } from '../../ui/Settings';
 import { sessionPath, type AuditEntry } from './model';
+
+const HEADERS = ['Ação', 'Credencial', 'Quando'];
 
 /** Atividade tab: recent MCP calls made with this connection's tokens and ChatGPT grants. */
 export function AuditList({ id }: { id: string }) {
   const { data, error } = useFetch<AuditEntry[]>(`${sessionPath(id)}/audit`);
   if (error)
     return (
-      <p role="alert" className="text-sm text-n-ruby-11">
+      <Alert severity="error" sx={{ fontSize: 14 }}>
         {error}
-      </p>
+      </Alert>
     );
-  if (!data) return <p className="text-sm text-n-slate-11">Carregando atividade…</p>;
+  if (!data)
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Carregando atividade…
+      </Typography>
+    );
   return (
-    <Table
-      headers={['Ação', 'Credencial', 'Quando']}
-      empty="As chamadas MCP aparecerão aqui."
-      rows={data.length}
-    >
-      {data.slice(0, 100).map((a, i) => (
-        <tr key={i}>
-          <Cell>
-            <code className="text-n-slate-12">{a.action}</code>
-          </Cell>
-          <Cell>{a.token_id || '—'}</Cell>
-          <Cell>{new Date(a.at).toLocaleString('pt-BR')}</Cell>
-        </tr>
-      ))}
+    <Table size="small" aria-label="Atividade MCP">
+      <TableHead>
+        <TableRow>
+          {HEADERS.map((header) => (
+            <TableCell key={header}>
+              <Typography variant="subtitle2" component="span">
+                {header}
+              </Typography>
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {data.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={HEADERS.length}>
+              <Typography variant="body1" sx={{ py: 8, textAlign: 'center' }}>
+                As chamadas MCP aparecerão aqui.
+              </Typography>
+            </TableCell>
+          </TableRow>
+        )}
+        {data.slice(0, 100).map((a, i) => (
+          <TableRow key={i}>
+            <TableCell>
+              <Box component="code" sx={{ color: 'var(--color-n-slate-12)' }}>
+                {a.action}
+              </Box>
+            </TableCell>
+            <TableCell>{a.token_id || '—'}</TableCell>
+            <TableCell>{new Date(a.at).toLocaleString('pt-BR')}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }

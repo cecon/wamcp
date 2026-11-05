@@ -183,7 +183,8 @@ describe('inbox limits and CSAT message', () => {
     });
     const limited = { ...inbox, max_assignment_limit: 5, csat_survey_message: 'Avalie!' };
     const { user } = renderSettings('inboxes', 10, { ...catalog, inboxes: [limited] });
-    const limit = screen.getByLabelText(/Limite de conversas por agente/);
+    // A página de caixas é lazy no C3Theme: espera o chunk montar.
+    const limit = await screen.findByLabelText(/Limite de conversas por agente/);
     expect(limit).toHaveValue(5);
     expect(screen.getByRole('button', { name: 'Salvar limite' })).toBeDisabled();
     await user.clear(limit);

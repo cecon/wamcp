@@ -1,10 +1,23 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import InputAdornment from '@mui/material/InputAdornment';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Search } from 'lucide-react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+
 import type { SearchResults as Results, SearchType } from '../parityTypes';
-import { SettingsPage } from '../ui/Settings';
-import { cn } from '../ui/cn';
 import { SearchResults } from './SearchResults';
 import { MIN_CHARS, useSearch } from './useSearch';
+import { SettingsC3Error, SettingsC3Page } from '../settings/c3/SettingsC3';
 
 const TABS: { type: SearchType; label: string }[] = [
   { type: 'all', label: 'Todos' },
@@ -21,68 +34,66 @@ interface Props {
   onOpenContact: (id: number) => void;
 }
 
-/** Chatwoot search page: term field, result type tabs and the grouped results. */
+/** Busca global no C3Theme (lote 6): cabeçalho, campo e abas do pacote; as listas de resultado seguem no app. */
 export function SearchPage({ onOpenConversation, onOpenContact }: Props) {
   const [text, setText] = useState(''),
     [type, setType] = useState<SearchType>('all');
   const { term, results, error, searching } = useSearch(text, type);
   return (
-    <SettingsPage>
-      <h1 className="text-heading-1 pt-2 text-n-slate-12">Pesquisar</h1>
-      <label className="flex h-10 items-center gap-2 rounded-lg bg-n-alpha-black2 px-3 outline outline-1 -outline-offset-1 outline-n-weak focus-within:outline-n-brand">
-        <Search size={16} className="shrink-0 text-n-slate-10" />
-        <input
-          autoFocus
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          aria-label="Pesquisar mensagens, contatos ou conversas"
-          placeholder="Pesquise mensagens, contatos ou conversas (#12 abre a conversa 12)"
-          className="w-full min-w-0 bg-transparent text-sm text-n-slate-12 outline-none placeholder:text-n-slate-10"
-        />
-      </label>
-      <nav role="tablist" className="flex gap-4 border-b border-n-weak">
-        {TABS.map((t) => (
-          <button
-            key={t.type}
-            type="button"
-            role="tab"
-            aria-selected={type === t.type}
-            onClick={() => setType(t.type)}
-            className={cn(
-              'relative py-2.5 text-sm font-medium',
-              type === t.type ? 'text-n-blue-11' : 'text-n-slate-11 hover:text-n-slate-12',
-            )}
+    <SettingsC3Page>
+      <Panel>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="h4" component="h1">
+            Pesquisar
+          </Typography>
+          <OutlinedInput
+            autoFocus
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="Pesquise mensagens, contatos ou conversas (#12 abre a conversa 12)"
+            startAdornment={
+              <InputAdornment position="start">
+                <Search size={16} />
+              </InputAdornment>
+            }
+            slotProps={{ input: { 'aria-label': 'Pesquisar mensagens, contatos ou conversas' } }}
+          />
+          <Tabs
+            value={type}
+            onChange={(_event, value: SearchType) => setType(value)}
+            aria-label="Tipo de resultado"
           >
-            {t.label}
-            {type === t.type && (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-n-brand" />
-            )}
-          </button>
-        ))}
-      </nav>
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
+            {TABS.map((tab) => (
+              <Tab key={tab.type} value={tab.type} label={tab.label} />
+            ))}
+          </Tabs>
+        </Box>
+      </Panel>
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
       {text.trim().length < MIN_CHARS ? (
-        <p className="py-12 text-center text-sm text-n-slate-11">
+        <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
           Digite ao menos {MIN_CHARS} caracteres para pesquisar.
-        </p>
+        </Typography>
       ) : searching && !results ? (
-        <p className="py-12 text-center text-sm text-n-slate-11">Pesquisando…</p>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
+          Pesquisando…
+        </Typography>
       ) : results && total(results) > 0 ? (
-        <SearchResults
-          results={results}
-          term={term}
-          onOpenConversation={onOpenConversation}
-          onOpenContact={onOpenContact}
-        />
+        <Panel>
+          <SearchResults
+            results={results}
+            term={term}
+            onOpenConversation={onOpenConversation}
+            onOpenContact={onOpenContact}
+          />
+        </Panel>
       ) : (
         !searching && (
-          <p className="py-12 text-center text-sm text-n-slate-11">Nenhum resultado para “{term}”.</p>
+          <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
+            Nenhum resultado para “{term}”.
+          </Typography>
         )
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

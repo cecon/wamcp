@@ -1,10 +1,22 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http, query } from '../api';
 import type { AuditLog } from '../accountTypes';
 import { formatDateTime } from '../profile/browser';
-import { Button } from '../ui/Button';
-import { Cell, SettingsHeader, SettingsPage, Table } from '../ui/Settings';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 const PER_PAGE = 50;
 const ACTION: Record<string, string> = {
@@ -39,7 +51,7 @@ const TYPE: Record<string, string> = {
 };
 const label = (map: Record<string, string>, key: string) => map[key] || key.replaceAll('_', ' ');
 
-/** Chatwoot "Auditoria": who changed what, from which IP and when (50 per page). */
+/** Auditoria no C3Theme (lote 28): quem alterou o quê, de qual IP e quando (50 por página). */
 export function AuditLogPage() {
   const [page, setPage] = useState(1),
     [logs, setLogs] = useState<AuditLog[] | null>(null),
@@ -55,60 +67,111 @@ export function AuditLogPage() {
   }, [page]);
   const items = logs || [];
 
+  const columns: ColumnDef<AuditLog>[] = [
+    {
+      id: 'user',
+      header: 'Usuário',
+      accessorFn: (log) => log.user_name || 'Sistema',
+      cell: (info) => (
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'action',
+      header: 'Ação',
+      accessorFn: (log) => label(ACTION, log.action),
+      cell: (info) => {
+        const details = info.row.original.details;
+        return (
+          <Typography
+            variant="body2"
+            component="span"
+            title={details?.path ? `${details.method} ${details.path}` : undefined}
+          >
+            {String(info.getValue())}
+          </Typography>
+        );
+      },
+    },
+    {
+      id: 'type',
+      header: 'Tipo',
+      accessorFn: (log) => label(TYPE, log.auditable_type),
+      cell: (info) => (
+        <Typography variant="body2" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'auditable_id',
+      header: 'ID',
+      accessorFn: (log) => log.auditable_id ?? '—',
+      cell: (info) => <Typography variant="body2">{String(info.getValue())}</Typography>,
+    },
+    {
+      id: 'ip',
+      header: 'Endereço IP',
+      accessorFn: (log) => log.ip_address || '—',
+      cell: (info) => (
+        <Typography variant="caption" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'created_at',
+      header: 'Data',
+      accessorFn: (log) => formatDateTime(log.created_at),
+      cell: (info) => (
+        <Typography variant="caption" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Registro de auditoria"
         description="Acompanhe os acessos e as alterações administrativas feitas na conta: agentes, times, caixas, automações, macros, webhooks e mais."
       />
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <Table
-        headers={['Usuário', 'Ação', 'Tipo', 'ID', 'Endereço IP', 'Data']}
-        rows={items.length}
-        empty={logs ? 'Nenhum registro nesta página.' : 'Carregando…'}
-      >
-        {items.map((log) => (
-          <tr key={log.id}>
-            <Cell>
-              <span className="font-medium text-n-slate-12">{log.user_name || 'Sistema'}</span>
-            </Cell>
-            <Cell>
-              <span title={log.details?.path ? `${log.details.method} ${log.details.path}` : undefined}>
-                {label(ACTION, log.action)}
-              </span>
-            </Cell>
-            <Cell>{label(TYPE, log.auditable_type)}</Cell>
-            <Cell>{log.auditable_id ?? '—'}</Cell>
-            <Cell>{log.ip_address || '—'}</Cell>
-            <Cell>{formatDateTime(log.created_at)}</Cell>
-          </tr>
-        ))}
-      </Table>
-      <nav aria-label="Paginação" className="flex items-center justify-end gap-2 text-sm text-n-slate-11">
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Panel flush>
+        <DataTable
+          rows={items}
+          columns={columns}
+          getRowId={(log) => String(log.id)}
+          empty={logs ? 'Nenhum registro nesta página.' : 'Carregando…'}
+          ariaLabel="Registro de auditoria"
+        />
+      </Panel>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
         <Button
-          color="slate"
-          variant="faded"
-          size="sm"
-          icon={ChevronLeft}
-          label="Anterior"
+          variant="outlined"
+          size="small"
+          startIcon={<ChevronLeft size={14} />}
           disabled={page === 1}
           onClick={() => setPage((p) => p - 1)}
-        />
-        <span>Página {page}</span>
+        >
+          Anterior
+        </Button>
+        <Typography variant="body2" color="text.secondary">
+          Página {page}
+        </Typography>
         <Button
-          color="slate"
-          variant="faded"
-          size="sm"
-          trailingIcon={ChevronRight}
-          label="Próxima"
+          variant="outlined"
+          size="small"
+          endIcon={<ChevronRight size={14} />}
           disabled={items.length < PER_PAGE}
           onClick={() => setPage((p) => p + 1)}
-        />
-      </nav>
-    </SettingsPage>
+        >
+          Próxima
+        </Button>
+      </Stack>
+    </SettingsC3Page>
   );
 }

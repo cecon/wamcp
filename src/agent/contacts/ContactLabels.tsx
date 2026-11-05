@@ -1,8 +1,19 @@
+import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Plus, X } from 'lucide-react';
+
 import { http } from '../api';
 import type { Contact, Label } from '../types';
-import { Button } from '../ui/Button';
-import { Dropdown, MenuItem } from '../ui/Overlay';
 
 interface Props {
   contact: Contact;
@@ -11,66 +22,71 @@ interface Props {
   onError: (message: string) => void;
 }
 
-/** Contact labels (Chatwoot ContactLabels): chips with remove plus an "add" menu of existing labels. */
+/** Etiquetas do contato no C3Theme (lote 11): chips com remover e menu de adicionar. */
 export function ContactLabels({ contact, labels, onSaved, onError }: Props) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const current = contact.labels || [];
-  const available = labels.filter((l) => !current.includes(l.title));
+  const available = labels.filter((label) => !current.includes(label.title));
   const save = (next: string[]) =>
     void http<Contact>(`/contacts/${contact.id}/labels`, 'POST', { labels: next })
       .then(onSaved)
       .catch((e: Error) => onError(e.message));
-  const color = (title: string) => labels.find((l) => l.title === title)?.color || '#8B8D98';
+  const color = (title: string) => labels.find((label) => label.title === title)?.color || '#8B8D98';
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
       {current.map((title) => (
-        <span
+        <Box
           key={title}
-          className="flex h-6 items-center gap-1.5 rounded-lg bg-n-label-color pr-1 pl-2 text-xs text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-label-border"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            height: 24,
+            pl: 1,
+            pr: 0.25,
+            borderRadius: 1,
+            bgcolor: 'action.hover',
+            border: 1,
+            borderColor: 'divider',
+          }}
         >
-          <span className="size-2 rounded-sm" style={{ background: color(title) }} />
-          {title}
-          <Button
-            color="slate"
-            variant="ghost"
-            size="xs"
-            icon={X}
+          <Box sx={{ width: 8, height: 8, borderRadius: 0.25, bgcolor: color(title) }} />
+          <Typography variant="caption">{title}</Typography>
+          <IconButton
+            size="small"
             aria-label={`Remover etiqueta ${title}`}
-            className="!size-4"
-            onClick={() => save(current.filter((l) => l !== title))}
-          />
-        </span>
+            onClick={() => save(current.filter((label) => label !== title))}
+            sx={{ p: 0.25 }}
+          >
+            <X size={12} />
+          </IconButton>
+        </Box>
       ))}
-      <Dropdown
-        align="start"
-        className="max-h-60 w-56 overflow-y-auto"
-        trigger={({ toggle }) => (
-          <Button
-            color="blue"
-            variant="faded"
-            size="xs"
-            icon={Plus}
-            label="Adicionar etiqueta"
-            onClick={toggle}
-          />
-        )}
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<Plus size={14} />}
+        onClick={(event) => setAnchor(event.currentTarget)}
       >
-        {(close) =>
-          available.length === 0 ? (
-            <p className="p-2 text-sm text-n-slate-11">Nenhuma etiqueta disponível.</p>
-          ) : (
-            available.map((l) => (
-              <MenuItem
-                key={l.id}
-                label={l.title}
-                onClick={() => {
-                  close();
-                  save([...current, l.title]);
-                }}
-              />
-            ))
-          )
-        }
-      </Dropdown>
-    </div>
+        Adicionar etiqueta
+      </Button>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {available.length === 0 ? (
+          <MenuItem disabled>Nenhuma etiqueta disponível.</MenuItem>
+        ) : (
+          available.map((label) => (
+            <MenuItem
+              key={label.id}
+              onClick={() => {
+                setAnchor(null);
+                save([...current, label.title]);
+              }}
+            >
+              {label.title}
+            </MenuItem>
+          ))
+        )}
+      </Menu>
+    </Stack>
   );
 }

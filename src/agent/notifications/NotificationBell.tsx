@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Bell, X } from 'lucide-react';
+
 import type { Realtime } from '../api';
-import { Button } from '../ui/Button';
+import C3Provider from '../c3/C3Provider';
 import { NotificationBulkActions, NotificationList } from './NotificationList';
 import { useNotifications } from './useNotifications';
 
@@ -18,7 +28,13 @@ export function NotificationBell({ realtime, unread, onUnread, onOpen }: Props) 
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const outside = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const outside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (ref.current?.contains(target as Node)) return;
+      // The item menu is portaled to <body>; clicking it must not close the panel under it.
+      if (target.closest?.('[role="menu"]')) return;
+      setOpen(false);
+    };
     const escape = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', outside);
     window.addEventListener('keydown', escape);
@@ -28,36 +44,55 @@ export function NotificationBell({ realtime, unread, onUnread, onOpen }: Props) 
     };
   }, [open]);
   return (
-    <div ref={ref} className="relative ml-auto">
-      <button
-        type="button"
+    <Box ref={ref} sx={{ position: 'relative', ml: 'auto' }}>
+      <IconButton
+        size="small"
         aria-label={unread ? `Notificações (${unread} não lidas)` : 'Notificações'}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="relative grid size-7 place-content-center rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
+        sx={{ position: 'relative', color: 'var(--color-n-slate-11)' }}
       >
         <Bell size={16} />
         {unread > 0 && (
-          <span
+          <Box
+            component="span"
             aria-hidden
-            className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-n-ruby-9 px-1 text-[0.625rem] leading-none font-medium text-white"
+            sx={{
+              position: 'absolute',
+              top: -4,
+              right: -4,
+              display: 'flex',
+              height: 16,
+              minWidth: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '999px',
+              bgcolor: 'var(--color-n-ruby-9)',
+              px: 0.5,
+              fontSize: 10,
+              lineHeight: 1,
+              fontWeight: 500,
+              color: '#fff',
+            }}
           >
             {unread > 99 ? '99+' : unread}
-          </span>
+          </Box>
         )}
-      </button>
+      </IconButton>
       {open && (
-        <Panel
-          realtime={realtime}
-          onUnread={onUnread}
-          onClose={() => setOpen(false)}
-          onOpen={(displayId) => {
-            setOpen(false);
-            onOpen(displayId);
-          }}
-        />
+        <C3Provider>
+          <NotificationsPanel
+            realtime={realtime}
+            onUnread={onUnread}
+            onClose={() => setOpen(false)}
+            onOpen={(displayId) => {
+              setOpen(false);
+              onOpen(displayId);
+            }}
+          />
+        </C3Provider>
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -68,29 +103,53 @@ interface PanelProps {
   onClose: () => void;
 }
 
-function Panel({ realtime, onUnread, onOpen, onClose }: PanelProps) {
+function NotificationsPanel({ realtime, onUnread, onOpen, onClose }: PanelProps) {
   const actions = useNotifications(realtime, onUnread);
   return (
-    <div
+    <Paper
       role="dialog"
       aria-label="Painel de notificações"
-      className="fixed top-2 left-[13rem] z-40 flex max-h-[min(36rem,calc(100vh-1rem))] w-[26rem] max-w-[calc(100vw-14rem)] flex-col overflow-hidden rounded-xl border border-n-weak bg-n-alpha-3 shadow-lg backdrop-blur-[100px]"
+      elevation={8}
+      sx={{
+        position: 'fixed',
+        top: 8,
+        left: 208,
+        zIndex: 40,
+        display: 'flex',
+        maxHeight: 'min(36rem, calc(100vh - 1rem))',
+        width: 416,
+        maxWidth: 'calc(100vw - 14rem)',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        borderRadius: 1.5,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+      }}
     >
-      <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <h2 className="text-sm font-medium text-n-slate-12">Notificações</h2>
-        <div className="flex items-center gap-1">
+      <Stack
+        component="header"
+        direction="row"
+        sx={{
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          px: 2,
+          py: 1.5,
+        }}
+      >
+        <Typography variant="subtitle2" component="h2">
+          Notificações
+        </Typography>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
           <NotificationBulkActions actions={actions} />
-          <Button
-            color="slate"
-            variant="ghost"
-            size="xs"
-            icon={X}
-            aria-label="Fechar notificações"
-            onClick={onClose}
-          />
-        </div>
-      </header>
+          <IconButton size="small" aria-label="Fechar notificações" onClick={onClose}>
+            <X size={14} />
+          </IconButton>
+        </Stack>
+      </Stack>
       <NotificationList actions={actions} onOpen={onOpen} />
-    </div>
+    </Paper>
   );
 }

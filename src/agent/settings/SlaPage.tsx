@@ -1,48 +1,109 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog, Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http } from '../api';
 import type { SlaPolicy } from '../parityTypes';
 import { formatSeconds } from '../reports/metrics';
 import { THRESHOLDS, useSlaPolicies } from '../sla/sla';
-import { Button } from '../ui/Button';
-import { ConfirmModal } from '../ui/Confirm';
-import { Cell, RowActions, SettingsHeader, SettingsPage, Table } from '../ui/Settings';
 import { SlaModal } from './SlaModal';
+import { SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
-/** Chatwoot SLA settings: policies with their targets, plus the add/edit modal and delete confirmation. */
+/** Configurações → SLA no C3Theme (lote 4): lista/cabeçalho/confirmação; o editor de SLA segue o do app. */
 export function SlaPage() {
   const { policies, error, reload } = useSlaPolicies();
   const [editing, setEditing] = useState<SlaPolicy | 'new' | null>(null),
     [removing, setRemoving] = useState<SlaPolicy | null>(null);
+  const count = `${policies.length} SLA${policies.length === 1 ? '' : 's'}`;
+
+  const columns: ColumnDef<SlaPolicy>[] = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessorKey: 'name',
+      cell: (info) => (
+        <Stack>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {info.row.original.name}
+          </Typography>
+          {info.row.original.description && (
+            <Typography variant="caption" color="text.secondary">
+              {info.row.original.description}
+            </Typography>
+          )}
+        </Stack>
+      ),
+    },
+    ...THRESHOLDS.map<ColumnDef<SlaPolicy>>(({ key, label }) => ({
+      id: key,
+      header: label,
+      accessorFn: (policy) => formatSeconds(policy[key]),
+      cell: (info) => <Typography variant="body2">{String(info.getValue())}</Typography>,
+    })),
+    {
+      id: 'actions',
+      header: '',
+      cell: (info) => (
+        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+          <IconButton
+            size="small"
+            aria-label={`Editar ${info.row.original.name}`}
+            onClick={() => setEditing(info.row.original)}
+          >
+            <Pencil size={14} />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="error"
+            aria-label={`Excluir ${info.row.original.name}`}
+            onClick={() => setRemoving(info.row.original)}
+          >
+            <Trash2 size={14} />
+          </IconButton>
+        </Stack>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="SLA"
         description="Acordos de nível de serviço definem prazos de primeira resposta, próxima resposta e resolução. Aplique-os nas conversas, por automações ou por macros."
-        count={`${policies.length} SLA${policies.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Adicionar SLA" onClick={() => setEditing('new')} />}
+        count={count}
+        action={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEditing('new')}>
+            Adicionar SLA
+          </Button>
+        }
       />
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      <Table
-        headers={['Nome', ...THRESHOLDS.map((t) => t.label), '']}
-        rows={policies.length}
-        empty="Nenhum SLA ainda."
-      >
-        {policies.map((p) => (
-          <tr key={p.id}>
-            <Cell>
-              <span className="block font-medium text-n-slate-12">{p.name}</span>
-              {p.description && <span className="text-sm">{p.description}</span>}
-            </Cell>
-            {THRESHOLDS.map(({ key }) => (
-              <Cell key={key}>{formatSeconds(p[key])}</Cell>
-            ))}
-            <Cell className="w-24">
-              <RowActions labelFor={p.name} onEdit={() => setEditing(p)} onDelete={() => setRemoving(p)} />
-            </Cell>
-          </tr>
-        ))}
-      </Table>
+      {error && (
+        <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+      <Panel flush>
+        <DataTable
+          rows={policies}
+          columns={columns}
+          getRowId={(policy) => String(policy.id)}
+          paginate={policies.length > 10}
+          empty="Nenhum SLA ainda."
+          ariaLabel="SLA"
+        />
+      </Panel>
       {editing && (
         <SlaModal
           policy={editing === 'new' ? null : editing}
@@ -51,17 +112,21 @@ export function SlaPage() {
         />
       )}
       {removing && (
-        <ConfirmModal
+        <ActionDialog
+          open
           title={`Excluir o SLA “${removing.name}”?`}
           description="Conversas que já usam este SLA deixam de ser acompanhadas."
-          confirm="Excluir"
-          onConfirm={async () => {
-            await http(`/sla_policies/${removing.id}`, 'DELETE');
-            reload();
-          }}
+          confirmLabel="Excluir"
+          backLabel="Cancelar"
+          tone="danger"
           onClose={() => setRemoving(null)}
+          onConfirm={() =>
+            void http(`/sla_policies/${removing.id}`, 'DELETE')
+              .then(() => reload())
+              .then(() => setRemoving(null))
+          }
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

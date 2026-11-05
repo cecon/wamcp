@@ -114,7 +114,7 @@ describe('inbox AI agent', () => {
       'POST /inboxes/10/ai_agent': { ...inbox, ai_agent_id: 1 },
     });
     const { user, onChange } = renderSettings('inboxes', 10);
-    const select = screen.getByLabelText('Agente de IA');
+    const select = await screen.findByLabelText('Agente de IA');
     await screen.findByRole('option', { name: /Ana/ });
     const names = within(select)
       .getAllByRole('option')

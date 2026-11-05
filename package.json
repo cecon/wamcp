@@ -3,6 +3,15 @@
   "version": "26.10.10",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@c3theme/chat",
+      "@c3theme/ui",
+      "esbuild",
+      "sharp"
+    ]
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
@@ -10,26 +19,39 @@
     "test": "node --test tests/*.test.mjs",
     "tauri": "tauri",
     "prepare:desktop": "node scripts/prepare-desktop.mjs",
-    "desktop": "npm run prepare:desktop && tauri dev",
-    "desktop:build": "npm run prepare:desktop && tauri build",
-    "lint": "eslint . --max-warnings 0 && node scripts/check-architecture.mjs",
+    "desktop": "pnpm run prepare:desktop && tauri dev",
+    "desktop:build": "pnpm run prepare:desktop && tauri build",
+    "lint": "eslint . --max-warnings 0 && node scripts/check-architecture.mjs && node scripts/c3-progresso.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "progresso:c3": "node scripts/c3-progresso.mjs",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run format:check && npm run build && npm test && npm run test:ui",
+    "check": "pnpm run lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:ui",
     "version": "node scripts/version.mjs",
     "test:ui": "vitest run --coverage",
     "test:server": "cargo test --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features",
     "coverage:server": "cargo llvm-cov --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features --fail-under-lines 80"
   },
   "dependencies": {
+    "@c3theme/chat": "github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/chat",
+    "@c3theme/ui": "github:cecon/C3Theme#e88cf032e5ce881730be768c6468ff72d360f511&path:packages/ui",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@fontsource-variable/inter": "^5.3.0",
+    "@mui/material": "^9.5.0",
+    "@tanstack/react-table": "^8.21.3",
     "@tauri-apps/api": "^2.12.4",
+    "iconsax-reactjs": "^0.0.8",
     "lucide-react": "^1.61.0",
     "react": "^19.0.0",
     "react-dom": "^19.3.1",
+    "react-intl": "^12.1.6",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "react-router": "^8.5.1",
+    "remark-gfm": "^4.0.1",
+    "stylis": "^4.2.0",
+    "stylis-plugin-rtl": "^2.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

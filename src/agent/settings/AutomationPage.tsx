@@ -1,15 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
 import { Copy, Plus } from 'lucide-react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http } from '../api';
 import type { AutomationRule, Catalog } from '../types';
 import { ACTIONS, AUTOMATION_EVENTS } from '../labels';
-import { Button } from '../ui/Button';
 import { SidePanel } from '../ui/Overlay';
-import { Cell, RowActions, SettingsHeader, SettingsPage, Table, Toggle } from '../ui/Settings';
+import { RowActions, Toggle } from '../ui/Settings';
 import { RuleEditor } from './RuleEditor';
 import { useAction } from './useAction';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
-/** Chatwoot Automation settings: rules table (Name | Active | Created) and the rule side panel. */
+/** Automação no C3Theme (lote 32): regras (Nome | Quando | Ativa) e o painel lateral do editor. */
 export function AutomationPage({ catalog }: { catalog: Catalog }) {
   const [rules, setRules] = useState<AutomationRule[]>([]),
     [q, setQ] = useState(''),
@@ -21,69 +36,105 @@ export function AutomationPage({ catalog }: { catalog: Catalog }) {
   }, [load]);
   const visible = rules.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()));
 
+  const columns: ColumnDef<AutomationRule>[] = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessorFn: (rule) => rule.name,
+      cell: (info) => (
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {info.row.original.name}
+          </Typography>
+          <Typography variant="caption" component="span" color="text.secondary" sx={{ display: 'block' }}>
+            {info.row.original.actions.map((a) => ACTIONS[a.action_name] || a.action_name).join(', ')}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'event',
+      header: 'Quando',
+      accessorFn: (rule) => AUTOMATION_EVENTS[rule.event_name] || rule.event_name,
+      cell: (info) => (
+        <Typography variant="body2" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'active',
+      header: 'Ativa',
+      accessorFn: (rule) => (rule.active ? 'Ativa' : 'Inativa'),
+      cell: (info) => (
+        <Toggle
+          compact
+          label={`Ativa ${info.row.original.name}`}
+          checked={Boolean(info.row.original.active)}
+          onChange={(active) =>
+            void run(async () => {
+              await http(`/automation_rules/${info.row.original.id}`, 'PATCH', { active });
+              await load();
+            })
+          }
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: (info) => (
+        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+          <IconButton
+            size="small"
+            aria-label={`Clonar ${info.row.original.name}`}
+            title="Clonar"
+            onClick={() =>
+              void run(async () => {
+                await http(`/automation_rules/${info.row.original.id}/clone`, 'POST');
+                await load();
+              })
+            }
+          >
+            <Copy size={16} />
+          </IconButton>
+          <RowActions
+            labelFor={info.row.original.name}
+            onDelete={() =>
+              void run(async () => {
+                await http(`/automation_rules/${info.row.original.id}`, 'DELETE');
+                await load();
+              })
+            }
+          />
+        </Stack>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Automação"
         description="Regras rodam após cada evento e executam ações como atribuir, etiquetar ou responder. Ações feitas por uma regra não disparam outras regras."
         search={{ value: q, onChange: setQ, placeholder: 'Pesquisar automações…' }}
         count={`${rules.length} regra${rules.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Criar automação" onClick={() => setCreating(true)} />}
+        action={
+          <Button variant="contained" startIcon={<Plus size={14} />} onClick={() => setCreating(true)}>
+            Criar automação
+          </Button>
+        }
       />
-      {error && !creating && <p className="text-sm text-n-ruby-11">{error}</p>}
-      <Table headers={['Nome', 'Quando', 'Ativa', '']} rows={visible.length} empty="Nenhuma automação ainda.">
-        {visible.map((r) => (
-          <tr key={r.id}>
-            <Cell>
-              <span className="block font-medium text-n-slate-12">{r.name}</span>
-              <span className="text-sm">
-                {r.actions.map((a) => ACTIONS[a.action_name] || a.action_name).join(', ')}
-              </span>
-            </Cell>
-            <Cell>{AUTOMATION_EVENTS[r.event_name]}</Cell>
-            <Cell className="w-24">
-              <Toggle
-                compact
-                label={`Ativa ${r.name}`}
-                checked={Boolean(r.active)}
-                onChange={(active) =>
-                  void run(async () => {
-                    await http(`/automation_rules/${r.id}`, 'PATCH', { active });
-                    await load();
-                  })
-                }
-              />
-            </Cell>
-            <Cell className="w-32">
-              <div className="flex justify-end gap-1">
-                <Button
-                  color="slate"
-                  variant="faded"
-                  size="sm"
-                  icon={Copy}
-                  aria-label={`Clonar ${r.name}`}
-                  title="Clonar"
-                  onClick={() =>
-                    void run(async () => {
-                      await http(`/automation_rules/${r.id}/clone`, 'POST');
-                      await load();
-                    })
-                  }
-                />
-                <RowActions
-                  labelFor={r.name}
-                  onDelete={() =>
-                    void run(async () => {
-                      await http(`/automation_rules/${r.id}`, 'DELETE');
-                      await load();
-                    })
-                  }
-                />
-              </div>
-            </Cell>
-          </tr>
-        ))}
-      </Table>
+      {error && !creating && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Panel flush>
+        <DataTable
+          rows={visible}
+          columns={columns}
+          getRowId={(rule) => String(rule.id)}
+          empty="Nenhuma automação ainda."
+          ariaLabel="Automação"
+        />
+      </Panel>
       {creating && (
         <SidePanel title="Criar automação" onClose={() => setCreating(false)}>
           <RuleEditor
@@ -101,6 +152,6 @@ export function AutomationPage({ catalog }: { catalog: Catalog }) {
           />
         </SidePanel>
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

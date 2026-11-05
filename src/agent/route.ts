@@ -25,8 +25,46 @@ export type SettingsSection =
 /** Settings pages every agent can open (the others are for administrators). */
 export const AGENT_SECTIONS: SettingsSection[] = ['macros'];
 
+/** Todas as seções de Configurações (ordem do menu lateral). Fonte única para validar URL e montar navegação. */
+export const SETTINGS_SECTIONS: SettingsSection[] = [
+  'account',
+  'agents',
+  'organization',
+  'teams',
+  'inboxes',
+  'labels',
+  'attributes',
+  'canned',
+  'automation',
+  'skills',
+  'macros',
+  'sla',
+  'webhooks',
+  'audit',
+  'custom_roles',
+  'engine',
+  'schedules',
+  'connections',
+  'app',
+];
+
 /** Chatwoot report pages (administrators and roles with `report_manage`). */
 export type ReportSection = 'overview' | 'agents' | 'inboxes' | 'teams' | 'labels' | 'csat' | 'bots' | 'sla';
+
+/** Todas as seções de Relatórios: fonte única para validar URL. */
+export const REPORT_SECTIONS: ReportSection[] = [
+  'overview',
+  'agents',
+  'inboxes',
+  'teams',
+  'labels',
+  'csat',
+  'bots',
+  'sla',
+];
+
+/** Filtros rápidos de conversa (as do menu lateral). */
+export const CONVERSATION_TYPES: ConversationType[] = ['unattended', 'mentions', 'participating'];
 
 export type Route =
   | { page: 'notifications' }

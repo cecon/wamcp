@@ -1,3 +1,10 @@
+// material-ui
+import Button from '@mui/material/Button';
+import Link from '@mui/material/Link';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { useState } from 'react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
@@ -8,11 +15,9 @@ interface AppStatus {
   repos: { inbox_id: number; repo: string }[];
 }
 
-const link = 'text-sm font-medium text-n-blue-11 underline';
-
 /**
- * The agents' own GitHub identity (`name[bot]`): created from a manifest GitHub fills in, then
- * installed on repositories; each one becomes a GitHub channel. Hidden from non-administrators.
+ * A identidade GitHub do agente (`name[bot]`): criada por um manifesto que o GitHub preenche e
+ * instalada em repositórios; cada um vira um canal. Visível só para administradores.
  */
 export function GithubAppPanel() {
   const status = useFetch<AppStatus>('/github_app');
@@ -22,63 +27,78 @@ export function GithubAppPanel() {
   if (!status.data) return null;
   const { app, repos } = status.data;
   return (
-    <section className="mb-6 flex flex-col gap-3 rounded-xl border border-n-weak p-4" aria-label="GitHub App">
-      <h2 className="text-heading-3 text-n-slate-12">GitHub App do agente</h2>
+    <Stack
+      component="section"
+      aria-label="GitHub App"
+      spacing={1.5}
+      sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}
+    >
+      <Typography variant="h6" component="h2">
+        GitHub App do agente
+      </Typography>
       {app ? (
         <>
-          <p className="text-sm text-n-slate-12">
+          <Typography variant="body2">
             O agente age no GitHub como <strong>@{app.slug}[bot]</strong>
             {app.owner && <> (de {app.owner})</>}. Cada repositório em que o App estiver instalado vira um
             canal, e os eventos chegam pelo webhook do App.
-          </p>
-          <a className={link} href={app.install_url} target="_blank" rel="noreferrer">
+          </Typography>
+          <Link href={app.install_url} target="_blank" rel="noreferrer" sx={{ alignSelf: 'flex-start' }}>
             Instalar ou escolher repositórios no GitHub
-          </a>
+          </Link>
           {repos.length > 0 ? (
-            <p className="text-sm text-n-slate-11">Repositórios: {repos.map((r) => r.repo).join(', ')}</p>
+            <Typography variant="body2" color="text.secondary">
+              Repositórios: {repos.map((r) => r.repo).join(', ')}
+            </Typography>
           ) : (
-            <p className="text-sm text-n-slate-11">Ainda não instalado em nenhum repositório.</p>
+            <Typography variant="body2" color="text.secondary">
+              Ainda não instalado em nenhum repositório.
+            </Typography>
           )}
         </>
       ) : (
         <>
-          <p className="text-sm text-n-slate-12">
+          <Typography variant="body2">
             Dê ao agente uma identidade própria no GitHub, em vez do seu token pessoal: o GitHub abre com o
             App preenchido (permissões, eventos e webhook), você confirma e escolhe os repositórios.
-          </p>
-          <label>
-            <span className="field-label">Organização (opcional; vazio cria na sua conta)</span>
-            <input
-              className="field"
+          </Typography>
+          <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+            <TextField
+              size="small"
+              label="Organização (opcional; vazio cria na sua conta)"
               placeholder="ex.: minha-empresa"
               value={owner}
-              onChange={(e) => setOwner(e.target.value)}
+              onChange={(event) => setOwner(event.target.value)}
+              sx={{ width: '100%', maxWidth: 420 }}
             />
-          </label>
-          {next ? (
-            <a className={link} href={next} target="_blank" rel="noreferrer">
-              Abrir o GitHub para criar o App
-            </a>
-          ) : (
-            <button
-              type="button"
-              className="self-start text-sm font-medium text-n-blue-11 disabled:opacity-50"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  const started = await http<{ url: string }>('/github_app', 'POST', {
-                    owner: owner.trim() || null,
-                  });
-                  setNext(started.url);
-                })
-              }
-            >
-              {busy ? 'Preparando…' : 'Criar GitHub App'}
-            </button>
-          )}
-          {error && <p className="text-sm text-n-ruby-11">{error}</p>}
+            {next ? (
+              <Link href={next} target="_blank" rel="noreferrer">
+                Abrir o GitHub para criar o App
+              </Link>
+            ) : (
+              <Button
+                variant="outlined"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const started = await http<{ url: string }>('/github_app', 'POST', {
+                      owner: owner.trim() || null,
+                    });
+                    setNext(started.url);
+                  })
+                }
+              >
+                {busy ? 'Preparando…' : 'Criar GitHub App'}
+              </Button>
+            )}
+            {error && (
+              <Typography variant="body2" role="alert" sx={{ color: 'error.main' }}>
+                {error}
+              </Typography>
+            )}
+          </Stack>
         </>
       )}
-    </section>
+    </Stack>
   );
 }

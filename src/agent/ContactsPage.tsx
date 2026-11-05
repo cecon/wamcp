@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
+
+// material-ui
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http, isForbidden, query, timeAgo, type Realtime } from './api';
 import type { Catalog, Contact, User } from './types';
 import { Avatar } from './ui/Avatar';
 import { NoAccess } from './ui/NoAccess';
-import { Cell, SettingsHeader, SettingsPage, Table } from './ui/Settings';
 import { ContactDetail } from './contacts/ContactDetail';
 import { ContactsToolbar, type ContactScope } from './contacts/ContactsToolbar';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './settings/c3/SettingsC3';
 
 const EMPTY: Catalog = { inboxes: [], agents: [], teams: [], labels: [] };
 
@@ -19,7 +29,7 @@ interface Props {
   contactId?: number;
 }
 
-/** Chatwoot Contacts: searchable/filterable list; a contact opens in a side panel with its details. */
+/** Contatos no C3Theme (lote 9): lista/cabeçalho no pacote; detalhe e modais seguem os do app. */
 export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realtime, contactId }: Props) {
   const [q, setQ] = useState(''),
     [scope, setScope] = useState<ContactScope>({ filters: null, viewId: null }),
@@ -70,10 +80,61 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
     [realtime],
   );
 
+  const columns: ColumnDef<Contact>[] = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessorFn: (contact) => contact.name || 'Sem nome',
+      cell: (info) => (
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          <Avatar
+            name={info.row.original.name || info.row.original.phone_number}
+            src={info.row.original.avatar_url}
+            size={32}
+          />
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {info.row.original.name || 'Sem nome'}
+          </Typography>
+          {info.row.original.blocked ? (
+            <Typography variant="caption" sx={{ color: 'error.main' }}>
+              Bloqueado
+            </Typography>
+          ) : null}
+        </Stack>
+      ),
+    },
+    {
+      id: 'email',
+      header: 'E-mail',
+      accessorFn: (contact) => contact.email || '—',
+      cell: (info) => (
+        <Typography variant="body2" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'phone',
+      header: 'Telefone',
+      accessorFn: (contact) => contact.phone_number || '—',
+      cell: (info) => <Typography variant="body2">{String(info.getValue())}</Typography>,
+    },
+    {
+      id: 'last_activity',
+      header: 'Última atividade',
+      accessorFn: (contact) => (contact.last_activity_at ? timeAgo(contact.last_activity_at) : '—'),
+      cell: (info) => (
+        <Typography variant="caption" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+  ];
+
   if (forbidden) return <NoAccess />;
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Contatos"
         description="Pessoas que falaram com a sua equipe pelo WhatsApp."
         search={{ value: q, onChange: setQ, placeholder: 'Pesquisar contatos…' }}
@@ -93,31 +154,18 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
           />
         }
       />
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <Table
-        headers={['Nome', 'E-mail', 'Telefone', 'Última atividade']}
-        rows={items.length}
-        empty="Nenhum contato encontrado."
-      >
-        {items.map((c) => (
-          <tr key={c.id} onClick={() => open(c.id)} className="cursor-pointer hover:bg-n-alpha-1">
-            <Cell>
-              <span className="flex items-center gap-3">
-                <Avatar name={c.name || c.phone_number} src={c.avatar_url} size={32} />
-                <span className="font-medium text-n-slate-12">{c.name || 'Sem nome'}</span>
-                {c.blocked ? <span className="text-xs text-n-ruby-11">Bloqueado</span> : null}
-              </span>
-            </Cell>
-            <Cell>{c.email || '—'}</Cell>
-            <Cell>{c.phone_number || '—'}</Cell>
-            <Cell>{c.last_activity_at ? timeAgo(c.last_activity_at) : '—'}</Cell>
-          </tr>
-        ))}
-      </Table>
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Panel flush>
+        <DataTable
+          rows={items}
+          columns={columns}
+          getRowId={(contact) => String(contact.id)}
+          paginate={items.length > 25}
+          empty="Nenhum contato encontrado."
+          ariaLabel="Contatos"
+          onRowClick={(row) => open(row.original.id)}
+        />
+      </Panel>
       {selected && (
         <ContactDetail
           key={selected.id}
@@ -134,6 +182,6 @@ export function ContactsPage({ onOpenConversation, user, catalog = EMPTY, realti
           onOpenConversation={onOpenConversation}
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

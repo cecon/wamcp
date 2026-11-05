@@ -1,3 +1,7 @@
+// material-ui
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import type { CustomAttributes, FilterType, FilterValue } from '../types';
 import { AttributeInput } from './AttributeInput';
 import { useAttributeDefinitions } from './useAttributeDefinitions';
@@ -14,12 +18,12 @@ export function AttributesSection({ model, values = {}, onSave }: Props) {
   const { definitions } = useAttributeDefinitions(model);
   if (definitions.length === 0)
     return (
-      <p className="text-sm text-n-slate-11">
+      <Typography variant="body2" color="text.secondary">
         Nenhum atributo personalizado. Um administrador pode criá-los em Configurações.
-      </p>
+      </Typography>
     );
   return (
-    <div className="flex flex-col gap-3">
+    <Stack spacing={1.5}>
       {definitions.map((d) => (
         <AttributeInput
           key={`${d.id}:${String(values[d.attribute_key] ?? '')}`}
@@ -28,6 +32,6 @@ export function AttributesSection({ model, values = {}, onSave }: Props) {
           onSave={(value) => onSave(d.attribute_key, value)}
         />
       ))}
-    </div>
+    </Stack>
   );
 }
