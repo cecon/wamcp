@@ -15,7 +15,7 @@ pub const PATCH_LIMIT: usize = 6_000;
 /// Added to the GitHub system prompt when the tools are open for the run.
 pub const TOOLS_PROMPT: &str =
     "Você tem as ferramentas do servidor github para ler e agir no repositório: ver o PR ou \
-a issue (item), o diff (pr_files), os checks (checks) e o log de um job que falhou (job_log); revisar (review), \
+a issue (item), o diff (pr_files), os checks (checks), os jobs de uma execução de workflow (run_jobs) e o log de um job que falhou (job_log); revisar (review), \
 aprovar, pedir mudanças, mesclar (merge), fechar ou reabrir (set_state), atribuir pessoas (assign), pedir revisores \
 (request_reviewers), mudar labels (labels), rodar de novo os jobs que falharam (rerun_failed) e encaminhar a conversa \
 ao seu responsável direto no app (forward). Sem `number`, elas agem no PR ou na issue desta conversa. Aja quando o \
@@ -56,7 +56,8 @@ pub fn github_tools() -> Vec<SystemTool> {
         tool("item", "Mostra o PR ou a issue: título, estado, descrição, autor, labels e responsáveis; num PR também as branches, se pode mesclar, os revisores pedidos e os checks do último commit.", object(json!({ "number": number() }), &[])),
         tool("pr_files", "Lista os arquivos alterados do PR com o diff de cada um (cortado quando é grande).", object(json!({ "number": number() }), &[])),
         tool("checks", "Checks do último commit do PR: nome, situação, resultado, job_id e run_id.", object(json!({ "number": number() }), &[])),
-        tool("job_log", "O final do log de um job do GitHub Actions (job_id vem de checks), para ver por que falhou.", object(json!({ "job_id": { "type": "integer", "minimum": 1 } }), &["job_id"])),
+        tool("run_jobs", "Os jobs de uma execução de workflow, com os passos que falharam e o job_id de cada um. Use para falhas fora de PR (ex.: na main): o run_id está no link /actions/runs/<run_id> da mensagem.", object(json!({ "run_id": { "type": "integer", "minimum": 1 } }), &["run_id"])),
+        tool("job_log", "O final do log de um job do GitHub Actions (job_id vem de checks ou de run_jobs), para ver por que falhou.", object(json!({ "job_id": { "type": "integer", "minimum": 1 } }), &["job_id"])),
         tool("review", "Revisa o PR: APPROVE aprova, REQUEST_CHANGES pede mudanças, COMMENT só comenta. Pode levar comentários em linhas do diff (path e line do arquivo novo).", object(json!({ "number": number(), "event": { "type": "string", "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"] }, "body": text(20000), "comments": inline }), &["event"])),
         tool("merge", "Mescla o PR (merge, squash ou rebase; padrão merge).", object(json!({ "number": number(), "method": { "type": "string", "enum": ["merge", "squash", "rebase"] }, "title": text(250) }), &[])),
         tool("set_state", "Fecha ou reabre o PR ou a issue. Numa issue fechada, reason diz se foi resolvida (completed) ou não será feita (not_planned).", object(json!({ "number": number(), "state": { "type": "string", "enum": ["open", "closed"] }, "reason": { "type": "string", "enum": ["completed", "not_planned"] } }), &["state"])),

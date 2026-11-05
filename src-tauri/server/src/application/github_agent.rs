@@ -136,6 +136,7 @@ impl HelpdeskService {
             "request_reviewers" => api.people(number()?, args, "reviewers").await,
             "labels" => api.labels(number()?, args).await,
             "rerun_failed" => api.rerun(args).await,
+            "run_jobs" => api.run_jobs(args).await,
             "forward" => self.forward(token, &run, args).await,
             _ => fail(format!("Ferramenta desconhecida: {name}")),
         }

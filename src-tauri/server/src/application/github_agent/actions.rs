@@ -228,6 +228,28 @@ impl Api<'_> {
         Ok(json!({ "number": number, "added": add, "removed": remove }))
     }
 
+    /// The jobs of a workflow run (a failure on a branch has no PR to read the checks from).
+    pub async fn run_jobs(&self, args: &Value) -> Result<Value> {
+        let Some(run) = args["run_id"].as_u64() else {
+            return fail("Informe run_id");
+        };
+        let found = self
+            .call("GET", &format!("/actions/runs/{run}/jobs?per_page=100"), None)
+            .await?;
+        let jobs = found["jobs"].as_array().into_iter().flatten().map(|job| {
+            let failed: Vec<&Value> = job["steps"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|step| step["conclusion"] == "failure")
+                .map(|step| &step["name"])
+                .collect();
+            json!({ "name": job["name"], "status": job["status"], "conclusion": job["conclusion"],
+                    "job_id": job["id"], "failed_steps": failed })
+        });
+        Ok(json!({ "run_id": run, "jobs": jobs.collect::<Vec<_>>() }))
+    }
+
     pub async fn rerun(&self, args: &Value) -> Result<Value> {
         let Some(run) = args["run_id"].as_u64() else {
             return fail("Informe run_id");
