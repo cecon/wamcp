@@ -1,4 +1,5 @@
 //! The GitHub REST API (api.github.com) for GitHub inboxes, plus an in-memory double for tests.
+use super::github_jwt::app_jwt;
 use crate::application::ports::GithubApi;
 use crate::domain::error::{fail, fail_with, Result};
 use async_trait::async_trait;
@@ -24,15 +25,17 @@ impl HttpGithub {
     }
 
     async fn call(&self, token: &str, method: reqwest::Method, path: &str, body: Option<Value>) -> Result<Value> {
-        let mut request = self
-            .client
-            .request(method, format!("{API}{path}"))
-            .bearer_auth(token)
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28");
+        let mut request = self.client.request(method, format!("{API}{path}")).bearer_auth(token);
         if let Some(body) = body {
             request = request.json(&body);
         }
+        self.send(request).await
+    }
+
+    async fn send(&self, request: reqwest::RequestBuilder) -> Result<Value> {
+        let request = request
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28");
         let response = match request.send().await {
             Ok(response) => response,
             Err(_) => return fail("Não foi possível falar com o GitHub"),
@@ -104,6 +107,16 @@ impl GithubApi for HttpGithub {
         self.call(token, method, path, body).await
     }
 
+    async fn convert_manifest(&self, code: &str) -> Result<Value> {
+        let url = format!("{API}/app-manifests/{code}/conversions");
+        self.send(self.client.post(url)).await
+    }
+
+    async fn app_api(&self, app_id: i64, pem: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
+        let jwt = app_jwt(app_id, pem, chrono::Utc::now().timestamp())?;
+        self.api(&jwt, method, path, body).await
+    }
+
     async fn job_log(&self, token: &str, repo: &str, job_id: u64) -> Result<String> {
         // GitHub answers with a redirect to a short-lived download address (no token goes there).
         let response = self
@@ -134,7 +147,8 @@ impl GithubApi for HttpGithub {
 }
 
 /// Records what would reach GitHub. `refuse_hooks` simulates a token without webhook permission;
-/// `answers` holds what `api` and `job_log` return, by `"GET /repos/…"` or `"LOG <job id>"`.
+/// `answers` holds what `api` and `job_log` return, by `"GET /repos/…"` or `"LOG <job id>"`, the
+/// App created from a manifest code (`"MANIFEST <code>"`) and what `app_api` returns (`"APP GET /…"`).
 #[derive(Default)]
 pub struct MemoryGithub {
     pub comments: Mutex<Vec<(String, u64, String)>>,
@@ -177,6 +191,31 @@ impl GithubApi for MemoryGithub {
             .push((method.into(), path.into(), body.unwrap_or(Value::Null)));
         let answer = self.answers.lock().get(&format!("{method} {path}")).cloned();
         Ok(answer.unwrap_or(Value::Null))
+    }
+
+    async fn convert_manifest(&self, code: &str) -> Result<Value> {
+        let answer = self.answers.lock().get(&format!("MANIFEST {code}")).cloned();
+        match answer {
+            Some(app) => Ok(app),
+            None => fail_with("O GitHub não reconheceu o código (expirado?)", 422),
+        }
+    }
+
+    /// Recorded as `APP <method>`; an installation token is always granted.
+    async fn app_api(&self, _app_id: i64, pem: &str, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
+        if pem.is_empty() {
+            return fail_with("Chave privada do GitHub App inválida", 422);
+        }
+        self.calls
+            .lock()
+            .push((format!("APP {method}"), path.into(), body.unwrap_or(Value::Null)));
+        if let Some(answer) = self.answers.lock().get(&format!("APP {method} {path}")).cloned() {
+            return Ok(answer);
+        }
+        if path.ends_with("/access_tokens") {
+            return Ok(json!({ "token": format!("ghs_{path}"), "expires_at": "2999-01-01T00:00:00Z" }));
+        }
+        Ok(Value::Null)
     }
 
     async fn job_log(&self, _token: &str, _repo: &str, job_id: u64) -> Result<String> {

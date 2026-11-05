@@ -12,6 +12,7 @@ import { InboxLimit } from './InboxLimit';
 import { InboxAgentSelect } from './InboxAgentSelect';
 import { useAction } from './useAction';
 import { ConnectGithubModal } from './github/ConnectGithubModal';
+import { GithubAppPanel } from './github/GithubAppPanel';
 import { GithubSetup } from './github/GithubSetup';
 import { NewConnectionModal } from './connections/ConnectionsPage';
 
@@ -54,6 +55,7 @@ export function InboxesPage({ catalog, inboxId, onNavigate, onChange }: Props) {
         }
         count={`${catalog.inboxes.length} ${catalog.inboxes.length === 1 ? 'canal' : 'canais'}`}
       />
+      <GithubAppPanel />
       <ul className="divide-y divide-n-weak border-t border-n-weak">
         {catalog.inboxes.length === 0 && <li className="py-20 text-center text-base">Nenhum canal ainda.</li>}
         {catalog.inboxes.map((i) => (

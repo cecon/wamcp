@@ -150,4 +150,20 @@ pub struct GithubChannel {
     /// The login of the token's account: its own comments come back as events and are ignored.
     pub own_login: Option<String>,
     pub hook_id: Option<i64>,
+    /// Set when the repository is reached through the app's GitHub App: its installation tokens
+    /// replace `token`, and its events come by the App's webhook instead of a repository hook.
+    #[serde(default)]
+    pub installation_id: Option<i64>,
+}
+
+/// The GitHub App the administrator created from the app (one per installation of the app). The
+/// private key and the webhook secret are sealed.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct GithubApp {
+    pub app_id: i64,
+    pub slug: String,
+    pub html_url: String,
+    pub owner: Option<String>,
+    pub private_key: String,
+    pub webhook_secret: String,
 }

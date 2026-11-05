@@ -1,4 +1,5 @@
 //! A connected GitHub channel and the webhook deliveries the tests send to it.
+#![allow(dead_code)]
 use crate::common::{self, Fixture};
 use axum::body::Body;
 use axum::http::Request;
@@ -35,7 +36,7 @@ pub async fn connected() -> Channel {
     }
 }
 
-fn signature(secret: &str, body: &[u8]) -> String {
+pub fn signature(secret: &str, body: &[u8]) -> String {
     let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
     mac.update(body);
     format!("sha256={}", hex::encode(mac.finalize().into_bytes()))
