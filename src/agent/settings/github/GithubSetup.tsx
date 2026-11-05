@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
+import { GithubAppPanel } from './GithubAppPanel';
 import type { GithubWebhook } from './WebhookInstructions';
 import { WebhookInstructions } from './WebhookInstructions';
 
@@ -42,6 +43,12 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
           <p className="text-sm font-medium text-n-amber-11">
             O webhook ainda não existe no GitHub: nenhum evento chega a esta caixa.
           </p>
+          <p className="text-sm text-n-slate-11">
+            Recomendado: instale o GitHub App do agente neste repositório. Ele recebe os eventos sem webhook
+            próprio e o agente deixa de agir com o seu token.
+          </p>
+          <GithubAppPanel />
+          <p className="text-sm text-n-slate-11">Ou continue com o seu token:</p>
           <div className="flex flex-col gap-1">
             <button
               type="button"

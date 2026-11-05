@@ -127,4 +127,14 @@ describe('GitHub channel', () => {
     expect(await screen.findByText(/Conectado pelo GitHub App/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Criar webhook' })).not.toBeInTheDocument();
   });
+
+  it('offers the GitHub App inside an inbox that has no webhook', async () => {
+    fakeApi({
+      'GET /inboxes/2/github': { ...webhook, repo: 'cecon/C3Theme', account: 'cecon', hook_created: false },
+      'GET /github_app': { app: null, repos: [] },
+    });
+    render(<GithubSetup inboxId={2} />);
+    expect(await screen.findByRole('button', { name: 'Criar GitHub App' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar webhook' })).toBeInTheDocument();
+  });
 });
