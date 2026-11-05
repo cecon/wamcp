@@ -105,4 +105,10 @@ impl GithubRepo for SqliteStore {
         self.exec("DELETE FROM github_app_manifest WHERE state=?", vec![text(state)])
             .map(|_| ())
     }
+
+    fn delete_github_app(&self) -> Result<()> {
+        self.exec("DELETE FROM github_app", vec![])?;
+        self.exec("UPDATE channel_github SET installation_id=NULL", vec![])
+            .map(|_| ())
+    }
 }

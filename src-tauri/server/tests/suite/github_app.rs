@@ -171,4 +171,14 @@ async fn a_repository_connected_with_a_token_moves_to_the_app_when_it_is_install
         helpdesk.github_token(&channel).await.unwrap(),
         "ghs_/app/installations/5/access_tokens"
     );
+
+    // Removing the App (to create it again) puts the channel back on its token.
+    let maria = c.f.agent(&c.admin, "maria@example.com", "agent", false).await;
+    assert_eq!(maria.call("DELETE", "/github_app", None).await.status, 403);
+    let removed = c.admin.call("DELETE", "/github_app", None).await;
+    assert_eq!(removed.status, 200, "{:?}", removed.body);
+    assert_eq!(removed.body["app"], Value::Null);
+    let channel = helpdesk.core.repo.github_channel(c.inbox).unwrap().unwrap();
+    assert_eq!(channel.installation_id, None);
+    assert_eq!(helpdesk.github_token(&channel).await.unwrap(), "ghp_teste");
 }

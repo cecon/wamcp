@@ -112,6 +112,18 @@ impl HelpdeskService {
         Ok(format!("{html_url}/installations/new"))
     }
 
+    /// Forgets the GitHub App (administrators), so it can be created again: its channels stay, without
+    /// an installation, until the new App is installed on their repositories. The App itself is
+    /// deleted on GitHub, by the person.
+    pub fn remove_github_app(&self, actor: &Actor) -> Result<Value> {
+        if !actor.is_admin() {
+            return fail_with("Apenas administradores removem o GitHub App", 403);
+        }
+        self.core.commit(Some(actor), |_| self.core.repo.delete_github_app())?;
+        self.github_runs.lock().tokens.clear();
+        self.github_app_status(actor)
+    }
+
     /// The GitHub App and the repositories it serves (administrators).
     pub fn github_app_status(&self, actor: &Actor) -> Result<Value> {
         if !actor.is_admin() {
