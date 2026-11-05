@@ -13,13 +13,12 @@ import { BulkActionBar } from './BulkActionBar';
 import { ChatListHeader, type StatusFilter } from './ChatListHeader';
 import { ConversationCard } from './ConversationCard';
 
-export type AssigneeType = 'me' | 'unassigned' | 'ai' | 'all';
+export type AssigneeType = 'me' | 'unassigned' | 'all';
 export type { StatusFilter };
 
 const TABS: { id: AssigneeType; label: string; count: keyof Meta }[] = [
   { id: 'me', label: 'Minhas', count: 'mine' },
   { id: 'unassigned', label: 'Não atribuídas', count: 'unassigned' },
-  { id: 'ai', label: 'Com a IA', count: 'ai' },
   { id: 'all', label: 'Todas', count: 'all' },
 ];
 
@@ -44,7 +43,7 @@ interface Props {
   onReload: () => void;
 }
 
-/** Lista de conversas no C3Theme (lote 15): cabeçalho, abas Minhas/Sem dono/Todas, barra em lote e os cards. */
+/** Lista de conversas no C3Theme (lote 15): cabeçalho, abas Minhas/Não atribuídas/Todas (as atendidas pela IA aparecem em Todas), barra em lote e os cards. */
 export function ChatList({
   title,
   items,
