@@ -4,7 +4,6 @@ use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
 use crate::application::accounts::AccountService;
 use crate::application::agents::AgentDirectory;
-use crate::application::ai_watchdog::AiWatchdog;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
 use crate::application::avatars::AvatarService;
