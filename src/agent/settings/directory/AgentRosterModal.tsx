@@ -63,6 +63,7 @@ export function AgentRosterModal(props: Props) {
     runtime: agent?.runtime || RUNTIMES[0].value,
     model: agent?.model || '',
     instructions: agent?.instructions || '',
+    goals: agent?.goals || '',
     active: agent?.active ?? true,
   });
   const [skillIds, setSkillIds] = useState<number[]>(agent?.skill_ids || []);
@@ -94,6 +95,7 @@ export function AgentRosterModal(props: Props) {
       runtime: form.runtime,
       model: form.model.trim() || null,
       instructions: form.instructions.trim() || null,
+      goals: form.goals.trim() || null,
     };
   };
 
@@ -207,6 +209,16 @@ export function AgentRosterModal(props: Props) {
                 value={form.instructions}
                 onChange={(e) => setForm({ ...form, instructions: e.target.value })}
                 slotProps={{ htmlInput: { maxLength: 8000 } }}
+              />
+              <TextField
+                label="Objetivos (quando encerrar a conversa)"
+                multiline
+                minRows={2}
+                placeholder="Ex.: o PR foi mesclado e o CI está verde; ou o cliente confirmou o pedido."
+                helperText="O agente marca a conversa como resolvida sozinho quando este critério for atendido."
+                value={form.goals}
+                onChange={(e) => setForm({ ...form, goals: e.target.value })}
+                slotProps={{ htmlInput: { maxLength: 2000 } }}
               />
             </>
           )}

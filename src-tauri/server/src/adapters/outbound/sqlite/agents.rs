@@ -10,7 +10,7 @@ use serde_json::Value;
 
 /// The role and profile come from the profile; a person with a login uses the login's profile.
 const AGENT: &str = "SELECT a.id,a.name,a.kind,p.agent_role AS role,p.id AS profile_id,p.name AS profile_name,
-  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.active,a.system,a.created,
+  a.description,a.user_id,a.whatsapp_jid,a.runtime,a.model,a.instructions,a.goals,a.active,a.system,a.created,
   a.supervisor_id,a.avatar,u.name AS user_name, u.email AS user_email, u.availability,
   (SELECT json_group_array(s.skill_id) FROM agent_skills s WHERE s.agent_id=a.id) AS skill_ids,
   (SELECT json_group_array(r.skill_id) FROM custom_role_skills r WHERE r.role_id=p.id) AS profile_skill_ids,
@@ -57,21 +57,22 @@ impl AgentsRepo for SqliteStore {
             opt_text(agent.runtime.as_deref()),
             opt_text(agent.model.as_deref()),
             opt_text(agent.instructions.as_deref()),
+            opt_text(agent.goals.as_deref()),
             flag(agent.active),
             opt_int(agent.supervisor_id),
         ];
         let id = if agent.id == 0 {
             values.push(text(iso(now_ms())));
             self.insert(
-                "INSERT INTO agents(name,kind,role,profile_id,description,user_id,whatsapp_jid,runtime,model,instructions,active,supervisor_id,created)
-                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO agents(name,kind,role,profile_id,description,user_id,whatsapp_jid,runtime,model,instructions,goals,active,supervisor_id,created)
+                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 values,
             )?
         } else {
             values.push(int(agent.id));
             self.exec(
                 "UPDATE agents SET name=?,kind=?,role=?,profile_id=?,description=?,user_id=?,whatsapp_jid=?,runtime=?,model=?,
-                 instructions=?,active=?,supervisor_id=? WHERE id=?",
+                 instructions=?,goals=?,active=?,supervisor_id=? WHERE id=?",
                 values,
             )?;
             agent.id

@@ -167,6 +167,16 @@ export function ConversationBox({
           onBack={onBack}
           onTogglePanel={() => setPanel((v) => !v)}
           onStatus={(status, until) => void setStatus(status, until)}
+          onHandToAi={
+            inboxChannel?.ai_agent_id
+              ? () =>
+                  void act(async () =>
+                    setConversation(
+                      await http<Conversation>(`${path}/assignments`, 'POST', { assignee_id: null }),
+                    ),
+                  )
+              : undefined
+          }
           menu={
             <ConversationMenu
               conversation={conversation}

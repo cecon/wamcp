@@ -24,6 +24,7 @@ struct AgentBody {
     runtime: Option<String>,
     model: Option<String>,
     instructions: Option<String>,
+    goals: Option<String>,
     active: Option<bool>,
     supervisor_id: Option<i64>,
 }
@@ -52,6 +53,7 @@ fn draft(id: i64, body: AgentBody) -> ApiResult<RosterAgentDraft> {
         runtime: optional(body.runtime, 40)?,
         model: optional(body.model, 80)?,
         instructions: optional(body.instructions, 8000)?,
+        goals: optional(body.goals, 2000)?,
         active: body.active.unwrap_or(true),
         supervisor_id: body.supervisor_id,
     })

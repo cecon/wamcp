@@ -27,6 +27,11 @@ interface Props {
   onBack: () => void;
   onTogglePanel: () => void;
   onStatus: (status: ConversationStatus, snoozedUntil?: number) => void;
+  /**
+   * Inboxes with an AI agent: hands the conversation back to it (it becomes the assignee again, the
+   * conversation stays open). Without it, "Passar para a IA" moves a legacy bot inbox to `pending`.
+   */
+  onHandToAi?: () => void;
   /** Extra header actions (the conversation "more" menu). */
   menu?: ReactNode;
 }
@@ -38,6 +43,7 @@ export function ConversationHeader({
   onBack,
   onTogglePanel,
   onStatus,
+  onHandToAi,
   menu,
 }: Props) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -137,10 +143,11 @@ export function ConversationHeader({
                   Adiar {snooze.label.toLowerCase()}
                 </MenuItem>
               ))}
-            {c.status !== 'pending' && (
+            {(onHandToAi ? Boolean(c.assignee_id) : c.status !== 'pending') && (
               <MenuItem
                 onClick={() => {
-                  onStatus('pending');
+                  if (onHandToAi) onHandToAi();
+                  else onStatus('pending');
                   setAnchor(null);
                 }}
               >

@@ -244,5 +244,12 @@ pub fn steps() -> Vec<String> {
         // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
         // a volta do GitHub
         "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
+        // v40: o agente de IA trabalha como qualquer atendente: as conversas dele ficam abertas e
+        // atribuídas a ele, sem o status `pending` à parte (que fica só para robôs legados)
+        "UPDATE conversations SET status='open'
+           WHERE status='pending' AND inbox_id IN (SELECT id FROM inboxes WHERE ai_agent_id IS NOT NULL);"
+            .into(),
+        // v41: objetivos do agente de IA: quando ele pode encerrar (resolver) uma conversa sozinho
+        "ALTER TABLE agents ADD COLUMN goals TEXT;".into(),
     ]
 }

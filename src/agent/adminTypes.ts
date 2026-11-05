@@ -44,6 +44,8 @@ export interface RosterAgent {
   runtime: string | null;
   model: string | null;
   instructions: string | null;
+  /** AI agents: when they may resolve a conversation on their own. */
+  goals?: string | null;
   active: boolean;
   skill_ids: number[];
   /** Skills inherited from the profile. */
