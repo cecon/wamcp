@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import * as navTools from './nav';
 import AgentApp from '../../src/agent/AgentApp';
 import { SearchPage } from '../../src/agent/search/SearchPage';
 import { Highlight } from '../../src/agent/search/Highlight';
@@ -88,7 +89,7 @@ describe('global search', () => {
     await screen.findByRole('heading', { name: 'Conversas' });
     await user.click(screen.getByRole('button', { name: 'Pesquisa global' }));
     expect(await screen.findByRole('heading', { name: 'Pesquisar' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Contatos' }));
+    await navTools.click(user, 'Contatos');
     await screen.findByRole('heading', { name: 'Contatos' });
     await user.keyboard('{Control>}k{/Control}');
     await user.type(await screen.findByLabelText('Pesquisar mensagens, contatos ou conversas'), 'joão');

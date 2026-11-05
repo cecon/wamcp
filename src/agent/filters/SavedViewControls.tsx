@@ -1,12 +1,24 @@
 import { useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+
+// third-party
 import { EllipsisVertical, Pencil, Save, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { CustomFilter, FilterCondition, FilterType } from '../types';
 import { useAction } from '../settings/useAction';
-import { Button } from '../ui/Button';
-import { ConfirmModal } from '../ui/Confirm';
-import { Dropdown, MenuItem, Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
+import C3Provider from '../c3/C3Provider';
 
 function NameModal({
   title,
@@ -24,30 +36,36 @@ function NameModal({
   const [name, setName] = useState(initial);
   const { error, busy, run } = useAction();
   return (
-    <Modal title={title} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
+    <C3Provider>
+      <ActionDialog
+        open
+        title={title}
+        confirmLabel={submit}
+        backLabel="Cancelar"
+        loading={busy}
+        error={error}
+        dirty={name !== initial}
+        onClose={onClose}
+        onConfirm={() => {
+          const trimmed = name.trim();
+          if (!trimmed) return;
           void run(async () => {
-            await onSubmit(name.trim());
+            await onSubmit(trimmed);
             onClose();
           });
         }}
       >
-        <label>
-          <span className="field-label">Nome da visualização</span>
-          <input
-            className="field"
-            value={name}
-            maxLength={80}
-            required
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <ModalFooter busy={busy} submit={submit} onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+        <TextField
+          label="Nome da visualização"
+          size="small"
+          fullWidth
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          slotProps={{ htmlInput: { maxLength: 80, autoFocus: true, required: true } }}
+          sx={{ mt: 1 }}
+        />
+      </ActionDialog>
+    </C3Provider>
   );
 }
 
@@ -64,14 +82,9 @@ export function SaveViewButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        color="slate"
-        variant="faded"
-        size="xs"
-        icon={Save}
-        label="Salvar visualização"
-        onClick={() => setOpen(true)}
-      />
+      <Button size="small" variant="outlined" startIcon={<Save size={14} />} onClick={() => setOpen(true)}>
+        Salvar visualização
+      </Button>
       {open && (
         <NameModal
           title="Salvar visualização"
@@ -102,44 +115,48 @@ export function ViewMenu({
   onRenamed: (view: CustomFilter) => void;
   onDeleted: () => void;
 }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
   const path = `/custom_filters/${view.id}`;
+  const close = () => setAnchor(null);
   return (
-    <>
-      <Dropdown
-        trigger={({ toggle }) => (
-          <Button
-            color="slate"
-            variant="faded"
-            size="xs"
-            icon={EllipsisVertical}
-            aria-label="Opções da visualização"
-            onClick={toggle}
-          />
-        )}
+    <C3Provider>
+      <IconButton
+        size="small"
+        aria-label="Opções da visualização"
+        onClick={(event) => setAnchor(event.currentTarget)}
       >
-        {(close) => (
-          <>
-            <MenuItem
-              icon={Pencil}
-              label="Renomear visualização"
-              onClick={() => {
-                close();
-                setDialog('rename');
-              }}
-            />
-            <MenuItem
-              icon={Trash2}
-              danger
-              label="Excluir visualização"
-              onClick={() => {
-                close();
-                setDialog('delete');
-              }}
-            />
-          </>
-        )}
-      </Dropdown>
+        <EllipsisVertical size={14} />
+      </IconButton>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={close}
+        slotProps={{ paper: { sx: { width: 220 } } }}
+      >
+        <MenuItem
+          onClick={() => {
+            close();
+            setDialog('rename');
+          }}
+        >
+          <ListItemIcon>
+            <Pencil size={14} />
+          </ListItemIcon>
+          <ListItemText>Renomear visualização</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            close();
+            setDialog('delete');
+          }}
+        >
+          <ListItemIcon>
+            <Trash2 size={14} />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>Excluir visualização</ListItemText>
+        </MenuItem>
+      </Menu>
       {dialog === 'rename' && (
         <NameModal
           title="Renomear visualização"
@@ -150,17 +167,21 @@ export function ViewMenu({
         />
       )}
       {dialog === 'delete' && (
-        <ConfirmModal
+        <ActionDialog
+          open
           title="Excluir visualização"
           description={`A visualização “${view.name}” será removida. As conversas e contatos não são afetados.`}
-          confirm="Excluir"
+          confirmLabel="Excluir"
+          backLabel="Cancelar"
+          tone="danger"
           onClose={() => setDialog(null)}
-          onConfirm={async () => {
-            await http(path, 'DELETE');
-            onDeleted();
-          }}
+          onConfirm={() =>
+            void http(path, 'DELETE')
+              .then(onDeleted)
+              .catch(() => {})
+          }
         />
       )}
-    </>
+    </C3Provider>
   );
 }

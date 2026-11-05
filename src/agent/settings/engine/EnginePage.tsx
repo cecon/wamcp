@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
 import { KeyRound, Send } from 'lucide-react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import type { RosterAgent } from '../../adminTypes';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
-import { Cell, SettingsHeader, SettingsPage, Table } from '../../ui/Settings';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import { ActivityPanel } from './ActivityPanel';
 import { AskModal } from './AskModal';
 import { PermissionsPanel } from './PermissionsPanel';
@@ -29,66 +42,114 @@ export function EnginePage() {
     return () => window.clearInterval(timer);
   }, [busy, reload]);
 
+  const columns: ColumnDef<EngineActivity>[] = [
+    {
+      id: 'id',
+      header: '#',
+      accessorKey: 'id',
+      cell: (info) => (
+        <Typography variant="caption" color="text.secondary">
+          {info.row.original.id}
+        </Typography>
+      ),
+    },
+    {
+      id: 'agent',
+      header: 'Agente',
+      accessorFn: (activity) => name(activity.agent_id),
+      cell: (info) => (
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'request',
+      header: 'Pedido',
+      accessorKey: 'request',
+      cell: (info) => (
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => setOpen(info.row.original.id)}
+          sx={{ justifyContent: 'flex-start', textAlign: 'start', p: 0 }}
+        >
+          {info.row.original.request}
+        </Button>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Situação',
+      accessorFn: (activity) => activity.status,
+      cell: (info) => <StatusPill status={info.row.original.status} />,
+    },
+    {
+      id: 'updated',
+      header: 'Atualizado',
+      accessorFn: (activity) => activity.updated,
+      cell: (info) => (
+        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+          {new Date(info.row.original.updated).toLocaleString('pt-BR')}
+        </Typography>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Motor de agentes"
         description="Pedidos feitos aos agentes de IA: quem recebeu, para quem delegou, quais ferramentas usou, com que evidência respondeu e quanto consumiu. Tudo fica registrado e sobrevive a reinícios."
         count={`${list.length} pedido${list.length === 1 ? '' : 's'}`}
         action={
-          <div className="flex gap-2">
+          <Stack direction="row" spacing={1}>
             <Button
-              icon={KeyRound}
-              color="slate"
-              variant="faded"
-              label="Permissões"
+              variant="outlined"
+              startIcon={<KeyRound size={16} />}
               onClick={() => setPermissions(true)}
-            />
+            >
+              Permissões
+            </Button>
             <Button
-              icon={Send}
-              label="Novo pedido"
+              variant="contained"
+              startIcon={<Send size={16} />}
               disabled={ai.length === 0}
               onClick={() => setAsking(true)}
-            />
-          </div>
+            >
+              Novo pedido
+            </Button>
+          </Stack>
         }
       />
       {(activities.error || roster.error) && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {activities.error || roster.error}
-        </p>
+        <SettingsC3Error>{activities.error || roster.error}</SettingsC3Error>
       )}
-      <Table
-        headers={['#', 'Agente', 'Pedido', 'Situação', 'Atualizado']}
-        rows={list.length}
-        empty={activities.data ? 'Nenhum pedido ainda.' : 'Carregando…'}
-      >
-        {list.map((activity) => (
-          <tr
-            key={activity.id}
-            className="cursor-pointer hover:bg-n-alpha-1"
-            onClick={() => setOpen(activity.id)}
-          >
-            <Cell className="w-12">{activity.id}</Cell>
-            <Cell>
-              <span className="font-medium text-n-slate-12">{name(activity.agent_id)}</span>
-            </Cell>
-            <Cell>
-              <button
-                type="button"
-                className="text-start hover:underline"
-                onClick={() => setOpen(activity.id)}
-              >
-                {activity.request}
-              </button>
-            </Cell>
-            <Cell>
-              <StatusPill status={activity.status} />
-            </Cell>
-            <Cell className="whitespace-nowrap">{new Date(activity.updated).toLocaleString('pt-BR')}</Cell>
-          </tr>
-        ))}
-      </Table>
+      <Panel flush>
+        {list.length === 0 && activities.data && (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              Nenhum pedido ainda.
+            </Typography>
+          </Box>
+        )}
+        {!activities.data && (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              Carregando…
+            </Typography>
+          </Box>
+        )}
+        {list.length > 0 && (
+          <DataTable
+            rows={list}
+            columns={columns}
+            getRowId={(activity) => String(activity.id)}
+            paginate={list.length > 10}
+            ariaLabel="Motor de agentes"
+          />
+        )}
+      </Panel>
       {open !== null && (
         <ActivityPanel id={open} name={name} onClose={() => setOpen(null)} onChanged={reload} />
       )}
@@ -103,6 +164,6 @@ export function EnginePage() {
         />
       )}
       {permissions && <PermissionsPanel agents={ai} onClose={() => setPermissions(false)} />}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

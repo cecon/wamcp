@@ -1,3 +1,6 @@
+// material-ui
+import Box from '@mui/material/Box';
+
 import type { ReactNode } from 'react';
 
 /*
@@ -22,9 +25,19 @@ export function formatWhatsApp(text: string, prefix = 'f'): ReactNode[] {
     const [, code, bold, italic, strike] = match;
     if (code !== undefined)
       nodes.push(
-        <code key={key} className="rounded bg-n-alpha-black1 px-1 font-mono text-[0.8125rem]">
+        <Box
+          component="code"
+          key={key}
+          sx={{
+            borderRadius: 0.5,
+            bgcolor: 'var(--color-n-alpha-black1)',
+            px: 0.5,
+            fontFamily: 'monospace',
+            fontSize: '0.8125rem',
+          }}
+        >
           {code}
-        </code>,
+        </Box>,
       );
     else if (bold !== undefined) nodes.push(<strong key={key}>{formatWhatsApp(bold, key)}</strong>);
     else if (italic !== undefined) nodes.push(<em key={key}>{formatWhatsApp(italic, key)}</em>);

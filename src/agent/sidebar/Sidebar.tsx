@@ -1,36 +1,20 @@
 import { useState, type ReactNode } from 'react';
-import {
-  AtSign,
-  Bolt,
-  Bot,
-  ChartSpline,
-  Contact,
-  Folder,
-  Inbox as InboxIcon,
-  Mailbox,
-  MessageCircle,
-  MessageCircleDashed,
-  Search,
-  Tag,
-  TextSearch,
-  Users,
-  UsersRound,
-} from 'lucide-react';
-import type { Catalog, ConversationType, CustomFilter, User } from '../types';
-import { CONVERSATION_TYPE_LABEL } from '../labels';
-import type { Route } from '../route';
-import { SidebarGroup, SidebarLeaf, SidebarSeparator } from './SidebarParts';
-import { ProfileMenu } from './ProfileMenu';
-import { REPORTS, SETTINGS } from './navItems';
-import { canManageContacts, canViewReports } from '../permissions';
-import { isDesktop } from '../desktop/tauri';
 
-const TYPES: { type: ConversationType; icon: typeof Bolt }[] = [
-  { type: 'mentions', icon: AtSign },
-  { type: 'unattended', icon: MessageCircleDashed },
-  { type: 'participating', icon: UsersRound },
-];
-type Group = 'conversations' | 'reports' | 'settings' | null;
+// material-ui
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { MessageCircle, Search, TextSearch } from 'lucide-react';
+
+import type { Catalog, CustomFilter, User } from '../types';
+import type { Route } from '../route';
+import { ProfileMenu } from './ProfileMenu';
+import { SidebarNav, type SidebarGroupId } from './SidebarNav';
 
 interface Props {
   user: User;
@@ -62,215 +46,113 @@ export function Sidebar({
   bell,
   onShortcuts,
 }: Props) {
-  const isAdmin = user.role === 'administrator';
-  const [expanded, setExpanded] = useState<Group>(
+  const [expanded, setExpanded] = useState<SidebarGroupId>(
     route.page === 'settings' || route.page === 'reports' ? route.page : 'conversations',
   );
   const [q, setQ] = useState('');
-  const conv = route.page === 'conversations' ? route : null;
-  const allActive = Boolean(
-    conv && !conv.inboxId && !conv.teamId && !conv.label && !conv.conversationType && !conv.filters,
-  );
-  const open = (group: Group, target: Route) => {
+  const open = (group: SidebarGroupId, target: Route) => {
     setExpanded(group);
     onNavigate(target);
   };
-  const dot = (color: string) => (
-    <span className="size-2 shrink-0 rounded-sm" style={{ background: color }} />
-  );
 
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-n-weak bg-n-background text-sm">
-      <div className="mt-1 mb-4 grid gap-2 pt-2">
-        <div className="flex items-center gap-2 px-2">
-          <span className="flex size-6 items-center justify-center rounded-md bg-n-brand text-white">
+    <Box
+      component="aside"
+      sx={{
+        display: 'flex',
+        height: '100%',
+        width: 232,
+        flexShrink: 0,
+        flexDirection: 'column',
+        borderRight: 1,
+        borderColor: 'divider',
+        bgcolor: 'var(--color-n-background)',
+        color: 'var(--color-n-slate-12)',
+        fontSize: 14,
+      }}
+    >
+      <Box sx={{ mt: 0.5, mb: 2, display: 'grid', gap: 1, pt: 1 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              width: 24,
+              height: 24,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 1,
+              bgcolor: 'var(--color-n-brand)',
+              color: '#fff',
+            }}
+          >
             <MessageCircle size={14} />
-          </span>
-          <span className="h-3 w-px bg-n-strong" />
-          <span className="truncate px-2 text-sm leading-5 font-medium text-n-slate-12">WA MCP</span>
+          </Box>
+          <Box sx={{ height: 12, width: 1, bgcolor: 'var(--color-n-strong)' }} />
+          <Typography noWrap sx={{ px: 1, fontSize: 14, lineHeight: '20px', fontWeight: 500 }}>
+            WA MCP
+          </Typography>
           {bell}
-        </div>
-        <form
-          className="flex gap-2 px-2"
-          onSubmit={(e) => {
-            e.preventDefault();
+        </Stack>
+        <Box
+          component="form"
+          onSubmit={(event) => {
+            event.preventDefault();
             open('conversations', { page: 'conversations', q: q.trim() || undefined });
           }}
+          sx={{ display: 'flex', gap: 1, px: 1, alignItems: 'center' }}
         >
-          <label className="flex h-7 w-full items-center gap-2 rounded-lg bg-n-button-color px-2 py-1 outline outline-1 -outline-offset-1 outline-n-weak">
-            <Search size={16} className="shrink-0 text-n-slate-10" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Pesquisar…"
-              aria-label="Pesquisar conversas"
-              className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-n-slate-10"
-            />
-          </label>
-          <button
+          <OutlinedInput
+            size="small"
+            fullWidth
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Pesquisar…"
+            startAdornment={
+              <InputAdornment position="start">
+                <Search size={16} />
+              </InputAdornment>
+            }
+            slotProps={{ input: { 'aria-label': 'Pesquisar conversas' } }}
+            sx={{
+              height: 28,
+              bgcolor: 'var(--color-n-button-color)',
+              '& .MuiOutlinedInput-input': { py: 0.5, fontSize: 14 },
+            }}
+          />
+          <IconButton
             type="button"
+            size="small"
             aria-label="Pesquisa global"
             title="Pesquisa global (Ctrl+K)"
             aria-current={route.page === 'search' ? 'page' : undefined}
             onClick={() => open(null, { page: 'search' })}
-            className="grid size-7 shrink-0 place-content-center rounded-lg text-n-slate-11 outline outline-1 -outline-offset-1 outline-n-weak hover:bg-n-alpha-2"
+            sx={{ flexShrink: 0, color: 'var(--color-n-slate-11)', border: 1, borderColor: 'divider' }}
           >
             <TextSearch size={16} />
-          </button>
-        </form>
-      </div>
+          </IconButton>
+        </Box>
+      </Box>
 
-      <nav className="no-scrollbar grid min-h-0 flex-grow content-start gap-2 overflow-x-hidden overflow-y-auto px-2 pb-5">
-        <ul className="flex flex-col gap-1">
-          <SidebarGroup
-            icon={InboxIcon}
-            label="Caixa de entrada"
-            count={unread}
-            active={route.page === 'notifications'}
-            parentOfActive={false}
-            onClick={() => open(null, { page: 'notifications' })}
-          />
-          <SidebarGroup
-            icon={MessageCircle}
-            label="Conversas"
-            active={false}
-            parentOfActive={route.page === 'conversations'}
-            expanded={expanded === 'conversations'}
-            onClick={() =>
-              expanded === 'conversations'
-                ? setExpanded(null)
-                : open('conversations', { page: 'conversations' })
-            }
-          >
-            <SidebarLeaf
-              label="Todas as conversas"
-              icon={<InboxIcon size={16} />}
-              active={allActive}
-              onClick={() => onNavigate({ page: 'conversations' })}
-            />
-            {TYPES.map(({ type, icon: Icon }) => (
-              <SidebarLeaf
-                key={type}
-                label={CONVERSATION_TYPE_LABEL[type]}
-                icon={<Icon size={16} />}
-                active={conv?.conversationType === type}
-                onClick={() => onNavigate({ page: 'conversations', conversationType: type })}
-              />
-            ))}
-            {views.length > 0 && <SidebarSeparator icon={Folder} label="Pastas" />}
-            {views.map((v) => (
-              <SidebarLeaf
-                key={`v${v.id}`}
-                label={v.name}
-                active={conv?.viewId === v.id}
-                onClick={() =>
-                  onNavigate({ page: 'conversations', viewId: v.id, filters: v.query?.payload || [] })
-                }
-              />
-            ))}
-            {catalog.teams.length > 0 && <SidebarSeparator icon={Users} label="Times" />}
-            {catalog.teams.map((t) => (
-              <SidebarLeaf
-                key={`t${t.id}`}
-                nested
-                label={t.name}
-                active={conv?.teamId === t.id}
-                onClick={() => onNavigate({ page: 'conversations', teamId: t.id })}
-              />
-            ))}
-            {catalog.inboxes.length > 0 && <SidebarSeparator icon={Mailbox} label="Canais" />}
-            {catalog.inboxes.map((i) => (
-              <SidebarLeaf
-                key={`i${i.id}`}
-                nested
-                label={i.name}
-                icon={<MessageCircle size={16} className="text-n-teal-10" />}
-                active={conv?.inboxId === i.id}
-                onClick={() => onNavigate({ page: 'conversations', inboxId: i.id })}
-              />
-            ))}
-            {catalog.labels.length > 0 && <SidebarSeparator icon={Tag} label="Etiquetas" />}
-            {catalog.labels.map((l) => (
-              <SidebarLeaf
-                key={`l${l.id}`}
-                nested
-                label={l.title}
-                icon={dot(l.color)}
-                active={conv?.label === l.title}
-                onClick={() => onNavigate({ page: 'conversations', label: l.title })}
-              />
-            ))}
-          </SidebarGroup>
-          <SidebarGroup
-            icon={Bot}
-            label="Agentes"
-            active={route.page === 'agent_chat'}
-            parentOfActive={false}
-            onClick={() => open(null, { page: 'agent_chat' })}
-          />
-          {canManageContacts(user) && (
-            <SidebarGroup
-              icon={Contact}
-              label="Contatos"
-              active={route.page === 'contacts'}
-              parentOfActive={false}
-              onClick={() => open(null, { page: 'contacts' })}
-            />
-          )}
-          {canViewReports(user) && (
-            <SidebarGroup
-              icon={ChartSpline}
-              label="Relatórios"
-              active={false}
-              parentOfActive={route.page === 'reports'}
-              expanded={expanded === 'reports'}
-              onClick={() =>
-                expanded === 'reports'
-                  ? setExpanded(null)
-                  : open('reports', { page: 'reports', section: 'overview' })
-              }
-            >
-              {REPORTS.map(({ section, label }) => (
-                <SidebarLeaf
-                  key={section}
-                  label={label}
-                  active={route.page === 'reports' && (route.section || 'overview') === section}
-                  onClick={() => onNavigate({ page: 'reports', section })}
-                />
-              ))}
-            </SidebarGroup>
-          )}
-          {isAdmin && (
-            <SidebarGroup
-              icon={Bolt}
-              label="Configurações"
-              active={false}
-              parentOfActive={route.page === 'settings'}
-              expanded={expanded === 'settings'}
-              onClick={() =>
-                expanded === 'settings'
-                  ? setExpanded(null)
-                  : open('settings', { page: 'settings', section: 'agents' })
-              }
-            >
-              {SETTINGS.filter((s) => !s.desktop || isDesktop()).map(({ section, label, icon: Icon }) => (
-                <SidebarLeaf
-                  key={section}
-                  label={label}
-                  icon={<Icon size={16} />}
-                  active={
-                    route.page === 'settings' &&
-                    (route.section === section || (section === 'inboxes' && route.section === 'connections'))
-                  }
-                  onClick={() => onNavigate({ page: 'settings', section })}
-                />
-              ))}
-            </SidebarGroup>
-          )}
-        </ul>
-      </nav>
+      <SidebarNav
+        user={user}
+        catalog={catalog}
+        views={views}
+        route={route}
+        unread={unread}
+        expanded={expanded}
+        onExpand={setExpanded}
+        onOpen={open}
+        onNavigate={onNavigate}
+      />
 
-      <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-t from-n-background" />
+      <Box
+        sx={{
+          pointerEvents: 'none',
+          mt: -4,
+          height: 32,
+          background: 'linear-gradient(to top, var(--color-n-background), transparent)',
+        }}
+      />
       <ProfileMenu
         user={user}
         online={online}
@@ -279,6 +161,6 @@ export function Sidebar({
         onNavigate={onNavigate}
         onShortcuts={onShortcuts}
       />
-    </aside>
+    </Box>
   );
 }

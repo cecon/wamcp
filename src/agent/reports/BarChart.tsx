@@ -1,3 +1,6 @@
+// material-ui
+import Box from '@mui/material/Box';
+
 import type { ReportPoint } from '../parityTypes';
 import type { GroupBy } from './period';
 
@@ -29,7 +32,7 @@ export function BarChart({ label, points, groupBy, format }: Props) {
   const width = Math.max(2, Math.min(32, slot * 0.6));
   const every = Math.max(1, Math.ceil(points.length / 8));
   return (
-    <figure className="w-full">
+    <Box component="figure" sx={{ width: '100%', m: 0 }}>
       <svg role="img" aria-label={label} viewBox={`0 0 ${W} ${H}`} className="h-auto w-full">
         {[0, 0.5, 1].map((f) => (
           <line
@@ -78,6 +81,6 @@ export function BarChart({ label, points, groupBy, format }: Props) {
           );
         })}
       </svg>
-    </figure>
+    </Box>
   );
 }

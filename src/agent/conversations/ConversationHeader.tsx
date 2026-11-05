@@ -1,9 +1,19 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { AlarmClockMinus, ArrowLeft, BellOff, ChevronDown, CircleDotDashed, PanelRight } from 'lucide-react';
+
 import type { Conversation, ConversationStatus } from '../types';
 import { Avatar } from '../ui/Avatar';
-import { Button } from '../ui/Button';
-import { Dropdown, MenuItem } from '../ui/Overlay';
 
 const SNOOZE: { label: string; hours: number }[] = [
   { label: 'Por 1 hora', hours: 1 },
@@ -21,7 +31,7 @@ interface Props {
   menu?: ReactNode;
 }
 
-/** Chatwoot ConversationHeader + ResolveAction split button (snooze / pending menu). */
+/** Cabeçalho da conversa no C3Theme (lote 16): voltar, contato, resolver/abrir e o menu de status. */
 export function ConversationHeader({
   conversation: c,
   panelOpen,
@@ -30,6 +40,7 @@ export function ConversationHeader({
   onStatus,
   menu,
 }: Props) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const name = c.contact_name || c.contact_phone || 'Contato';
   const main =
     c.status === 'open'
@@ -42,88 +53,113 @@ export function ConversationHeader({
       ? new Date(c.snoozed_until * 1000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
       : null;
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-n-weak px-3 pt-3 pb-2">
-      <div className="flex min-w-0 items-center">
-        <Button
-          color="slate"
-          variant="ghost"
-          icon={ArrowLeft}
+    <Stack
+      component="header"
+      direction="row"
+      spacing={1}
+      sx={{
+        height: 48,
+        flexShrink: 0,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: 1,
+        borderColor: 'divider',
+        px: 1.5,
+        pt: 1.5,
+        pb: 1,
+      }}
+    >
+      <Stack direction="row" spacing={0.5} sx={{ minWidth: 0, alignItems: 'center' }}>
+        <IconButton
+          size="small"
           aria-label="Voltar"
           onClick={onBack}
-          className="mr-1 md:hidden"
-        />
+          sx={{ mr: 0.5, display: { xs: 'inline-flex', md: 'none' } }}
+        >
+          <ArrowLeft size={16} />
+        </IconButton>
         <Avatar name={name} src={c.contact_avatar_url} size={32} />
-        <div className="ms-2 min-w-0">
-          <p className="flex items-center gap-1 truncate text-sm leading-tight font-medium text-n-slate-12">
-            {name}
+        <Box sx={{ ms: 1, minWidth: 0 }}>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500, lineHeight: 1.2 }}>
+              {name}
+            </Typography>
             {c.muted ? (
               <BellOff size={12} className="text-n-slate-10" aria-label="Conversa silenciada" />
             ) : null}
-          </p>
-          <p className="truncate text-xs text-n-slate-11">
+          </Stack>
+          <Typography variant="caption" color="text.secondary" noWrap component="p">
             #{c.display_id} • {c.inbox_name}
-            {c.status === 'pending' && <span className="text-n-iris-9"> • com a IA</span>}
-            {snoozedUntil && <span className="text-n-amber-11"> • adiada até {snoozedUntil}</span>}
-          </p>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="flex rounded-lg shadow-sm">
+            {c.status === 'pending' && (
+              <Box component="span" sx={{ color: 'info.main' }}>
+                {' '}
+                • com a IA
+              </Box>
+            )}
+            {snoozedUntil && (
+              <Box component="span" sx={{ color: 'warning.main' }}>
+                {' '}
+                • adiada até {snoozedUntil}
+              </Box>
+            )}
+          </Typography>
+        </Box>
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ flexShrink: 0, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', borderRadius: 1 }}>
           <Button
-            color="slate"
-            label={main.label}
-            className="rounded-r-none"
+            size="small"
+            variant="outlined"
             onClick={() => onStatus(main.status)}
-          />
-          <Dropdown
-            trigger={({ toggle }) => (
-              <Button
-                color="slate"
-                icon={ChevronDown}
-                aria-label="Mais ações de status"
-                className="rounded-l-none border-l border-n-weak"
-                onClick={toggle}
-              />
-            )}
+            sx={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
           >
-            {(close) => (
-              <>
-                {c.status !== 'snoozed' &&
-                  SNOOZE.map((s) => (
-                    <MenuItem
-                      key={s.hours}
-                      icon={AlarmClockMinus}
-                      label={`Adiar ${s.label.toLowerCase()}`}
-                      onClick={() => {
-                        onStatus('snoozed', Math.floor(Date.now() / 1000) + s.hours * 3600);
-                        close();
-                      }}
-                    />
-                  ))}
-                {c.status !== 'pending' && (
-                  <MenuItem
-                    icon={CircleDotDashed}
-                    label="Passar para a IA"
-                    onClick={() => {
-                      onStatus('pending');
-                      close();
-                    }}
-                  />
-                )}
-              </>
+            {main.label}
+          </Button>
+          <IconButton
+            size="small"
+            aria-label="Mais ações de status"
+            onClick={(event) => setAnchor(event.currentTarget)}
+            sx={{ border: 1, borderColor: 'divider', borderRadius: '0 4px 4px 0', borderLeft: 0 }}
+          >
+            <ChevronDown size={16} />
+          </IconButton>
+          <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+            {c.status !== 'snoozed' &&
+              SNOOZE.map((snooze) => (
+                <MenuItem
+                  key={snooze.hours}
+                  onClick={() => {
+                    onStatus('snoozed', Math.floor(Date.now() / 1000) + snooze.hours * 3600);
+                    setAnchor(null);
+                  }}
+                >
+                  <AlarmClockMinus size={14} style={{ marginRight: 8 }} />
+                  Adiar {snooze.label.toLowerCase()}
+                </MenuItem>
+              ))}
+            {c.status !== 'pending' && (
+              <MenuItem
+                onClick={() => {
+                  onStatus('pending');
+                  setAnchor(null);
+                }}
+              >
+                <CircleDotDashed size={14} style={{ marginRight: 8 }} />
+                Passar para a IA
+              </MenuItem>
             )}
-          </Dropdown>
-        </div>
+          </Menu>
+        </Box>
         {menu}
-        <Button
-          color="slate"
-          variant="ghost"
-          icon={PanelRight}
+        <IconButton
+          size="small"
           aria-label={panelOpen ? 'Ocultar painel do contato' : 'Mostrar painel do contato'}
           aria-pressed={panelOpen}
           onClick={onTogglePanel}
-        />
-      </div>
-    </header>
+        >
+          <PanelRight size={16} />
+        </IconButton>
+      </Stack>
+    </Stack>
   );
 }

@@ -1,58 +1,70 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { upload } from '../api';
 import type { ImportResult } from '../types';
 import { useAction } from '../settings/useAction';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
 
-/** Chatwoot "Importar contatos": CSV with name, phone_number, email, identifier; updates by phone. */
+/** "Importar contatos" no C3Theme (lote 12): CSV com name, phone_number, email, identifier; atualiza por telefone. */
 export function ImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
   const [file, setFile] = useState<File | null>(null),
     [result, setResult] = useState<ImportResult | null>(null);
   const { error, busy, run } = useAction();
+  const submit = () =>
+    void run(async () => {
+      if (!file) return;
+      const form = new FormData();
+      form.append('import_file', file);
+      setResult(await upload<ImportResult>('/contacts/import', form));
+      onImported();
+    });
   return (
-    <Modal
+    <ActionDialog
+      open
       title="Importar contatos"
       description="Envie um CSV com o cabeçalho name, phone_number, email, identifier. Contatos com o mesmo telefone são atualizados."
+      confirmLabel="Importar"
+      backLabel="Cancelar"
+      loading={busy || !file}
+      error={error}
       onClose={onClose}
+      onConfirm={submit}
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!file) return;
-          void run(async () => {
-            const form = new FormData();
-            form.append('import_file', file);
-            setResult(await upload<ImportResult>('/contacts/import', form));
-            onImported();
-          });
-        }}
-      >
-        <label>
-          <span className="field-label">Arquivo CSV</span>
-          <input
-            className="field"
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-        </label>
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <Box
+          component="input"
+          type="file"
+          accept=".csv,text/csv"
+          aria-label="Arquivo CSV"
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] || null)}
+          sx={{ fontSize: 14 }}
+        />
         {result && (
-          <div role="status" className="mt-4 text-sm text-n-slate-12">
-            <p>
+          <Stack spacing={1} role="status">
+            <Typography variant="body2">
               {result.created} criado(s), {result.updated} atualizado(s), {result.failed.length} com erro.
-            </p>
-            <ul className="mt-2 text-n-ruby-11">
-              {result.failed.map((f) => (
-                <li key={f.line}>
-                  Linha {f.line}: {f.error}
-                </li>
-              ))}
-            </ul>
-          </div>
+            </Typography>
+            {result.failed.length > 0 && (
+              <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'error.main' }}>
+                {result.failed.map((failure) => (
+                  <Box component="li" key={failure.line}>
+                    <Typography variant="body2" color="inherit">
+                      Linha {failure.line}: {failure.error}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Stack>
         )}
-        <ModalFooter busy={busy || !file} submit="Importar" onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }

@@ -1,19 +1,28 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../api';
 import type { ConversationSla } from '../parityTypes';
 import { formatSeconds } from '../reports/metrics';
 import { useFetch } from '../useFetch';
-import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
 import { THRESHOLDS, useSlaPolicies } from './sla';
 import { useNow } from './useNow';
 
-const STATUS: Record<ConversationSla['state']['status'], [string, string]> = {
-  active: ['Em andamento', 'bg-n-blue-3 text-n-blue-11'],
-  hit: ['Cumprido', 'bg-n-teal-3 text-n-teal-11'],
-  missed: ['Perdido', 'bg-n-ruby-2 text-n-ruby-11'],
+const STATUS: Record<
+  ConversationSla['state']['status'],
+  { label: string; color: 'info' | 'success' | 'error' }
+> = {
+  active: { label: 'Em andamento', color: 'info' },
+  hit: { label: 'Cumprido', color: 'success' },
+  missed: { label: 'Perdido', color: 'error' },
 };
-const badge = 'rounded-md px-1.5 py-0.5 text-xs font-medium';
 const DUE: Record<string, 'first_response_due_at' | 'next_response_due_at' | 'resolution_due_at'> = {
   first_response: 'first_response_due_at',
   next_response: 'next_response_due_at',
@@ -23,9 +32,18 @@ const DUE: Record<string, 'first_response_due_at' | 'next_response_due_at' | 're
 /** One SLA target: countdown while running, "perdido" once late, "—" when met or not applicable. */
 function Deadline({ due, missed, now }: { due: number | null; missed: boolean; now: number }) {
   if (missed || (due !== null && due <= now))
-    return <span className={cn(badge, STATUS.missed[1])}>perdido</span>;
-  if (due === null) return <span className="text-n-slate-11">—</span>;
-  return <span className="text-n-slate-12">vence em {formatSeconds(due - now)}</span>;
+    return <Chip size="small" color="error" label="perdido" sx={{ height: 20, fontSize: 12 }} />;
+  if (due === null)
+    return (
+      <Typography component="span" variant="body2" color="text.secondary">
+        —
+      </Typography>
+    );
+  return (
+    <Typography component="span" variant="body2">
+      vence em {formatSeconds(due - now)}
+    </Typography>
+  );
 }
 
 /** Chatwoot conversation SLA: applied policy, its deadlines and a selector to apply another one. */
@@ -48,38 +66,66 @@ export function SlaSection({ displayId }: { displayId: number }) {
       .catch((e: Error) => setError(e.message));
 
   return (
-    <div className="flex flex-col gap-3 text-sm">
+    <Stack spacing={1.5}>
       {sla ? (
         <>
-          <p className="flex items-center justify-between gap-2">
-            <span className="font-medium text-n-slate-12">{sla.policy.name}</span>
-            <span className={cn(badge, STATUS[sla.state.status][1])}>{STATUS[sla.state.status][0]}</span>
-          </p>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography component="span" variant="body2" sx={{ fontWeight: 500 }}>
+              {sla.policy.name}
+            </Typography>
+            <Chip
+              size="small"
+              color={STATUS[sla.state.status].color}
+              label={STATUS[sla.state.status].label}
+              sx={{ height: 20, fontSize: 12 }}
+            />
+          </Stack>
+          <Box
+            component="dl"
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              columnGap: 2,
+              rowGap: 1,
+              m: 0,
+            }}
+          >
             {THRESHOLDS.filter(({ key }) => sla.policy[key]).map(({ target, label }) => (
-              <div key={target} className="contents">
-                <dt className="text-n-slate-11">{label}</dt>
-                <dd>
+              <Box key={target} sx={{ display: 'contents' }}>
+                <Typography component="dt" variant="body2" color="text.secondary">
+                  {label}
+                </Typography>
+                <Box component="dd" sx={{ m: 0 }}>
                   <Deadline
                     due={sla.state[DUE[target]]}
                     missed={sla.state.missed.includes(target)}
                     now={now}
                   />
-                </dd>
-              </div>
+                </Box>
+              </Box>
             ))}
-          </dl>
+          </Box>
         </>
       ) : (
-        !current.loading && <p className="text-n-slate-11">Nenhum SLA aplicado.</p>
+        !current.loading && (
+          <Typography variant="body2" color="text.secondary">
+            Nenhum SLA aplicado.
+          </Typography>
+        )
       )}
-      {(error || current.error) && <p className="text-n-ruby-11">{error || current.error}</p>}
-      <div className="flex items-center gap-2">
-        <select
-          aria-label="Política de SLA"
-          className="field !h-8 !py-1"
+      {(error || current.error) && (
+        <Typography variant="body2" color="error">
+          {error || current.error}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Select
+          native
+          size="small"
           value={choice}
-          onChange={(e) => setChoice(e.target.value)}
+          inputProps={{ 'aria-label': 'Política de SLA' }}
+          onChange={(event) => setChoice(String(event.target.value))}
+          sx={{ minWidth: 180, fontSize: 14 }}
         >
           <option value="">{sla ? 'Trocar SLA…' : 'Selecione um SLA…'}</option>
           {policies.map((p) => (
@@ -87,9 +133,11 @@ export function SlaSection({ displayId }: { displayId: number }) {
               {p.name}
             </option>
           ))}
-        </select>
-        <Button color="slate" label="Aplicar" disabled={!choice} onClick={() => void apply()} />
-      </div>
-    </div>
+        </Select>
+        <Button variant="outlined" size="small" disabled={!choice} onClick={() => void apply()}>
+          Aplicar
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

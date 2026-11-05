@@ -1,12 +1,22 @@
 import { useState, type ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { CircleDot, Flag, Tag, UserRound, Users, Workflow, X } from 'lucide-react';
+
 import { http } from '../api';
 import type { BulkResult, Catalog, ConversationStatus } from '../types';
 import { PRIORITY_LABEL } from '../labels';
 import { executeMacro, useMacros } from '../macros/useMacros';
 import type { Macro } from '../accountTypes';
-import { Button } from '../ui/Button';
-import { Dropdown, MenuItem } from '../ui/Overlay';
 
 type Fields = Partial<{
   status: ConversationStatus;
@@ -30,8 +40,9 @@ const STATUS_OPTIONS: Option[] = [
   { label: 'Marcar como pendente', change: { fields: { status: 'pending' } } },
 ];
 
-function Menu<T>({
-  icon,
+/** Menu de ação em massa no C3Theme (lote 23): `IconButton` com `aria-label` e `MenuItem`s. */
+function ActionMenu<T>({
+  icon: Icon,
   label,
   options,
   onPick,
@@ -41,27 +52,31 @@ function Menu<T>({
   options: Option<NoInfer<T>>[];
   onPick: (change: T) => void;
 }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
-    <Dropdown
-      align="start"
-      className="max-h-64 w-56 overflow-y-auto"
-      trigger={({ toggle }) => (
-        <Button color="slate" variant="faded" size="xs" icon={icon} aria-label={label} onClick={toggle} />
-      )}
-    >
-      {(close) =>
-        options.map((o) => (
+    <>
+      <IconButton size="small" aria-label={label} onClick={(event) => setAnchor(event.currentTarget)}>
+        <Icon size={16} />
+      </IconButton>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={() => setAnchor(null)}
+        slotProps={{ paper: { sx: { maxHeight: 256, width: 224 } } }}
+      >
+        {options.map((option) => (
           <MenuItem
-            key={o.label}
-            label={o.label}
+            key={option.label}
             onClick={() => {
-              close();
-              onPick(o.change);
+              setAnchor(null);
+              onPick(option.change);
             }}
-          />
-        ))
-      }
-    </Dropdown>
+          >
+            {option.label}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
   );
 }
 
@@ -74,7 +89,7 @@ interface Props {
   onDone: (updated: number[]) => void;
 }
 
-/** Chatwoot BulkActionBar: select all, then status, agent, team, priority and labels for the selection. */
+/** Barra de ações em massa no C3Theme (lote 23): selecionar todas, status, agente, time, prioridade, macros e etiquetas. */
 export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, onDone }: Props) {
   const [result, setResult] = useState<ReactNode>(null);
   const { macros } = useMacros();
@@ -92,21 +107,25 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
       const r = await request;
       setResult(
         r.failed.length ? (
-          <ul role="alert" className="text-xs text-n-ruby-11">
+          <Box
+            component="ul"
+            role="alert"
+            sx={{ m: 0, pl: 2, color: 'error.main', fontSize: 12, listStyle: 'none' }}
+          >
             {r.failed.map((f) => (
-              <li key={f.id}>
+              <Box component="li" key={f.id}>
                 #{f.id}: {f.error}
-              </li>
+              </Box>
             ))}
-          </ul>
+          </Box>
         ) : null,
       );
       onDone(r.updated);
     } catch (e) {
       setResult(
-        <p role="alert" className="text-xs text-n-ruby-11">
+        <Typography variant="caption" role="alert" sx={{ color: 'error.main' }}>
           {(e as Error).message}
-        </p>,
+        </Typography>,
       );
     }
   }
@@ -115,20 +134,31 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
     change: { fields: { [key]: null } },
   });
   return (
-    <div
+    <Box
       role="toolbar"
       aria-label="Ações em massa"
-      className="flex flex-col gap-1 border-b border-n-weak bg-n-slate-2 px-3 py-2"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.5,
+        borderBottom: 1,
+        borderColor: 'divider',
+        bgcolor: 'action.hover',
+        px: 1.5,
+        py: 1,
+      }}
     >
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          aria-label="Selecionar todas"
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Checkbox
+          size="small"
           checked={selected.length === total}
-          onChange={(e) => onSelectAll(e.target.checked)}
+          onChange={(event) => onSelectAll(event.target.checked)}
+          slotProps={{ input: { 'aria-label': 'Selecionar todas' } }}
         />
-        <span className="flex-1 text-xs font-medium text-n-slate-12">{selected.length} selecionada(s)</span>
-        <Menu
+        <Typography variant="caption" sx={{ flex: 1, fontWeight: 500 }}>
+          {selected.length} selecionada(s)
+        </Typography>
+        <ActionMenu
           icon={CircleDot}
           label="Alterar status"
           options={[
@@ -137,7 +167,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
           ]}
           onPick={(c: Change) => void apply(c)}
         />
-        <Menu
+        <ActionMenu
           icon={UserRound}
           label="Atribuir agente"
           options={[
@@ -146,7 +176,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
           ]}
           onPick={(c: Change) => void apply(c)}
         />
-        <Menu
+        <ActionMenu
           icon={Users}
           label="Atribuir time"
           options={[
@@ -155,7 +185,7 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
           ]}
           onPick={(c: Change) => void apply(c)}
         />
-        <Menu
+        <ActionMenu
           icon={Flag}
           label="Alterar prioridade"
           options={[
@@ -168,14 +198,14 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
           onPick={(c: Change) => void apply(c)}
         />
         {macros.length > 0 && (
-          <Menu
+          <ActionMenu
             icon={Workflow}
             label="Executar macro"
             options={macros.map((m) => ({ label: m.name, change: m }))}
             onPick={(m: Macro) => void report(executeMacro(m, selected))}
           />
         )}
-        <Menu
+        <ActionMenu
           icon={Tag}
           label="Etiquetas"
           options={catalog.labels.flatMap((l) => [
@@ -184,16 +214,11 @@ export function BulkActionBar({ selected, total, catalog, onSelectAll, onClear, 
           ])}
           onPick={(c: Change) => void apply(c)}
         />
-        <Button
-          color="slate"
-          variant="ghost"
-          size="xs"
-          icon={X}
-          aria-label="Limpar seleção"
-          onClick={onClear}
-        />
-      </div>
+        <IconButton size="small" aria-label="Limpar seleção" onClick={onClear}>
+          <X size={16} />
+        </IconButton>
+      </Stack>
       {result}
-    </div>
+    </Box>
   );
 }

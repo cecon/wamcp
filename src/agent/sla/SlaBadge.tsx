@@ -1,6 +1,10 @@
+// material-ui
+import Chip from '@mui/material/Chip';
+
+// third-party
 import { Timer } from 'lucide-react';
+
 import type { SlaStatus } from '../types';
-import { cn } from '../ui/cn';
 
 const BADGE: Partial<Record<SlaStatus, { title: string; className: string }>> = {
   missed: { title: 'SLA perdido', className: 'bg-n-ruby-2 text-n-ruby-11 outline-n-ruby-4' },
@@ -12,16 +16,21 @@ export function SlaBadge({ status }: { status?: SlaStatus | null }) {
   const badge = status ? BADGE[status] : undefined;
   if (!badge) return null;
   return (
-    <span
+    <Chip
       title={badge.title}
       aria-label={badge.title}
-      className={cn(
-        'flex h-5 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium outline outline-1 -outline-offset-1',
-        badge.className,
-      )}
-    >
-      <Timer size={12} />
-      SLA
-    </span>
+      className={badge.className}
+      icon={<Timer size={12} />}
+      label="SLA"
+      size="small"
+      sx={{
+        height: 20,
+        borderRadius: 1,
+        fontSize: 12,
+        fontWeight: 500,
+        '& .MuiChip-icon': { ml: 0.75, mr: -0.25 },
+        '& .MuiChip-label': { px: 0.5 },
+      }}
+    />
   );
 }

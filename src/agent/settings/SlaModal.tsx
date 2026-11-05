@@ -1,8 +1,14 @@
 import { useState } from 'react';
+
+// material-ui
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+
+// C3Theme
+import { ActionDialog, SelectField } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { SlaPolicy } from '../parityTypes';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
 import {
   splitThreshold,
   THRESHOLDS,
@@ -36,82 +42,72 @@ export function SlaModal({ policy, onClose, onSaved }: Props) {
     setTargets((t) => ({ ...t, [key]: { ...t[key], ...patch } }));
 
   return (
-    <Modal
+    <ActionDialog
+      open
       title={policy ? 'Editar SLA' : 'Adicionar SLA'}
       description="Defina ao menos um prazo. Os prazos contam a partir da aplicação do SLA na conversa."
+      confirmLabel="Salvar"
+      backLabel="Cancelar"
+      loading={busy}
+      error={error}
       onClose={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          const body = {
+            name: name.trim(),
+            description: description.trim() || null,
+            ...Object.fromEntries(
+              THRESHOLDS.map(({ key }) => [key, toSeconds(targets[key].value, targets[key].unit)]),
+            ),
+          };
+          await http(policy ? `/sla_policies/${policy.id}` : '/sla_policies', policy ? 'PUT' : 'POST', body);
+          onSaved();
+          onClose();
+        })
+      }
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            const body = {
-              name: name.trim(),
-              description: description.trim() || null,
-              ...Object.fromEntries(
-                THRESHOLDS.map(({ key }) => [key, toSeconds(targets[key].value, targets[key].unit)]),
-              ),
-            };
-            await http(
-              policy ? `/sla_policies/${policy.id}` : '/sla_policies',
-              policy ? 'PUT' : 'POST',
-              body,
-            );
-            onSaved();
-            onClose();
-          });
-        }}
-      >
-        <label>
-          <span className="field-label">Nome</span>
-          <input
-            className="field"
-            required
-            maxLength={80}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <input
-            className="field"
-            maxLength={500}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <TextField
+          label="Nome"
+          size="small"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
+        />
+        <TextField
+          label="Descrição"
+          size="small"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          slotProps={{ htmlInput: { maxLength: 500 } }}
+        />
         {THRESHOLDS.map(({ key, label }) => (
-          <fieldset key={key} className="flex items-end gap-2">
-            <label className="flex-1">
-              <span className="field-label">{label}</span>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                step="any"
-                placeholder="Sem prazo"
-                value={targets[key].value}
-                onChange={(e) => setTarget(key, { value: e.target.value })}
-              />
-            </label>
-            <select
-              aria-label={`Unidade ${label}`}
-              className="field !w-32"
+          <Stack key={key} direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
+            <TextField
+              label={label}
+              size="small"
+              type="number"
+              placeholder="Sem prazo"
+              value={targets[key].value}
+              onChange={(event) => setTarget(key, { value: event.target.value })}
+              slotProps={{ htmlInput: { min: 1, step: 'any' } }}
+              sx={{ flex: 1 }}
+            />
+            <SelectField
+              native
+              size="small"
+              label={`Unidade ${label}`}
               value={targets[key].unit}
-              onChange={(e) => setTarget(key, { unit: e.target.value as ThresholdUnit })}
-            >
-              {Object.entries(UNIT_LABEL).map(([unit, unitLabel]) => (
-                <option key={unit} value={unit}>
-                  {unitLabel}
-                </option>
-              ))}
-            </select>
-          </fieldset>
+              onChange={(value) => value && setTarget(key, { unit: value as ThresholdUnit })}
+              options={Object.entries(UNIT_LABEL).map(([unit, unitLabel]) => ({
+                value: unit,
+                label: unitLabel,
+              }))}
+              sx={{ width: 128 }}
+            />
+          </Stack>
         ))}
-        <ModalFooter busy={busy} submit="Salvar" onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }

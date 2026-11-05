@@ -1,4 +1,13 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../api';
 import type { NotificationSettings } from '../accountTypes';
 import { NOTIFICATION_TYPES } from '../notifications/notificationText';
@@ -9,7 +18,41 @@ import {
   saveAlertPrefs,
   type AlertPrefs,
 } from '../notifications/browserAlerts';
-import { Toggle } from '../ui/Settings';
+
+/** One switch row (label and hint on the left), with the `switch` role kept for assistive technology. */
+function SwitchRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <Stack
+      direction="row"
+      spacing={2}
+      sx={{ alignItems: 'flex-start', justifyContent: 'space-between', py: 1.5 }}
+    >
+      <Box>
+        <Typography variant="subtitle2">{label}</Typography>
+        {hint && (
+          <Typography variant="body2" color="text.secondary">
+            {hint}
+          </Typography>
+        )}
+      </Box>
+      <Switch
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        slotProps={{ input: { 'aria-label': label } }}
+      />
+    </Stack>
+  );
+}
 
 /** Per-type notification flags (GET/PATCH /notification_settings) and this browser's alerts. */
 export function NotificationPreferences() {
@@ -27,26 +70,27 @@ export function NotificationPreferences() {
       .catch((e: Error) => setError(e.message));
   };
   return (
-    <div className="flex flex-col">
-      <h3 className="text-heading-3 text-n-slate-12">Tipo de notificação</h3>
-      <div className="divide-y divide-n-weak">
+    <Stack>
+      <Typography variant="h6" component="h3" sx={{ mb: 1 }}>
+        Tipo de notificação
+      </Typography>
+      <Box>
         {NOTIFICATION_TYPES.map(([type, label]) => (
-          <Toggle
-            key={type}
-            label={label}
-            checked={flags?.[type] ?? true}
-            onChange={(enabled) => toggle(type, enabled)}
-          />
+          <Box key={type} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <SwitchRow
+              label={label}
+              checked={flags?.[type] ?? true}
+              onChange={(enabled) => toggle(type, enabled)}
+            />
+          </Box>
         ))}
-      </div>
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <h3 className="text-heading-3 mt-6 text-n-slate-12">Alertas neste navegador</h3>
+      </Box>
+      {error && <Alert severity="error">{error}</Alert>}
+      <Typography variant="h6" component="h3" sx={{ mt: 3, mb: 1 }}>
+        Alertas neste navegador
+      </Typography>
       <BrowserAlerts />
-    </div>
+    </Stack>
   );
 }
 
@@ -58,8 +102,9 @@ function BrowserAlerts() {
     saveAlertPrefs(next);
   };
   return (
-    <div className="divide-y divide-n-weak">
-      <Toggle
+    <>
+      <Divider sx={{ mb: 0.5 }} />
+      <SwitchRow
         label="Notificações na área de trabalho"
         hint="Mostra um aviso do sistema a cada nova notificação, mesmo com a aba em segundo plano."
         checked={prefs.desktop}
@@ -73,7 +118,8 @@ function BrowserAlerts() {
           );
         }}
       />
-      <Toggle
+      <Divider />
+      <SwitchRow
         label="Alerta sonoro"
         hint="Toca um som curto a cada nova notificação."
         checked={prefs.sound}
@@ -83,10 +129,10 @@ function BrowserAlerts() {
         }}
       />
       {notice && (
-        <p role="status" className="py-2 text-sm text-n-amber-11">
+        <Typography variant="body2" role="status" sx={{ py: 1, color: 'warning.main' }}>
           {notice}
-        </p>
+        </Typography>
       )}
-    </div>
+    </>
   );
 }

@@ -1,9 +1,19 @@
 import { Fragment, useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+
+// third-party
 import { Plus } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import type { Catalog, FilterCondition, FilterType } from '../types';
 import { useAttributeDefinitions } from '../attributes/useAttributeDefinitions';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Overlay';
+import C3Provider from '../c3/C3Provider';
 import { ConditionRow } from './ConditionRow';
 import { emptyCondition, filterAttributes, needsValue } from './filterAttributes';
 
@@ -27,63 +37,67 @@ export function FilterModal({ type, catalog, initial, onApply, onClose }: Props)
   const [error, setError] = useState('');
   const update = (index: number, next: FilterCondition) =>
     setRows((list) => list.map((row, i) => (i === index ? next : row)));
+  const submit = () => {
+    if (rows.some((r) => needsValue(r.filter_operator) && r.values.length === 0))
+      return setError('Preencha o valor de todas as condições.');
+    onApply(rows.map((r, i) => (i === rows.length - 1 ? { ...r, query_operator: 'and' } : r)));
+  };
 
   return (
-    <Modal
-      title={TITLE[type]}
-      description="Adicione condições para refinar a lista; cada uma se liga à próxima por E ou OU."
-      onClose={onClose}
-    >
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (rows.some((r) => needsValue(r.filter_operator) && r.values.length === 0))
-            return setError('Preencha o valor de todas as condições.');
-          onApply(rows.map((r, i) => (i === rows.length - 1 ? { ...r, query_operator: 'and' } : r)));
-        }}
+    <C3Provider>
+      <ActionDialog
+        open
+        title={TITLE[type]}
+        description="Adicione condições para refinar a lista; cada uma se liga à próxima por E ou OU."
+        confirmLabel="Aplicar filtros"
+        backLabel="Cancelar"
+        error={error}
+        onClose={onClose}
+        onConfirm={submit}
       >
-        {rows.map((row, i) => (
-          <Fragment key={i}>
-            {i > 0 && (
-              <select
-                className="field !h-7 !w-20 self-center !py-0 text-xs"
-                aria-label={`Operador entre as condições ${i} e ${i + 1}`}
-                value={rows[i - 1].query_operator}
-                onChange={(e) => update(i - 1, { ...rows[i - 1], query_operator: e.target.value as 'and' })}
-              >
-                <option value="and">E</option>
-                <option value="or">OU</option>
-              </select>
-            )}
-            <ConditionRow
-              index={i}
-              condition={row}
-              attributes={attributes}
-              onChange={(next) => update(i, next)}
-              onRemove={rows.length > 1 ? () => setRows((list) => list.filter((_, j) => j !== i)) : undefined}
-            />
-          </Fragment>
-        ))}
-        <Button
-          color="blue"
-          variant="link"
-          size="xs"
-          icon={Plus}
-          label="Adicionar filtro"
-          className="self-start"
-          onClick={() => setRows((list) => [...list, emptyCondition(attributes[0])])}
-        />
-        {error && (
-          <p role="alert" className="text-sm text-n-ruby-11">
-            {error}
-          </p>
-        )}
-        <div className="flex justify-end gap-2 pt-4">
-          <Button color="slate" variant="faded" label="Cancelar" onClick={onClose} />
-          <Button type="submit" label="Aplicar filtros" />
-        </div>
-      </form>
-    </Modal>
+        <Stack spacing={1.5} sx={{ pt: 1 }}>
+          {rows.map((row, i) => (
+            <Fragment key={i}>
+              {i > 0 && (
+                <Select
+                  native
+                  size="small"
+                  value={rows[i - 1].query_operator}
+                  inputProps={{ 'aria-label': `Operador entre as condições ${i} e ${i + 1}` }}
+                  onChange={(event) =>
+                    update(i - 1, {
+                      ...rows[i - 1],
+                      query_operator: String(event.target.value) as FilterCondition['query_operator'],
+                    })
+                  }
+                  sx={{ alignSelf: 'center', width: 80, fontSize: 12 }}
+                >
+                  <option value="and">E</option>
+                  <option value="or">OU</option>
+                </Select>
+              )}
+              <ConditionRow
+                index={i}
+                condition={row}
+                attributes={attributes}
+                onChange={(next) => update(i, next)}
+                onRemove={
+                  rows.length > 1 ? () => setRows((list) => list.filter((_, j) => j !== i)) : undefined
+                }
+              />
+            </Fragment>
+          ))}
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<Plus size={14} />}
+            sx={{ alignSelf: 'flex-start' }}
+            onClick={() => setRows((list) => [...list, emptyCondition(attributes[0])])}
+          >
+            Adicionar filtro
+          </Button>
+        </Stack>
+      </ActionDialog>
+    </C3Provider>
   );
 }

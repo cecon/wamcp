@@ -1,31 +1,39 @@
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { CheckCheck, Inbox, Trash2 } from 'lucide-react';
+
 import type { AppNotification } from '../types';
-import { Button } from '../ui/Button';
 import { NotificationItem } from './NotificationItem';
 import type { Notifications } from './useNotifications';
 
 /** "Marcar tudo como lido" and "Excluir todas" (Chatwoot InboxListHeader actions). */
 export function NotificationBulkActions({ actions }: { actions: Notifications }) {
   return (
-    <div className="flex items-center gap-1">
+    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
       <Button
-        color="slate"
-        variant="faded"
-        size="xs"
-        icon={CheckCheck}
-        label="Marcar tudo como lido"
+        size="small"
+        variant="outlined"
+        startIcon={<CheckCheck size={14} />}
         onClick={() => void actions.readAll()}
-      />
+      >
+        Marcar tudo como lido
+      </Button>
       <Button
-        color="slate"
-        variant="faded"
-        size="xs"
-        icon={Trash2}
-        label="Excluir todas"
+        size="small"
+        variant="outlined"
+        startIcon={<Trash2 size={14} />}
         disabled={actions.items.length === 0}
         onClick={() => void actions.destroyAll()}
-      />
-    </div>
+      >
+        Excluir todas
+      </Button>
+    </Stack>
   );
 }
 
@@ -44,20 +52,43 @@ export function NotificationList({ actions, onOpen }: Props) {
   return (
     <>
       {actions.error && (
-        <p role="alert" className="px-4 py-2 text-sm text-n-ruby-11">
+        <Alert severity="error" sx={{ mx: 2, my: 1 }}>
           {actions.error}
-        </p>
+        </Alert>
       )}
-      <ul aria-label="Notificações" className="flex-1 overflow-y-auto border-t border-n-weak">
+      <Box
+        component="ul"
+        aria-label="Notificações"
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          borderTop: 1,
+          borderColor: 'divider',
+          m: 0,
+          p: 0,
+          listStyle: 'none',
+        }}
+      >
         {actions.items.map((n) => (
           <NotificationItem key={n.id} notification={n} actions={actions} onOpen={open} />
         ))}
-      </ul>
+      </Box>
       {actions.loaded && actions.items.length === 0 && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-n-slate-11">
-          <Inbox size={36} className="text-n-slate-8" />
-          <p className="text-sm">Nenhuma notificação por aqui.</p>
-        </div>
+        <Stack
+          sx={{
+            flex: 1,
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            p: 4,
+            textAlign: 'center',
+            color: 'text.secondary',
+          }}
+        >
+          <Inbox size={36} />
+          <Typography variant="body2">Nenhuma notificação por aqui.</Typography>
+        </Stack>
       )}
     </>
   );

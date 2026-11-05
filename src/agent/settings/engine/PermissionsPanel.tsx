@@ -1,9 +1,24 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { X } from 'lucide-react';
+
 import { http } from '../../api';
 import type { RosterAgent } from '../../adminTypes';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
-import { SidePanel } from '../../ui/Overlay';
 import { useAction } from '../useAction';
 import {
   POLICY_LABEL,
@@ -48,135 +63,174 @@ export function PermissionsPanel({ agents, onClose }: Props) {
     policy && setEdits({ agent: agentId, policy: { ...policy, [key]: value } });
 
   return (
-    <SidePanel title="Permissões dos agentes de IA" onClose={onClose}>
-      <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5 text-sm">
-        <label>
-          <span className="field-label">Agente</span>
-          <select className="field" value={agentId} onChange={(e) => setAgentId(Number(e.target.value))}>
+    <Dialog open fullWidth maxWidth="md" onClose={onClose} scroll="paper">
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        Permissões dos agentes de IA
+        <IconButton size="small" aria-label="Fechar" onClick={onClose}>
+          <X size={16} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2.5}>
+          <TextField
+            select
+            label="Agente"
+            size="small"
+            fullWidth
+            value={agentId}
+            onChange={(e) => setAgentId(Number(e.target.value))}
+            slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
+          >
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
             ))}
-          </select>
-        </label>
-        {catalog.data && (
-          <p className="text-xs text-n-slate-11">
-            Runtimes:{' '}
-            {catalog.data.runtimes
-              .map((r) => `${r.id} ${r.available ? '(instalado)' : `(indisponível: ${r.detail})`}`)
-              .join(' · ')}
-          </p>
-        )}
-        {policy && (
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-2 font-medium text-n-slate-12">Autonomia e limites</legend>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={policy.enabled}
-                onChange={(e) => set('enabled', e.target.checked)}
-              />
-              Motor ligado para este agente
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={policy.proactive_enabled}
-                onChange={(e) => set('proactive_enabled', e.target.checked)}
-              />
-              Pode agir por iniciativa própria (por eventos)
-            </label>
-            <label>
-              <span className="field-label">Política de execução</span>
-              <select
-                className="field"
-                value={policy.execution_policy}
-                onChange={(e) => set('execution_policy', e.target.value as ExecutionPolicy)}
-              >
-                {Object.entries(POLICY_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              <label>
-                <span className="field-label">Execuções simultâneas</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  className="field"
-                  value={policy.max_concurrency}
-                  onChange={(e) => set('max_concurrency', Number(e.target.value))}
-                />
-              </label>
-              <label>
-                <span className="field-label">Tempo máximo (s)</span>
-                <input
-                  type="number"
-                  min={10}
-                  max={3600}
-                  className="field"
-                  value={policy.run_timeout_secs}
-                  onChange={(e) => set('run_timeout_secs', Number(e.target.value))}
-                />
-              </label>
-              <label>
-                <span className="field-label">Tokens por mês</span>
-                <input
-                  type="number"
-                  min={0}
-                  className="field"
-                  placeholder="Sem limite"
-                  value={policy.monthly_token_budget ?? ''}
-                  onChange={(e) =>
-                    set('monthly_token_budget', e.target.value === '' ? null : Number(e.target.value))
-                  }
-                />
-              </label>
-            </div>
-            <Button label="Salvar limites" disabled={action.busy} onClick={save} className="self-start" />
-          </fieldset>
-        )}
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 font-medium text-n-slate-12">Ferramentas</legend>
-          {coordinator && (
-            <p className="text-xs text-n-slate-11">
-              Coordenadores não executam ferramentas: eles só delegam.
-            </p>
+          </TextField>
+          {catalog.data && (
+            <Typography variant="caption" color="text.secondary">
+              Runtimes:{' '}
+              {catalog.data.runtimes
+                .map((r) => `${r.id} ${r.available ? '(instalado)' : `(indisponível: ${r.detail})`}`)
+                .join(' · ')}
+            </Typography>
           )}
-          {tools.map((tool) => {
-            const effect = current.data?.grants.find((g) => g.tool === tool.name)?.effect ?? '';
-            return (
-              <label key={tool.name} className="flex items-center justify-between gap-3">
-                <span>
-                  <code className="text-xs">{tool.name}</code>
-                  <span className="block text-xs text-n-slate-11">{tool.description}</span>
-                </span>
-                <select
-                  className="field !w-44"
-                  aria-label={`Permissão para ${tool.name}`}
-                  value={effect}
-                  disabled={coordinator || action.busy}
-                  onChange={(e) => grant(tool.name, e.target.value)}
+          {policy && (
+            <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+              <Typography component="legend" variant="subtitle2" sx={{ mb: 1 }}>
+                Autonomia e limites
+              </Typography>
+              <Stack spacing={1.5}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={policy.enabled}
+                      onChange={(e) => set('enabled', e.target.checked)}
+                    />
+                  }
+                  label="Motor ligado para este agente"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={policy.proactive_enabled}
+                      onChange={(e) => set('proactive_enabled', e.target.checked)}
+                    />
+                  }
+                  label="Pode agir por iniciativa própria (por eventos)"
+                />
+                <TextField
+                  select
+                  label="Política de execução"
+                  size="small"
+                  fullWidth
+                  value={policy.execution_policy}
+                  onChange={(e) => set('execution_policy', e.target.value as ExecutionPolicy)}
+                  slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
                 >
-                  <option value="">Negada</option>
-                  <option value="allow">Permitida</option>
-                  <option value="approval">Com aprovação</option>
-                </select>
-              </label>
-            );
-          })}
-        </fieldset>
-        {(action.error || current.error) && (
-          <p role="alert" className="text-n-ruby-11">
-            {action.error || current.error}
-          </p>
-        )}
-      </div>
-    </SidePanel>
+                  {Object.entries(POLICY_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </TextField>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                  <TextField
+                    label="Execuções simultâneas"
+                    size="small"
+                    type="number"
+                    value={policy.max_concurrency}
+                    onChange={(e) => set('max_concurrency', Number(e.target.value))}
+                    slotProps={{ htmlInput: { min: 1, max: 10 } }}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    label="Tempo máximo (s)"
+                    size="small"
+                    type="number"
+                    value={policy.run_timeout_secs}
+                    onChange={(e) => set('run_timeout_secs', Number(e.target.value))}
+                    slotProps={{ htmlInput: { min: 10, max: 3600 } }}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    label="Tokens por mês"
+                    size="small"
+                    type="number"
+                    placeholder="Sem limite"
+                    value={policy.monthly_token_budget ?? ''}
+                    onChange={(e) =>
+                      set('monthly_token_budget', e.target.value === '' ? null : Number(e.target.value))
+                    }
+                    slotProps={{ htmlInput: { min: 0 } }}
+                    sx={{ flex: 1 }}
+                  />
+                </Stack>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={action.busy}
+                  onClick={save}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  Salvar limites
+                </Button>
+              </Stack>
+            </Box>
+          )}
+          <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+            <Typography component="legend" variant="subtitle2" sx={{ mb: 1 }}>
+              Ferramentas
+            </Typography>
+            <Stack spacing={1.5}>
+              {coordinator && (
+                <Typography variant="caption" color="text.secondary">
+                  Coordenadores não executam ferramentas: eles só delegam.
+                </Typography>
+              )}
+              {tools.map((tool) => {
+                const effect = current.data?.grants.find((g) => g.tool === tool.name)?.effect ?? '';
+                return (
+                  <Box key={tool.name} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography component="code" variant="caption">
+                        {tool.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {tool.description}
+                      </Typography>
+                    </Box>
+                    <TextField
+                      select
+                      size="small"
+                      value={effect}
+                      disabled={coordinator || action.busy}
+                      onChange={(e) => grant(tool.name, e.target.value)}
+                      slotProps={{
+                        select: { native: true },
+                        inputLabel: { shrink: true },
+                        htmlInput: { 'aria-label': `Permissão para ${tool.name}` },
+                      }}
+                      sx={{ minWidth: 176 }}
+                    >
+                      <option value="">Negada</option>
+                      <option value="allow">Permitida</option>
+                      <option value="approval">Com aprovação</option>
+                    </TextField>
+                  </Box>
+                );
+              })}
+            </Stack>
+          </Box>
+          {(action.error || current.error) && (
+            <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+              {action.error || current.error}
+            </Typography>
+          )}
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 }

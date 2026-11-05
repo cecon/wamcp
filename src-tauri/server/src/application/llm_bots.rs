@@ -7,11 +7,13 @@
 mod admin;
 mod chat;
 mod github_tools;
+mod record;
 mod scheduled;
+mod serves;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
-use super::ports::{Llm, LlmRequest, SecretBox, TokenUsage};
+use super::ports::{Llm, LlmRequest, SecretBox};
 use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
@@ -20,7 +22,7 @@ use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
 };
-use crate::domain::model::{ChatMessage, Inbox, LlmUsage, Message, BOT_LLM, CHAT_USER};
+use crate::domain::model::{ChatMessage, Inbox, Message, BOT_LLM, CHAT_USER};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -125,8 +127,13 @@ impl LlmBotService {
         if matches!(self.system_target(&conversation), Ok(Some(_))) {
             return true;
         }
-        let inbox = core.inbox(conversation.inbox_id);
-        conversation.status == "pending" && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
+        let Ok(inbox) = core.inbox(conversation.inbox_id) else {
+            return false;
+        };
+        let Ok(Some(responder)) = self.responder(&inbox) else {
+            return false;
+        };
+        self.can_answer(&conversation, &responder)
     }
 
     /// Who answers the inbox: its AI agent (when it may answer customers), else its `llm` bot. The
@@ -216,7 +223,10 @@ impl LlmBotService {
             return self.answer_admin(&conversation, &agent, admin).await;
         }
         let inbox = core.inbox(conversation.inbox_id)?;
-        let Some(responder) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
+        let Some(responder) = self
+            .responder(&inbox)?
+            .filter(|responder| self.can_answer(&conversation, responder))
+        else {
             return Ok(());
         };
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
@@ -245,7 +255,7 @@ impl LlmBotService {
         };
         // A person may have taken the conversation while the model was thinking.
         let current = core.repo.conversation_by_id(conversation_id)?;
-        if current.is_none_or(|c| c.status != "pending") {
+        if current.is_none_or(|c| !self.can_answer(&c, &responder)) {
             return Ok(());
         }
         let actor = Actor::Bot { inbox_id: inbox.id };
@@ -259,29 +269,6 @@ impl LlmBotService {
                 .toggle_status(&actor, conversation.display_id, "open", None)?;
         }
         Ok(())
-    }
-
-    /// Keeps the tokens of the call: an AI agent's salary is the cost of its calls plus the margin.
-    /// `run_ref` names what the call was for when it is not a conversation (`agent_chat:<id>`).
-    fn record(&self, responder: &Responder, conversation_id: Option<i64>, run_ref: Option<String>, usage: TokenUsage) {
-        let usage = LlmUsage {
-            agent_id: responder.agent_id,
-            agent_bot_id: responder.agent_bot_id,
-            conversation_id,
-            run_ref,
-            provider: responder.request.provider.clone(),
-            model: responder.request.model.clone(),
-            input_tokens: usage.input_tokens,
-            cached_tokens: usage.cached_input_tokens,
-            output_tokens: usage.output_tokens,
-            cost: usage.cost_usd,
-            currency: "USD".into(),
-            cost_reported: usage.cost_usd.is_some(),
-            at: self.helpdesk.core.clock.now_ms(),
-        };
-        if let Err(error) = self.helpdesk.core.repo.record_llm_usage(&usage) {
-            tracing::warn!(%error, ?conversation_id, "uso de tokens não registrado");
-        }
     }
 
     /// Waits until no answer is scheduled or running (tests and shutdown).

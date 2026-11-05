@@ -1,7 +1,14 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../api';
 import type { Contact } from '../types';
-import { Button } from '../ui/Button';
 
 const FIELDS = [
   { key: 'name', label: 'Nome', type: 'text', max: 120 },
@@ -16,7 +23,7 @@ interface Props {
   onSaved: (contact: Contact) => void;
 }
 
-/** Contact fields; phone and identifier are sent only when edited (the phone is re-normalised and must be unique). */
+/** Campos do contato no C3Theme; telefone e identificador só vão quando editados (o telefone é normalizado). */
 export function ContactForm({ contact, onSaved }: Props) {
   const initial = Object.fromEntries(FIELDS.map((f) => [f.key, contact[f.key] || ''])) as Record<Key, string>;
   const [form, setForm] = useState(initial),
@@ -36,27 +43,30 @@ export function ContactForm({ contact, onSaved }: Props) {
     }
   }
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
+    <Box
+      component="form"
+      onSubmit={(event) => {
+        event.preventDefault();
         void save();
       }}
     >
-      {FIELDS.map((f) => (
-        <label key={f.key}>
-          <span className="field-label">{f.label}</span>
-          <input
-            className="field"
-            type={f.type}
-            value={form[f.key]}
-            maxLength={f.max}
-            onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+      <Stack spacing={2}>
+        {FIELDS.map((field) => (
+          <TextField
+            key={field.key}
+            label={field.label}
+            type={field.type}
+            size="small"
+            value={form[field.key]}
+            onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
+            slotProps={{ htmlInput: { maxLength: field.max } }}
           />
-        </label>
-      ))}
-      {message && <p className="text-sm text-n-slate-11">{message}</p>}
-      <Button type="submit" label="Salvar contato" className="self-start" />
-    </form>
+        ))}
+        {message && <Typography variant="body2">{message}</Typography>}
+        <Button type="submit" variant="contained" sx={{ alignSelf: 'flex-start' }}>
+          Salvar contato
+        </Button>
+      </Stack>
+    </Box>
   );
 }

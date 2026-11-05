@@ -1,26 +1,33 @@
 import { useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { ApiError, http } from '../api';
 import { authError, type Me } from './authError';
-import { Button } from '../ui/Button';
 
 interface Props {
   token: string;
   onLogin: (me: Me) => void;
-  /** Back to e-mail and password (cancelled, or the challenge expired). */
+  /** Volta para e-mail e senha (desafio cancelado ou expirado). */
   onRestart: (message: string) => void;
 }
 
-/** Second login step (Chatwoot MfaVerification): a TOTP code or a backup code. */
+/** Segundo passo do login no C3Theme (lote 7): código TOTP ou código de recuperação. */
 export function MfaStep({ token, onLogin, onRestart }: Props) {
   const [code, setCode] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   return (
-    <form
-      className="w-full max-w-md bg-n-solid-1 p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
-      onSubmit={(e) => {
-        e.preventDefault();
+    <Box
+      component="form"
+      onSubmit={(event) => {
+        event.preventDefault();
         setBusy(true);
         setError('');
         http<Me>('/auth/mfa', 'POST', { mfa_token: token, code: code.trim() })
@@ -35,47 +42,35 @@ export function MfaStep({ token, onLogin, onRestart }: Props) {
           .finally(() => setBusy(false));
       }}
     >
-      <span className="mb-6 flex size-10 items-center justify-center rounded-xl bg-n-brand text-white">
-        <ShieldCheck size={22} />
-      </span>
-      <h1 className="text-2xl font-semibold text-n-slate-12">Verificação em duas etapas</h1>
-      <p className="mt-2 text-sm text-n-slate-11">
-        Insira o código de 6 dígitos do aplicativo autenticador ou um dos seus códigos de recuperação.
-      </p>
-      <div className="mt-8 space-y-4">
-        <label className="block">
-          <span className="field-label">Código de verificação</span>
-          <input
-            className="field font-mono tracking-widest"
-            value={code}
-            placeholder="000000"
-            autoComplete="one-time-code"
-            maxLength={20}
-            onChange={(e) => setCode(e.target.value)}
-            autoFocus
-            required
-          />
-        </label>
-        {error && (
-          <p className="text-sm text-n-ruby-11" role="alert">
-            {error}
-          </p>
-        )}
-        <Button
-          type="submit"
-          size="md"
-          className="w-full"
-          disabled={busy || !code.trim()}
-          label={busy ? 'Verificando…' : 'Verificar'}
+      <Stack spacing={2.5}>
+        <Box>
+          <Typography variant="h4" component="h1">
+            Verificação em duas etapas
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Insira o código de 6 dígitos do aplicativo autenticador ou um dos seus códigos de recuperação.
+          </Typography>
+        </Box>
+        <TextField
+          label="Código de verificação"
+          size="small"
+          autoFocus
+          value={code}
+          placeholder="000000"
+          onChange={(event) => setCode(event.target.value)}
+          slotProps={{
+            htmlInput: { required: true, autoComplete: 'one-time-code', maxLength: 20 },
+            input: { sx: { fontFamily: 'monospace', letterSpacing: '0.15em' } },
+          }}
         />
-        <Button
-          color="slate"
-          variant="link"
-          className="w-full"
-          label="Cancelar e voltar para o login"
-          onClick={() => onRestart('')}
-        />
-      </div>
-    </form>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Button type="submit" variant="contained" size="large" disabled={busy || !code.trim()} fullWidth>
+          {busy ? 'Verificando…' : 'Verificar'}
+        </Button>
+        <Button variant="text" color="secondary" fullWidth onClick={() => onRestart('')}>
+          Cancelar e voltar para o login
+        </Button>
+      </Stack>
+    </Box>
   );
 }

@@ -1,7 +1,15 @@
 import { useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../../api';
 import type { Account } from '../../parityTypes';
-import { Button } from '../../ui/Button';
 import { useAction } from '../useAction';
 
 /** Defaults of the vision doc (keep in sync with `domain::salary`). */
@@ -18,29 +26,24 @@ export function SalaryRatesForm({ account }: { account: Account }) {
   const [saved, setSaved] = useState(false);
   const { error, busy, run } = useAction();
   const field = (key: keyof typeof form, label: string, hint: string, step: string) => (
-    <div>
-      <label>
-        <span className="field-label">{label}</span>
-        <input
-          className="field"
-          type="number"
-          min={0}
-          step={step}
-          required
-          value={form[key]}
-          onChange={(e) => {
-            setSaved(false);
-            setForm({ ...form, [key]: e.target.value });
-          }}
-        />
-      </label>
-      <span className="mt-1 block text-xs text-n-slate-11">{hint}</span>
-    </div>
+    <TextField
+      label={label}
+      type="number"
+      size="small"
+      fullWidth
+      helperText={hint}
+      value={form[key]}
+      onChange={(e) => {
+        setSaved(false);
+        setForm({ ...form, [key]: e.target.value });
+      }}
+      slotProps={{ htmlInput: { min: 0, step, required: true } }}
+    />
   );
   return (
-    <form
+    <Box
+      component="form"
       aria-label="Salário digital"
-      className="flex max-w-2xl flex-col gap-4 border-t border-n-weak pt-4"
       onSubmit={(e) => {
         e.preventDefault();
         void run(async () => {
@@ -52,22 +55,39 @@ export function SalaryRatesForm({ account }: { account: Account }) {
           setSaved(true);
         });
       }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        maxWidth: 672,
+        borderTop: 1,
+        borderColor: 'divider',
+        pt: 2,
+      }}
     >
-      <div>
-        <h2 className="text-heading-3 text-n-slate-12">Salário digital</h2>
-        <p className="text-sm text-n-slate-11">
+      <Box>
+        <Typography variant="h5" component="h2">
+          Salário digital
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
           Quanto cada membro custa no painel de Funcionários. O salário de um agente de IA começa o mês em
           zero e acumula o custo dos tokens das suas tarefas com a margem.
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+        </Typography>
+      </Box>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         {field('seat', 'Assento por pessoa (R$/mês)', 'Cobrado de cada pessoa ativa.', '0.01')}
         {field('margin', 'Margem sobre a IA (%)', 'Somada ao custo dos tokens.', '1')}
         {field('rate', 'Cotação do dólar (R$)', 'Os runtimes informam o custo em dólar.', '0.01')}
-      </div>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      {saved && <p className="text-sm text-n-teal-11">Valores do salário digital salvos.</p>}
-      <Button type="submit" size="md" className="self-start" disabled={busy} label="Salvar valores" />
-    </form>
+      </Stack>
+      {error && <Alert severity="error">{error}</Alert>}
+      {saved && (
+        <Typography variant="body2" sx={{ color: 'var(--color-n-teal-11)' }}>
+          Valores do salário digital salvos.
+        </Typography>
+      )}
+      <Button type="submit" variant="contained" disabled={busy} sx={{ alignSelf: 'flex-start' }}>
+        Salvar valores
+      </Button>
+    </Box>
   );
 }

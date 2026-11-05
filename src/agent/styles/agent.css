@@ -190,3 +190,28 @@
     @apply text-sm leading-[21px] font-[420] tracking-[-0.28px];
   }
 }
+
+/* Telas full-bleed (conversas/agente): o AppLayout do C3Theme aplica padding no <main>; estas telas usam a �rea toda. */
+main.MuiBox-root:has([data-full-bleed]) {
+  padding: 0 !important;
+}
+
+/* Barras de rolagem discretas no WebView2/Chromium (o menu e as listas n�o mostram a barra nativa do Windows). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 24%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 36%, transparent);
+}

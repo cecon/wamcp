@@ -1,11 +1,18 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { MessageCircle, SquarePen } from 'lucide-react';
+
 import type { Realtime } from '../api';
 import type { Catalog, CustomFilter, User } from '../types';
 import type { Route } from '../route';
 import { CONVERSATION_TYPE_LABEL } from '../labels';
-import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
 import { NewChatModal } from './NewChatModal';
 import { ChatList, type AssigneeType, type StatusFilter } from './ChatList';
 import { ConversationBox } from './ConversationBox';
@@ -67,8 +74,15 @@ export function ConversationsScreen({
   ]);
 
   return (
-    <div className="flex h-full w-full">
-      <div className={cn('h-full w-full md:w-auto', displayId ? 'hidden md:block' : false)}>
+    <Box sx={{ display: 'flex', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+      <Box
+        sx={{
+          height: '100%',
+          width: { xs: '100%', md: 'auto' },
+          flexShrink: 0,
+          display: displayId ? { xs: 'none', md: 'block' } : 'block',
+        }}
+      >
         <ChatList
           title={listTitle(route, catalog, view)}
           items={list.items}
@@ -79,13 +93,14 @@ export function ConversationsScreen({
           filtering={Boolean(route.filters)}
           toolbar={
             <>
-              <Button
-                size="xs"
-                icon={SquarePen}
+              <IconButton
+                size="small"
                 aria-label="Nova conversa"
                 title="Nova conversa"
                 onClick={() => setStarting(true)}
-              />
+              >
+                <SquarePen size={16} />
+              </IconButton>
               <ConversationFilters
                 route={route}
                 catalog={catalog}
@@ -106,7 +121,7 @@ export function ConversationsScreen({
           onMore={list.more}
           onReload={list.reload}
         />
-      </div>
+      </Box>
       {displayId ? (
         <ConversationBox
           key={displayId}
@@ -122,18 +137,35 @@ export function ConversationsScreen({
           }}
         />
       ) : (
-        <div className="hidden flex-1 flex-col items-center justify-center gap-2 border-l border-n-weak bg-n-surface-1 text-n-slate-11 md:flex">
-          <MessageCircle size={40} className="text-n-slate-8" />
-          <p className="text-base font-medium text-n-slate-12">Selecione uma conversa</p>
-          <p className="text-sm">As mensagens do WhatsApp chegam aqui em tempo real.</p>
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            flex: 1,
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            borderLeft: 1,
+            borderColor: 'divider',
+            bgcolor: 'var(--color-n-surface-1)',
+            color: 'text.secondary',
+          }}
+        >
+          <MessageCircle size={40} />
+          <Typography variant="body1" sx={{ fontWeight: 500, color: 'text.primary' }}>
+            Selecione uma conversa
+          </Typography>
+          <Typography variant="body2">As mensagens do WhatsApp chegam aqui em tempo real.</Typography>
           <Button
-            className="mt-2"
-            size="sm"
-            icon={SquarePen}
-            label="Nova conversa"
+            variant="contained"
+            size="small"
+            startIcon={<SquarePen size={16} />}
+            sx={{ mt: 1 }}
             onClick={() => setStarting(true)}
-          />
-        </div>
+          >
+            Nova conversa
+          </Button>
+        </Box>
       )}
       {starting && (
         <NewChatModal
@@ -147,6 +179,6 @@ export function ConversationsScreen({
           }}
         />
       )}
-    </div>
+    </Box>
   );
 }

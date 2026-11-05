@@ -1,10 +1,17 @@
 import { useState } from 'react';
+
+// material-ui
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+
+// third-party
 import { FilterX, ListFilter } from 'lucide-react';
+
 import type { Catalog, CustomFilter } from '../types';
 import type { Route } from '../route';
 import { FilterModal } from '../filters/FilterModal';
 import { SaveViewButton, ViewMenu } from '../filters/SavedViewControls';
-import { Button } from '../ui/Button';
 
 type ConversationsRoute = Extract<Route, { page: 'conversations' }>;
 
@@ -16,20 +23,15 @@ interface Props {
   onViewsChange: () => void;
 }
 
-/** Chat list header actions for advanced filters and saved views (Chatwoot folders). */
+/** Ações de filtro/views da lista de conversas no C3Theme (lote 20). */
 export function ConversationFilters({ route, catalog, view, onNavigate, onViewsChange }: Props) {
   const [open, setOpen] = useState(false);
   const filters = route.filters;
   return (
-    <>
-      <Button
-        color="slate"
-        variant="faded"
-        size="xs"
-        icon={ListFilter}
-        aria-label="Filtrar conversas"
-        onClick={() => setOpen(true)}
-      />
+    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+      <IconButton size="small" aria-label="Filtrar conversas" onClick={() => setOpen(true)}>
+        <ListFilter size={16} />
+      </IconButton>
       {filters && !view && (
         <SaveViewButton
           filterType="conversation"
@@ -52,13 +54,13 @@ export function ConversationFilters({ route, catalog, view, onNavigate, onViewsC
       )}
       {filters && (
         <Button
-          color="slate"
-          variant="faded"
-          size="xs"
-          icon={FilterX}
-          label="Limpar filtros"
+          size="small"
+          variant="outlined"
+          startIcon={<FilterX size={14} />}
           onClick={() => onNavigate({ page: 'conversations' })}
-        />
+        >
+          Limpar filtros
+        </Button>
       )}
       {open && (
         <FilterModal
@@ -72,6 +74,6 @@ export function ConversationFilters({ route, catalog, view, onNavigate, onViewsC
           }}
         />
       )}
-    </>
+    </Stack>
   );
 }

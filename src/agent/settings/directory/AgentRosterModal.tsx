@@ -1,8 +1,18 @@
 import { useCallback, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../../api';
 import type { CustomRole, RosterAgent, RosterKind, Skill } from '../../adminTypes';
-import { Modal } from '../../ui/Overlay';
-import { ModalFooter } from '../../ui/Settings';
+import C3Provider from '../../c3/C3Provider';
 import { useAction } from '../useAction';
 import { CredentialsPanel } from './CredentialsPanel';
 import { SkillPicker } from './SkillPicker';
@@ -25,6 +35,16 @@ interface Props {
   /** A skill was created from this form (the page reloads its library). */
   onSkillsChanged: () => void;
 }
+
+const SELECT_SX = {
+  height: 40,
+  borderRadius: 1,
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  px: 1,
+} as const;
 
 /** Human or AI agent form: role, contact (humans) or runtime and instructions (AI), skills and credentials. */
 export function AgentRosterModal(props: Props) {
@@ -49,12 +69,6 @@ export function AgentRosterModal(props: Props) {
   const [library, setLibrary] = useState(skills);
   const [access, setAccess] = useState(noAccess);
   const { error, busy, run } = useAction();
-  const field = (
-    key: 'name' | 'profile_id' | 'description' | 'whatsapp' | 'runtime' | 'model' | 'instructions',
-  ) => ({
-    value: form[key],
-    onChange: (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value }),
-  });
   const setRuntime = useCallback((runtime: string) => setForm((f) => ({ ...f, runtime })), []);
   const chosen = profiles.find((p) => String(p.id) === form.profile_id);
   const withSkills = executes(chosen?.agent_role ?? null);
@@ -83,135 +97,157 @@ export function AgentRosterModal(props: Props) {
     };
   };
 
-  return (
-    <Modal
-      title={agent ? `Editar ${agent.name}` : human ? 'Adicionar pessoa' : 'Adicionar agente de IA'}
-      description={
-        human
-          ? 'Uma pessoa da equipe: com WhatsApp, os agentes de IA podem consultá-la; com acesso ao helpdesk, ela entra e atende conversas.'
-          : 'Agentes de IA executados por um runtime agêntico. Coordenadores só delegam; os demais executam com as suas skills.'
+  const save = () =>
+    void run(async () => {
+      // A new login first: every login is already a person, which this save then completes.
+      let userId = agent?.user_id ?? null;
+      if (human && !userId && access.enabled) {
+        const login = { name: form.name.trim(), email: access.email, password: access.password };
+        const created = await http<{ id: number }>('/agents', 'POST', {
+          ...login,
+          role: access.role,
+          inbox_ids: [],
+        });
+        userId = created.id;
       }
-      onClose={onClose}
-    >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            // A new login first: every login is already a person, which this save then completes.
-            let userId = agent?.user_id ?? null;
-            if (human && !userId && access.enabled) {
-              const login = { name: form.name.trim(), email: access.email, password: access.password };
-              const created = await http<{ id: number }>('/agents', 'POST', {
-                ...login,
-                role: access.role,
-                inbox_ids: [],
-              });
-              userId = created.id;
-            }
-            const saved = await http<RosterAgent>(
-              agent ? `/agent_directory/${agent.id}` : '/agent_directory',
-              agent ? 'PUT' : 'POST',
-              body(userId),
-            );
-            const same = [...skillIds].sort().join() === [...saved.skill_ids].sort().join();
-            if (!same)
-              await http(`/agent_directory/${saved.id}/skills`, 'PUT', {
-                skill_ids: withSkills ? skillIds : [],
-              });
-            onSaved();
-            onClose();
-          });
-        }}
+      const saved = await http<RosterAgent>(
+        agent ? `/agent_directory/${agent.id}` : '/agent_directory',
+        agent ? 'PUT' : 'POST',
+        body(userId),
+      );
+      const same = [...skillIds].sort().join() === [...saved.skill_ids].sort().join();
+      if (!same)
+        await http(`/agent_directory/${saved.id}/skills`, 'PUT', {
+          skill_ids: withSkills ? skillIds : [],
+        });
+      onSaved();
+      onClose();
+    });
+
+  return (
+    <C3Provider>
+      <ActionDialog
+        open
+        title={agent ? `Editar ${agent.name}` : human ? 'Adicionar pessoa' : 'Adicionar agente de IA'}
+        description={
+          human
+            ? 'Uma pessoa da equipe: com WhatsApp, os agentes de IA podem consultá-la; com acesso ao helpdesk, ela entra e atende conversas.'
+            : 'Agentes de IA executados por um runtime agêntico. Coordenadores só delegam; os demais executam com as suas skills.'
+        }
+        confirmLabel={agent ? 'Atualizar agente' : 'Criar agente'}
+        backLabel="Cancelar"
+        loading={busy}
+        error={error || undefined}
+        onClose={onClose}
+        onConfirm={save}
       >
-        <label>
-          <span className="field-label">Nome</span>
-          <input className="field" required maxLength={80} {...field('name')} />
-        </label>
-        <label>
-          <span className="field-label">Perfil</span>
-          <select className="field" required {...field('profile_id')}>
-            {choices.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.agent_role ? `${p.name} — ${roleLabel(p.agent_role)}` : p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <textarea className="field" rows={2} maxLength={500} {...field('description')} />
-        </label>
-        {human ? (
-          <>
-            <label>
-              <span className="field-label">WhatsApp</span>
-              <input
-                className="field"
-                inputMode="tel"
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            label="Nome"
+            size="small"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
+          />
+          <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography component="span" variant="body2">
+              Perfil
+            </Typography>
+            <Box
+              component="select"
+              value={form.profile_id}
+              onChange={(e) => setForm({ ...form, profile_id: e.target.value })}
+              sx={SELECT_SX}
+            >
+              {choices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.agent_role ? `${p.name} — ${roleLabel(p.agent_role)}` : p.name}
+                </option>
+              ))}
+            </Box>
+          </Box>
+          <TextField
+            label="Descrição"
+            size="small"
+            multiline
+            minRows={2}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            slotProps={{ htmlInput: { maxLength: 500 } }}
+          />
+          {human ? (
+            <>
+              <TextField
+                label="WhatsApp"
+                size="small"
+                type="tel"
                 placeholder="+55 11 98888-7777"
-                {...field('whatsapp')}
+                value={form.whatsapp}
+                onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
               />
-            </label>
-            <AccessSection agent={agent} access={access} onChange={setAccess} onManage={onManageAccess} />
-          </>
-        ) : (
-          <>
-            <RuntimeSelect value={form.runtime} onChange={setRuntime} pickInstalled={!agent} />
-            <label>
-              <span className="field-label">
-                {form.runtime === 'opencode' ? 'Modelo (provedor/modelo)' : 'Modelo (opcional)'}
-              </span>
-              <input
-                className="field"
-                maxLength={80}
-                required={form.runtime === 'opencode'}
+              <AccessSection agent={agent} access={access} onChange={setAccess} onManage={onManageAccess} />
+            </>
+          ) : (
+            <>
+              <RuntimeSelect value={form.runtime} onChange={setRuntime} pickInstalled={!agent} />
+              <TextField
+                label={form.runtime === 'opencode' ? 'Modelo (provedor/modelo)' : 'Modelo (opcional)'}
+                size="small"
                 placeholder={
                   form.runtime === 'opencode' ? 'Ex.: openrouter/openai/gpt-5' : 'Padrão do runtime'
                 }
-                {...field('model')}
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                slotProps={{ htmlInput: { required: form.runtime === 'opencode', maxLength: 80 } }}
               />
-            </label>
-            <label>
-              <span className="field-label">Instruções do agente</span>
-              <textarea className="field" rows={4} maxLength={8000} {...field('instructions')} />
-            </label>
-          </>
-        )}
-        {withSkills && (
-          <SkillPicker
-            library={library}
-            selected={skillIds}
-            onToggle={toggle}
-            onCreated={(skill) => {
-              setLibrary((list) => [...list, skill]);
-              setSkillIds((list) => [...list, skill.id]);
-              onSkillsChanged();
+              <TextField
+                label="Instruções do agente"
+                multiline
+                minRows={4}
+                value={form.instructions}
+                onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+                slotProps={{ htmlInput: { maxLength: 8000 } }}
+              />
+            </>
+          )}
+          {withSkills && (
+            <SkillPicker
+              library={library}
+              selected={skillIds}
+              onToggle={toggle}
+              onCreated={(skill) => {
+                setLibrary((list) => [...list, skill]);
+                setSkillIds((list) => [...list, skill.id]);
+                onSkillsChanged();
+              }}
+            />
+          )}
+          {withSkills && inherited.length > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Herdadas do perfil {chosen?.name}: {inherited.join(', ')}.
+            </Typography>
+          )}
+          <Box
+            component="label"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              fontSize: 14,
+              color: 'var(--color-n-slate-12)',
             }}
-          />
-        )}
-        {withSkills && inherited.length > 0 && (
-          <p className="text-sm text-n-slate-11">
-            Herdadas do perfil {chosen?.name}: {inherited.join(', ')}.
-          </p>
-        )}
-        <label className="flex items-center gap-2 text-sm text-n-slate-12">
-          <input
-            type="checkbox"
-            className="size-4 accent-n-brand"
-            checked={form.active}
-            onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          />
-          Ativo
-        </label>
-        <ModalFooter
-          busy={busy}
-          submit={agent ? 'Atualizar agente' : 'Criar agente'}
-          onCancel={onClose}
-          error={error}
-        />
-      </form>
-      {agent && holdsCredentials(agent) && <CredentialsPanel agentId={agent.id} onChange={onSaved} />}
-    </Modal>
+          >
+            <Checkbox
+              size="small"
+              checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              sx={{ p: 0.5 }}
+            />
+            Ativo
+          </Box>
+          {agent && holdsCredentials(agent) && <CredentialsPanel agentId={agent.id} onChange={onSaved} />}
+        </Stack>
+      </ActionDialog>
+    </C3Provider>
   );
 }

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import AgentApp from '../../src/agent/AgentApp';
 import { ContactsPage } from '../../src/agent/ContactsPage';
 import type { CustomFilter, FilterCondition } from '../../src/agent/types';
+import * as navTools from './nav';
 import { fakeApi, status } from './fake-api';
 import {
   admin,
@@ -17,7 +18,6 @@ import {
   workspaceRoutes,
 } from './fixtures';
 
-const nav = () => screen.getByRole('navigation');
 const vipFilter: FilterCondition[] = [
   { attribute_key: 'labels', filter_operator: 'equal_to', values: ['vip'], query_operator: 'and' },
 ];
@@ -50,9 +50,9 @@ describe('saved conversation views', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    await user.click(within(nav()).getByRole('button', { name: 'Não atendidas' }));
+    await navTools.click(user, 'Não atendidas');
     expect(await screen.findByRole('heading', { name: 'Não atendidas' })).toBeInTheDocument();
-    await user.click(await within(nav()).findByRole('button', { name: 'VIPs' }));
+    await navTools.click(user, 'VIPs');
     expect(await screen.findByRole('heading', { name: 'VIPs' })).toBeInTheDocument();
     await waitFor(() =>
       expect(api.called('POST', '/conversations/filter')[0].body).toEqual({ payload: vipFilter }),
@@ -73,7 +73,7 @@ describe('saved conversation views', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Excluir visualização' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir' }));
     expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
-    expect(within(nav()).queryByRole('button', { name: 'Clientes VIP' })).not.toBeInTheDocument();
+    expect(navTools.navQuery('Clientes VIP')).not.toBeInTheDocument();
   });
 
   it('builds an advanced filter with E/OU rows, saves it as a view and clears it', async () => {

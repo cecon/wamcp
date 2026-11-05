@@ -1,6 +1,8 @@
-import { GROUP_LABEL, PRESET_LABEL, type GroupBy, type Preset, type ReportPeriod } from './period';
+// material-ui
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
 
-const select = 'field !h-8 !w-auto !py-1';
+import { GROUP_LABEL, PRESET_LABEL, type GroupBy, type Preset, type ReportPeriod } from './period';
 
 interface Props {
   period: ReportPeriod;
@@ -9,57 +11,63 @@ interface Props {
   grouping?: boolean;
 }
 
-/** Chatwoot ReportFilters: date range presets (with a custom range) and the chart grouping. */
+/** Filtros de período no C3Theme (lote 14): presets (com intervalo personalizado) e agrupamento do gráfico. */
 export function ReportFilters({ period, onChange, grouping = true }: Props) {
   const set = (patch: Partial<ReportPeriod>) => onChange({ ...period, ...patch });
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <select
-        aria-label="Período"
-        className={select}
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+      <TextField
+        select
+        size="small"
+        label="Período"
         value={period.preset}
-        onChange={(e) => set({ preset: e.target.value as Preset })}
+        onChange={(event) => set({ preset: event.target.value as Preset })}
+        slotProps={{ select: { native: true } }}
+        sx={{ minWidth: 150 }}
       >
         {Object.entries(PRESET_LABEL).map(([id, label]) => (
           <option key={id} value={id}>
             {label}
           </option>
         ))}
-      </select>
+      </TextField>
       {period.preset === 'custom' && (
         <>
-          <input
+          <TextField
             type="date"
-            aria-label="Data inicial"
-            className={select}
+            size="small"
+            label="Data inicial"
             value={period.from}
-            max={period.to}
-            onChange={(e) => set({ from: e.target.value })}
+            onChange={(event) => set({ from: event.target.value })}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: period.to } }}
           />
-          <input
+          <TextField
             type="date"
-            aria-label="Data final"
-            className={select}
+            size="small"
+            label="Data final"
             value={period.to}
-            min={period.from}
-            onChange={(e) => set({ to: e.target.value })}
+            onChange={(event) => set({ to: event.target.value })}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: period.from } }}
           />
         </>
       )}
       {grouping && (
-        <select
-          aria-label="Agrupar por"
-          className={select}
+        <TextField
+          select
+          size="small"
+          label="Agrupar por"
           value={period.groupBy}
-          onChange={(e) => set({ groupBy: e.target.value as GroupBy })}
+          onChange={(event) => set({ groupBy: event.target.value as GroupBy })}
+          slotProps={{ select: { native: true } }}
+          sx={{ minWidth: 150 }}
         >
           {Object.entries(GROUP_LABEL).map(([id, label]) => (
             <option key={id} value={id}>
               {label}
             </option>
           ))}
-        </select>
+        </TextField>
       )}
-    </div>
+    </Box>
   );
 }

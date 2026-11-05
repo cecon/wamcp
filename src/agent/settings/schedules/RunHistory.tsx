@@ -1,12 +1,26 @@
 import { useEffect } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { useFetch } from '../../useFetch';
 import { RUN_LABEL, formatTime, type AgentSchedule, type ScheduleRun } from './types';
 
 const TONE: Record<ScheduleRun['status'], string> = {
-  running: 'bg-n-blue-3 text-n-blue-11',
-  done: 'bg-n-teal-3 text-n-teal-11',
-  failed: 'bg-n-ruby-3 text-n-ruby-11',
-  skipped: 'bg-n-amber-3 text-n-amber-11',
+  running: 'info.light',
+  done: 'success.light',
+  failed: 'error.light',
+  skipped: 'warning.light',
+};
+
+const TEXT_TONE: Record<ScheduleRun['status'], string> = {
+  running: 'info.dark',
+  done: 'success.dark',
+  failed: 'error.dark',
+  skipped: 'warning.dark',
 };
 
 /** The newest runs of a schedule, refreshed while one is going on. */
@@ -22,32 +36,56 @@ export function RunHistory({ schedule, refresh }: { schedule: AgentSchedule; ref
 
   if (error) {
     return (
-      <p role="alert" className="text-sm text-n-ruby-11">
+      <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
         {error}
-      </p>
+      </Typography>
     );
   }
-  if (data?.length === 0) return <p className="text-sm text-n-slate-11">Nenhuma execução ainda.</p>;
+  if (data?.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Nenhuma execução ainda.
+      </Typography>
+    );
+  }
   return (
-    <ol className="flex flex-col gap-3" aria-label="Execuções">
+    <Stack component="ol" aria-label="Execuções" spacing={1.5} sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {data?.map((run) => (
-        <li key={run.id} className="rounded-xl p-3 outline outline-1 -outline-offset-1 outline-n-weak">
-          <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="font-medium text-n-slate-12">{run.agent_name ?? `Agente ${run.agent_id}`}</span>
-            <span className={`rounded-md px-2 py-0.5 text-xs ${TONE[run.status]}`}>
-              {RUN_LABEL[run.status]}
-            </span>
-          </div>
-          <p className="text-xs text-n-slate-11">
+        <Paper component="li" key={run.id} variant="outlined" sx={{ p: 2 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {run.agent_name ?? `Agente ${run.agent_id}`}
+            </Typography>
+            <Box
+              sx={{
+                bgcolor: TONE[run.status],
+                color: TEXT_TONE[run.status],
+                borderRadius: 1,
+                px: 1,
+                py: 0.25,
+              }}
+            >
+              <Typography variant="caption">{RUN_LABEL[run.status]}</Typography>
+            </Box>
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
             {formatTime(run.started_at, schedule.timezone)}
             {run.finished_at && run.status !== 'skipped' && (
               <> · {Math.max(0, Math.round((run.finished_at - run.started_at) / 1000))} s</>
             )}
-          </p>
-          {run.output && <p className="mt-2 whitespace-pre-wrap text-sm text-n-slate-12">{run.output}</p>}
-          {run.error && <p className="mt-2 text-sm text-n-ruby-11">{run.error}</p>}
-        </li>
+          </Typography>
+          {run.output && (
+            <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+              {run.output}
+            </Typography>
+          )}
+          {run.error && (
+            <Typography variant="body2" sx={{ mt: 1, color: 'error.main' }}>
+              {run.error}
+            </Typography>
+          )}
+        </Paper>
       ))}
-    </ol>
+    </Stack>
   );
 }
