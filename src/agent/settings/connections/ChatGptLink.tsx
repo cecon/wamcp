@@ -1,8 +1,17 @@
 import { useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { ShieldCheck, Trash2 } from 'lucide-react';
+
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
 import { ConfirmModal } from '../../ui/Confirm';
 import { SecretField } from '../../ui/SecretField';
 import { useAction } from '../useAction';
@@ -25,89 +34,135 @@ export function ChatGptLink({ id, url }: { id: string; url: string }) {
   const { error, busy, run } = useAction();
   const grants = data || [];
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <ol className="list-decimal space-y-1 ps-5 text-sm text-n-slate-12">
-        <li>No ChatGPT, ative o modo de desenvolvedor nas configurações, se disponível para sua conta.</li>
-        <li>
-          Crie a conexão WA MCP com o endereço abaixo e escolha <strong>OAuth</strong>, deixando Client ID e
-          Client Secret vazios.
-        </li>
-        <li>Gere o código aqui e cole na página de autorização aberta pelo ChatGPT.</li>
-      </ol>
+    <Box sx={{ display: 'flex', maxWidth: 768, flexDirection: 'column', gap: 3 }}>
+      <Box
+        component="ol"
+        sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, m: 0, pl: 2.5, fontSize: 14 }}
+      >
+        <Typography component="li" variant="body2">
+          No ChatGPT, ative o modo de desenvolvedor nas configurações, se disponível para sua conta.
+        </Typography>
+        <Typography component="li" variant="body2">
+          Crie a conexão WA MCP com o endereço abaixo e escolha <Box component="strong">OAuth</Box>, deixando
+          Client ID e Client Secret vazios.
+        </Typography>
+        <Typography component="li" variant="body2">
+          Gere o código aqui e cole na página de autorização aberta pelo ChatGPT.
+        </Typography>
+      </Box>
       <SecretField
         label="URL do servidor MCP para o ChatGPT"
         secret={url}
         copyLabel="Copiar URL do ChatGPT"
       />
-      <div className="flex flex-wrap items-end gap-2">
-        <label>
-          <span className="field-label">Permissão do ChatGPT</span>
-          <select className="field" value={scope} onChange={(e) => setScope(e.target.value)}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 1 }}>
+        <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Typography component="span" variant="body2">
+            Permissão do ChatGPT
+          </Typography>
+          <Box
+            component="select"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            sx={{
+              height: 40,
+              borderRadius: 1,
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              px: 1,
+            }}
+          >
             {SCOPES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
-          </select>
-        </label>
+          </Box>
+        </Box>
         <Button
-          size="md"
-          label="Gerar código para o ChatGPT"
+          variant="contained"
           disabled={busy}
           onClick={() =>
             void run(async () => setCode(await http<ChatGptLinkCode>(`${base}/link`, 'POST', { scope })))
           }
-        />
-      </div>
+        >
+          Gerar código para o ChatGPT
+        </Button>
+      </Box>
       {(error || loadError) && (
-        <p role="alert" className="text-sm text-n-ruby-11">
+        <Alert severity="error" sx={{ fontSize: 14 }}>
           {error || loadError}
-        </p>
+        </Alert>
       )}
       {code && (
-        <div className="flex flex-col gap-2 rounded-xl border border-n-weak bg-n-solid-2 p-4">
-          <p className="text-sm font-medium text-n-slate-12">Código de uso único, válido por dez minutos</p>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            borderRadius: 3,
+            border: 1,
+            borderColor: 'divider',
+            bgcolor: 'var(--color-n-solid-2)',
+            p: 2,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Código de uso único, válido por dez minutos
+          </Typography>
           <SecretField label="Código para o ChatGPT" secret={code.code} copyLabel="Copiar código" />
-          <p className="text-xs text-n-slate-11">
+          <Typography variant="caption" color="text.secondary">
             Expira às {new Date(code.expires).toLocaleTimeString('pt-BR')}. Cole somente na página de
             autorização do WA MCP.
-          </p>
-          <Button
-            color="slate"
-            variant="link"
-            className="self-start"
-            label="Ocultar código"
-            onClick={() => setCode(null)}
-          />
-        </div>
+          </Typography>
+          <Button variant="text" onClick={() => setCode(null)} sx={{ alignSelf: 'flex-start' }}>
+            Ocultar código
+          </Button>
+        </Box>
       )}
-      <div className="flex items-center justify-between">
-        <h3 className="text-heading-3 text-n-slate-12">Conexões autorizadas</h3>
-        <Button color="slate" variant="link" label="Atualizar" onClick={reload} />
-      </div>
-      <ul className="divide-y divide-n-weak border-t border-n-weak" aria-label="Conexões do ChatGPT">
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h6" component="h3">
+          Conexões autorizadas
+        </Typography>
+        <Button variant="text" onClick={reload}>
+          Atualizar
+        </Button>
+      </Stack>
+      <Box
+        component="ul"
+        aria-label="Conexões do ChatGPT"
+        sx={{ m: 0, p: 0, listStyle: 'none', borderTop: 1, borderColor: 'divider' }}
+      >
         {data && grants.length === 0 && (
-          <li className="py-6 text-sm text-n-slate-11">Nenhuma conexão do ChatGPT autorizada.</li>
+          <Typography component="li" variant="body2" color="text.secondary" sx={{ py: 3 }}>
+            Nenhuma conexão do ChatGPT autorizada.
+          </Typography>
         )}
         {grants.map((g) => (
-          <li key={g.id} className="flex items-center gap-3 py-3">
-            <ShieldCheck size={18} className="shrink-0 text-n-teal-10" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-n-slate-12">{g.name}</p>
-              <p className="text-xs text-n-slate-11">
+          <Stack
+            key={g.id}
+            component="li"
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', py: 1.5, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Box component={ShieldCheck} size={18} sx={{ flexShrink: 0, color: 'var(--color-n-teal-10)' }} />
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                {g.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
                 {scopeLabel(g.scope)} · Até {formatDate(g.expires)}
-              </p>
-            </div>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Trash2}
-              aria-label={`Desconectar ${g.name}`}
-              onClick={() => setRevoking(g)}
-            />
-          </li>
+              </Typography>
+            </Box>
+            <IconButton aria-label={`Desconectar ${g.name}`} onClick={() => setRevoking(g)}>
+              <Trash2 size={16} />
+            </IconButton>
+          </Stack>
         ))}
-      </ul>
+      </Box>
       {revoking && (
         <ConfirmModal
           title={`Desconectar ${revoking.name}?`}
@@ -120,6 +175,6 @@ export function ChatGptLink({ id, url }: { id: string; url: string }) {
           onClose={() => setRevoking(null)}
         />
       )}
-    </div>
+    </Box>
   );
 }

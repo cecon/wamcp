@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+
 import type { User } from '../types';
-import { SettingsHeader, SettingsPage } from '../ui/Settings';
+import { SettingsC3Header, SettingsC3Page } from '../settings/c3/SettingsC3';
 import { MfaSection } from './MfaSection';
 import { NotificationPreferences } from './NotificationPreferences';
 import { SessionsSection } from './SessionsSection';
 
-/** Chatwoot profile settings block: title and note on the left, controls on the right. */
+/** Bloco do perfil no `Panel` do pacote: título e nota em cima, controles embaixo. */
 export function ProfileSection({
   title,
   note,
@@ -16,26 +20,17 @@ export function ProfileSection({
   children: ReactNode;
 }) {
   return (
-    <section
-      aria-labelledby={`profile-${title}`}
-      className="grid gap-4 border-b border-n-weak py-8 last:border-b-0 lg:grid-cols-[1fr_2fr]"
-    >
-      <div>
-        <h2 id={`profile-${title}`} className="text-heading-2 text-n-slate-12">
-          {title}
-        </h2>
-        <p className="mt-1 text-sm text-n-slate-11">{note}</p>
-      </div>
-      <div className="min-w-0">{children}</div>
-    </section>
+    <Panel title={title} subtitle={note}>
+      {children}
+    </Panel>
   );
 }
 
-/** Chatwoot "Configurações do perfil": notification preferences and account security. */
+/** Configurações do perfil no C3Theme (lote 5): casca migrada; as seções seguem no app por enquanto. */
 export function ProfilePage({ user }: { user: User }) {
   return (
-    <SettingsPage>
-      <SettingsHeader title="Configurações do perfil" description={`${user.name} · ${user.email}`} />
+    <SettingsC3Page>
+      <SettingsC3Header title="Configurações do perfil" description={`${user.name} · ${user.email}`} />
       <ProfileSection
         title="Notificações"
         note="Escolha quais eventos geram notificações e como o navegador avisa você."
@@ -54,6 +49,6 @@ export function ProfilePage({ user }: { user: User }) {
       >
         <SessionsSection />
       </ProfileSection>
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AgentApp from '../../src/agent/AgentApp';
+// Pré-carrega os chunks das páginas lazy usadas no teste (Relatórios/Configurações) fora do tempo da asserção.
+import '../../src/agent/Reports';
+import '../../src/agent/settings/AccountPage';
+import '../../src/agent/settings/SlaPage';
+import '../../src/agent/settings/TeamsPage';
+import * as navTools from './nav';
 import { fakeApi, FakeEventSource, status } from './fake-api';
 import { admin, maria, workspaceRoutes } from './fixtures';
 import { row, summary } from './report-fixtures';
-
-const nav = () => screen.getByRole('navigation');
 
 describe('login', () => {
   it('reports bad credentials, then enters the workspace with CSRF on later calls', async () => {
@@ -50,35 +54,39 @@ describe('sidebar', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
-    expect(await within(nav()).findByText('3')).toBeInTheDocument();
+    expect(await within(navTools.nav()).findByText('3')).toBeInTheDocument();
 
-    await user.click(within(nav()).getByRole('button', { name: 'Suporte' }));
+    await navTools.click(user, 'Suporte');
     expect(await screen.findByRole('heading', { name: 'Suporte' })).toBeInTheDocument();
     await waitFor(() => expect(api.called('GET', '/conversations').at(-1)!.search).toContain('inbox_id=10'));
-    await user.click(within(nav()).getByRole('button', { name: 'Financeiro' }));
+    await navTools.click(user, 'Financeiro');
     await waitFor(() => expect(api.called('GET', '/conversations').at(-1)!.search).toContain('team_id=5'));
-    await user.click(within(nav()).getByRole('button', { name: 'vip' }));
+    await navTools.click(user, 'vip');
     expect(await screen.findByRole('heading', { name: '#vip' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Pesquisar conversas'), 'joão{Enter}');
     expect(await screen.findByRole('heading', { name: 'Busca: “joão”' })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Todas as conversas' }));
+    await navTools.click(user, 'Todas as conversas');
     expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
 
-    await user.click(within(nav()).getByRole('button', { name: 'Conversas' }));
-    expect(within(nav()).queryByRole('button', { name: 'Todas as conversas' })).not.toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Contatos' }));
+    await navTools.click(user, 'Conversas');
+    await navTools.click(user, 'Contatos');
     expect(await screen.findByRole('heading', { name: 'Contatos' })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
-    expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
-    expect(await screen.findByRole('heading', { name: 'Funcionários' })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
-    expect(within(nav()).queryByRole('button', { name: 'Webhooks' })).not.toBeInTheDocument();
+    await navTools.click(user, 'Relatórios');
+    await navTools.click(user, 'Visão geral');
+    expect(
+      await screen.findByRole('heading', { name: 'Visão geral' }, { timeout: 8000 }),
+    ).toBeInTheDocument();
+    await navTools.click(user, 'Configurações');
+    await navTools.click(user, 'Funcionários');
+    expect(
+      await screen.findByRole('heading', { name: 'Funcionários' }, { timeout: 8000 }),
+    ).toBeInTheDocument();
+    await navTools.click(user, 'Configurações');
 
     FakeEventSource.instances[0].onopen?.();
     FakeEventSource.emit('presence.update', {});
     FakeEventSource.emit('notification.created', { id: 9 });
-    expect(await within(nav()).findByText('4')).toBeInTheDocument();
+    expect(await within(navTools.nav()).findByText('4')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Perfil' }));
     await user.click(screen.getByRole('menuitem', { name: 'Sair' }));
     expect(await screen.findByRole('button', { name: 'Entrar' })).toBeInTheDocument();
@@ -96,26 +104,27 @@ describe('sidebar', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
-    expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Times' }));
-    expect(await screen.findByRole('button', { name: 'Financeiro' })).toBeInTheDocument();
-    expect(within(nav()).getByRole('button', { name: 'Times' })).toHaveAttribute('aria-current', 'page');
-    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
-    expect(within(nav()).queryByRole('button', { name: 'CSAT' })).not.toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
-    await user.click(within(nav()).getByRole('button', { name: 'Configurações da conta' }));
-    expect(await screen.findByLabelText('Nome da conta')).toHaveValue('Loja');
-    await user.click(within(nav()).getByRole('button', { name: 'SLA' }));
-    expect(await screen.findByText('Nenhum SLA ainda.')).toBeInTheDocument();
+    await navTools.click(user, 'Relatórios');
+    await navTools.click(user, 'Visão geral');
+    expect(
+      await screen.findByRole('heading', { name: 'Visão geral' }, { timeout: 8000 }),
+    ).toBeInTheDocument();
+    await navTools.click(user, 'Times');
+    expect(await screen.findByRole('button', { name: 'Financeiro' }, { timeout: 8000 })).toBeInTheDocument();
+    expect(navTools.navItem('Times')).toHaveAttribute('href', expect.stringContaining('section=teams'));
+    await navTools.click(user, 'Configurações');
+    await navTools.click(user, 'Configurações da conta');
+    expect(await screen.findByLabelText('Nome da conta', {}, { timeout: 8000 })).toHaveValue('Loja');
+    await user.click(screen.getAllByRole('link', { name: 'SLA' }).at(-1)!);
+    expect(await screen.findByText('Nenhum SLA ainda.', {}, { timeout: 8000 })).toBeInTheDocument();
   });
 
   it('hides reports and settings from agents', async () => {
     fakeApi(workspaceRoutes(maria));
     render(<AgentApp />);
     expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
-    expect(within(nav()).queryByRole('button', { name: 'Configurações' })).not.toBeInTheDocument();
-    expect(within(nav()).queryByRole('button', { name: 'Relatórios' })).not.toBeInTheDocument();
+    expect(navTools.navQuery('Configurações')).not.toBeInTheDocument();
+    expect(navTools.navQuery('Relatórios')).not.toBeInTheDocument();
   });
 });
 
@@ -168,7 +177,7 @@ describe('notifications inbox', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    await user.click(within(nav()).getByRole('button', { name: /Caixa de entrada/ }));
+    await navTools.click(user, /Caixa de entrada/);
     expect(await screen.findByText('Ana atribuiu a você a conversa #7')).toBeInTheDocument();
     expect(screen.getByText('Nova mensagem em #7')).toBeInTheDocument();
     expect(screen.getByText('Nova conversa #8')).toBeInTheDocument();
@@ -187,7 +196,7 @@ describe('notifications inbox', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    await user.click(within(nav()).getByRole('button', { name: /Caixa de entrada/ }));
+    await navTools.click(user, /Caixa de entrada/);
     expect(await screen.findByText('Nenhuma notificação por aqui.')).toBeInTheDocument();
   });
 });

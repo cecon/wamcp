@@ -1,8 +1,15 @@
 import { useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { X } from 'lucide-react';
+
 import type { BreakdownRow } from '../parityTypes';
 import { useFetch } from '../useFetch';
-import { Button } from '../ui/Button';
 import { Cell, Table } from '../ui/Settings';
 import { cn } from '../ui/cn';
 import { formatMetric } from './metrics';
@@ -22,7 +29,7 @@ const TITLE: Record<BreakdownKind, [string, string]> = {
 const scopeOf = (kind: BreakdownKind, row: BreakdownRow): ReportScope =>
   kind === 'label' ? { type: 'label', label: row.name } : { type: kind, id: row.id ?? undefined };
 
-/** Chatwoot agent/inbox/team/label reports: one row per item; selecting one shows its metrics and chart. */
+/** Relatórios por agente/caixa/time/etiqueta no C3Theme (lote 13): uma linha por item; selecionar mostra métricas. */
 export function BreakdownReport({ kind }: { kind: BreakdownKind }) {
   const { period, range, setPeriod } = useReportPeriod();
   const [selected, setSelected] = useState<BreakdownRow | null>(null);
@@ -63,18 +70,14 @@ export function BreakdownReport({ kind }: { kind: BreakdownKind }) {
       </ReportCard>
       {selected && (
         <>
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-medium text-n-slate-12">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6" component="h2">
               {singular}: {selected.name}
-            </h2>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={X}
-              label="Limpar seleção"
-              onClick={() => setSelected(null)}
-            />
-          </div>
+            </Typography>
+            <Button variant="outlined" startIcon={<X size={16} />} onClick={() => setSelected(null)}>
+              Limpar seleção
+            </Button>
+          </Stack>
           <MetricReport
             key={selected.name}
             scope={scopeOf(kind, selected)}

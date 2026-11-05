@@ -8,7 +8,7 @@ use rusqlite::types::Value as Sql;
 
 pub(super) const SELECT: &str =
     "SELECT c.*, ct.name AS contact_name, ct.phone_number AS contact_phone, ct.avatar_url AS contact_avatar_url, ci.source_id AS contact_jid,
-  i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, t.name AS team_name,
+  i.name AS inbox_name, i.agent_bot_enabled, u.name AS assignee_name, aa.name AS assignee_agent_name, t.name AS team_name,
   (SELECT json_group_array(l.title) FROM (SELECT l.title FROM conversation_labels cl JOIN labels l ON l.id=cl.label_id
      WHERE cl.conversation_id=c.id ORDER BY l.title) l) AS labels,
   (SELECT content FROM conversation_messages m WHERE m.conversation_id=c.id AND m.message_type<>'activity'
@@ -17,7 +17,8 @@ pub(super) const SELECT: &str =
      AND m.created_at>COALESCE(c.agent_last_seen_at,0)) AS unread_count,
   (SELECT a.status FROM applied_slas a WHERE a.conversation_id=c.id) AS sla_status
   FROM conversations c JOIN contacts ct ON ct.id=c.contact_id JOIN contact_inboxes ci ON ci.id=c.contact_inbox_id
-  JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id LEFT JOIN teams t ON t.id=c.team_id";
+  JOIN inboxes i ON i.id=c.inbox_id LEFT JOIN users u ON u.id=c.assignee_id
+    LEFT JOIN agents aa ON aa.id=c.assignee_agent_id LEFT JOIN teams t ON t.id=c.team_id";
 pub(super) const SHAPE: Shape = Shape {
     json: &["labels", "custom_attributes"],
     bools: &[],
@@ -28,7 +29,7 @@ pub(super) fn limit_clause(limit: &ConversationLimit, args: &mut Vec<Sql>) -> St
     let mut parts = vec!["c.assignee_id=?"];
     args.push(int(limit.user_id));
     if limit.unassigned {
-        parts.push("c.assignee_id IS NULL");
+        parts.push("c.assignee_id IS NULL AND c.assignee_agent_id IS NULL");
     }
     if limit.participating {
         parts.push("EXISTS(SELECT 1 FROM conversation_participants p WHERE p.conversation_id=c.id AND p.user_id=?)");
@@ -118,6 +119,7 @@ fn changes_to_fields(c: &ConversationChanges) -> Vec<(&'static str, Sql)> {
     }
     let optional = [
         ("assignee_id", c.assignee_id),
+        ("assignee_agent_id", c.assignee_agent_id),
         ("team_id", c.team_id),
         ("snoozed_until", c.snoozed_until),
         ("waiting_since", c.waiting_since),
@@ -169,9 +171,9 @@ impl ConversationRepo for SqliteStore {
             vec![],
         )?;
         let id = self.insert(
-            "INSERT INTO conversations(display_id,inbox_id,contact_id,contact_inbox_id,status,waiting_since,last_activity_at,created)
-             VALUES(?,?,?,?,?,?,?,?)",
-            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), text(status), int(ts), int(ts), text(iso(ts * 1000))],
+            "INSERT INTO conversations(display_id,inbox_id,contact_id,contact_inbox_id,assignee_agent_id,status,waiting_since,last_activity_at,created)
+             VALUES(?,?,?,?,(SELECT ai_agent_id FROM inboxes WHERE id=?),?,?,?,?)",
+            vec![int(next), int(inbox_id), int(ci.contact_id), int(ci.id), int(inbox_id), text(status), int(ts), int(ts), text(iso(ts * 1000))],
         )?;
         self.conversation_by_id(id)?
             .ok_or_else(|| Error::internal("conversation vanished"))
@@ -190,7 +192,8 @@ impl ConversationRepo for SqliteStore {
                 wheres.push("c.assignee_id=?".into());
                 args.push(opt_int(filters.user_id));
             }
-            "unassigned" => wheres.push("c.assignee_id IS NULL".into()),
+            "unassigned" => wheres.push("c.assignee_id IS NULL AND c.assignee_agent_id IS NULL".into()),
+            "ai" => wheres.push("c.assignee_agent_id IS NOT NULL AND c.assignee_id IS NULL".into()),
             "assigned" => wheres.push("c.assignee_id IS NOT NULL".into()),
             _ => {}
         }
@@ -215,9 +218,27 @@ impl ConversationRepo for SqliteStore {
         mine_args.push(opt_int(filters.user_id));
         Ok(ConversationCounts {
             mine: self.count(&format!("{base} AND c.assignee_id=?"), mine_args)?,
-            unassigned: self.count(&format!("{base} AND c.assignee_id IS NULL"), args.clone())?,
+            unassigned: self.count(
+                &format!("{base} AND c.assignee_id IS NULL AND c.assignee_agent_id IS NULL"),
+                args.clone(),
+            )?,
+            ai: self.count(
+                &format!("{base} AND c.assignee_agent_id IS NOT NULL AND c.assignee_id IS NULL"),
+                args.clone(),
+            )?,
             all: self.count(&base, args)?,
         })
+    }
+    fn stalled_ai_conversations(&self, stale_before: i64, limit: i64) -> Result<Vec<i64>> {
+        self.ids(
+            "SELECT c.id FROM conversations c
+             WHERE c.assignee_agent_id IS NOT NULL AND c.assignee_id IS NULL
+               AND c.status IN ('open','pending') AND c.last_activity_at<=?
+               AND (SELECT m.message_type FROM conversation_messages m WHERE m.conversation_id=c.id
+                      AND m.message_type<>'activity' ORDER BY m.created_at DESC, m.id DESC LIMIT 1)='incoming'
+             ORDER BY c.last_activity_at LIMIT ?",
+            vec![int(stale_before), int(limit)],
+        )
     }
 
     fn contact_conversations(&self, contact_id: i64, visible: Option<&[i64]>) -> Result<Vec<Conversation>> {

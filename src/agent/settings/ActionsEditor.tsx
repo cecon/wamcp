@@ -1,10 +1,19 @@
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Plus, Trash2 } from 'lucide-react';
+
 import type { Action, Catalog } from '../types';
 import { ACTIONS } from '../labels';
-import { Button } from '../ui/Button';
-import { BOX, choices, newAction, NO_PARAM, small, TEXT_PARAM } from './ruleOptions';
-import { ValueInput } from './ValueInput';
 import { useSlaPolicies } from '../sla/sla';
+import { choices, newAction, NO_PARAM, TEXT_PARAM } from './ruleOptions';
+import { ValueInput } from './ValueInput';
 
 interface Props {
   actions: Action[];
@@ -12,7 +21,7 @@ interface Props {
   onChange: (actions: Action[]) => void;
 }
 
-/** Ordered action list shared by automation rules and macros (Chatwoot ActionInput). */
+/** Ordered action list shared by automation rules and macros (Chatwoot ActionInput), agora no C3Theme. */
 export function ActionsEditor({ actions, catalog, onChange }: Props) {
   // SLA policies are only fetched once an "Adicionar SLA" action exists.
   const { policies } = useSlaPolicies(actions.some((a) => a.action_name === 'add_sla'));
@@ -21,23 +30,37 @@ export function ActionsEditor({ actions, catalog, onChange }: Props) {
   const set = (i: number, patch: Partial<Action>) =>
     onChange(actions.map((a, j) => (i === j ? { ...a, ...patch } : a)));
   return (
-    <fieldset>
-      <legend className="field-label">Ações</legend>
-      <ul className={BOX}>
+    <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+      <Typography component="legend" variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>
+        Ações
+      </Typography>
+      <Stack component="ul" spacing={1.5} sx={{ listStyle: 'none', m: 0, p: 0 }}>
         {actions.map((a, i) => (
-          <li key={i} className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label={`Ação ${i + 1}`}
-              className={small}
+          <Stack
+            component="li"
+            key={i}
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+          >
+            <TextField
+              select
+              size="small"
               value={a.action_name}
               onChange={(e) => set(i, { action_name: e.target.value, action_params: [] })}
+              slotProps={{
+                select: { native: true },
+                inputLabel: { shrink: true },
+                htmlInput: { 'aria-label': `Ação ${i + 1}` },
+              }}
+              sx={{ minWidth: 190 }}
             >
               {Object.entries(ACTIONS).map(([id, label]) => (
                 <option key={id} value={id}>
                   {label}
                 </option>
               ))}
-            </select>
+            </TextField>
             {!NO_PARAM.has(a.action_name) && (
               <ValueInput
                 id={`Parâmetro ${i + 1}`}
@@ -47,24 +70,27 @@ export function ActionsEditor({ actions, catalog, onChange }: Props) {
                 onChange={(v) => set(i, { action_params: v ? [v] : [] })}
               />
             )}
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Trash2}
+            <IconButton
+              size="small"
+              color="error"
               aria-label={`Remover ação ${i + 1}`}
               onClick={() => onChange(actions.filter((_, j) => j !== i))}
-            />
-          </li>
+            >
+              <Trash2 size={14} />
+            </IconButton>
+          </Stack>
         ))}
         <li>
           <Button
-            variant="faded"
-            icon={Plus}
-            label="Adicionar ação"
+            size="small"
+            variant="outlined"
+            startIcon={<Plus size={16} />}
             onClick={() => onChange([...actions, newAction()])}
-          />
+          >
+            Adicionar ação
+          </Button>
         </li>
-      </ul>
-    </fieldset>
+      </Stack>
+    </Box>
   );
 }

@@ -1,9 +1,19 @@
+import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Plus, X } from 'lucide-react';
+
 import { http } from '../api';
 import type { Catalog, Conversation, User } from '../types';
 import { PRIORITY_LABEL } from '../labels';
-import { Button } from '../ui/Button';
-import { Dropdown, MenuItem } from '../ui/Overlay';
+import { useFetch } from '../useFetch';
 
 interface Props {
   conversation: Conversation;
@@ -13,35 +23,58 @@ interface Props {
   onError: (message: string) => void;
 }
 
-/** Chatwoot ConversationAction.vue: assigned agent (+ assign to me), team, priority, labels. */
+const fieldSx = {
+  height: 32,
+  width: '100%',
+  borderRadius: 1,
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  px: 1,
+  fontSize: 14,
+  color: 'text.primary',
+};
+
+/** Ações da conversa no C3Theme (lote 24): agente (+ “Atribuir a mim”), time, prioridade e etiquetas. */
 export function ConversationActions({ conversation: c, user, catalog, onChange, onError }: Props) {
+  const [adding, setAdding] = useState(false);
   const path = `/conversations/${c.display_id}`;
   const run = (request: Promise<Conversation>) =>
     request.then(onChange).catch((e: Error) => onError(e.message));
   const agents = catalog.agents.filter(
     (a) => a.active && (a.role === 'administrator' || a.inbox_ids?.includes(c.inbox_id)),
   );
+  // O agente de IA é da caixa, não um “agente atribuído” humano: mostramos quem está atendendo
+  // automaticamente enquanto ninguém assume a conversa.
+  const aiAgentId = catalog.inboxes.find((inbox) => inbox.id === c.inbox_id)?.ai_agent_id ?? null;
+  const directory = useFetch<{ id: number; name: string }[]>(aiAgentId ? '/agent_directory' : null);
+  const aiAgent = aiAgentId ? directory.data?.find((agent) => agent.id === aiAgentId) : undefined;
   const available = catalog.labels.filter((l) => !c.labels.includes(l.title));
   const setLabels = (labels: string[]) => run(http(`${path}/labels`, 'POST', { labels }));
   const color = (title: string) => catalog.labels.find((l) => l.title === title)?.color || '#8B8D98';
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <div className="mb-1 flex items-center justify-between text-sm text-n-slate-12">
-          <span id="assignee-label">Agente atribuído</span>
+    <Stack spacing={2}>
+      <Box>
+        <Stack direction="row" sx={{ mb: 0.5, alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="body2">
+            <Box component="span" id="assignee-label">
+              Agente atribuído
+            </Box>
+          </Typography>
           {c.assignee_id !== user.id && (
-            <button
-              type="button"
-              className="text-xs font-medium text-n-blue-11 hover:underline"
+            <Button
+              size="small"
+              variant="text"
               onClick={() => void run(http(`${path}/assignments`, 'POST', { assignee_id: user.id }))}
+              sx={{ fontSize: 12, textTransform: 'none' }}
             >
               Atribuir a mim
-            </button>
+            </Button>
           )}
-        </div>
-        <select
-          className="field"
+        </Stack>
+        <Box
+          component="select"
           aria-labelledby="assignee-label"
           value={c.assignee_id ?? ''}
           onChange={(e) =>
@@ -51,6 +84,7 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               }),
             )
           }
+          sx={fieldSx}
         >
           <option value="">Nenhum</option>
           {agents.map((a) => (
@@ -59,12 +93,20 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               {a.availability === 'online' ? '' : a.availability === 'busy' ? ' · ocupado' : ' · offline'}
             </option>
           ))}
-        </select>
-      </div>
-      <label className="block">
-        <span className="mb-1 block text-sm text-n-slate-12">Time atribuído</span>
-        <select
-          className="field"
+        </Box>
+        {!c.assignee_id && (c.assignee_agent_name || aiAgent) && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            Responsável: <strong>{c.assignee_agent_name ?? aiAgent?.name}</strong> (IA) — responde até um
+            humano assumir; se não resolver, passa automaticamente para uma pessoa.
+          </Typography>
+        )}
+      </Box>
+      <Box>
+        <Typography component="label" variant="body2" sx={{ display: 'block', mb: 0.5 }}>
+          Time atribuído
+        </Typography>
+        <Box
+          component="select"
           aria-label="Time atribuído"
           value={c.team_id ?? ''}
           onChange={(e) =>
@@ -74,6 +116,7 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               }),
             )
           }
+          sx={fieldSx}
         >
           <option value="">Nenhum</option>
           {catalog.teams.map((t) => (
@@ -81,17 +124,20 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               {t.name}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-sm text-n-slate-12">Prioridade</span>
-        <select
-          className="field"
+        </Box>
+      </Box>
+      <Box>
+        <Typography component="label" variant="body2" sx={{ display: 'block', mb: 0.5 }}>
+          Prioridade
+        </Typography>
+        <Box
+          component="select"
           aria-label="Prioridade"
           value={c.priority ?? ''}
           onChange={(e) =>
             void run(http(`${path}/toggle_priority`, 'POST', { priority: e.target.value || null }))
           }
+          sx={fieldSx}
         >
           <option value="">Nenhuma</option>
           {Object.entries(PRIORITY_LABEL).map(([id, label]) => (
@@ -99,67 +145,88 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
               {label}
             </option>
           ))}
-        </select>
-      </label>
-      <div>
-        <span className="mb-2 block text-sm text-n-slate-12">Etiquetas da conversa</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <Dropdown
-            align="start"
-            className="max-h-60 w-56 overflow-y-auto"
-            trigger={({ toggle }) => (
-              <button
-                type="button"
-                onClick={toggle}
-                data-shortcut="labels"
-                className="flex h-6 items-center gap-1 rounded-md px-2 text-xs text-n-blue-11 outline outline-1 -outline-offset-1 outline-dashed outline-n-blue-9/40 hover:bg-n-blue-3"
-              >
-                <Plus size={12} /> Adicionar etiquetas
-              </button>
-            )}
+        </Box>
+      </Box>
+      <Box>
+        <Typography variant="body2" sx={{ display: 'block', mb: 1 }}>
+          Etiquetas da conversa
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button
+            size="small"
+            variant="outlined"
+            data-shortcut="labels"
+            startIcon={<Plus size={12} />}
+            onClick={() => setAdding(true)}
+            sx={{ borderRadius: 1, borderStyle: 'dashed', textTransform: 'none', fontSize: 12, height: 24 }}
           >
-            {(close) =>
-              available.length === 0 ? (
-                <p className="p-2 text-sm text-n-slate-11">Nenhuma etiqueta disponível.</p>
+            Adicionar etiquetas
+          </Button>
+          {adding && (
+            <Box
+              sx={{
+                width: '100%',
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+                maxHeight: 240,
+                overflowY: 'auto',
+              }}
+              role="menu"
+            >
+              {available.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
+                  Nenhuma etiqueta disponível.
+                </Typography>
               ) : (
                 available.map((l) => (
-                  <MenuItem
+                  <Button
                     key={l.id}
-                    label={
-                      <span className="flex items-center gap-2">
-                        <span className="size-2 rounded-sm" style={{ background: l.color }} />
-                        {l.title}
-                      </span>
-                    }
+                    role="menuitem"
+                    fullWidth
                     onClick={() => {
+                      setAdding(false);
                       void setLabels([...c.labels, l.title]);
-                      close();
                     }}
-                  />
+                    sx={{ justifyContent: 'flex-start', gap: 1, textTransform: 'none' }}
+                  >
+                    <Box sx={{ width: 8, height: 8, borderRadius: 0.25, bgcolor: l.color }} />
+                    {l.title}
+                  </Button>
                 ))
-              )
-            }
-          </Dropdown>
+              )}
+            </Box>
+          )}
           {c.labels.map((title) => (
-            <span
+            <Stack
               key={title}
-              className="flex h-6 items-center gap-1.5 rounded-lg bg-n-label-color pr-1 pl-2 text-xs text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-label-border"
+              direction="row"
+              spacing={0.75}
+              sx={{
+                height: 24,
+                alignItems: 'center',
+                borderRadius: 1,
+                bgcolor: 'action.hover',
+                border: 1,
+                borderColor: 'divider',
+                pl: 1,
+                pr: 0.25,
+              }}
             >
-              <span className="size-2 rounded-sm" style={{ background: color(title) }} />
-              {title}
-              <Button
-                color="slate"
-                variant="ghost"
-                size="xs"
-                icon={X}
+              <Box sx={{ width: 8, height: 8, borderRadius: 0.25, bgcolor: color(title) }} />
+              <Typography variant="caption">{title}</Typography>
+              <IconButton
+                size="small"
                 aria-label={`Remover ${title}`}
-                className="!size-4"
                 onClick={() => void setLabels(c.labels.filter((l) => l !== title))}
-              />
-            </span>
+                sx={{ p: 0.25 }}
+              >
+                <X size={12} />
+              </IconButton>
+            </Stack>
           ))}
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Box>
+    </Stack>
   );
 }

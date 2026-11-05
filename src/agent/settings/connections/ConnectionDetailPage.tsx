@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { ArrowLeft } from 'lucide-react';
+
 import { http } from '../../api';
-import { cn } from '../../ui/cn';
-import { SettingsHeader, SettingsPage } from '../../ui/Settings';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import { ChatGptLink } from './ChatGptLink';
 import { ConnectionStatus } from './ConnectionStatus';
 import { HistoryViewer } from './HistoryViewer';
@@ -55,59 +65,50 @@ export function ConnectionDetailPage({ id, onBack, onChange }: Props) {
     return () => clearInterval(timer);
   }, [loaded, connected, load]);
 
-  const back = { label: 'Canais', onClick: onBack };
+  const back = (
+    <Button variant="text" startIcon={<ArrowLeft size={16} />} onClick={onBack}>
+      Canais
+    </Button>
+  );
   if (!detail)
     return (
-      <SettingsPage>
-        <SettingsHeader title="Conexão" back={back} />
+      <SettingsC3Page>
+        <SettingsC3Header title="Conexão" action={back} />
         {error ? (
-          <p role="alert" className="text-sm text-n-ruby-11">
-            {error}
-          </p>
+          <SettingsC3Error>{error}</SettingsC3Error>
         ) : (
-          <p className="text-sm text-n-slate-11">Carregando conexão…</p>
+          <Typography variant="body2" color="text.secondary">
+            Carregando conexão…
+          </Typography>
         )}
-      </SettingsPage>
+      </SettingsC3Page>
     );
   const refresh = async () => {
     await load();
     await onChange().catch(() => {});
   };
   return (
-    <SettingsPage>
-      <SettingsHeader title={detail.name} description={formatPhone(detail.phone)} back={back} />
-      <div className="flex items-center gap-2">
+    <SettingsC3Page>
+      <SettingsC3Header title={detail.name} description={formatPhone(detail.phone)} action={back} />
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <ConnectionStatus status={detail.status} />
-        {detail.error && <span className="text-sm text-n-ruby-11">{detail.error}</span>}
-      </div>
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <nav role="tablist" className="flex gap-4 border-b border-n-weak">
+        {detail.error && (
+          <Typography variant="body2" sx={{ color: 'error.main' }}>
+            {detail.error}
+          </Typography>
+        )}
+      </Stack>
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Tabs value={tab} onChange={(_event, value: Tab) => setTab(value)} aria-label="Conexão">
         {TABS.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            onClick={() => setTab(value)}
-            className={cn(
-              'relative py-2.5 text-sm font-medium',
-              tab === value ? 'text-n-blue-11' : 'text-n-slate-11 hover:text-n-slate-12',
-            )}
-          >
-            {label}
-            {tab === value && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-n-brand" />}
-          </button>
+          <Tab key={value} value={value} label={label} />
         ))}
-      </nav>
+      </Tabs>
       {tab === 'pairing' && <PairingPanel detail={detail} onRefresh={refresh} />}
       {tab === 'history' && <HistoryViewer id={id} />}
       {tab === 'mcp' && <McpAccess id={id} url={detail.mcpUrl || ''} />}
       {tab === 'chatgpt' && <ChatGptLink id={id} url={detail.mcpUrl || ''} />}
       {tab === 'audit' && <AuditList id={id} />}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

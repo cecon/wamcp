@@ -1,9 +1,20 @@
 import { useEffect } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Check, X } from 'lucide-react';
+
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
-import { SidePanel } from '../../ui/Overlay';
 import { useAction } from '../useAction';
 import { StatusPill } from './StatusPill';
 import { CALL_STATUS, isFinal, type ActivityDetail, type EngineRun } from './types';
@@ -42,117 +53,192 @@ export function ActivityPanel({ id, name, onClose, onChanged }: Props) {
     });
 
   return (
-    <SidePanel title={`Pedido #${id}`} onClose={onClose}>
-      <div className="flex flex-col gap-5 overflow-y-auto px-6 py-5 text-sm">
-        {(error || action.error) && (
-          <p role="alert" className="text-n-ruby-11">
-            {error || action.error}
-          </p>
-        )}
-        {!data && !error && <p className="text-n-slate-11">Carregando…</p>}
-        {data?.tree.map(({ activity, runs, tool_calls, evidence, messages }) => {
-          const delegation = data.delegations.find((d) => d.activity_id === activity.id);
-          return (
-            <section
-              key={activity.id}
-              aria-label={`Atividade de ${name(activity.agent_id)}`}
-              className={`flex flex-col gap-2 rounded-lg border border-n-weak p-4 ${activity.parent_id ? 'ms-6' : ''}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-n-slate-12">
-                  {name(activity.agent_id)}
-                  {delegation && (
-                    <span className="font-normal text-n-slate-11">
-                      {' '}
-                      · delegado por {name(delegation.from_agent_id)} (skill {delegation.skill}, salto{' '}
-                      {delegation.hops})
-                    </span>
-                  )}
-                </span>
-                <StatusPill status={activity.status} />
-              </div>
-              <p className="text-n-slate-11">Pedido: {activity.request}</p>
-              {activity.result && <p className="text-n-slate-12">Resposta: {activity.result}</p>}
-              {activity.error && <p className="text-n-ruby-11">Erro: {activity.error}</p>}
-              {activity.evidence.length > 0 && (
-                <p className="text-xs text-n-slate-11">Evidências citadas: {activity.evidence.join(', ')}</p>
-              )}
-              {tool_calls.map((call) => (
-                <div
-                  key={call.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md bg-n-alpha-1 px-3 py-2"
-                >
-                  <code className="text-xs">{call.tool}</code>
-                  <span className="text-xs text-n-slate-11">{JSON.stringify(call.args)}</span>
-                  <span className="text-xs text-n-slate-12">→ {CALL_STATUS[call.status]}</span>
-                  {call.evidence_id && <span className="text-xs text-n-slate-11">({call.evidence_id})</span>}
-                  {call.status === 'pending_approval' && (
-                    <span className="ms-auto flex gap-1">
-                      <Button
-                        size="sm"
-                        icon={Check}
-                        label="Aprovar"
-                        disabled={action.busy}
-                        onClick={() => decide(call.id, true)}
-                      />
-                      <Button
-                        size="sm"
-                        color="ruby"
-                        variant="faded"
-                        icon={X}
-                        label="Recusar"
-                        disabled={action.busy}
-                        onClick={() => decide(call.id, false)}
-                      />
-                    </span>
-                  )}
-                </div>
-              ))}
-              {evidence.length > 0 && (
-                <details>
-                  <summary className="cursor-pointer text-xs text-n-slate-11">
-                    Evidências ({evidence.length})
-                  </summary>
-                  {evidence.map((e) => (
-                    <pre key={e.id} className="mt-1 overflow-x-auto rounded bg-n-alpha-1 p-2 text-xs">
-                      {e.id} · {e.source}
-                      {'\n'}
-                      {JSON.stringify(e.content, null, 2)}
-                    </pre>
-                  ))}
-                </details>
-              )}
-              {messages.length > 0 && (
-                <ul className="flex flex-col gap-1 text-xs text-n-slate-11">
-                  {messages.map((m) => (
-                    <li key={m.id}>
-                      <span className="font-medium text-n-slate-12">
-                        {m.from_agent_id ? name(m.from_agent_id) : '—'} →{' '}
-                        {m.to_agent_id ? name(m.to_agent_id) : '—'}:
-                      </span>{' '}
-                      {m.body}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {runs.length > 0 && <p className="text-xs text-n-slate-11">{usage(runs)}</p>}
-            </section>
-          );
-        })}
-        {data && data.audit.length > 0 && (
-          <details>
-            <summary className="cursor-pointer text-n-slate-12">Auditoria ({data.audit.length})</summary>
-            <ol className="mt-2 flex flex-col gap-1 text-xs text-n-slate-11">
-              {data.audit.map((a) => (
-                <li key={a.id}>
-                  {new Date(a.at).toLocaleTimeString('pt-BR')} · {a.agent_id ? name(a.agent_id) : 'Sistema'} ·{' '}
-                  {a.action} · {a.outcome}
-                </li>
-              ))}
-            </ol>
-          </details>
-        )}
-      </div>
-    </SidePanel>
+    <Dialog open fullWidth maxWidth="md" onClose={onClose} scroll="paper">
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        Pedido #{id}
+        <IconButton size="small" aria-label="Fechar" onClick={onClose}>
+          <X size={16} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={2.5}>
+          {(error || action.error) && (
+            <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+              {error || action.error}
+            </Typography>
+          )}
+          {!data && !error && (
+            <Typography variant="body2" color="text.secondary">
+              Carregando…
+            </Typography>
+          )}
+          {data?.tree.map(({ activity, runs, tool_calls, evidence, messages }) => {
+            const delegation = data.delegations.find((d) => d.activity_id === activity.id);
+            return (
+              <Box
+                key={activity.id}
+                component="section"
+                aria-label={`Atividade de ${name(activity.agent_id)}`}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  p: 2,
+                  ms: activity.parent_id ? 3 : 0,
+                }}
+              >
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between' }}>
+                  <Typography variant="body2">
+                    <Typography component="span" sx={{ fontWeight: 600 }}>
+                      {name(activity.agent_id)}
+                    </Typography>
+                    {delegation && (
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {' '}
+                        · delegado por {name(delegation.from_agent_id)} (skill {delegation.skill}, salto{' '}
+                        {delegation.hops})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <StatusPill status={activity.status} />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  Pedido: {activity.request}
+                </Typography>
+                {activity.result && <Typography variant="body2">Resposta: {activity.result}</Typography>}
+                {activity.error && (
+                  <Typography variant="body2" sx={{ color: 'error.main' }}>
+                    Erro: {activity.error}
+                  </Typography>
+                )}
+                {activity.evidence.length > 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    Evidências citadas: {activity.evidence.join(', ')}
+                  </Typography>
+                )}
+                {tool_calls.map((call) => (
+                  <Stack
+                    key={call.id}
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
+                      px: 2,
+                      py: 1,
+                    }}
+                  >
+                    <Typography component="code" variant="caption">
+                      {call.tool}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {JSON.stringify(call.args)}
+                    </Typography>
+                    <Typography variant="caption">→ {CALL_STATUS[call.status]}</Typography>
+                    {call.evidence_id && (
+                      <Typography variant="caption" color="text.secondary">
+                        ({call.evidence_id})
+                      </Typography>
+                    )}
+                    {call.status === 'pending_approval' && (
+                      <Stack direction="row" spacing={0.5} sx={{ ml: 'auto' }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<Check size={14} />}
+                          disabled={action.busy}
+                          onClick={() => decide(call.id, true)}
+                        >
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          startIcon={<X size={14} />}
+                          disabled={action.busy}
+                          onClick={() => decide(call.id, false)}
+                        >
+                          Recusar
+                        </Button>
+                      </Stack>
+                    )}
+                  </Stack>
+                ))}
+                {evidence.length > 0 && (
+                  <Box component="details">
+                    <Typography
+                      component="summary"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      Evidências ({evidence.length})
+                    </Typography>
+                    {evidence.map((e) => (
+                      <Box
+                        key={e.id}
+                        component="pre"
+                        sx={{
+                          mt: 1,
+                          overflowX: 'auto',
+                          borderRadius: 1,
+                          bgcolor: 'action.hover',
+                          p: 1,
+                          fontSize: '0.75rem',
+                          m: 0,
+                        }}
+                      >
+                        {e.id} · {e.source}
+                        {'\n'}
+                        {JSON.stringify(e.content, null, 2)}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                {messages.length > 0 && (
+                  <Stack component="ul" spacing={0.5} sx={{ m: 0, pl: 2 }}>
+                    {messages.map((m) => (
+                      <Typography component="li" key={m.id} variant="caption" color="text.secondary">
+                        <Typography component="span" variant="caption" sx={{ fontWeight: 600 }}>
+                          {m.from_agent_id ? name(m.from_agent_id) : '—'} →{' '}
+                          {m.to_agent_id ? name(m.to_agent_id) : '—'}:
+                        </Typography>{' '}
+                        {m.body}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+                {runs.length > 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    {usage(runs)}
+                  </Typography>
+                )}
+              </Box>
+            );
+          })}
+          {data && data.audit.length > 0 && (
+            <Box component="details">
+              <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>
+                Auditoria ({data.audit.length})
+              </Typography>
+              <Stack component="ol" spacing={0.5} sx={{ mt: 1, pl: 2 }}>
+                {data.audit.map((a) => (
+                  <Typography component="li" key={a.id} variant="caption" color="text.secondary">
+                    {new Date(a.at).toLocaleTimeString('pt-BR')} · {a.agent_id ? name(a.agent_id) : 'Sistema'}{' '}
+                    · {a.action} · {a.outcome}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+          )}
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 }

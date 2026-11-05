@@ -11,13 +11,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm audit --audit-level=high
+          cache: pnpm
+      # The C3Theme packages come from the private repo by git (SHA + subpath).
+      - name: Authorize the private C3Theme git dependency
+        shell: bash
+        run: |
+          base="https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/"
+          git config --global --add url."$base".insteadOf "git@github.com:"
+          git config --global --add url."$base".insteadOf "ssh://git@github.com/"
+          git config --global --add url."$base".insteadOf "https://github.com/"
+      - name: Build the C3Theme packages from git
+        shell: bash
+        env:
+          C3THEME_TOKEN: ${{ secrets.C3THEME_TOKEN }}
+        run: |
+          sha=$(node -p "require('./package.json').dependencies['@c3theme/ui'].split('#')[1].split('&')[0]")
+          git clone --quiet "https://x-access-token:${C3THEME_TOKEN}@github.com/cecon/C3Theme.git" .c3theme
+          git -C .c3theme checkout --quiet "$sha"
+          (cd .c3theme && pnpm install --frozen-lockfile --reporter=append-only && pnpm --filter @c3theme/ui --filter @c3theme/chat build)
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Use the freshly built C3Theme packages
+        shell: bash
+        run: |
+          for pkg in ui chat; do
+            rm -rf "node_modules/@c3theme/$pkg/dist"
+            cp -R ".c3theme/packages/$pkg/dist" "node_modules/@c3theme/$pkg/dist"
+          done
+      - run: pnpm run check
+      - run: pnpm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       # The OAuth browser test runs the real Rust backend (without the WhatsApp adapter).
       - uses: dtolnay/rust-toolchain@stable
@@ -25,7 +50,7 @@ jobs:
         with:
           workspaces: src-tauri -> target
       - run: cargo build --manifest-path src-tauri/Cargo.toml -p wamcp-server --no-default-features
-      - run: npm run test:e2e
+      - run: pnpm run test:e2e
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -35,21 +60,45 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy, llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-      - run: npm ci
-      - run: npm run prepare:desktop
-      - run: npm run build
+      - name: Authorize the private C3Theme git dependency
+        shell: bash
+        run: |
+          base="https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/"
+          git config --global --add url."$base".insteadOf "git@github.com:"
+          git config --global --add url."$base".insteadOf "ssh://git@github.com/"
+          git config --global --add url."$base".insteadOf "https://github.com/"
+      - name: Build the C3Theme packages from git
+        shell: bash
+        env:
+          C3THEME_TOKEN: ${{ secrets.C3THEME_TOKEN }}
+        run: |
+          sha=$(node -p "require('./package.json').dependencies['@c3theme/ui'].split('#')[1].split('&')[0]")
+          git clone --quiet "https://x-access-token:${C3THEME_TOKEN}@github.com/cecon/C3Theme.git" .c3theme
+          git -C .c3theme checkout --quiet "$sha"
+          (cd .c3theme && pnpm install --frozen-lockfile --reporter=append-only && pnpm --filter @c3theme/ui --filter @c3theme/chat build)
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Use the freshly built C3Theme packages
+        shell: bash
+        run: |
+          for pkg in ui chat; do
+            rm -rf "node_modules/@c3theme/$pkg/dist"
+            cp -R ".c3theme/packages/$pkg/dist" "node_modules/@c3theme/$pkg/dist"
+          done
+      - run: pnpm run prepare:desktop
+      - run: pnpm run build
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --locked -- -D warnings
       # Backend tests and coverage gate (the real WhatsApp adapter is exercised manually, see docs).
-      - run: npm run coverage:server
+      - run: pnpm run coverage:server

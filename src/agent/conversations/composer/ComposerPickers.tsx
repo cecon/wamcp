@@ -1,8 +1,17 @@
+import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { AtSign, Search, Smile } from 'lucide-react';
+
 import type { Canned, User } from '../../types';
 import { Avatar } from '../../ui/Avatar';
-import { cn } from '../../ui/cn';
-import { Dropdown } from '../../ui/Overlay';
 
 // prettier-ignore
 const EMOJIS = [
@@ -12,44 +21,59 @@ const EMOJIS = [
   '⭐', '💡', '📌', '📞', '📦', '💰', '🕒', '🚀',
 ];
 
-/** Compact emoji grid; the composer inserts the pick at the caret. */
+/** Grid compacto de emoji no C3Theme (lote 25); o composer insere no caret. */
 export function EmojiPicker({ onPick, disabled }: { onPick: (emoji: string) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Dropdown
-      align="start"
-      placement="top"
-      className="w-72 grid-cols-8"
-      trigger={({ toggle }) => (
-        <button
-          type="button"
-          aria-label="Inserir emoji"
-          title="Emoji"
-          disabled={disabled}
-          onClick={toggle}
-          className="grid size-8 place-content-center rounded-lg text-n-slate-11 hover:bg-n-alpha-2 disabled:opacity-50"
+    <Box sx={{ position: 'relative', display: 'flex' }}>
+      <IconButton
+        size="small"
+        aria-label="Inserir emoji"
+        title="Emoji"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        <Smile size={16} />
+      </IconButton>
+      {open && (
+        <Box
+          role="menu"
+          aria-label="Emoji"
+          sx={{
+            position: 'absolute',
+            bottom: '100%',
+            left: 0,
+            zIndex: 20,
+            mb: 1,
+            width: 288,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(8, 1fr)',
+            gap: 0.5,
+            p: 1,
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            boxShadow: 3,
+          }}
         >
-          <Smile size={16} />
-        </button>
+          {EMOJIS.map((emoji) => (
+            <Button
+              key={emoji}
+              role="menuitem"
+              aria-label={emoji}
+              onClick={() => {
+                onPick(emoji);
+                setOpen(false);
+              }}
+              sx={{ minWidth: 0, width: 32, height: 32, p: 0, fontSize: 18 }}
+            >
+              {emoji}
+            </Button>
+          ))}
+        </Box>
       )}
-    >
-      {(close) =>
-        EMOJIS.map((emoji) => (
-          <button
-            key={emoji}
-            type="button"
-            role="menuitem"
-            aria-label={emoji}
-            onClick={() => {
-              onPick(emoji);
-              close();
-            }}
-            className="grid size-8 place-content-center rounded-lg text-lg hover:bg-n-alpha-2"
-          >
-            {emoji}
-          </button>
-        ))
-      }
-    </Dropdown>
+    </Box>
   );
 }
 
@@ -61,40 +85,105 @@ interface CannedProps {
   onPick: (canned: Canned) => void;
 }
 
-/** Chatwoot CannedResponse.vue: list on the left, preview of the highlighted one on the right. */
+/** Respostas prontas no C3Theme (lote 25): lista à esquerda, prévia da destacada à direita. */
 export function CannedList({ shortcut, options, highlight, onHighlight, onPick }: CannedProps) {
   const preview = options[highlight];
   return (
-    <div className="absolute bottom-full left-0 z-20 mb-2 flex h-60 w-full max-w-[768px] overflow-hidden rounded-xl border border-n-strong bg-n-alpha-3 shadow-lg backdrop-blur-[100px]">
-      <div className="flex w-full max-w-[420px] flex-col border-r border-n-weak">
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-n-weak px-3 text-sm text-n-slate-11">
-          <Search size={14} /> Respostas prontas: /{shortcut}
-        </div>
-        <ul role="listbox" aria-label="Respostas prontas" className="overflow-y-auto p-1">
+    <Box
+      sx={{
+        position: 'absolute',
+        bottom: '100%',
+        left: 0,
+        zIndex: 20,
+        mb: 1,
+        display: 'flex',
+        height: 240,
+        width: '100%',
+        maxWidth: 768,
+        overflow: 'hidden',
+        borderRadius: 2,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: 4,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          width: '100%',
+          maxWidth: 420,
+          flexDirection: 'column',
+          borderRight: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            height: 44,
+            flexShrink: 0,
+            alignItems: 'center',
+            borderBottom: 1,
+            borderColor: 'divider',
+            px: 1.5,
+            color: 'text.secondary',
+          }}
+        >
+          <Search size={14} />
+          <Typography variant="body2">Respostas prontas: /{shortcut}</Typography>
+        </Stack>
+        <Box
+          component="ul"
+          role="listbox"
+          aria-label="Respostas prontas"
+          sx={{ overflowY: 'auto', p: 0.5, m: 0, listStyle: 'none' }}
+        >
           {options.map((c, i) => (
-            <li key={c.id} role="option" aria-selected={i === highlight}>
-              <button
-                type="button"
+            <Box component="li" key={c.id} role="option" aria-selected={i === highlight}>
+              <Button
+                fullWidth
                 onMouseEnter={() => onHighlight(i)}
                 onClick={() => onPick(c)}
-                className={cn(
-                  'w-full rounded-lg px-2 py-1 text-left',
-                  i === highlight && 'bg-n-alpha-black2',
-                )}
+                sx={{
+                  justifyContent: 'flex-start',
+                  textAlign: 'left',
+                  textTransform: 'none',
+                  px: 1,
+                  py: 0.5,
+                  bgcolor: i === highlight ? 'action.selected' : 'transparent',
+                }}
               >
-                <span className="block text-sm font-medium text-n-slate-12">/{c.short_code}</span>
-                <span className="block truncate text-xs text-n-slate-11">{c.content}</span>
-              </button>
-            </li>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500, display: 'block' }}>
+                    /{c.short_code}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                    {c.content}
+                  </Typography>
+                </Box>
+              </Button>
+            </Box>
           ))}
-        </ul>
-      </div>
+        </Box>
+      </Box>
       {preview && (
-        <p className="hidden flex-1 overflow-y-auto px-4 py-3 text-sm whitespace-pre-wrap text-n-slate-12 md:block">
+        <Typography
+          variant="body2"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            flex: 1,
+            overflowY: 'auto',
+            px: 2,
+            py: 1.5,
+            whiteSpace: 'pre-wrap',
+          }}
+        >
           {preview.content}
-        </p>
+        </Typography>
       )}
-    </div>
+    </Box>
   );
 }
 
@@ -106,34 +195,75 @@ interface MentionProps {
   onPick: (agent: User) => void;
 }
 
-/** Chatwoot TagAgents.vue: agents matching the "@query" typed in a private note. */
+/** Menção de agentes no C3Theme (lote 25): agentes que casam com “@query” na nota privada. */
 export function MentionList({ query, options, highlight, onHighlight, onPick }: MentionProps) {
   return (
-    <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-[320px] overflow-hidden rounded-xl border border-n-strong bg-n-alpha-3 shadow-lg backdrop-blur-[100px]">
-      <div className="flex h-9 items-center gap-2 border-b border-n-weak px-3 text-xs text-n-slate-11">
-        <AtSign size={14} /> Mencionar agente{query ? `: ${query}` : ''}
-      </div>
-      <ul role="listbox" aria-label="Mencionar agente" className="max-h-60 overflow-y-auto p-1">
+    <Box
+      sx={{
+        position: 'absolute',
+        bottom: '100%',
+        left: 0,
+        zIndex: 20,
+        mb: 1,
+        width: '100%',
+        maxWidth: 320,
+        overflow: 'hidden',
+        borderRadius: 2,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        boxShadow: 4,
+      }}
+    >
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          height: 36,
+          alignItems: 'center',
+          borderBottom: 1,
+          borderColor: 'divider',
+          px: 1.5,
+          color: 'text.secondary',
+        }}
+      >
+        <AtSign size={14} />
+        <Typography variant="caption">Mencionar agente{query ? `: ${query}` : ''}</Typography>
+      </Stack>
+      <Box
+        component="ul"
+        role="listbox"
+        aria-label="Mencionar agente"
+        sx={{ maxHeight: 240, overflowY: 'auto', p: 0.5, m: 0, listStyle: 'none' }}
+      >
         {options.map((a, i) => (
-          <li key={a.id} role="option" aria-selected={i === highlight}>
-            <button
-              type="button"
+          <Box component="li" key={a.id} role="option" aria-selected={i === highlight}>
+            <Button
+              fullWidth
               onMouseEnter={() => onHighlight(i)}
               onClick={() => onPick(a)}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left',
-                i === highlight && 'bg-n-alpha-black2',
-              )}
+              sx={{
+                justifyContent: 'flex-start',
+                gap: 1,
+                px: 1,
+                py: 0.75,
+                textTransform: 'none',
+                bgcolor: i === highlight ? 'action.selected' : 'transparent',
+              }}
             >
               <Avatar name={a.name} size={24} />
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-n-slate-12">{a.name}</span>
-                <span className="block truncate text-xs text-n-slate-11">{a.email}</span>
-              </span>
-            </button>
-          </li>
+              <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, display: 'block' }} noWrap>
+                  {a.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                  {a.email}
+                </Typography>
+              </Box>
+            </Button>
+          </Box>
         ))}
-      </ul>
-    </div>
+      </Box>
+    </Box>
   );
 }

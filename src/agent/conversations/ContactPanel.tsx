@@ -1,5 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { AtSign, Mail, Phone, X } from 'lucide-react';
+
 import { http, timeAgo } from '../api';
 import type { Catalog, Contact, Conversation, FilterValue, User } from '../types';
 import { STATUS_LABEL } from '../labels';
@@ -13,10 +22,12 @@ import { MacroRunner } from '../macros/MacroRunner';
 import { SlaSection } from '../sla/SlaSection';
 
 const Row = ({ icon, children }: { icon: ReactNode; children: ReactNode }) => (
-  <p className="flex min-w-0 items-center gap-2 text-sm text-n-slate-11">
-    <span className="shrink-0 text-n-slate-10">{icon}</span>
-    <span className="truncate">{children}</span>
-  </p>
+  <Stack direction="row" spacing={1} sx={{ minWidth: 0, alignItems: 'center' }}>
+    <Box sx={{ flexShrink: 0, color: 'text.disabled', display: 'flex' }}>{icon}</Box>
+    <Typography variant="body2" color="text.secondary" noWrap>
+      {children}
+    </Typography>
+  </Stack>
 );
 
 interface Props {
@@ -29,7 +40,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Chatwoot ConversationSidebar / ContactPanel: contact info then reorderable accordion sections. */
+/** Painel do contato no C3Theme (lote 22): contato e seções reordenáveis (ações, SLA, macros, participantes…). */
 export function ContactPanel({
   conversation: c,
   user,
@@ -60,22 +71,51 @@ export function ContactPanel({
   const previous = (contact?.conversations || []).filter((p) => p.id !== c.id);
 
   return (
-    <aside
+    <Box
+      component="aside"
       aria-label="Painel do contato"
-      className="hidden h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-n-weak bg-n-surface-2 xl:flex 2xl:w-[360px]"
+      sx={{
+        display: { xs: 'none', xl: 'flex' },
+        height: '100%',
+        width: { xl: 320, '2xl': 360 },
+        flexShrink: 0,
+        flexDirection: 'column',
+        overflowY: 'auto',
+        borderLeft: 1,
+        borderColor: 'divider',
+        bgcolor: 'var(--color-n-surface-2)',
+      }}
     >
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-n-weak px-4 py-2">
-        <span className="text-sm font-medium text-n-slate-12">Contato</span>
-        <Button color="slate" variant="ghost" icon={X} aria-label="Fechar painel" onClick={onClose} />
-      </div>
-      <div className="flex flex-col gap-2 p-4">
+      <Stack
+        direction="row"
+        sx={{
+          height: 48,
+          flexShrink: 0,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: 1,
+          borderColor: 'divider',
+          px: 2,
+          py: 1,
+        }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          Contato
+        </Typography>
+        <IconButton size="small" aria-label="Fechar painel" onClick={onClose}>
+          <X size={16} />
+        </IconButton>
+      </Stack>
+      <Stack spacing={1} sx={{ p: 2 }}>
         <Avatar name={name} src={contact?.avatar_url ?? c.contact_avatar_url} size={48} />
-        <p className="mt-1 text-base font-medium text-n-slate-12">{name}</p>
+        <Typography variant="subtitle1" sx={{ mt: 0.5, fontWeight: 500 }}>
+          {name}
+        </Typography>
         {contact?.email && <Row icon={<Mail size={14} />}>{contact.email}</Row>}
         {c.contact_phone && <Row icon={<Phone size={14} />}>{c.contact_phone}</Row>}
         <Row icon={<AtSign size={14} />}>{c.contact_jid}</Row>
-      </div>
-      <div className="flex flex-col gap-3 px-2 pb-8">
+      </Stack>
+      <Stack spacing={1.5} sx={{ px: 1, pb: 4 }}>
         <Accordion title="Ações da conversa" open>
           <ConversationActions
             conversation={c}
@@ -110,40 +150,54 @@ export function ContactPanel({
           />
         </Accordion>
         <Accordion title="Informações da conversa">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-n-slate-11">Número</dt>
-            <dd className="text-n-slate-12">#{c.display_id}</dd>
-            <dt className="text-n-slate-11">Caixa</dt>
-            <dd className="text-n-slate-12">{c.inbox_name}</dd>
-            <dt className="text-n-slate-11">Status</dt>
-            <dd className="text-n-slate-12">{STATUS_LABEL[c.status]}</dd>
-            <dt className="text-n-slate-11">Última atividade</dt>
-            <dd className="text-n-slate-12">{timeAgo(c.last_activity_at)}</dd>
-          </dl>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 2, rowGap: 1 }}>
+            {[
+              ['Número', `#${c.display_id}`],
+              ['Caixa', c.inbox_name],
+              ['Status', STATUS_LABEL[c.status]],
+              ['Última atividade', timeAgo(c.last_activity_at)],
+            ].map(([label, value]) => (
+              <Box key={label} sx={{ display: 'contents' }}>
+                <Typography variant="body2" color="text.secondary">
+                  {label}
+                </Typography>
+                <Typography variant="body2">{value}</Typography>
+              </Box>
+            ))}
+          </Box>
         </Accordion>
         <Accordion title="Conversas anteriores">
           {previous.length === 0 ? (
-            <p className="text-sm text-n-slate-11">Nenhuma conversa anterior.</p>
+            <Typography variant="body2" color="text.secondary">
+              Nenhuma conversa anterior.
+            </Typography>
           ) : (
-            <ul className="flex flex-col gap-1">
+            <Stack component="ul" spacing={0.5} sx={{ listStyle: 'none', m: 0, p: 0 }}>
               {previous.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
+                <Box component="li" key={p.id}>
+                  <Button
+                    color="slate"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    label={
+                      <>
+                        <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
+                          #{p.display_id}
+                        </Typography>{' '}
+                        <Typography component="span" variant="caption" color="text.secondary">
+                          {p.inbox_name} · {STATUS_LABEL[p.status]} · {timeAgo(p.last_activity_at)}
+                        </Typography>
+                      </>
+                    }
                     onClick={() => onOpenConversation(p.display_id)}
-                    className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-n-alpha-2"
-                  >
-                    <span className="font-medium text-n-slate-12">#{p.display_id}</span>{' '}
-                    <span className="text-n-slate-11">
-                      {p.inbox_name} · {STATUS_LABEL[p.status]} · {timeAgo(p.last_activity_at)}
-                    </span>
-                  </button>
-                </li>
+                  />
+                </Box>
               ))}
-            </ul>
+            </Stack>
           )}
         </Accordion>
-      </div>
-    </aside>
+      </Stack>
+    </Box>
   );
 }

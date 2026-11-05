@@ -46,6 +46,9 @@ pub trait ConversationRepo {
     fn update_conversation(&self, id: i64, changes: &ConversationChanges) -> Result<Conversation>;
     fn conversations(&self, filters: &ConversationFilters) -> Result<Vec<Conversation>>;
     fn conversation_counts(&self, filters: &ConversationFilters) -> Result<ConversationCounts>;
+    /// Conversas cujo responsável é o agente de IA da caixa, cuja última mensagem é do contato e que
+    /// estão paradas desde `stale_before` (o vigia pede ao agente para decidir e depois passa a um humano).
+    fn stalled_ai_conversations(&self, stale_before: i64, limit: i64) -> Result<Vec<i64>>;
     fn contact_conversations(&self, contact_id: i64, visible: Option<&[i64]>) -> Result<Vec<Conversation>>;
     fn due_snoozed(&self, now: i64) -> Result<Vec<i64>>;
     fn add_participant(&self, conversation_id: i64, user_id: i64) -> Result<()>;

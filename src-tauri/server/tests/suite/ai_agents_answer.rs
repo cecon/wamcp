@@ -10,6 +10,7 @@ use common::{Fixture, Incoming};
 use parking_lot::Mutex;
 use serde_json::{json, Value};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use wamcp_server::adapters::outbound::llm::claude_cli::parse_output;
@@ -24,13 +25,17 @@ use wamcp_server::domain::model::SealedCredential;
 struct FakeRuntime {
     calls: Mutex<Vec<LlmRequest>>,
     location: Option<String>,
+    handoff: AtomicBool,
 }
 
 #[async_trait]
 impl Llm for FakeRuntime {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         self.calls.lock().push(request.clone());
-        Ok(json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": false }).into())
+        Ok(
+            json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": self.handoff.load(Ordering::Relaxed) })
+                .into(),
+        )
     }
 
     fn location(&self) -> Option<String> {
@@ -42,6 +47,7 @@ fn runtime(location: Option<&str>) -> Arc<FakeRuntime> {
     Arc::new(FakeRuntime {
         calls: Mutex::default(),
         location: location.map(String::from),
+        handoff: AtomicBool::new(false),
     })
 }
 
@@ -262,4 +268,33 @@ fn codex_and_claude_outputs_are_read_back() {
 
     let inline = br#"{"type":"result","is_error":false,"result":"{\"reply\":\"Oi\",\"handoff\":true}"}"#;
     assert_eq!(parse_output(inline, b"").unwrap()["handoff"], true);
+}
+
+#[tokio::test]
+async fn ai_is_responsible_and_hands_off_to_a_human_when_it_cannot_solve() {
+    let s = setup().await;
+    let p = profiles(&s.admin).await;
+    s.write("IN1", "Oi").await;
+    let ana = s.agent(ai(&p, "Ana", "operator")).await;
+    assert_eq!(s.connect(Some(ana)).await.status, 200);
+    let handed = s
+        .admin
+        .post("/conversations/1/toggle_status", json!({ "status": "pending" }))
+        .await;
+    assert_eq!(handed.status, 200, "{:?}", handed.body);
+    s.f.settle().await;
+
+    let c = s.admin.get("/conversations/1").await.body;
+    assert_eq!(c["assignee_agent_name"], "Ana", "{c:?}");
+    assert!(c["assignee_agent_id"].as_i64().is_some());
+    assert!(c["assignee_id"].is_null());
+
+    // Ela não consegue resolver: a conversa obrigatoriamente passa para um humano.
+    s.claude.handoff.store(true, Ordering::Relaxed);
+    s.write("IN2", "Quero falar com uma pessoa").await;
+    s.f.settle().await;
+    let c = s.admin.get("/conversations/1").await.body;
+    assert!(c["assignee_agent_id"].is_null(), "{c:?}");
+    assert!(c["assignee_id"].as_i64().is_some(), "{c:?}");
+    assert_eq!(c["status"], "open");
 }

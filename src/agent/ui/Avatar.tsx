@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { cn } from './cn';
+
+// material-ui
+import Box from '@mui/material/Box';
+import MuiAvatar from '@mui/material/Avatar';
+
 import { initials } from '../api';
 import type { Availability } from '../types';
 
@@ -13,9 +17,9 @@ const PALETTE: [string, string][] = [
   ['#E1E9FF', '#3A5BC7'],
 ];
 const STATUS: Record<Availability, string> = {
-  online: 'bg-n-teal-10',
-  busy: 'bg-n-amber-10',
-  offline: 'bg-n-slate-10',
+  online: 'var(--color-n-teal-10)',
+  busy: 'var(--color-n-amber-10)',
+  offline: 'var(--color-n-slate-10)',
 };
 
 function pick(name: string) {
@@ -33,39 +37,50 @@ interface Props {
   src?: string | null;
 }
 
+/** Avatar do app sobre o `Avatar` do MUI, com iniciais determinísticas e o ponto de disponibilidade. */
 export function Avatar({ name, size = 32, status, className, src }: Props) {
   const label = name || '?';
   const [background, color] = pick(label);
   const [broken, setBroken] = useState<string | null>(null);
   const photo = src && broken !== src ? src : null;
   return (
-    <span className={cn('relative inline-flex shrink-0', className)} style={{ width: size, height: size }}>
-      {photo ? (
-        <img
-          src={photo}
-          alt=""
-          className="size-full rounded-full object-cover"
-          onError={() => setBroken(photo)}
-        />
-      ) : (
-        <span
-          className="flex size-full items-center justify-center rounded-full font-medium select-none"
-          style={{ background, color, fontSize: Math.max(10, Math.round(size * 0.4)) }}
-          aria-hidden
-        >
-          {initials(label)}
-        </span>
-      )}
+    <Box
+      className={className}
+      sx={{ position: 'relative', display: 'inline-flex', flexShrink: 0, width: size, height: size }}
+    >
+      <MuiAvatar
+        src={photo ?? undefined}
+        alt=""
+        onError={() => photo && setBroken(photo)}
+        sx={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          bgcolor: photo ? 'transparent' : background,
+          color,
+          fontSize: Math.max(10, Math.round(size * 0.4)),
+          fontWeight: 500,
+          userSelect: 'none',
+        }}
+      >
+        {initials(label)}
+      </MuiAvatar>
       {status && (
-        <span
-          className={cn(
-            'absolute -right-0.5 -bottom-0.5 rounded-full border border-n-slate-3',
-            STATUS[status],
-          )}
-          style={{ width: Math.max(8, size / 4), height: Math.max(8, size / 4) }}
+        <Box
           aria-label={status}
+          sx={{
+            position: 'absolute',
+            right: -2,
+            bottom: -2,
+            width: Math.max(8, size / 4),
+            height: Math.max(8, size / 4),
+            borderRadius: '50%',
+            border: 1,
+            borderColor: 'var(--color-n-slate-3)',
+            bgcolor: STATUS[status],
+          }}
         />
       )}
-    </span>
+    </Box>
   );
 }

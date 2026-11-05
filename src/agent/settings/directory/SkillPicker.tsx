@@ -1,8 +1,18 @@
 import { useRef, useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { FileUp, Plus } from 'lucide-react';
+
 import { http } from '../../api';
 import type { Skill } from '../../adminTypes';
-import { Button } from '../../ui/Button';
 import { useAction } from '../useAction';
 
 interface Props {
@@ -25,52 +35,81 @@ export function SkillPicker({ library, selected, onToggle, onCreated }: Props) {
     });
 
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="field-label">Skills</legend>
+    <Box
+      component="fieldset"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1, border: 0, m: 0, p: 0 }}
+    >
+      <Typography component="legend" variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
+        Skills
+      </Typography>
       {library.length === 0 && !draft && (
-        <p className="text-sm">Nenhuma skill ainda: crie uma aqui ou importe um SKILL.md.</p>
+        <Typography variant="body2">Nenhuma skill ainda: crie uma aqui ou importe um SKILL.md.</Typography>
       )}
       {library.map((s) => (
-        <label key={s.id} className="flex items-center gap-2 text-sm text-n-slate-12">
-          <input
-            type="checkbox"
-            className="size-4 accent-n-brand"
+        <Box
+          key={s.id}
+          component="label"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            fontSize: 14,
+            color: 'var(--color-n-slate-12)',
+          }}
+        >
+          <Checkbox
+            size="small"
             checked={selected.includes(s.id)}
             onChange={() => onToggle(s.id)}
+            sx={{ p: 0.5 }}
           />
           {s.name}
-          {s.description && <span className="text-xs text-n-slate-11">— {s.description}</span>}
-        </label>
+          {s.description && (
+            <Typography component="span" variant="caption" color="text.secondary">
+              — {s.description}
+            </Typography>
+          )}
+        </Box>
       ))}
       {draft ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-n-weak p-3" aria-label="Nova skill">
-          <input
-            className="field"
-            maxLength={80}
-            placeholder="Nome da skill"
-            aria-label="Nome da nova skill"
+        <Box
+          aria-label="Nova skill"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'divider',
+            p: 1.5,
+          }}
+        >
+          <TextField
+            size="small"
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            placeholder="Nome da skill"
+            slotProps={{ htmlInput: { maxLength: 80, 'aria-label': 'Nome da nova skill' } }}
           />
-          <textarea
-            className="field"
-            rows={3}
-            placeholder="Instruções: como o agente deve executar"
-            aria-label="Instruções da nova skill"
+          <TextField
+            multiline
+            minRows={3}
             value={draft.instructions}
             onChange={(e) => setDraft({ ...draft, instructions: e.target.value })}
+            placeholder="Instruções: como o agente deve executar"
+            slotProps={{ htmlInput: { 'aria-label': 'Instruções da nova skill' } }}
           />
-          <input
-            className="field"
-            placeholder="Ferramentas (ex.: reply_conversation, conversation_*)"
-            aria-label="Ferramentas da nova skill"
+          <TextField
+            size="small"
             value={draft.tools}
             onChange={(e) => setDraft({ ...draft, tools: e.target.value })}
+            placeholder="Ferramentas (ex.: reply_conversation, conversation_*)"
+            slotProps={{ htmlInput: { 'aria-label': 'Ferramentas da nova skill' } }}
           />
-          <div className="flex gap-2">
+          <Stack direction="row" spacing={1}>
             <Button
-              size="sm"
-              label="Criar e vincular"
+              size="small"
+              variant="contained"
               disabled={busy || !draft.name.trim()}
               onClick={() =>
                 void create({
@@ -82,44 +121,48 @@ export function SkillPicker({ library, selected, onToggle, onCreated }: Props) {
                     .filter(Boolean),
                 })
               }
-            />
-            <Button size="sm" color="slate" variant="faded" label="Cancelar" onClick={() => setDraft(null)} />
-          </div>
-        </div>
+            >
+              Criar e vincular
+            </Button>
+            <Button size="small" variant="outlined" onClick={() => setDraft(null)}>
+              Cancelar
+            </Button>
+          </Stack>
+        </Box>
       ) : (
-        <div className="flex gap-2">
+        <Stack direction="row" spacing={1}>
           <Button
-            size="sm"
-            color="slate"
-            variant="faded"
-            icon={Plus}
-            label="Nova skill"
+            size="small"
+            variant="outlined"
+            startIcon={<Plus size={16} />}
             onClick={() => setDraft({ name: '', instructions: '', tools: '' })}
-          />
+          >
+            Nova skill
+          </Button>
           <Button
-            size="sm"
-            color="slate"
-            variant="faded"
-            icon={FileUp}
-            label="Importar SKILL.md"
+            size="small"
+            variant="outlined"
+            startIcon={<FileUp size={16} />}
             disabled={busy}
             onClick={() => file.current?.click()}
-          />
-        </div>
+          >
+            Importar SKILL.md
+          </Button>
+        </Stack>
       )}
       <input
         ref={file}
         type="file"
         accept=".md,text/markdown,text/plain"
         aria-label="Importar SKILL.md para este agente"
-        className="hidden"
+        style={{ display: 'none' }}
         onChange={(e) => {
           const chosen = e.target.files?.[0];
           e.target.value = '';
           if (chosen) void chosen.text().then((content) => create({ content }, '/skills/import'));
         }}
       />
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-    </fieldset>
+      {error && <Alert severity="error">{error}</Alert>}
+    </Box>
   );
 }

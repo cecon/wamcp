@@ -1,4 +1,13 @@
-import { Modal } from '../ui/Overlay';
+// material-ui
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { X } from 'lucide-react';
 
 /** Shortcuts shown in the help (Chatwoot keyboard shortcuts modal). */
 const SHORTCUTS: { keys: string[]; label: string }[] = [
@@ -19,28 +28,74 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
 /** Chatwoot "Atalhos do teclado" modal: one row per action with its key chips. */
 export function ShortcutsModal({ onClose }: { onClose: () => void }) {
   return (
-    <Modal
-      title="Atalhos de teclado"
-      description="Os atalhos não funcionam enquanto você digita em um campo, exceto os do editor."
-      onClose={onClose}
-    >
-      <ul className="grid gap-x-8 sm:grid-cols-2">
-        {SHORTCUTS.map((s) => (
-          <li key={s.label} className="flex items-center justify-between gap-3 border-b border-n-weak py-2">
-            <span className="text-sm text-n-slate-12">{s.label}</span>
-            <span className="flex shrink-0 gap-1">
-              {s.keys.map((key) => (
-                <kbd
-                  key={key}
-                  className="rounded-md bg-n-alpha-2 px-1.5 py-0.5 font-sans text-xs text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak"
-                >
-                  {key}
-                </kbd>
-              ))}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Modal>
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle sx={{ pr: 7 }}>
+        Atalhos de teclado
+        <IconButton
+          size="small"
+          aria-label="Fechar"
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 10, right: 10 }}
+        >
+          <X size={16} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Os atalhos não funcionam enquanto você digita em um campo, exceto os do editor.
+        </Typography>
+        <Box
+          component="ul"
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+            columnGap: 4,
+            m: 0,
+            p: 0,
+            listStyle: 'none',
+          }}
+        >
+          {SHORTCUTS.map((s) => (
+            <Box
+              component="li"
+              key={s.label}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.5,
+                borderBottom: 1,
+                borderColor: 'divider',
+                py: 1,
+              }}
+            >
+              <Typography component="span" variant="body2">
+                {s.label}
+              </Typography>
+              <Box component="span" sx={{ display: 'flex', flexShrink: 0, gap: 0.5 }}>
+                {s.keys.map((key) => (
+                  <Box
+                    component="kbd"
+                    key={key}
+                    sx={{
+                      borderRadius: 1,
+                      bgcolor: 'action.hover',
+                      px: 0.75,
+                      py: 0.25,
+                      fontFamily: 'inherit',
+                      fontSize: 12,
+                      border: 1,
+                      borderColor: 'divider',
+                    }}
+                  >
+                    {key}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </DialogContent>
+    </Dialog>
   );
 }

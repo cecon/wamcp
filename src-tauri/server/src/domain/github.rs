@@ -17,7 +17,7 @@ pub const EVENTS: [&str; 7] = [
 ];
 /// Longest text taken from a title, body or comment.
 const TEXT_LIMIT: usize = 4000;
-const FAILED: [&str; 3] = ["failure", "timed_out", "startup_failure"];
+pub const FAILED: [&str; 3] = ["failure", "timed_out", "startup_failure"];
 /// Hidden mark at the end of every comment the app posts. Its webhook echo is recognised by it,
 /// not by the author: the token is often the person's own, so their own events must still arrive.
 pub const COMMENT_MARK: &str = "<!-- wamcp -->";

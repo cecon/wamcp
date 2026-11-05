@@ -1,10 +1,20 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { ActionDialog, SelectField } from '@c3theme/ui';
+
 import { http } from '../../api';
 import type { CustomRole, Permission, Skill } from '../../adminTypes';
 import { PERMISSIONS } from '../../permissions';
 import { useFetch } from '../../useFetch';
-import { Modal } from '../../ui/Overlay';
-import { ModalFooter } from '../../ui/Settings';
 import { useAction } from '../useAction';
 import { executes, ROLES } from '../directory/labels';
 import { SkillPicker } from '../directory/SkillPicker';
@@ -31,62 +41,58 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
     setPermissions((list) => (list.includes(key) ? list.filter((p) => p !== key) : [...list, key]));
 
   return (
-    <Modal
+    <ActionDialog
+      open
       title={role ? 'Editar perfil' : 'Adicionar perfil'}
       description="Todo agente, pessoa ou IA, tem um perfil. Ele define as permissões e a função: coordenador, operador, suporte dev ou QA. Agentes de IA precisam de um perfil com função."
+      confirmLabel={role ? 'Atualizar perfil' : 'Criar perfil'}
+      backLabel="Cancelar"
+      loading={busy}
+      error={error}
       onClose={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          const body = {
+            name: name.trim(),
+            description: description.trim() || null,
+            permissions,
+            agent_role: agentRole || null,
+            skill_ids: withSkills ? skillIds : [],
+          };
+          await http(role ? `/custom_roles/${role.id}` : '/custom_roles', role ? 'PUT' : 'POST', body);
+          onSaved();
+          onClose();
+        })
+      }
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            const body = {
-              name: name.trim(),
-              description: description.trim() || null,
-              permissions,
-              agent_role: agentRole || null,
-              skill_ids: withSkills ? skillIds : [],
-            };
-            await http(role ? `/custom_roles/${role.id}` : '/custom_roles', role ? 'PUT' : 'POST', body);
-            onSaved();
-            onClose();
-          });
-        }}
-      >
-        <label>
-          <span className="field-label">Nome do perfil</span>
-          <input
-            className="field"
-            required
-            maxLength={60}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <textarea
-            className="field"
-            rows={2}
-            maxLength={300}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-        <label>
-          <span className="field-label">Função</span>
-          <select className="field" value={agentRole} onChange={(e) => setAgentRole(e.target.value)}>
-            <option value="">Nenhuma</option>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label} — {r.hint}
-              </option>
-            ))}
-          </select>
-        </label>
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <TextField
+          label="Nome do perfil"
+          size="small"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          slotProps={{ htmlInput: { required: true, maxLength: 60 } }}
+        />
+        <TextField
+          label="Descrição"
+          size="small"
+          multiline
+          minRows={2}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          slotProps={{ htmlInput: { maxLength: 300 } }}
+        />
+        <SelectField
+          native
+          size="small"
+          label="Função"
+          value={agentRole}
+          onChange={(value) => setAgentRole(value ?? '')}
+          emptyLabel="Nenhuma"
+          options={ROLES.map((r) => ({ value: r.value, label: `${r.label} — ${r.hint}` }))}
+        />
         {withSkills && (
-          <div className="flex flex-col gap-1">
+          <Box>
             <SkillPicker
               library={library}
               selected={skillIds}
@@ -98,34 +104,28 @@ export function CustomRoleModal({ role, onClose, onSaved }: Props) {
                 setSkillIds((list) => [...list, skill.id]);
               }}
             />
-            <p className="text-xs text-n-slate-11">
+            <Typography variant="caption" color="text.secondary">
               Todo agente deste perfil, pessoa ou IA, herda estas skills, somadas às dele.
-            </p>
-          </div>
+            </Typography>
+          </Box>
         )}
-        <fieldset>
-          <legend className="field-label">Permissões</legend>
-          <div className="flex flex-col gap-2.5">
+        <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+          <Typography component="legend" variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>
+            Permissões
+          </Typography>
+          <Stack spacing={1}>
             {PERMISSIONS.map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 text-sm text-n-slate-12">
-                <input
-                  type="checkbox"
-                  className="size-4 accent-n-brand"
-                  checked={permissions.includes(key)}
-                  onChange={() => toggle(key)}
-                />
-                {label}
-              </label>
+              <FormControlLabel
+                key={key}
+                control={
+                  <Checkbox size="small" checked={permissions.includes(key)} onChange={() => toggle(key)} />
+                }
+                label={<Typography variant="body2">{label}</Typography>}
+              />
             ))}
-          </div>
-        </fieldset>
-        <ModalFooter
-          busy={busy}
-          submit={role ? 'Atualizar perfil' : 'Criar perfil'}
-          onCancel={onClose}
-          error={error}
-        />
-      </form>
-    </Modal>
+          </Stack>
+        </Box>
+      </Stack>
+    </ActionDialog>
   );
 }

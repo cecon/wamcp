@@ -1,8 +1,14 @@
 import type { ReactNode } from 'react';
-import { SettingsPage } from '../ui/Settings';
-import { cn } from '../ui/cn';
 
-/** Chatwoot report card: rounded solid surface with an optional title and LIVE chip. */
+// material-ui
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../settings/c3/SettingsC3';
+
+/** Cartão de relatório no C3Theme (lote 13): superfície com título opcional e selo AO VIVO. */
 export function ReportCard({
   title,
   live,
@@ -15,38 +21,53 @@ export function ReportCard({
   children: ReactNode;
 }) {
   return (
-    <section
+    <Box
+      component="section"
       aria-label={title}
-      className={cn(
-        'flex flex-col gap-4 rounded-xl bg-n-solid-2 px-6 py-5 shadow outline outline-1 -outline-offset-1 outline-n-container',
-        className,
-      )}
+      className={className}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        borderRadius: 3,
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        px: 3,
+        py: 2.5,
+      }}
     >
       {title && (
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-medium text-n-slate-12">{title}</h2>
-          {live && (
-            <span className="flex items-center gap-1 rounded bg-n-teal-3 px-2 py-0.5 text-xs text-n-teal-11">
-              <span className="size-1 rounded-full bg-n-teal-9" /> AO VIVO
-            </span>
-          )}
-        </div>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="h6" component="h2">
+            {title}
+          </Typography>
+          {live && <Chip size="small" color="success" label="AO VIVO" />}
+        </Stack>
       )}
       {children}
-    </section>
+    </Box>
   );
 }
 
-/** Chatwoot ReportMetricCard: small label above a large value, with an optional hint below. */
+/** Métrica de relatório: rótulo pequeno acima do valor grande, com dica opcional embaixo. */
 export const Stat = ({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) => (
-  <div>
-    <p className="text-sm font-medium text-n-slate-11">{label}</p>
-    <p className="mt-1 text-2xl text-n-slate-12">{value}</p>
-    {hint && <p className="mt-0.5 text-xs text-n-slate-11">{hint}</p>}
-  </div>
+  <Box>
+    <Typography variant="body2" sx={{ fontWeight: 500 }} color="text.secondary">
+      {label}
+    </Typography>
+    <Typography variant="h5" sx={{ mt: 0.5 }}>
+      {value}
+    </Typography>
+    {hint && (
+      <Typography variant="caption" color="text.secondary">
+        {hint}
+      </Typography>
+    )}
+  </Box>
 );
 
-/** Report page frame: title with the filters on the right, then an error line and the content. */
+/** Moldura das páginas de relatório no C3Theme: título com filtros à direita, erro e conteúdo. */
 export function ReportLayout({
   title,
   filters,
@@ -59,17 +80,10 @@ export function ReportLayout({
   children: ReactNode;
 }) {
   return (
-    <SettingsPage>
-      <header className="flex flex-wrap items-center justify-between gap-3 pt-2 pb-1">
-        <h1 className="text-heading-1 text-n-slate-12">{title}</h1>
-        {filters}
-      </header>
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
+    <SettingsC3Page>
+      <SettingsC3Header title={title} action={filters} />
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
       {children}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

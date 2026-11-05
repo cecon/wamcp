@@ -1,9 +1,17 @@
 import { useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+
+// third-party
 import { Ban, Merge, MessageCirclePlus, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { Contact, Inbox } from '../types';
-import { Button } from '../ui/Button';
-import { ConfirmModal } from '../ui/Confirm';
 import { MergeModal } from './MergeModal';
 import { NewConversationModal } from './NewConversationModal';
 
@@ -20,7 +28,7 @@ interface Props {
 
 type Dialog = 'conversation' | 'merge' | 'delete' | null;
 
-/** Chatwoot contact header actions: new conversation, block, merge and delete (administrator). */
+/** Ações do contato no C3Theme (lote 11): nova conversa, bloquear, mesclar e excluir (`ActionDialog`). */
 export function ContactActions({
   contact,
   isAdmin,
@@ -35,42 +43,46 @@ export function ContactActions({
   const blocked = Boolean(contact.blocked);
   const close = () => setDialog(null);
   return (
-    <div className="flex flex-wrap gap-2">
+    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
       <Button
-        size="xs"
-        icon={MessageCirclePlus}
-        label="Nova conversa"
+        size="small"
+        variant="outlined"
+        startIcon={<MessageCirclePlus size={14} />}
         onClick={() => setDialog('conversation')}
-      />
+      >
+        Nova conversa
+      </Button>
       <Button
-        color={blocked ? 'slate' : 'amber'}
-        variant="faded"
-        size="xs"
-        icon={Ban}
-        label={blocked ? 'Desbloquear' : 'Bloquear'}
+        size="small"
+        variant="outlined"
+        color={blocked ? 'secondary' : 'warning'}
+        startIcon={<Ban size={14} />}
         onClick={() =>
           void http<Contact>(`/contacts/${contact.id}`, 'PATCH', { blocked: !blocked })
             .then(onSaved)
             .catch((e: Error) => onError(e.message))
         }
-      />
+      >
+        {blocked ? 'Desbloquear' : 'Bloquear'}
+      </Button>
       <Button
-        color="slate"
-        variant="faded"
-        size="xs"
-        icon={Merge}
-        label="Mesclar"
+        size="small"
+        variant="outlined"
+        startIcon={<Merge size={14} />}
         onClick={() => setDialog('merge')}
-      />
+      >
+        Mesclar
+      </Button>
       {isAdmin && (
         <Button
-          color="ruby"
-          variant="faded"
-          size="xs"
-          icon={Trash2}
-          label="Excluir contato"
+          size="small"
+          variant="outlined"
+          color="error"
+          startIcon={<Trash2 size={14} />}
           onClick={() => setDialog('delete')}
-        />
+        >
+          Excluir contato
+        </Button>
       )}
       {dialog === 'conversation' && (
         <NewConversationModal
@@ -82,17 +94,21 @@ export function ContactActions({
       )}
       {dialog === 'merge' && <MergeModal contact={contact} onClose={close} onMerged={onMerged} />}
       {dialog === 'delete' && (
-        <ConfirmModal
+        <ActionDialog
+          open
           title="Excluir contato"
           description="O contato e todas as conversas dele serão excluídos permanentemente."
-          confirm="Excluir"
+          confirmLabel="Excluir"
+          backLabel="Cancelar"
+          tone="danger"
           onClose={close}
-          onConfirm={async () => {
-            await http(`/contacts/${contact.id}`, 'DELETE');
-            onDeleted();
-          }}
+          onConfirm={() =>
+            void http(`/contacts/${contact.id}`, 'DELETE')
+              .then(() => onDeleted())
+              .catch((e: Error) => onError(e.message))
+          }
         />
       )}
-    </div>
+    </Stack>
   );
 }

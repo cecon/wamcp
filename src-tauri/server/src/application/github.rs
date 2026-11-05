@@ -120,6 +120,7 @@ impl HelpdeskService {
         delivery: &str,
         payload: &Value,
     ) -> Result<Option<Message>> {
+        let repeated = self.repeated_github_failure(channel, event, payload);
         let Some(parsed) = parse(event, payload) else {
             return Ok(None);
         };
@@ -130,11 +131,12 @@ impl HelpdeskService {
             return Ok(None);
         }
         let inbox = self.core.inbox(channel.inbox_id)?;
-        self.core
-            .commit(Some(&Actor::contact()), |events| match self.take_github_echo(&parsed) {
+        self.core.commit(Some(&Actor::contact()), |events| {
+            match repeated || self.take_github_echo(&parsed) {
                 true => self.note_github_echo(&inbox, &parsed, events).map(|_| None),
                 false => self.store_github(&inbox, delivery, &parsed, events),
-            })
+            }
+        })
     }
 
     fn github_contact(&self, inbox: &Inbox, event: &GithubEvent, events: &mut Events) -> Result<ContactInbox> {

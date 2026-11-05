@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReplyBox } from '../../src/agent/conversations/ReplyBox';
 import { fakeApi } from './fake-api';
@@ -93,9 +93,13 @@ describe('voice notes', () => {
   it('falls back to WebM, counts the elapsed time and can be discarded', async () => {
     supported = ['audio/webm;codecs=opus'];
     const { api, typing, user } = setup();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    await user.click(screen.getByRole('button', { name: 'Gravar áudio' }));
-    await screen.findByRole('group', { name: 'Gravando áudio' });
+    // Timers 100% falsos: o clique de início usa fireEvent para o relógio não avançar com tempo real.
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Gravar áudio' }));
+    // Drena as promessas do start (getUserMedia/MediaRecorder) sem avançar 1 s (o relógio só conta por tique).
+    for (let i = 0; i < 50 && !screen.queryByRole('group', { name: 'Gravando áudio' }); i++)
+      await vi.advanceTimersByTimeAsync(1);
+    expect(screen.getByRole('group', { name: 'Gravando áudio' })).toBeInTheDocument();
     expect(recorders[0].mimeType).toBe('audio/webm;codecs=opus');
     await vi.advanceTimersByTimeAsync(65_400);
     expect(screen.getByLabelText('Tempo de gravação')).toHaveTextContent('1:05');

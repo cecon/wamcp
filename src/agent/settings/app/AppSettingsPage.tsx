@@ -1,8 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Button } from '../../ui/Button';
+
+// material-ui
+import Button from '@mui/material/Button';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+
 import { SecretField } from '../../ui/SecretField';
-import { SettingsHeader, SettingsPage, Toggle } from '../../ui/Settings';
 import { NoAccess } from '../../ui/NoAccess';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import {
   CHECK_UPDATES_EVENT,
   desktop,
@@ -21,13 +32,9 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 border-t border-n-weak pt-6" aria-label={title}>
-      <div>
-        <h2 className="text-heading-3 text-n-slate-12">{title}</h2>
-        <p className="text-sm text-n-slate-11">{description}</p>
-      </div>
+    <Panel title={title} subtitle={description}>
       {children}
-    </section>
+    </Panel>
   );
 }
 
@@ -86,23 +93,24 @@ function DesktopSettings() {
     }
   }
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Aplicativo"
         description="Configurações deste computador: início automático, túnel, acesso pela rede e atualizações."
       />
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <div className="flex max-w-2xl flex-col gap-6">
-        <Toggle
-          label="Iniciar com o Windows"
-          hint="Abre o WA MCP minimizado na bandeja ao ligar o computador."
-          checked={autostart}
-          onChange={(v) => void toggleAutostart(v)}
-        />
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Stack spacing={3} sx={{ maxWidth: 640 }}>
+        <Panel>
+          <FormControlLabel
+            control={
+              <Switch checked={autostart} onChange={(event) => void toggleAutostart(event.target.checked)} />
+            }
+            label="Iniciar com o Windows"
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            Abre o WA MCP minimizado na bandeja ao ligar o computador.
+          </Typography>
+        </Panel>
         <Section
           title="Acesso pela rede"
           description="Outros computadores da rede abrem este endereço no navegador e entram com login e senha."
@@ -114,40 +122,47 @@ function DesktopSettings() {
               copyLabel="Copiar endereço na rede"
             />
           ) : (
-            <p className="text-sm text-n-slate-11">
+            <Typography variant="body2" color="text.secondary">
               {status ? 'Nenhuma rede local detectada neste computador.' : 'Carregando…'}
-            </p>
+            </Typography>
           )}
         </Section>
         <Section
           title="Cloudflare Tunnel"
           description="Publica o endereço do MCP e do atendimento na internet. Execute o túnel em apenas um computador."
         >
-          <p className="text-sm text-n-slate-12" data-testid="tunnel-status">
+          <Typography variant="body2" data-testid="tunnel-status" sx={{ mb: 1 }}>
             {tunnelLabel(status)}
-          </p>
-          <form
-            className="flex items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
+          </Typography>
+          <Stack
+            component="form"
+            direction="row"
+            spacing={1}
+            onSubmit={(event) => {
+              event.preventDefault();
               void saveTunnel();
             }}
           >
-            <label className="flex-1">
-              <span className="field-label">Token do túnel</span>
-              <input
-                className="field"
-                type="password"
-                required
-                autoComplete="off"
-                value={token}
-                placeholder="Cole o token do Cloudflare Tunnel"
-                onChange={(e) => setToken(e.target.value)}
-              />
-            </label>
-            <Button type="submit" size="md" label="Salvar e conectar" disabled={busy || !token.trim()} />
-          </form>
-          {notice && <p className="text-sm text-n-teal-11">{notice}</p>}
+            <TextField
+              label="Token do túnel"
+              size="small"
+              type="password"
+              autoComplete="off"
+              fullWidth
+              value={token}
+              placeholder="Cole o token do Cloudflare Tunnel"
+              onChange={(event) => setToken(event.target.value)}
+              slotProps={{ htmlInput: { required: true } }}
+            />
+            <Button type="submit" variant="contained" disabled={busy || !token.trim()}>
+              Salvar e conectar
+            </Button>
+          </Stack>
+          {notice && (
+            <Typography variant="body2" sx={{ color: 'success.main', mt: 1 }}>
+              {notice}
+            </Typography>
+          )}
         </Section>
         <Section
           title="Armazenamento local"
@@ -163,19 +178,24 @@ function DesktopSettings() {
           title="Atualizações"
           description="O aplicativo verifica novas versões ao abrir e a cada seis horas, baixa e valida a assinatura."
         >
-          <p className="text-sm text-n-slate-12">Versão instalada: {__APP_VERSION__}</p>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Versão instalada: {__APP_VERSION__}
+          </Typography>
           {status?.updatesEnabled === false ? (
-            <p className="text-sm text-n-slate-11">Modo de desenvolvimento: atualizações desativadas.</p>
+            <Typography variant="body2" color="text.secondary">
+              Modo de desenvolvimento: atualizações desativadas.
+            </Typography>
           ) : (
             <Button
-              color="slate"
-              className="self-start"
-              label="Verificar atualizações"
+              variant="outlined"
+              sx={{ alignSelf: 'flex-start' }}
               onClick={() => window.dispatchEvent(new Event(CHECK_UPDATES_EVENT))}
-            />
+            >
+              Verificar atualizações
+            </Button>
           )}
         </Section>
-      </div>
-    </SettingsPage>
+      </Stack>
+    </SettingsC3Page>
   );
 }

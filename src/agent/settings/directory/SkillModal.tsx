@@ -1,8 +1,15 @@
 import { useState } from 'react';
+
+// material-ui
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../../api';
 import type { Skill } from '../../adminTypes';
-import { Modal } from '../../ui/Overlay';
-import { ModalFooter } from '../../ui/Settings';
+import C3Provider from '../../c3/C3Provider';
 import { useAction } from '../useAction';
 
 interface Props {
@@ -26,15 +33,17 @@ export function SkillModal({ skill, onClose, onSaved }: Props) {
   });
 
   return (
-    <Modal
-      title={skill ? 'Editar skill' : 'Adicionar skill'}
-      description="As instruções dizem ao agente como executar; as ferramentas limitam o que ele pode chamar."
-      onClose={onClose}
-    >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
+    <C3Provider>
+      <ActionDialog
+        open
+        title={skill ? 'Editar skill' : 'Adicionar skill'}
+        description="As instruções dizem ao agente como executar; as ferramentas limitam o que ele pode chamar."
+        confirmLabel={skill ? 'Atualizar skill' : 'Criar skill'}
+        backLabel="Cancelar"
+        loading={busy}
+        error={error}
+        onClose={onClose}
+        onConfirm={() =>
           void run(async () => {
             const body = {
               name: form.name.trim(),
@@ -48,32 +57,38 @@ export function SkillModal({ skill, onClose, onSaved }: Props) {
             await http(skill ? `/skills/${skill.id}` : '/skills', skill ? 'PUT' : 'POST', body);
             onSaved();
             onClose();
-          });
-        }}
+          })
+        }
       >
-        <label>
-          <span className="field-label">Nome</span>
-          <input className="field" required maxLength={80} {...field('name')} />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <input className="field" maxLength={500} {...field('description')} />
-        </label>
-        <label>
-          <span className="field-label">Instruções</span>
-          <textarea className="field font-mono" rows={8} maxLength={20000} {...field('instructions')} />
-        </label>
-        <label>
-          <span className="field-label">Ferramentas</span>
-          <input className="field" placeholder="reply_conversation, conversation_*" {...field('tools')} />
-        </label>
-        <ModalFooter
-          busy={busy}
-          submit={skill ? 'Atualizar skill' : 'Criar skill'}
-          onCancel={onClose}
-          error={error}
-        />
-      </form>
-    </Modal>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            label="Nome"
+            size="small"
+            {...field('name')}
+            slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
+          />
+          <TextField
+            label="Descrição"
+            size="small"
+            {...field('description')}
+            slotProps={{ htmlInput: { maxLength: 500 } }}
+          />
+          <TextField
+            label="Instruções"
+            multiline
+            minRows={8}
+            {...field('instructions')}
+            slotProps={{ htmlInput: { maxLength: 20000 } }}
+            sx={{ '& textarea': { fontFamily: 'monospace' } }}
+          />
+          <TextField
+            label="Ferramentas"
+            size="small"
+            placeholder="reply_conversation, conversation_*"
+            {...field('tools')}
+          />
+        </Stack>
+      </ActionDialog>
+    </C3Provider>
   );
 }

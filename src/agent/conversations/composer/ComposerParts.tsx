@@ -1,28 +1,49 @@
 import { useEffect, useMemo } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { FileText, Reply, Send, Trash2, X } from 'lucide-react';
+
 import { humanSize } from '../../api';
 import type { Message } from '../../types';
-import { Button } from '../../ui/Button';
 import { authorOf, snippet } from '../messageText';
 
-/** Chatwoot ReplyBox "Replying to" banner above the editor. */
+/** Faixa “Respondendo a” no C3Theme (lote 25). */
 export function ReplyToBar({ message, onCancel }: { message: Message; onCancel: () => void }) {
   return (
-    <div className="mx-3 mt-3 flex items-center gap-2 rounded-lg bg-n-alpha-black2 px-3 py-2 text-xs">
-      <Reply size={14} className="shrink-0 text-n-slate-11" />
-      <p className="min-w-0 flex-1 truncate text-n-slate-11">
-        Respondendo a <span className="font-medium text-n-slate-12">{authorOf(message)}</span>:{' '}
-        {snippet(message)}
-      </p>
-      <Button
-        variant="ghost"
-        color="slate"
-        size="xs"
-        icon={X}
-        aria-label="Cancelar resposta"
-        onClick={onCancel}
-      />
-    </div>
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        mx: 1.5,
+        mt: 1.5,
+        alignItems: 'center',
+        borderRadius: 1,
+        bgcolor: 'action.hover',
+        px: 1.5,
+        py: 1,
+      }}
+    >
+      <Box sx={{ flexShrink: 0, color: 'text.secondary', display: 'flex' }}>
+        <Reply size={14} />
+      </Box>
+      <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, flex: 1 }}>
+        Respondendo a{' '}
+        <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>
+          {authorOf(message)}
+        </Box>
+        : {snippet(message)}
+      </Typography>
+      <IconButton size="small" aria-label="Cancelar resposta" onClick={onCancel}>
+        <X size={14} />
+      </IconButton>
+    </Stack>
   );
 }
 
@@ -31,43 +52,74 @@ function PendingFile({ file, onRemove }: { file: File; onRemove: () => void }) {
   const url = useMemo(() => (image ? URL.createObjectURL(file) : ''), [file, image]);
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url]);
   return (
-    <li className="relative flex h-14 max-w-56 items-center gap-2 rounded-lg border border-n-weak bg-n-alpha-black2 pr-7 pl-1">
+    <Box
+      component="li"
+      sx={{
+        position: 'relative',
+        display: 'flex',
+        height: 56,
+        maxWidth: 224,
+        alignItems: 'center',
+        gap: 1,
+        borderRadius: 1,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'action.hover',
+        pr: 3.5,
+        pl: 0.5,
+      }}
+    >
       {image ? (
-        <img src={url} alt={file.name} className="size-12 rounded-md object-cover" />
+        <Box
+          component="img"
+          src={url}
+          alt={file.name}
+          sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover' }}
+        />
       ) : (
-        <FileText size={20} className="ml-2 shrink-0 text-n-slate-11" />
+        <Box sx={{ ml: 1, flexShrink: 0, color: 'text.secondary', display: 'flex' }}>
+          <FileText size={20} />
+        </Box>
       )}
-      <span className="min-w-0">
-        <span className="block truncate text-xs text-n-slate-12">{file.name}</span>
-        <span className="block text-xxs text-n-slate-10">{humanSize(file.size)}</span>
-      </span>
-      <button
-        type="button"
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" sx={{ display: 'block' }} noWrap>
+          {file.name}
+        </Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', fontSize: 10 }}>
+          {humanSize(file.size)}
+        </Typography>
+      </Box>
+      <IconButton
+        size="small"
         aria-label={`Remover ${file.name}`}
         onClick={onRemove}
-        className="absolute top-1 right-1 grid size-5 place-content-center rounded-full text-n-slate-11 hover:bg-n-alpha-2"
+        sx={{ position: 'absolute', top: 2, right: 2 }}
       >
         <X size={12} />
-      </button>
-    </li>
+      </IconButton>
+    </Box>
   );
 }
 
-/** Chatwoot AttachmentPreview: thumbnails of the files waiting to be sent. */
+/** Prévia dos anexos no C3Theme (lote 25). */
 export function PendingFiles({ files, onRemove }: { files: File[]; onRemove: (index: number) => void }) {
   if (!files.length) return null;
   return (
-    <ul aria-label="Anexos" className="flex flex-wrap gap-2 px-3 pt-3">
+    <Box
+      component="ul"
+      aria-label="Anexos"
+      sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, listStyle: 'none', m: 0, px: 1.5, pt: 1.5 }}
+    >
       {files.map((file, i) => (
         <PendingFile key={`${file.name}-${i}`} file={file} onRemove={() => onRemove(i)} />
       ))}
-    </ul>
+    </Box>
   );
 }
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
-/** Recording state of the voice note: elapsed time, discard and send. */
+/** Gravação de áudio no C3Theme (lote 25): tempo, descartar e enviar. */
 export function RecorderBar({
   elapsed,
   busy,
@@ -80,14 +132,35 @@ export function RecorderBar({
   onSend: () => void;
 }) {
   return (
-    <div role="group" aria-label="Gravando áudio" className="flex h-[4.5rem] items-center gap-3 px-3">
-      <span className="size-2.5 animate-pulse rounded-full bg-n-ruby-9" aria-hidden />
-      <span className="text-sm text-n-slate-12 tabular-nums" aria-label="Tempo de gravação">
+    <Stack
+      direction="row"
+      role="group"
+      aria-label="Gravando áudio"
+      spacing={1.5}
+      sx={{ height: 72, alignItems: 'center', px: 1.5 }}
+    >
+      <Box
+        aria-hidden
+        sx={{
+          width: 10,
+          height: 10,
+          borderRadius: '50%',
+          bgcolor: 'error.main',
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
+      <Typography variant="body2" aria-label="Tempo de gravação" sx={{ fontVariantNumeric: 'tabular-nums' }}>
         {clock(elapsed)}
-      </span>
-      <span className="flex-1 text-sm text-n-slate-11">Gravando áudio…</span>
-      <Button variant="ghost" color="ruby" icon={Trash2} aria-label="Descartar áudio" onClick={onCancel} />
-      <Button icon={Send} label="Enviar áudio" disabled={busy} onClick={onSend} />
-    </div>
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        Gravando áudio…
+      </Typography>
+      <IconButton aria-label="Descartar áudio" color="error" onClick={onCancel}>
+        <Trash2 size={16} />
+      </IconButton>
+      <Button variant="contained" startIcon={<Send size={14} />} disabled={busy} onClick={onSend}>
+        Enviar áudio
+      </Button>
+    </Stack>
   );
 }

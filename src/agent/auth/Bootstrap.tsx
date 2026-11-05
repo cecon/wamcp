@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { ApiError, firstRun, http } from '../api';
-import { Button } from '../ui/Button';
 import { authError, type LoginResult } from './authError';
 
 interface Props {
@@ -18,7 +25,7 @@ const FIELDS = [
 ] as const;
 type Form = Record<(typeof FIELDS)[number]['key'], string>;
 
-/** First run on this computer: creates the first administrator, then signs in with it. */
+/** Primeiro acesso no C3Theme (lote 8): cria o primeiro administrador e entra com ele. */
 export function Bootstrap({ onSignedIn, onExists }: Props) {
   const [form, setForm] = useState<Form>({ name: '', email: '', password: '', confirm: '' }),
     [error, setError] = useState(''),
@@ -47,48 +54,46 @@ export function Bootstrap({ onSignedIn, onExists }: Props) {
     }
   }
   return (
-    <form
-      className="w-full max-w-md bg-n-solid-1 p-8 sm:rounded-lg sm:p-11 sm:shadow-lg"
-      onSubmit={(e) => {
-        e.preventDefault();
+    <Box
+      component="form"
+      onSubmit={(event) => {
+        event.preventDefault();
         void submit();
       }}
     >
-      <span className="mb-6 flex size-10 items-center justify-center rounded-xl bg-n-brand text-white">
-        <ShieldCheck size={22} />
-      </span>
-      <h1 className="text-2xl font-semibold text-n-slate-12">Criar administrador</h1>
-      <p className="mt-2 text-sm text-n-slate-11">
-        Primeiro acesso ao WA MCP. Esta conta conecta o WhatsApp e cadastra os demais agentes.
-      </p>
-      <div className="mt-8 space-y-4">
-        {FIELDS.map((f) => (
-          <label key={f.key} className="block">
-            <span className="field-label">{f.label}</span>
-            <input
-              className="field"
-              type={f.type}
-              autoComplete={f.autoComplete}
-              value={form[f.key]}
-              maxLength={f.key === 'name' ? 80 : 200}
-              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-              required
+      <Stack spacing={2.5}>
+        <Box>
+          <Typography variant="h4" component="h1">
+            Criar administrador
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Primeiro acesso ao WA MCP. Esta conta conecta o WhatsApp e cadastra os demais agentes.
+          </Typography>
+        </Box>
+        <Stack spacing={2}>
+          {FIELDS.map((field) => (
+            <TextField
+              key={field.key}
+              label={field.label}
+              type={field.type}
+              size="small"
+              value={form[field.key]}
+              onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
+              slotProps={{
+                htmlInput: {
+                  required: true,
+                  autoComplete: field.autoComplete,
+                  maxLength: field.key === 'name' ? 80 : 200,
+                },
+              }}
             />
-          </label>
-        ))}
-        {error && (
-          <p className="text-sm text-n-ruby-11" role="alert">
-            {error}
-          </p>
-        )}
-        <Button
-          type="submit"
-          size="md"
-          className="w-full"
-          disabled={busy}
-          label={busy ? 'Criando…' : 'Criar administrador'}
-        />
-      </div>
-    </form>
+          ))}
+        </Stack>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
+          {busy ? 'Criando…' : 'Criar administrador'}
+        </Button>
+      </Stack>
+    </Box>
   );
 }

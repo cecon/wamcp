@@ -1,18 +1,32 @@
+import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Keyboard, Monitor, Moon, Power, Sun, UserCog, Workflow } from 'lucide-react';
+
 import type { Availability, User } from '../types';
 import type { Route } from '../route';
 import { Avatar } from '../ui/Avatar';
-import { Dropdown, MenuItem } from '../ui/Overlay';
-import { cn } from '../ui/cn';
 import { THEME_LABEL, useTheme, type ThemeMode } from '../theme/theme';
 
 const THEME_ICON: Record<ThemeMode, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
 
 const AVAILABILITY: { value: Availability; label: string; color: string }[] = [
-  { value: 'online', label: 'Online', color: 'bg-n-teal-9' },
-  { value: 'busy', label: 'Ocupado', color: 'bg-n-amber-9' },
-  { value: 'offline', label: 'Offline', color: 'bg-n-slate-9' },
+  { value: 'online', label: 'Online', color: 'var(--color-n-teal-9)' },
+  { value: 'busy', label: 'Ocupado', color: 'var(--color-n-amber-9)' },
+  { value: 'offline', label: 'Offline', color: 'var(--color-n-slate-9)' },
 ];
+
+const heading = { px: 1, pt: 0.5, fontSize: 12, fontWeight: 500, color: 'text.disabled' } as const;
 
 interface Props {
   user: User;
@@ -26,98 +40,146 @@ interface Props {
 /** Chatwoot SidebarProfileMenu: avatar + name/email, opening availability and logout. */
 export function ProfileMenu({ user, online, onAvailability, onLogout, onNavigate, onShortcuts }: Props) {
   const [theme, setTheme] = useTheme();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const close = () => setAnchor(null);
   return (
-    <div className="border-t border-n-weak px-1 py-1.5 shadow-[0_-2px_4px_rgba(27,28,29,0.02)]">
-      <Dropdown
-        align="start"
-        placement="top"
-        className="w-64"
-        trigger={({ toggle }) => (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label="Perfil"
-            className="flex w-full items-center gap-2 rounded-lg p-1 text-left hover:bg-n-alpha-1"
-          >
-            <Avatar name={user.name} size={32} status={user.availability} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm leading-4 font-medium text-n-slate-12">
-                {user.name}
-              </span>
-              <span className="block truncate text-xs text-n-slate-11">{user.email}</span>
-            </span>
-            <span
-              className={cn('size-1.5 shrink-0 rounded-full', online ? 'bg-n-teal-9' : 'bg-n-ruby-9')}
-              title={online ? 'Tempo real conectado' : 'Reconectando…'}
-            />
-          </button>
-        )}
+    <Box
+      sx={{
+        borderTop: 1,
+        borderColor: 'divider',
+        px: 0.5,
+        py: 0.75,
+        boxShadow: '0 -2px 4px rgba(27, 28, 29, 0.02)',
+      }}
+    >
+      <ButtonBase
+        onClick={(event) => setAnchor(event.currentTarget)}
+        aria-label="Perfil"
+        sx={{
+          display: 'flex',
+          width: '100%',
+          alignItems: 'center',
+          gap: 1,
+          borderRadius: 1,
+          p: 0.5,
+          textAlign: 'left',
+          justifyContent: 'flex-start',
+          '&:hover': { bgcolor: 'var(--color-n-alpha-1)' },
+        }}
       >
-        {(close) => (
-          <>
-            <p className="px-2 pt-1 text-xs font-medium text-n-slate-10">Disponibilidade</p>
-            {AVAILABILITY.map((a) => (
-              <MenuItem
-                key={a.value}
-                active={user.availability === a.value}
-                label={
-                  <span className="flex items-center gap-3">
-                    <span className={cn('size-2 rounded-sm', a.color)} />
-                    {a.label}
-                  </span>
-                }
-                onClick={() => {
-                  onAvailability(a.value);
-                  close();
-                }}
-              />
-            ))}
-            <div className="my-1 h-px bg-n-weak" />
-            <p className="px-2 pt-1 text-xs font-medium text-n-slate-10">Aparência</p>
-            {(Object.keys(THEME_LABEL) as ThemeMode[]).map((mode) => (
-              <MenuItem
-                key={mode}
-                icon={THEME_ICON[mode]}
-                active={theme === mode}
-                label={THEME_LABEL[mode]}
-                onClick={() => setTheme(mode)}
-              />
-            ))}
-            <div className="my-1 h-px bg-n-weak" />
-            {onShortcuts && (
-              <MenuItem
-                icon={Keyboard}
-                label="Atalhos de teclado"
-                onClick={() => {
-                  close();
-                  onShortcuts();
-                }}
-              />
-            )}
-            {onNavigate && (
-              <MenuItem
-                icon={UserCog}
-                label="Configurações do perfil"
-                onClick={() => {
-                  close();
-                  onNavigate({ page: 'profile' });
-                }}
-              />
-            )}
-            {onNavigate && user.role !== 'administrator' && (
-              <MenuItem
-                icon={Workflow}
-                label="Macros"
-                onClick={() => {
-                  close();
-                  onNavigate({ page: 'settings', section: 'macros' });
-                }}
-              />
-            )}
-            <MenuItem icon={Power} label="Sair" onClick={onLogout} />
-          </>
+        <Avatar name={user.name} size={32} status={user.availability} />
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography noWrap sx={{ display: 'block', fontSize: 14, lineHeight: '16px', fontWeight: 500 }}>
+            {user.name}
+          </Typography>
+          <Typography noWrap sx={{ display: 'block', fontSize: 12, color: 'var(--color-n-slate-11)' }}>
+            {user.email}
+          </Typography>
+        </Box>
+        <Box
+          component="span"
+          title={online ? 'Tempo real conectado' : 'Reconectando…'}
+          sx={{
+            width: 6,
+            height: 6,
+            flexShrink: 0,
+            borderRadius: '50%',
+            bgcolor: online ? 'var(--color-n-teal-9)' : 'var(--color-n-ruby-9)',
+          }}
+        />
+      </ButtonBase>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={close}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        slotProps={{ paper: { sx: { width: 256 } } }}
+      >
+        <Box component="li" role="presentation" sx={heading}>
+          Disponibilidade
+        </Box>
+        {AVAILABILITY.map((a) => (
+          <MenuItem
+            key={a.value}
+            onClick={() => {
+              onAvailability(a.value);
+              close();
+            }}
+          >
+            <ListItemIcon>
+              <Box component="span" sx={{ width: 8, height: 8, borderRadius: 0.5, bgcolor: a.color }} />
+            </ListItemIcon>
+            <ListItemText>{a.label}</ListItemText>
+          </MenuItem>
+        ))}
+        <Divider sx={{ my: 1 }} />
+        <Box component="li" role="presentation" sx={heading}>
+          Aparência
+        </Box>
+        {(Object.keys(THEME_LABEL) as ThemeMode[]).map((mode) => {
+          const Icon = THEME_ICON[mode];
+          return (
+            <MenuItem
+              key={mode}
+              className={theme === mode ? 'bg-n-alpha-2' : undefined}
+              sx={{ bgcolor: theme === mode ? 'var(--color-n-alpha-2)' : undefined }}
+              onClick={() => setTheme(mode)}
+            >
+              <ListItemIcon>
+                <Icon size={16} />
+              </ListItemIcon>
+              <ListItemText>{THEME_LABEL[mode]}</ListItemText>
+            </MenuItem>
+          );
+        })}
+        <Divider sx={{ my: 1 }} />
+        {onShortcuts && (
+          <MenuItem
+            onClick={() => {
+              close();
+              onShortcuts();
+            }}
+          >
+            <ListItemIcon>
+              <Keyboard size={16} />
+            </ListItemIcon>
+            <ListItemText>Atalhos de teclado</ListItemText>
+          </MenuItem>
         )}
-      </Dropdown>
-    </div>
+        {onNavigate && (
+          <MenuItem
+            onClick={() => {
+              close();
+              onNavigate({ page: 'profile' });
+            }}
+          >
+            <ListItemIcon>
+              <UserCog size={16} />
+            </ListItemIcon>
+            <ListItemText>Configurações do perfil</ListItemText>
+          </MenuItem>
+        )}
+        {onNavigate && user.role !== 'administrator' && (
+          <MenuItem
+            onClick={() => {
+              close();
+              onNavigate({ page: 'settings', section: 'macros' });
+            }}
+          >
+            <ListItemIcon>
+              <Workflow size={16} />
+            </ListItemIcon>
+            <ListItemText>Macros</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={onLogout}>
+          <ListItemIcon>
+            <Power size={16} />
+          </ListItemIcon>
+          <ListItemText>Sair</ListItemText>
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 }

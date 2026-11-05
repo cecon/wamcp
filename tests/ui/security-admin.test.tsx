@@ -6,6 +6,7 @@ import { SettingsRouter } from '../../src/agent/settings/SettingsRouter';
 import { ContactsPage } from '../../src/agent/ContactsPage';
 import { connectRealtime } from '../../src/agent/api';
 import type { AuditLog } from '../../src/agent/accountTypes';
+import * as navTools from './nav';
 import { fakeApi, FakeEventSource, status } from './fake-api';
 import { admin, contact, inbox, labels, maria, team, workspaceRoutes } from './fixtures';
 
@@ -21,7 +22,6 @@ const log = (id: number, fields: Partial<AuditLog> = {}): AuditLog => ({
   created_at: 1_760_000_000,
   ...fields,
 });
-const nav = () => screen.getByRole('navigation');
 
 describe('audit log', () => {
   it('lists entries in pt-BR with pagination from the settings sidebar', async () => {
@@ -46,8 +46,8 @@ describe('audit log', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    await user.click(within(nav()).getByRole('button', { name: 'Configurações' }));
-    await user.click(within(nav()).getByRole('button', { name: 'Registro de auditoria' }));
+    await navTools.click(user, 'Configurações');
+    await navTools.click(user, 'Registro de auditoria');
     expect(await screen.findByRole('heading', { name: 'Registro de auditoria' })).toBeInTheDocument();
     const clone = (await screen.findByText('Clonou')).closest('tr')!;
     expect(within(clone).getByText('Automação')).toBeInTheDocument();

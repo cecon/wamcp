@@ -1,12 +1,24 @@
 import { useState } from 'react';
-import { History, Play, Plus } from 'lucide-react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
+import { History, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog, Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http } from '../../api';
 import type { RosterAgent } from '../../adminTypes';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
-import { ConfirmModal } from '../../ui/Confirm';
 import { SidePanel } from '../../ui/Overlay';
-import { Cell, RowActions, SettingsHeader, SettingsPage, Table } from '../../ui/Settings';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import { useAction } from '../useAction';
 import { RunHistory } from './RunHistory';
 import { ScheduleEditor } from './ScheduleEditor';
@@ -45,59 +57,110 @@ export function SchedulesPage() {
       setHistory(s);
     });
 
+  const actions = (s: AgentSchedule) => (
+    <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+      <IconButton
+        size="small"
+        aria-label={`Executar agora ${s.name}`}
+        disabled={busy || s.agent_ids.length === 0}
+        onClick={() => runNow(s)}
+      >
+        <Play size={14} />
+      </IconButton>
+      <IconButton size="small" aria-label={`Histórico de ${s.name}`} onClick={() => setHistory(s)}>
+        <History size={14} />
+      </IconButton>
+      <IconButton size="small" aria-label={`Editar ${s.name}`} onClick={() => setEditing(s)}>
+        <Pencil size={14} />
+      </IconButton>
+      <IconButton size="small" color="error" aria-label={`Excluir ${s.name}`} onClick={() => setDeleting(s)}>
+        <Trash2 size={14} />
+      </IconButton>
+    </Stack>
+  );
+
+  const columns: ColumnDef<AgentSchedule>[] = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessorKey: 'name',
+      cell: (info) => (
+        <Stack>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {info.row.original.name}
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {info.row.original.prompt}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: 'when',
+      header: 'Quando',
+      accessorFn: (schedule) => describeWhen(schedule),
+      cell: (info) => <Typography variant="body2">{String(info.getValue())}</Typography>,
+    },
+    {
+      id: 'agents',
+      header: 'Agentes',
+      accessorFn: (schedule) => schedule.agent_ids.map(nameOf).join(', ') || '—',
+      cell: (info) => (
+        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'next',
+      header: 'Próxima execução',
+      accessorFn: (schedule) =>
+        schedule.active ? formatTime(schedule.next_run_at, schedule.timezone) : 'Pausado',
+      cell: (info) => (
+        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: (info) => actions(info.row.original),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Agendamentos"
         description="Tarefas recorrentes em que agentes de IA se inscrevem para trabalhar sozinhos (como o /loop do Claude Code). A cada execução, o resultado chega no chat de quem criou o agendamento com o agente."
         count={`${schedules.length} agendamento${schedules.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Novo agendamento" onClick={() => setEditing('new')} />}
+        action={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEditing('new')}>
+            Novo agendamento
+          </Button>
+        }
       />
-      {(loadError || (error && !editing)) && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {loadError || error}
-        </p>
+      {(loadError || (error && !editing)) && <SettingsC3Error>{loadError || error}</SettingsC3Error>}
+      {notice && (
+        <Typography variant="body2" sx={{ color: 'success.main' }}>
+          {notice}
+        </Typography>
       )}
-      {notice && <p className="text-sm text-n-teal-11">{notice}</p>}
-      <Table
-        headers={['Nome', 'Quando', 'Agentes', 'Próxima execução', '']}
-        rows={schedules.length}
-        empty="Nenhum agendamento ainda."
-      >
-        {schedules.map((s) => (
-          <tr key={s.id}>
-            <Cell>
-              <span className="block font-medium text-n-slate-12">{s.name}</span>
-              <span className="line-clamp-1 text-sm">{s.prompt}</span>
-            </Cell>
-            <Cell>{describeWhen(s)}</Cell>
-            <Cell>{s.agent_ids.length ? s.agent_ids.map(nameOf).join(', ') : '—'}</Cell>
-            <Cell>{s.active ? formatTime(s.next_run_at, s.timezone) : 'Pausado'}</Cell>
-            <Cell className="w-48">
-              <div className="flex justify-end gap-1">
-                <Button
-                  color="slate"
-                  variant="faded"
-                  size="sm"
-                  icon={Play}
-                  aria-label={`Executar agora ${s.name}`}
-                  disabled={busy || s.agent_ids.length === 0}
-                  onClick={() => runNow(s)}
-                />
-                <Button
-                  color="slate"
-                  variant="faded"
-                  size="sm"
-                  icon={History}
-                  aria-label={`Histórico de ${s.name}`}
-                  onClick={() => setHistory(s)}
-                />
-                <RowActions labelFor={s.name} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} />
-              </div>
-            </Cell>
-          </tr>
-        ))}
-      </Table>
+      <Panel flush>
+        <DataTable
+          rows={schedules}
+          columns={columns}
+          getRowId={(schedule) => String(schedule.id)}
+          paginate={schedules.length > 10}
+          empty="Nenhum agendamento ainda."
+          ariaLabel="Agendamentos"
+        />
+      </Panel>
       {editing && (
         <SidePanel
           title={editing === 'new' ? 'Novo agendamento' : 'Editar agendamento'}
@@ -119,17 +182,23 @@ export function SchedulesPage() {
         </SidePanel>
       )}
       {deleting && (
-        <ConfirmModal
+        <ActionDialog
+          open
           title="Excluir agendamento"
           description={`Você tem certeza que deseja excluir “${deleting.name}”? O histórico de execuções também será apagado.`}
-          confirm="Sim, excluir"
+          confirmLabel="Sim, excluir"
+          backLabel="Cancelar"
+          tone="danger"
           onClose={() => setDeleting(null)}
-          onConfirm={async () => {
-            await http(`/agent_schedules/${deleting.id}`, 'DELETE');
-            reload();
-          }}
+          onConfirm={() =>
+            void run(async () => {
+              await http(`/agent_schedules/${deleting.id}`, 'DELETE');
+              setDeleting(null);
+              reload();
+            })
+          }
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

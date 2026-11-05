@@ -1,3 +1,6 @@
+// material-ui
+import Box from '@mui/material/Box';
+
 import type { UsageDay } from '../../adminTypes';
 import { count, fillDays } from './format';
 
@@ -11,10 +14,10 @@ export function UsageChart({ usage, days = 30 }: { usage: UsageDay[]; days?: num
   const bar = width / series.length;
   const total = series.reduce((sum, d) => sum + d.input_tokens + d.output_tokens, 0);
   return (
-    <figure className="flex flex-col gap-2">
+    <Box component="figure" sx={{ display: 'flex', flexDirection: 'column', gap: 1, m: 0 }}>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-24 w-full"
+        style={{ height: 96, width: '100%' }}
         role="img"
         aria-label={`Tokens nos últimos ${days} dias: ${count(total)}`}
         preserveAspectRatio="none"
@@ -39,14 +42,27 @@ export function UsageChart({ usage, days = 30 }: { usage: UsageDay[]; days?: num
           );
         })}
       </svg>
-      <figcaption className="flex gap-4 text-xs text-n-slate-11">
-        <span className="inline-flex items-center gap-1">
-          <span className="size-2 rounded-sm bg-n-blue-9" aria-hidden /> Entrada
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="size-2 rounded-sm bg-n-amber-9" aria-hidden /> Saída
-        </span>
-      </figcaption>
-    </figure>
+      <Box
+        component="figcaption"
+        sx={{ display: 'flex', gap: 2, color: 'var(--color-n-slate-11)', fontSize: 12 }}
+      >
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            component="span"
+            aria-hidden
+            sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: 'var(--color-n-blue-9)' }}
+          />
+          Entrada
+        </Box>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            component="span"
+            aria-hidden
+            sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: 'var(--color-n-amber-9)' }}
+          />
+          Saída
+        </Box>
+      </Box>
+    </Box>
   );
 }
