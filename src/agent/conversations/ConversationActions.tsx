@@ -94,9 +94,10 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
             </option>
           ))}
         </Box>
-        {!c.assignee_id && aiAgent && (
+        {!c.assignee_id && (c.assignee_agent_name || aiAgent) && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            IA da caixa: <strong>{aiAgent.name}</strong> responde automaticamente até um humano assumir.
+            Responsável: <strong>{c.assignee_agent_name ?? aiAgent?.name}</strong> (IA) — responde até um humano
+            assumir; se não resolver, passa automaticamente para uma pessoa.
           </Typography>
         )}
       </Box>

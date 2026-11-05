@@ -97,7 +97,26 @@ impl Core {
     /// Round robin among online inbox members (restricted to the team when it allows auto-assign).
     pub fn auto_assign(&self, conversation: Conversation, events: &mut Events) -> Result<Conversation> {
         let inbox = self.inbox(conversation.inbox_id)?;
-        if inbox.enable_auto_assignment == 0 || conversation.assignee_id.is_some() || conversation.status != "open" {
+        let mut conversation = conversation;
+        // O agente de IA da caixa é o responsável enquanto atende; não existe conversa atendida "sem dono".
+        if conversation.assignee_id.is_none() && conversation.assignee_agent_id.is_none() {
+            if let Some(agent_id) = inbox.ai_agent_id {
+                conversation = self.update(
+                    conversation.id,
+                    ConversationChanges {
+                        assignee_agent_id: Some(Some(agent_id)),
+                        ..Default::default()
+                    },
+                )?;
+                events.push("assignee.changed", &conversation);
+            }
+        }
+        // Caixas com agente de IA não entram no rodízio humano: a IA é a responsável até o handoff.
+        if inbox.ai_agent_id.is_some()
+            || inbox.enable_auto_assignment == 0
+            || conversation.assignee_id.is_some()
+            || conversation.status != "open"
+        {
             return Ok(conversation);
         }
         let team = match conversation.team_id {

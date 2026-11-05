@@ -12,6 +12,7 @@ use crate::application::core::Core;
 use crate::application::event_bus::{EventBus, Worker};
 use crate::application::events::EventService;
 use crate::application::helpdesk::HelpdeskService;
+use crate::application::ai_watchdog::AiWatchdog;
 use crate::application::llm_bots::LlmBotService;
 use crate::application::notifications::NotificationService;
 use crate::application::oauth::OAuthService;
@@ -274,7 +275,6 @@ impl App {
                 let _ = webhooks.deliver_due().await;
             }
         });
-        // Agent schedules: unfinished runs of the last session failed; missed runs happen once (30 s).
         let schedules = support.schedules.clone();
         let scheduler = tokio::spawn(async move {
             let _ = schedules.recover();
@@ -284,8 +284,8 @@ impl App {
                 let _ = schedules.run_due();
             }
         });
-        let github = support.helpdesk.spawn_github_redelivery();
-        let mut jobs = vec![snoozes, deliveries, scheduler, github];
+        let mut jobs = vec![snoozes, deliveries, scheduler, support.helpdesk.spawn_github_redelivery()];
+        jobs.extend(AiWatchdog::spawn_optional(support.helpdesk.clone(), self.llm_bots.clone()));
         if let Some(events) = self.state.events.clone() {
             jobs.push(tokio::spawn(async move {
                 let mut ticker = tokio::time::interval(Duration::from_secs(1));

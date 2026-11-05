@@ -13,6 +13,8 @@ pub struct Conversation {
     pub status: String,
     pub priority: Option<String>,
     pub assignee_id: Option<i64>,
+    /// Agente de IA responsável na caixa (o atendimento é dele até passar a um humano).
+    pub assignee_agent_id: Option<i64>,
     pub team_id: Option<i64>,
     pub snoozed_until: Option<i64>,
     pub waiting_since: Option<i64>,
@@ -32,6 +34,7 @@ pub struct Conversation {
     pub inbox_name: String,
     pub agent_bot_enabled: i64,
     pub assignee_name: Option<String>,
+    pub assignee_agent_name: Option<String>,
     pub team_name: Option<String>,
     pub labels: Vec<String>,
     pub last_message: Option<String>,
@@ -47,6 +50,7 @@ pub struct ConversationChanges {
     pub status: Option<String>,
     pub priority: Option<Option<String>>,
     pub assignee_id: Option<Option<i64>>,
+    pub assignee_agent_id: Option<Option<i64>>,
     pub team_id: Option<Option<i64>>,
     pub snoozed_until: Option<Option<i64>>,
     pub waiting_since: Option<Option<i64>>,
@@ -81,6 +85,8 @@ pub struct ConversationFilters {
 pub struct ConversationCounts {
     pub mine: i64,
     pub unassigned: i64,
+    /// Atendidas pelo agente de IA da caixa (responsável sem humano).
+    pub ai: i64,
     pub all: i64,
 }
 
