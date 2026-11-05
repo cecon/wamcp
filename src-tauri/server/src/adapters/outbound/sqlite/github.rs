@@ -36,6 +36,13 @@ impl GithubRepo for SqliteStore {
         self.exec(sql, vec![int(hook_id), int(inbox_id)]).map(|_| ())
     }
 
+    fn set_github_token(&self, inbox_id: i64, token: &str, own_login: Option<&str>) -> Result<()> {
+        let sql = "UPDATE channel_github SET token=?,own_login=?
+                   WHERE id=(SELECT channel_id FROM inboxes WHERE id=? AND channel_type='github')";
+        self.exec(sql, vec![text(token), opt_text(own_login), int(inbox_id)])
+            .map(|_| ())
+    }
+
     fn github_channels(&self) -> Result<Vec<GithubChannel>> {
         let sql = "SELECT i.id AS inbox_id,g.repo,g.token,g.webhook_secret,g.own_login,g.hook_id,g.installation_id
                    FROM inboxes i JOIN channel_github g ON g.id=i.channel_id

@@ -265,3 +265,30 @@ async fn the_administrator_creates_the_webhook_again_when_github_refused_it() {
     admin.post(&retry, json!({})).await;
     assert_eq!(f.github.hooks.lock().len(), 1);
 }
+
+#[tokio::test]
+async fn the_administrator_replaces_the_token_and_the_webhook_is_created() {
+    let f = common::Fixture::new().await;
+    let admin = f.bootstrap().await;
+    let reply = admin
+        .post(
+            "/github_channels",
+            json!({ "name": "C3Theme", "repo": REPO, "token": "ghp_sem_webhook" }),
+        )
+        .await;
+    assert_eq!(reply.body["hook_created"], false, "{:?}", reply.body);
+    let inbox = reply.body["inbox"]["id"].as_i64().unwrap();
+    let path = format!("/inboxes/{inbox}/github/token");
+
+    let maria = f.agent(&admin, "maria@example.com", "agent", false).await;
+    assert_eq!(maria.put(&path, json!({ "token": "ghp_novo" })).await.status, 403);
+    assert_eq!(admin.put(&path, json!({ "token": "  " })).await.status, 422);
+    assert!(f.github.hooks.lock().is_empty());
+
+    // The new token is checked, stored and used right away to create the missing webhook.
+    let replaced = admin.put(&path, json!({ "token": "ghp_novo" })).await;
+    assert_eq!(replaced.status, 200, "{:?}", replaced.body);
+    assert_eq!(replaced.body["hook_created"], true);
+    assert_eq!(replaced.body["account"], "wamcp-bot");
+    assert_eq!(f.github.hooks.lock().len(), 1);
+}

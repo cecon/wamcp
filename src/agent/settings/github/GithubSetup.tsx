@@ -8,6 +8,8 @@ import { useState } from 'react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
+import { GithubAppPanel } from './GithubAppPanel';
+import { GithubTokenForm } from './GithubTokenForm';
 import type { GithubWebhook } from './WebhookInstructions';
 import { WebhookInstructions } from './WebhookInstructions';
 
@@ -18,7 +20,7 @@ interface Setup extends GithubWebhook {
   via_app?: boolean;
 }
 
-/** O lado GitHub de uma caixa de entrada: repositório, conta que comenta e o webhook. */
+/** O lado GitHub de uma caixa de entrada: repositório, conta que comenta, webhook/App e token. */
 export function GithubSetup({ inboxId }: { inboxId: number }) {
   const setup = useFetch<Setup>(`/inboxes/${inboxId}/github`);
   const [retried, setRetried] = useState<Setup | null>(null);
@@ -49,14 +51,23 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
             Conectado pelo GitHub App: os eventos chegam pelo webhook do App.
           </Typography>
         ) : hook_created ? (
-          <Typography variant="body2" color="text.secondary">
-            O webhook foi criado no GitHub pelo app.
-          </Typography>
+          <>
+            <Typography variant="body2" color="text.secondary">
+              O webhook foi criado no GitHub pelo app.
+            </Typography>
+            <GithubTokenForm<Setup> inboxId={inboxId} onSaved={setRetried} />
+          </>
         ) : (
           <>
             <Typography variant="body2" sx={{ fontWeight: 500, color: 'warning.main' }}>
               O webhook ainda não existe no GitHub: nenhum evento chega a esta caixa.
             </Typography>
+            <Typography variant="body2">
+              Recomendado: instale o GitHub App do agente neste repositório. Ele recebe os eventos sem webhook
+              próprio e o agente deixa de agir com o seu token.
+            </Typography>
+            <GithubAppPanel />
+            <Typography variant="body2">Ou continue com o seu token:</Typography>
             <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
               <Button
                 size="small"
@@ -70,7 +81,8 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
                 {busy ? 'Criando…' : 'Criar webhook'}
               </Button>
               <Typography variant="caption" color="text.secondary">
-                O token precisa da permissão Webhooks (leitura e escrita) no repositório. Ou cadastre à mão:
+                O token precisa da permissão Webhooks (leitura e escrita) no repositório. Se não tiver, troque
+                o token abaixo.
               </Typography>
               {error && (
                 <Typography variant="body2" sx={{ color: 'error.main' }}>
@@ -78,6 +90,10 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
                 </Typography>
               )}
             </Stack>
+            <GithubTokenForm<Setup> inboxId={inboxId} onSaved={setRetried} />
+            <Typography variant="caption" color="text.secondary">
+              Ou cadastre o webhook à mão:
+            </Typography>
             <WebhookInstructions webhook={current} reason={current.hook_error} />
           </>
         )}

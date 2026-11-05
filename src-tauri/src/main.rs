@@ -35,6 +35,25 @@ fn show(app: &tauri::AppHandle) {
         let _ = w.set_focus();
     }
 }
+/// Opens an http(s) URL in the default browser; any other scheme is ignored.
+fn open_in_browser(url: &str) {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return;
+    }
+    #[cfg(windows)]
+    let mut command = std::process::Command::new("rundll32");
+    #[cfg(windows)]
+    command.args(["url.dll,FileProtocolHandler", url]);
+    #[cfg(target_os = "macos")]
+    let mut command = std::process::Command::new("open");
+    #[cfg(target_os = "macos")]
+    command.arg(url);
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let mut command = std::process::Command::new("xdg-open");
+    #[cfg(not(any(windows, target_os = "macos")))]
+    command.arg(url);
+    let _ = command.spawn();
+}
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -67,6 +86,12 @@ fn main() {
                 .inner_size(1240.0, 820.0)
                 .min_inner_size(800.0, 600.0)
                 .visible(false)
+                // Links that open a new window (target=_blank: GitHub, chat links) go to the
+                // system browser; a bare WebView2 popup has no address bar and loses the session.
+                .on_new_window(|url, _| {
+                    open_in_browser(url.as_str());
+                    tauri::webview::NewWindowResponse::Deny
+                })
                 .build()?;
             let marker = app.path().app_local_data_dir()?.join("autostart-initialized");
             if !marker.exists() {

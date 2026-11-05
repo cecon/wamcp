@@ -1,5 +1,4 @@
 // material-ui
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
@@ -28,79 +27,78 @@ export function GithubAppPanel() {
   if (!status.data) return null;
   const { app, repos } = status.data;
   return (
-    <Box
+    <Stack
       component="section"
       aria-label="GitHub App"
-      sx={{ mb: 2, border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}
+      spacing={1.5}
+      sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}
     >
-      <Stack spacing={1.5}>
-        <Typography variant="h6" component="h2">
-          GitHub App do agente
-        </Typography>
-        {app ? (
-          <>
-            <Typography variant="body2">
-              O agente age no GitHub como <strong>@{app.slug}[bot]</strong>
-              {app.owner && <> (de {app.owner})</>}. Cada repositório em que o App estiver instalado vira um
-              canal, e os eventos chegam pelo webhook do App.
+      <Typography variant="h6" component="h2">
+        GitHub App do agente
+      </Typography>
+      {app ? (
+        <>
+          <Typography variant="body2">
+            O agente age no GitHub como <strong>@{app.slug}[bot]</strong>
+            {app.owner && <> (de {app.owner})</>}. Cada repositório em que o App estiver instalado vira um
+            canal, e os eventos chegam pelo webhook do App.
+          </Typography>
+          <Link href={app.install_url} target="_blank" rel="noreferrer" sx={{ alignSelf: 'flex-start' }}>
+            Instalar ou escolher repositórios no GitHub
+          </Link>
+          {repos.length > 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Repositórios: {repos.map((r) => r.repo).join(', ')}
             </Typography>
-            <Link href={app.install_url} target="_blank" rel="noreferrer" sx={{ alignSelf: 'flex-start' }}>
-              Instalar ou escolher repositórios no GitHub
-            </Link>
-            {repos.length > 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                Repositórios: {repos.map((r) => r.repo).join(', ')}
-              </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Ainda não instalado em nenhum repositório.
+            </Typography>
+          )}
+        </>
+      ) : (
+        <>
+          <Typography variant="body2">
+            Dê ao agente uma identidade própria no GitHub, em vez do seu token pessoal: o GitHub abre com o
+            App preenchido (permissões, eventos e webhook), você confirma e escolhe os repositórios.
+          </Typography>
+          <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+            <TextField
+              size="small"
+              label="Organização (opcional; vazio cria na sua conta)"
+              placeholder="ex.: minha-empresa"
+              value={owner}
+              onChange={(event) => setOwner(event.target.value)}
+              sx={{ width: '100%', maxWidth: 420 }}
+            />
+            {next ? (
+              <Link href={next} target="_blank" rel="noreferrer">
+                Abrir o GitHub para criar o App
+              </Link>
             ) : (
-              <Typography variant="body2" color="text.secondary">
-                Ainda não instalado em nenhum repositório.
+              <Button
+                variant="outlined"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const started = await http<{ url: string }>('/github_app', 'POST', {
+                      owner: owner.trim() || null,
+                    });
+                    setNext(started.url);
+                  })
+                }
+              >
+                {busy ? 'Preparando…' : 'Criar GitHub App'}
+              </Button>
+            )}
+            {error && (
+              <Typography variant="body2" role="alert" sx={{ color: 'error.main' }}>
+                {error}
               </Typography>
             )}
-          </>
-        ) : (
-          <>
-            <Typography variant="body2">
-              Dê ao agente uma identidade própria no GitHub, em vez do seu token pessoal: o GitHub abre com o
-              App preenchido (permissões, eventos e webhook), você confirma e escolhe os repositórios.
-            </Typography>
-            <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
-              <TextField
-                size="small"
-                label="Organização (opcional; vazio cria na sua conta)"
-                placeholder="ex.: minha-empresa"
-                value={owner}
-                onChange={(event) => setOwner(event.target.value)}
-                sx={{ width: '100%', maxWidth: 420 }}
-              />
-              {next ? (
-                <Link href={next} target="_blank" rel="noreferrer">
-                  Abrir o GitHub para criar o App
-                </Link>
-              ) : (
-                <Button
-                  variant="outlined"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      const started = await http<{ url: string }>('/github_app', 'POST', {
-                        owner: owner.trim() || null,
-                      });
-                      setNext(started.url);
-                    })
-                  }
-                >
-                  {busy ? 'Preparando…' : 'Criar GitHub App'}
-                </Button>
-              )}
-              {error && (
-                <Typography variant="body2" role="alert" sx={{ color: 'error.main' }}>
-                  {error}
-                </Typography>
-              )}
-            </Stack>
-          </>
-        )}
-      </Stack>
-    </Box>
+          </Stack>
+        </>
+      )}
+    </Stack>
   );
 }
