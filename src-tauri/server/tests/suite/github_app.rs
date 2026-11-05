@@ -66,6 +66,9 @@ async fn the_administrator_creates_the_app_from_a_manifest_and_installs_it() {
         json!({ "id": 77, "slug": "wamcp-agente", "pem": "-----BEGIN RSA PRIVATE KEY-----", "webhook_secret": SECRET,
                 "html_url": "https://github.com/apps/wamcp-agente", "owner": { "login": "cecon" } }),
     );
+    // A conversion GitHub refuses leaves the state alive: reloading the callback finishes it.
+    let refused = get(&f, &format!("/api/github/app/callback?state={state}&code=velho")).await;
+    assert_eq!(refused.status, 400, "{}", refused.text);
     let back = get(&f, &format!("/api/github/app/callback?state={state}&code=c0de")).await;
     assert_eq!(back.status, 303, "{}", back.text);
     assert_eq!(

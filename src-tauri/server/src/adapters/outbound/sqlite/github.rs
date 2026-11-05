@@ -83,4 +83,26 @@ impl GithubRepo for SqliteStore {
         ];
         self.exec(sql, params).map(|_| ())
     }
+
+    fn save_github_manifest(&self, state: &str, owner: Option<&str>, until: i64, now: i64) -> Result<()> {
+        self.exec("DELETE FROM github_app_manifest WHERE until<=?", vec![int(now)])?;
+        let sql = "INSERT INTO github_app_manifest(state,owner,until) VALUES(?,?,?)";
+        self.exec(sql, vec![text(state), opt_text(owner), int(until)])
+            .map(|_| ())
+    }
+
+    fn github_manifest(&self, state: &str, now: i64) -> Result<Option<Option<String>>> {
+        #[derive(serde::Deserialize)]
+        struct Manifest {
+            owner: Option<String>,
+        }
+        let sql = "SELECT owner FROM github_app_manifest WHERE state=? AND until>?";
+        let found: Option<Manifest> = self.row(sql, vec![text(state), int(now)], PLAIN)?;
+        Ok(found.map(|m| m.owner))
+    }
+
+    fn drop_github_manifest(&self, state: &str) -> Result<()> {
+        self.exec("DELETE FROM github_app_manifest WHERE state=?", vec![text(state)])
+            .map(|_| ())
+    }
 }

@@ -12,7 +12,8 @@ use crate::domain::model::{GithubApp, GithubChannel};
 use serde_json::{json, Value};
 
 /// How long the administrator has to confirm the App on GitHub.
-const MANIFEST_MS: i64 = 15 * 60 * 1000;
+/// As long as GitHub's own code for the conversion lasts.
+const MANIFEST_MS: i64 = 60 * 60 * 1000;
 /// An installation token is renewed this long before it expires.
 const TOKEN_MARGIN_MS: i64 = 5 * 60 * 1000;
 
@@ -54,21 +55,18 @@ impl HelpdeskService {
             return fail_with("Organização inválida", 422);
         }
         let state = random_secret();
-        let until = self.core.clock.now_ms() + MANIFEST_MS;
-        let mut runs = self.github_runs.lock();
         let now = self.core.clock.now_ms();
-        runs.manifests.retain(|_, (until, _)| *until > now);
-        runs.manifests.insert(state.clone(), (until, owner.map(String::from)));
+        self.core
+            .repo
+            .save_github_manifest(&state, owner, now + MANIFEST_MS, now)?;
         let base = public_url.trim_end_matches('/');
         Ok(json!({ "url": format!("{base}/api/github/app/new?state={state}") }))
     }
 
     /// The form that posts the manifest to GitHub: its address and the manifest, for a live state.
     pub fn github_app_form(&self, state: &str, public_url: &str) -> Result<(String, String)> {
-        let now = self.core.clock.now_ms();
-        let owner = match self.github_runs.lock().manifests.get(state) {
-            Some((until, owner)) if *until > now => owner.clone(),
-            _ => return fail_with("Link expirado: comece de novo pelo app", 410),
+        let Some(owner) = self.core.repo.github_manifest(state, self.core.clock.now_ms())? else {
+            return fail_with("Link expirado: comece de novo pelo app", 410);
         };
         let action = match &owner {
             Some(org) => format!("https://github.com/organizations/{org}/settings/apps/new?state={state}"),
@@ -81,12 +79,17 @@ impl HelpdeskService {
 
     /// GitHub came back with the App: stores it (key and secret sealed) and answers where to install it.
     pub async fn finish_github_app(&self, state: &str, code: &str) -> Result<String> {
-        let now = self.core.clock.now_ms();
-        match self.github_runs.lock().manifests.remove(state) {
-            Some((until, _)) if until > now => {}
-            _ => return fail_with("Link expirado: comece de novo pelo app", 410),
+        if self
+            .core
+            .repo
+            .github_manifest(state, self.core.clock.now_ms())?
+            .is_none()
+        {
+            return fail_with("Link expirado: comece de novo pelo app", 410);
         }
+        // Consumed only once GitHub answers, so a failed conversion can be retried by reloading.
         let created = self.github.convert_manifest(code).await?;
+        self.core.repo.drop_github_manifest(state)?;
         let (Some(app_id), Some(slug), Some(pem), Some(secret)) = (
             created["id"].as_i64(),
             created["slug"].as_str(),

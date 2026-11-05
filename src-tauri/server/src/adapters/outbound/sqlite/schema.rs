@@ -234,5 +234,8 @@ pub fn steps() -> Vec<String> {
            created TEXT NOT NULL);
          ALTER TABLE channel_github ADD COLUMN installation_id INTEGER;"
             .into(),
+        // v38: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
+        // a volta do GitHub
+        "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
     ]
 }
