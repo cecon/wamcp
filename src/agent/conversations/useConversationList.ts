@@ -72,15 +72,29 @@ export function useConversationList({ route, status, tab, sort, realtime }: Opti
     const handle = setTimeout(reload, 0);
     return () => clearTimeout(handle);
   }, [reload]);
+  /** Bursts (message + activity + assignment, or an action and its own event) collapse into one refresh. */
+  const refresh = useCallback(() => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => void load().catch(() => {}), 300);
+  }, [load]);
+  useEffect(() => () => clearTimeout(timer.current), []);
   useEffect(
     () =>
       realtime.subscribe(({ event }) => {
-        if (!REFRESH.has(event)) return;
-        clearTimeout(timer.current);
-        // Bursts (message + activity + assignment) collapse into one refresh.
-        timer.current = setTimeout(() => void load().catch(() => {}), 300);
+        if (REFRESH.has(event)) refresh();
       }),
-    [realtime, load],
+    [realtime, refresh],
+  );
+  /**
+   * A change made in this tab (resolve, assign, read): the card shows it at once and the counters and
+   * tab membership are fetched again, without waiting for the realtime stream to echo it back.
+   */
+  const apply = useCallback(
+    (changed: Conversation) => {
+      setItems((list) => list.map((c) => (c.id === changed.id ? { ...c, ...changed } : c)));
+      refresh();
+    },
+    [refresh],
   );
   return {
     items,
@@ -88,6 +102,8 @@ export function useConversationList({ route, status, tab, sort, realtime }: Opti
     hasMore,
     error,
     reload,
+    refresh,
+    apply,
     more: () => void load(page + 1).catch((e: Error) => setError(e.message)),
   };
 }
