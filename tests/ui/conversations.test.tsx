@@ -165,6 +165,36 @@ describe('conversation box', () => {
     expect(onNavigate).toHaveBeenCalledWith({ page: 'conversations', displayId: undefined });
   });
 
+  it('updates the list and its counters after reading and resolving, without waiting for realtime', async () => {
+    let open = true,
+      unread = 5;
+    const api = fakeApi({
+      ...workspaceRoutes(),
+      'GET /conversations': () => (open ? [{ ...conversation, unread_count: unread }] : []),
+      'POST /conversations/7/update_last_seen': () => {
+        unread = 0;
+        return { ...conversation, unread_count: 0 };
+      },
+      'GET /conversations/meta': () => ({ mine: open ? 1 : 0, unassigned: 0, all: open ? 1 : 0 }),
+      'POST /conversations/7/toggle_status': (body) => {
+        open = false;
+        return { ...conversation, ...(body as object) };
+      },
+    });
+    const user = userEvent.setup();
+    renderScreen({ displayId: 7 });
+    const list = await screen.findByRole('region', { name: 'Lista de conversas' });
+    expect(await within(list).findByRole('tab', { name: /Minhas\s*1/ })).toBeInTheDocument();
+    // Opening the conversation reads it: the card's unread badge goes away.
+    await waitFor(() => expect(api.called('POST', '/conversations/7/update_last_seen')).toHaveLength(1));
+    await waitFor(() => expect(within(list).queryByText('5')).not.toBeInTheDocument());
+    const box = screen.getByRole('region', { name: 'Conversa' });
+    await user.click(await within(box).findByRole('button', { name: 'Resolver' }));
+    expect(await within(list).findByRole('tab', { name: /Minhas\s*0/ })).toBeInTheDocument();
+    expect(within(list).getByText('Não há conversas ativas neste grupo.')).toBeInTheDocument();
+    expect(api.called('GET', '/conversations/meta').length).toBeGreaterThan(1);
+  });
+
   it('loads older messages and WhatsApp history, and reports load errors', async () => {
     const full = Array.from({ length: 50 }, (_, i) => message(i + 10));
     const api = fakeApi({

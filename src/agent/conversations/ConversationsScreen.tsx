@@ -129,7 +129,12 @@ export function ConversationsScreen({
           user={user}
           catalog={catalog}
           realtime={realtime}
-          onBack={() => select(undefined)}
+          onChange={list.apply}
+          onBack={() => {
+            // Leaving can follow a change (e.g. "mark as unread"): bring the counters up to date.
+            list.refresh();
+            select(undefined);
+          }}
           onOpen={select}
           onDeleted={() => {
             list.reload();
