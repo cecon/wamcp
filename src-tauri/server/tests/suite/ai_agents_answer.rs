@@ -32,7 +32,10 @@ struct FakeRuntime {
 impl Llm for FakeRuntime {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         self.calls.lock().push(request.clone());
-        Ok(json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": self.handoff.load(Ordering::Relaxed) }).into())
+        Ok(
+            json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": self.handoff.load(Ordering::Relaxed) })
+                .into(),
+        )
     }
 
     fn location(&self) -> Option<String> {
@@ -267,7 +270,6 @@ fn codex_and_claude_outputs_are_read_back() {
     assert_eq!(parse_output(inline, b"").unwrap()["handoff"], true);
 }
 
-
 #[tokio::test]
 async fn ai_is_responsible_and_hands_off_to_a_human_when_it_cannot_solve() {
     let s = setup().await;
@@ -276,7 +278,10 @@ async fn ai_is_responsible_and_hands_off_to_a_human_when_it_cannot_solve() {
     let ana = s.agent(ai(&p, "Ana", "operator")).await;
     assert_eq!(s.connect(Some(ana)).await.status, 200);
     // Entrega a conversa para a IA (status pending) e ela responde.
-    let handed = s.admin.post("/conversations/1/toggle_status", json!({ "status": "pending" })).await;
+    let handed = s
+        .admin
+        .post("/conversations/1/toggle_status", json!({ "status": "pending" }))
+        .await;
     assert_eq!(handed.status, 200, "{:?}", handed.body);
     s.f.settle().await;
 

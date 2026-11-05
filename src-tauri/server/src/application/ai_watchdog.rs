@@ -44,7 +44,9 @@ impl AiWatchdog {
                     Ok(()) => {
                         attempts.remove(id);
                     }
-                    Err(error) => tracing::warn!(%error, conversation = %id, "vigia da IA não conseguiu passar a um humano"),
+                    Err(error) => {
+                        tracing::warn!(%error, conversation = %id, "vigia da IA não conseguiu passar a um humano")
+                    }
                 }
             } else {
                 *tries += 1;

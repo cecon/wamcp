@@ -222,7 +222,10 @@ impl ConversationRepo for SqliteStore {
                 &format!("{base} AND c.assignee_id IS NULL AND c.assignee_agent_id IS NULL"),
                 args.clone(),
             )?,
-            ai: self.count(&format!("{base} AND c.assignee_agent_id IS NOT NULL AND c.assignee_id IS NULL"), args.clone())?,
+            ai: self.count(
+                &format!("{base} AND c.assignee_agent_id IS NOT NULL AND c.assignee_id IS NULL"),
+                args.clone(),
+            )?,
             all: self.count(&base, args)?,
         })
     }
