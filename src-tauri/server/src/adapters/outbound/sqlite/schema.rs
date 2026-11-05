@@ -241,5 +241,8 @@ pub fn steps() -> Vec<String> {
            WHERE assignee_id IS NULL AND status IN ('open','pending');
          CREATE INDEX conversations_assignee_agent ON conversations(assignee_agent_id);"
             .into(),
+        // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
+        // a volta do GitHub
+        "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
     ]
 }

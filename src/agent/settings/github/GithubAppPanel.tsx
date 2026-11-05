@@ -55,6 +55,27 @@ export function GithubAppPanel() {
               Ainda não instalado em nenhum repositório.
             </Typography>
           )}
+          <Button
+            color="error"
+            disabled={busy}
+            sx={{ alignSelf: 'flex-start' }}
+            onClick={() => {
+              const ask = `Remover o App @${app.slug}[bot] do WAMCP? Os canais voltam ao token até você criar e instalar um App novo. Depois, apague o App também no GitHub.`;
+              if (!window.confirm(ask)) return;
+              void run(async () => {
+                await http('/github_app', 'DELETE');
+                setNext(null);
+                status.reload();
+              });
+            }}
+          >
+            Remover GitHub App
+          </Button>
+          {error && (
+            <Typography variant="body2" role="alert" sx={{ color: 'error.main' }}>
+              {error}
+            </Typography>
+          )}
         </>
       ) : (
         <>

@@ -21,6 +21,10 @@ async fn status(State(state): State<AppState>, current: CurrentUser) -> ApiResul
     ok(state.support().helpdesk.github_app_status(&current.actor())?)
 }
 
+async fn remove(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
+    ok(state.support().helpdesk.remove_github_app(&current.actor())?)
+}
+
 async fn start(State(state): State<AppState>, current: CurrentUser, Body(body): Body<Start>) -> ApiResult<Response> {
     let started =
         state
@@ -127,7 +131,7 @@ async fn webhook(State(state): State<AppState>, headers: HeaderMap, body: Bytes)
 
 /// Under `/api/v1` (session and same-origin checks).
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/github_app", get(status).post(start))
+    Router::new().route("/github_app", get(status).post(start).delete(remove))
 }
 
 /// Mounted outside `/api/v1`: the browser comes from GitHub, and GitHub posts the events.
