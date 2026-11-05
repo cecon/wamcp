@@ -1,6 +1,6 @@
 //! The GitHub inbox's AI agent after a handoff: while nobody takes the conversation (it stays `open`
 //! and unassigned), a new message on the repository must reach the channel's responsible agent again.
-use crate::agents_support::{self, ai, profiles};
+use crate::agents_support::{ai, profiles};
 use crate::github_support::{connected, pr_opened, repository};
 use async_trait::async_trait;
 use parking_lot::Mutex;
