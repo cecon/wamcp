@@ -9,6 +9,8 @@ pub trait GithubRepo {
     fn create_github_inbox(&self, name: &str, channel: &GithubChannel) -> Result<Inbox>;
     fn github_channel(&self, inbox_id: i64) -> Result<Option<GithubChannel>>;
     fn set_github_hook(&self, inbox_id: i64, hook_id: i64) -> Result<()>;
+    /// Replaces the (sealed) token of a token-connected channel and the account it acts as.
+    fn set_github_token(&self, inbox_id: i64, token: &str, own_login: Option<&str>) -> Result<()>;
     /// Every GitHub inbox's channel.
     fn github_channels(&self) -> Result<Vec<GithubChannel>>;
     /// The channel of `owner/repo` (GitHub's case is not always the one typed).

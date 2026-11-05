@@ -48,6 +48,32 @@ impl HelpdeskService {
         Ok(setup)
     }
 
+    /// Replaces the token of a GitHub inbox (administrators), e.g. with one that has the Webhooks
+    /// permission, after checking it against GitHub, then creates the webhook if it is missing.
+    pub async fn replace_github_token(
+        &self,
+        actor: &Actor,
+        inbox_id: i64,
+        token: &str,
+        public_url: &str,
+    ) -> Result<Value> {
+        let setup = self.github_setup(actor, inbox_id, public_url)?;
+        let token = token.trim();
+        if token.is_empty() || token.len() > 400 {
+            return fail_with("Informe o token", 422);
+        }
+        let own_login = self.github.login(token).await?;
+        self.github
+            .repository(token, setup["repo"].as_str().unwrap_or_default())
+            .await?;
+        let sealed = self.secrets.seal(token)?;
+        let login = Some(own_login.as_str()).filter(|l| !l.is_empty());
+        self.core.commit(Some(actor), |_| {
+            self.core.repo.set_github_token(inbox_id, &sealed, login)
+        })?;
+        self.retry_github_hook(actor, inbox_id, public_url).await
+    }
+
     /// The webhook of a GitHub inbox, to add it on GitHub by hand (administrators).
     pub fn github_setup(&self, actor: &Actor, inbox_id: i64, public_url: &str) -> Result<Value> {
         if !actor.is_admin() {

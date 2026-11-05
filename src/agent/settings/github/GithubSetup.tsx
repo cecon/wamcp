@@ -3,6 +3,7 @@ import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
 import { GithubAppPanel } from './GithubAppPanel';
+import { GithubTokenForm } from './GithubTokenForm';
 import type { GithubWebhook } from './WebhookInstructions';
 import { WebhookInstructions } from './WebhookInstructions';
 
@@ -37,7 +38,10 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
           Conectado pelo GitHub App: os eventos chegam pelo webhook do App.
         </p>
       ) : hook_created ? (
-        <p className="text-sm text-n-slate-11">O webhook foi criado no GitHub pelo app.</p>
+        <>
+          <p className="text-sm text-n-slate-11">O webhook foi criado no GitHub pelo app.</p>
+          <GithubTokenForm<Setup> inboxId={inboxId} onSaved={setRetried} />
+        </>
       ) : (
         <>
           <p className="text-sm font-medium text-n-amber-11">
@@ -63,10 +67,13 @@ export function GithubSetup({ inboxId }: { inboxId: number }) {
               {busy ? 'Criando…' : 'Criar webhook'}
             </button>
             <p className="text-xs text-n-slate-11">
-              O token precisa da permissão Webhooks (leitura e escrita) no repositório. Ou cadastre à mão:
+              O token precisa da permissão Webhooks (leitura e escrita) no repositório. Se não tiver, troque o
+              token abaixo.
             </p>
             {error && <p className="text-sm text-n-ruby-11">{error}</p>}
           </div>
+          <GithubTokenForm<Setup> inboxId={inboxId} onSaved={setRetried} />
+          <p className="text-xs text-n-slate-11">Ou cadastre o webhook à mão:</p>
           <WebhookInstructions webhook={current} reason={current.hook_error} />
         </>
       )}

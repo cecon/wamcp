@@ -137,4 +137,22 @@ describe('GitHub channel', () => {
     expect(await screen.findByRole('button', { name: 'Criar GitHub App' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Criar webhook' })).toBeInTheDocument();
   });
+
+  it('replaces the token from the inbox and creates the webhook', async () => {
+    const api = fakeApi({
+      'GET /inboxes/2/github': { ...webhook, repo: 'cecon/C3Theme', account: 'cecon', hook_created: false },
+      'PUT /inboxes/2/github/token': {
+        ...webhook,
+        repo: 'cecon/C3Theme',
+        account: 'cecon',
+        hook_created: true,
+      },
+    });
+    render(<GithubSetup inboxId={2} />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Novo token do GitHub'), 'github_pat_novo');
+    await user.click(screen.getByRole('button', { name: 'Salvar token e criar webhook' }));
+    expect(await screen.findByText('O webhook foi criado no GitHub pelo app.')).toBeInTheDocument();
+    expect(api.called('PUT', '/inboxes/2/github/token')[0].body).toEqual({ token: 'github_pat_novo' });
+  });
 });
