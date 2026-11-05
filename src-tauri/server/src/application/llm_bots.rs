@@ -263,7 +263,8 @@ impl LlmBotService {
         let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
         };
-        self.conclude(&inbox, &conversation, &responder, answer, forwarded).await
+        self.conclude(&inbox, &conversation, &responder, answer, forwarded)
+            .await
     }
 
     /// O vigia usa para pedir ao agente que decida de novo sobre uma conversa parada.

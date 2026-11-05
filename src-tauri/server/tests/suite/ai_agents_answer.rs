@@ -134,7 +134,10 @@ async fn the_connected_ai_agent_answers_through_its_runtime_with_its_skills() {
     assert_eq!(calls[0].api_key, None);
     assert_eq!(s.f.wa.sent().last().unwrap().text, "Olá! Sou a Ana, da Padaria Sol.");
     let conversation = s.admin.get("/conversations/1").await.body;
-    assert_eq!(conversation["status"], "open", "the agent works open conversations like a person");
+    assert_eq!(
+        conversation["status"], "open",
+        "the agent works open conversations like a person"
+    );
     assert_eq!(conversation["assignee_agent_id"], ana);
     assert_eq!(conversation["assignee_id"], Value::Null);
 
@@ -157,23 +160,27 @@ async fn conversations_with_a_person_stay_with_them_until_handed_to_the_agent() 
     let s = setup().await;
     let p = profiles(&s.admin).await;
     s.write("IN1", "Oi").await;
-    let roster = s.admin.get("/agent_directory").await.body;
-    let me = roster.as_array().unwrap().iter().find(|a| a["user_id"].is_i64()).unwrap()["user_id"].clone();
-    let mine = s.admin.post("/conversations/1/assignments", json!({ "assignee_id": me })).await;
-    assert_eq!(mine.status, 200, "{:?}", mine.body);
+    let me = s.admin.user["id"].clone();
+    let assign = |who: Value| {
+        s.admin
+            .post("/conversations/1/assignments", json!({ "assignee_id": who }))
+    };
+    assert_eq!(assign(me.clone()).await.status, 200);
     let ana = s.agent(ai(&p, "Ana", "operator")).await;
     assert_eq!(s.connect(Some(ana)).await.status, 200);
 
     // A person is the assignee: the agent stays out.
     s.write("IN2", "Tem pão?").await;
     let conversation = s.admin.get("/conversations/1").await.body;
-    assert_eq!((conversation["status"].clone(), conversation["assignee_id"].clone()), (json!("open"), me));
+    assert_eq!(
+        (conversation["status"].clone(), conversation["assignee_id"].clone()),
+        (json!("open"), me)
+    );
     assert!(s.claude.calls.lock().is_empty());
 
     // Handed to the agent (no person as assignee), it answers the waiting message right away and
     // the conversation stays open, now assigned to it.
-    let handed = s.admin.post("/conversations/1/assignments", json!({ "assignee_id": null })).await;
-    assert_eq!(handed.status, 200, "{:?}", handed.body);
+    assert_eq!(assign(Value::Null).await.status, 200);
     s.f.settle().await;
     let calls = s.claude.calls.lock().clone();
     assert_eq!(calls.len(), 1);
@@ -190,10 +197,9 @@ async fn the_agent_resolves_the_conversation_when_its_goal_is_reached() {
     let p = profiles(&s.admin).await;
     let mut body = ai(&p, "Ana", "operator");
     body["goals"] = json!("O cliente recebeu o horário de funcionamento.");
-    let ana = s.agent(body).await;
-    let saved = s.admin.get("/agent_directory").await.body;
-    let saved = saved.as_array().unwrap().iter().find(|a| a["id"] == ana).unwrap().clone();
+    let saved = s.admin.post("/agent_directory", body).await.body;
     assert_eq!(saved["goals"], "O cliente recebeu o horário de funcionamento.");
+    let ana = saved["id"].as_i64().unwrap();
     assert_eq!(s.connect(Some(ana)).await.status, 200);
     s.claude.resolve.store(true, Ordering::Relaxed);
 

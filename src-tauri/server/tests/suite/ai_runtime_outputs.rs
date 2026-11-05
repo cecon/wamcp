@@ -55,10 +55,12 @@ fn codex_and_claude_outputs_are_read_back() {
     assert_eq!(parse_output(inline, b"").unwrap()["handoff"], true);
 }
 
-
 #[test]
 fn replies_lose_leaked_tool_call_markup_and_resolve_defaults_to_false() {
-    assert_eq!(clean_reply("Aprovo assim que o CI fechar.\n</parameter>\n</invoke>"), "Aprovo assim que o CI fechar.");
+    assert_eq!(
+        clean_reply("Aprovo assim que o CI fechar.\n</parameter>\n</invoke>"),
+        "Aprovo assim que o CI fechar."
+    );
     assert_eq!(clean_reply("<invoke name=\"x\">\nOi"), "Oi");
     let inline = "Use `</invoke>` para fechar.\n```xml\n</parameter>\n```";
     assert_eq!(clean_reply(inline), inline, "markup inside the text stays");
