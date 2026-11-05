@@ -28,7 +28,7 @@ interface Options {
 /** Loads the chat list (regular scopes or the advanced filter), paginates and refreshes on events. */
 export function useConversationList({ route, status, tab, sort, realtime }: Options) {
   const [items, setItems] = useState<Conversation[]>([]),
-    [meta, setMeta] = useState<Meta>({ mine: 0, unassigned: 0, all: 0 }),
+    [meta, setMeta] = useState<Meta>({ mine: 0, unassigned: 0, ai: 0, all: 0 }),
     [page, setPage] = useState(1),
     [hasMore, setHasMore] = useState(false),
     [error, setError] = useState('');

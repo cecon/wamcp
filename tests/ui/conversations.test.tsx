@@ -39,6 +39,7 @@ describe('chat list', () => {
           priority: 'low',
           unread_count: 0,
           last_message: null,
+          assignee_agent_name: 'JHON',
         },
         { ...conversation, id: 3, display_id: 9, priority: 'high' },
         { ...conversation, id: 4, display_id: 10, priority: 'medium' },
@@ -50,7 +51,14 @@ describe('chat list', () => {
     expect(screen.getByText('9+')).toBeInTheDocument();
     expect(screen.getByLabelText('Prioridade urgente')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Não atribuídas\s*4/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Com a IA/ })).toBeInTheDocument();
+    expect(screen.getByText('IA · JHON')).toBeInTheDocument();
     expect(api.calls[0].search).toContain('assignee_type=me');
+    await user.click(screen.getByRole('tab', { name: /Com a IA/ }));
+    await waitFor(() => {
+      const last = api.called('GET', '/conversations').at(-1)!.search;
+      expect(last).toContain('assignee_type=ai');
+    });
     await user.click(screen.getByRole('tab', { name: /Todas/ }));
     await user.click(screen.getByRole('button', { name: 'Filtrar por status' }));
     await user.selectOptions(screen.getByRole('combobox'), 'resolved');

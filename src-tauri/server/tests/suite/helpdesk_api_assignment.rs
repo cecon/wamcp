@@ -59,7 +59,7 @@ async fn assignment_validates_membership_and_round_robin_spreads_conversations()
     let meta = maria.get("/conversations/meta?status=all").await.body;
     let mut keys: Vec<&String> = meta.as_object().unwrap().keys().collect();
     keys.sort();
-    assert_eq!(keys, vec!["all", "mine", "unassigned"]);
+    assert_eq!(keys, vec!["ai", "all", "mine", "unassigned"]);
     assert_eq!(admin.post("/conversations/1/assignments", json!({})).await.status, 400);
 }
 

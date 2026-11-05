@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 import {
   AlertTriangle,
   BellOff,
+  Bot,
   MessageCircle,
   SignalHigh,
   SignalLow,
@@ -97,11 +98,15 @@ export function ConversationCard({
             <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
               {c.inbox_name}
             </Typography>
-            {c.assignee_name && (
+            {(c.assignee_name || c.assignee_agent_name) && (
               <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', minWidth: 0, ml: 0.5 }}>
-                <UserRound size={12} style={{ flexShrink: 0 }} />
+                {c.assignee_agent_name ? (
+                  <Bot size={12} style={{ flexShrink: 0 }} />
+                ) : (
+                  <UserRound size={12} style={{ flexShrink: 0 }} />
+                )}
                 <Typography variant="caption" sx={{ fontWeight: 500, minWidth: 0 }} noWrap>
-                  {c.assignee_name}
+                  {c.assignee_agent_name ? `IA · ${c.assignee_agent_name}` : c.assignee_name}
                 </Typography>
               </Stack>
             )}

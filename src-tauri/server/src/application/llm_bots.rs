@@ -229,6 +229,7 @@ impl LlmBotService {
         else {
             return Ok(());
         };
+        let conversation = self.helpdesk.ensure_ai_responsible(&conversation)?;
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
         // Already answered (by a person or an earlier run): nothing new from the contact.
         let last = messages
@@ -265,10 +266,20 @@ impl LlmBotService {
                 .await?;
         }
         if answer.handoff || forwarded {
+            // Regra do produto: se a IA não resolve, a conversa obrigatoriamente vai para um humano.
+            let target = core
+                .repo
+                .conversation_by_id(conversation.id)?
+                .unwrap_or_else(|| conversation.clone());
             self.helpdesk
-                .toggle_status(&actor, conversation.display_id, "open", None)?;
+                .handoff_to_human(&actor, &target, "a IA não conseguiu resolver")?;
         }
         Ok(())
+    }
+
+    /// O vigia usa para pedir ao agente que decida de novo sobre uma conversa parada.
+    pub(crate) fn nudge(&self, conversation_id: i64) {
+        self.schedule(Target::Conversation(conversation_id));
     }
 
     /// Waits until no answer is scheduled or running (tests and shutdown).

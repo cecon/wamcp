@@ -61,19 +61,22 @@ async fn the_agent_keeps_answering_after_a_handoff_while_nobody_takes_the_conver
         "handoff abre a conversa: {conversation:?}"
     );
     assert!(
-        conversation["assignee_id"].is_null(),
-        "ninguém assumiu: {conversation:?}"
+        !conversation["assignee_id"].is_null(),
+        "a IA não resolveu: um humano obrigatoriamente assume: {conversation:?}"
+    );
+    assert!(
+        conversation["assignee_agent_id"].is_null(),
+        "o agente de IA sai da conversa depois do handoff: {conversation:?}"
     );
 
-    // A person comments on the PR afterwards: the responsible agent answers again.
+    // A person comments on the PR afterwards: o humano é o responsável, a IA não responde mais.
     let comment = json!({ "action": "created", "sender": { "login": "maria" }, "repository": repository(),
         "issue": { "number": 11, "title": "Corrige login", "pull_request": {} }, "comment": { "body": "E agora?" } });
     c.deliver("issue_comment", "h2", &comment, None).await;
-    println!("AFTER={:?}", c.conversations().await);
     assert_eq!(
         handoff.requests.lock().len(),
-        2,
-        "a conversa não pode ficar órfã após o handoff"
+        1,
+        "depois do handoff quem responde é o humano, não a IA"
     );
-    assert_eq!(c.f.github.comments.lock().len(), 2);
+    assert_eq!(c.f.github.comments.lock().len(), 1);
 }
