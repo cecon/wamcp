@@ -84,8 +84,9 @@ fn round_robin_and_initial_status_edges() {
     assert_eq!(next_assignee(&[7], None), Some(7));
     assert_eq!(next_assignee(&[3, 3, 1], Some(1)), Some(3));
     assert_eq!(next_assignee(&[3, 1], Some(0)), Some(1));
-    assert_eq!(initial_status(true), "pending");
-    assert_eq!(initial_status(false), "open");
+    assert_eq!(initial_status(false, true), "pending");
+    assert_eq!(initial_status(true, true), "open");
+    assert_eq!(initial_status(false, false), "open");
 }
 
 #[test]

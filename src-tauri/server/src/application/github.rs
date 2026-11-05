@@ -171,8 +171,10 @@ impl HelpdeskService {
         let ci = self.github_contact(inbox, event, events)?;
         let now = core.clock.now();
         let latest = repo.latest_conversation(ci.id)?;
-        let status =
-            initial_status(inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some() || inbox.ai_agent_id.is_some());
+        let status = initial_status(
+            inbox.ai_agent_id.is_some(),
+            inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some(),
+        );
         let conversation = match (route_incoming(latest.as_ref(), inbox), latest) {
             (Route::Ignore, _) => return Ok(None),
             (Route::Reuse { reopen: false }, Some(latest)) => latest,

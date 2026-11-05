@@ -169,6 +169,7 @@ describe('Funcionários', () => {
       runtime: 'claude_cli',
       model: 'sonnet',
       instructions: 'Atenda bem.',
+      goals: null,
     });
     await user.selectOptions(within(pane).getByLabelText('Cabelo'), 'curly');
     await user.click(within(pane).getByRole('button', { name: 'Salvar avatar' }));

@@ -18,6 +18,15 @@ impl HelpdeskService {
     ) -> Result<Conversation> {
         let conversation = self.core.load(Some(actor), display_id)?;
         validate_status_change(status, snoozed_until, self.core.now())?;
+        // "Abrir" uma conversa que já está aberta com o agente de IA é o pedido de transferência
+        // (o que antes era sair de `pending`): ela passa para uma pessoa.
+        if status == "open"
+            && conversation.status == "open"
+            && conversation.assignee_id.is_none()
+            && conversation.assignee_agent_id.is_some()
+        {
+            return self.handoff_to_human(actor, &conversation, "pedido de transferência");
+        }
         if conversation.status == status && status != "snoozed" {
             return Ok(conversation);
         }

@@ -68,6 +68,7 @@ impl HelpdeskService {
                 events,
             )?;
             events.push("assignee.changed", &updated);
+            events.push("conversation.bot_handoff", &updated);
             Ok(updated)
         })
     }

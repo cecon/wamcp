@@ -38,7 +38,13 @@ export function agentBody(agent: RosterAgent, changes: Partial<RosterAgent> = {}
   };
   if (next.kind === 'human')
     return { ...common, user_id: next.user_id, whatsapp: phone(next.whatsapp_jid) || null };
-  return { ...common, runtime: next.runtime, model: next.model, instructions: next.instructions };
+  return {
+    ...common,
+    runtime: next.runtime,
+    model: next.model,
+    instructions: next.instructions,
+    goals: next.goals ?? null,
+  };
 }
 
 /** Skills of the agent: its own and the ones inherited from the profile, without repeats. */

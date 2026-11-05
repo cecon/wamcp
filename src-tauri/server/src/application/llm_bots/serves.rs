@@ -1,83 +1,42 @@
-//! Quando o agente de IA de uma caixa continua respondendo: pendente, ou aberta e órfã **depois** que
-//! ele mesmo já falou nela (handoff sem humano assumir). Uma conversa aberta por pessoas não é dele.
+//! Quando o agente de IA de uma caixa responde: ele trabalha como qualquer atendente. A conversa
+//! fica aberta e atribuída a ele (`assignee_agent_id`) até uma pessoa assumir; com um humano como
+//! responsável ela não é mais dele. Um robô legado (`llm`, sem agente de IA) só atende as pendentes.
 use super::{LlmBotService, Responder};
-use crate::domain::model::{Conversation, Message};
+use crate::domain::model::Conversation;
 
 impl LlmBotService {
     /// Whether the inbox's AI agent may answer this conversation.
     pub(super) fn can_answer(&self, conversation: &Conversation, responder: &Responder) -> bool {
-        if conversation.status == "pending" {
-            return true;
-        }
-        if conversation.status != "open" || conversation.assignee_id.is_some() {
-            return false;
-        }
-        // Só o agente de IA do roster continua depois do handoff enquanto ninguém assumir;
-        // um bot `llm`/webhook da caixa para de responder quando entrega para humanos.
-        responder.agent_id.is_some() && self.bot_spoke_last(conversation.id)
-    }
-
-    /// The last outgoing message (ignoring private/activity) came from an inbox bot/agent: the agent\n    /// was handling this conversation before the new incoming message arrived.
-    fn bot_spoke_last(&self, conversation_id: i64) -> bool {
-        let Ok(messages) = self.helpdesk.core.repo.messages(conversation_id, None, 20) else {
-            return false;
+        let Some(agent_id) = responder.agent_id else {
+            return conversation.status == "pending";
         };
-        last_spoken(&messages)
+        owned_by_agent(
+            &conversation.status,
+            conversation.assignee_id,
+            conversation.assignee_agent_id,
+            agent_id,
+        )
     }
 }
 
-fn last_spoken(messages: &[Message]) -> bool {
-    messages
-        .iter()
-        .rev()
-        .find(|m| !m.private && m.message_type == "outgoing")
-        .is_some_and(|m| m.sender_type.as_deref() == Some("agent_bot"))
+/// The agent owns an open (or legacy pending) conversation it is assigned to and no person took.
+/// No assignee at all only happens in data from before the agent became the assignee.
+fn owned_by_agent(status: &str, assignee_id: Option<i64>, assignee_agent_id: Option<i64>, agent_id: i64) -> bool {
+    matches!(status, "open" | "pending") && assignee_id.is_none() && assignee_agent_id.is_none_or(|id| id == agent_id)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::last_spoken;
-    use crate::domain::model::Message;
-    use serde_json::json;
-
-    fn message(id: i64, message_type: &str, sender: Option<&str>) -> Message {
-        Message {
-            id,
-            account_id: 1,
-            conversation_id: 1,
-            inbox_id: 1,
-            message_type: message_type.into(),
-            content: Some("x".into()),
-            content_type: "text".into(),
-            private: false,
-            status: "sent".into(),
-            sender_type: sender.map(String::from),
-            sender_id: None,
-            source_id: None,
-            wa_jid: None,
-            content_attributes: json!({}),
-            created_at: id,
-            sender_name: None,
-            attachments: Vec::new(),
-        }
-    }
+    use super::owned_by_agent;
 
     #[test]
-    fn only_a_bot_message_keeps_the_agent_in_an_open_conversation() {
-        let from_person = [
-            message(1, "incoming", Some("contact")),
-            message(2, "outgoing", Some("user")),
-        ];
-        assert!(!last_spoken(&from_person));
-        let from_bot = [
-            message(1, "incoming", Some("contact")),
-            message(2, "outgoing", Some("agent_bot")),
-        ];
-        assert!(last_spoken(&from_bot));
-        let activity_only = [
-            message(1, "outgoing", Some("agent_bot")),
-            message(2, "activity", Some("system")),
-        ];
-        assert!(last_spoken(&activity_only));
+    fn the_agent_answers_open_conversations_assigned_to_it_until_a_person_takes_them() {
+        assert!(owned_by_agent("open", None, Some(7), 7));
+        assert!(owned_by_agent("pending", None, Some(7), 7));
+        assert!(owned_by_agent("open", None, None, 7));
+        assert!(!owned_by_agent("open", Some(1), None, 7));
+        assert!(!owned_by_agent("open", None, Some(8), 7));
+        assert!(!owned_by_agent("resolved", None, Some(7), 7));
+        assert!(!owned_by_agent("snoozed", None, Some(7), 7));
     }
 }

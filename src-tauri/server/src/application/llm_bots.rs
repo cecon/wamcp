@@ -1,11 +1,12 @@
-//! Answers `pending` conversations of inboxes served by an AI agent of the roster (or a legacy `llm`
-//! bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
+//! Answers the conversations assigned to the AI agent of an inbox (or the `pending` ones of a legacy
+//! `llm` bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
 //! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
 //! model asks to). Bursts are debounced and runs are limited; one run per
 //! conversation at a time, with another one afterwards if the contact wrote meanwhile. The same queue
 //! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
 mod chat;
+mod conclude;
 mod github_tools;
 mod record;
 mod scheduled;
@@ -15,7 +16,6 @@ use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
 use super::ports::{Llm, LlmRequest, SecretBox};
 use super::system_agent::SystemAgent;
-use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::github;
 use crate::domain::llm::{
@@ -90,8 +90,8 @@ impl LlmBotService {
     }
 
     /// Bus listener: schedules an answer when a contact writes in a conversation an LLM bot serves,
-    /// when a person hands an open conversation back to it (status `pending`), or when a person
-    /// writes in their chat with an AI agent.
+    /// when a person hands a conversation back to it (assigning it to the AI agent, or status
+    /// `pending` for a legacy bot), or when a person writes in their chat with an AI agent.
     pub fn on_event(&self, envelope: &Envelope) {
         if envelope.event == "agent_chat.message" {
             if let Ok(m) = serde_json::from_value::<ChatMessage>(envelope.data.clone()) {
@@ -107,6 +107,15 @@ impl LlmBotService {
                 _ => return,
             },
             "conversation.status_changed" if envelope.data["status"] == "pending" => {
+                match envelope.data["id"].as_i64() {
+                    Some(id) => id,
+                    None => return,
+                }
+            }
+            // A person handed the conversation (back) to the AI agent: it picks up where it is.
+            "assignee.changed"
+                if envelope.data["assignee_id"].is_null() && envelope.data["assignee_agent_id"].is_i64() =>
+            {
                 match envelope.data["id"].as_i64() {
                     Some(id) => id,
                     None => return,
@@ -254,27 +263,8 @@ impl LlmBotService {
         let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
         };
-        // A person may have taken the conversation while the model was thinking.
-        let current = core.repo.conversation_by_id(conversation_id)?;
-        if current.is_none_or(|c| !self.can_answer(&c, &responder)) {
-            return Ok(());
-        }
-        let actor = Actor::Bot { inbox_id: inbox.id };
-        if !answer.reply.is_empty() {
-            self.helpdesk
-                .reply(&actor, conversation.display_id, &answer.reply, false)
-                .await?;
-        }
-        if answer.handoff || forwarded {
-            // Regra do produto: se a IA não resolve, a conversa obrigatoriamente vai para um humano.
-            let target = core
-                .repo
-                .conversation_by_id(conversation.id)?
-                .unwrap_or_else(|| conversation.clone());
-            self.helpdesk
-                .handoff_to_human(&actor, &target, "a IA não conseguiu resolver")?;
-        }
-        Ok(())
+        self.conclude(&inbox, &conversation, &responder, answer, forwarded)
+            .await
     }
 
     /// O vigia usa para pedir ao agente que decida de novo sobre uma conversa parada.

@@ -340,7 +340,7 @@
           },
           {
             "name": "list_conversations",
-            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). Use status \"pending\" para as que aguardam a IA.",
+            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). As atendidas pelo agente de IA ficam abertas e atribuídas a ele.",
             "inputSchema": {
               "type": "object",
               "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -928,7 +928,7 @@
           },
           {
             "name": "list_conversations",
-            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). Use status \"pending\" para as que aguardam a IA.",
+            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). As atendidas pelo agente de IA ficam abertas e atribuídas a ele.",
             "inputSchema": {
               "type": "object",
               "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -3156,7 +3156,7 @@
           },
           {
             "name": "list_conversations",
-            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). Use status \"pending\" para as que aguardam a IA.",
+            "description": "Lista conversas de atendimento desta caixa de entrada (mais recentes primeiro). As atendidas pelo agente de IA ficam abertas e atribuídas a ele.",
             "inputSchema": {
               "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
