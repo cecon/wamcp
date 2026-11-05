@@ -22,3 +22,11 @@ wamcp-server = { path = "server" }
 
 [workspace]
 members = [".", "server"]
+
+# Debug builds keep line numbers for backtraces but skip full debug info, and the
+# dependencies carry none: full symbols in every crate made the target directory huge.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
