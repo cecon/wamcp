@@ -1,8 +1,14 @@
 import { useState } from 'react';
+
+// material-ui
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import type { Action, Catalog, Condition } from '../types';
 import { AUTOMATION_EVENTS } from '../labels';
 import { useAttributeDefinitions } from '../attributes/useAttributeDefinitions';
-import { ModalFooter } from '../ui/Settings';
 import { ActionsEditor } from './ActionsEditor';
 import { ConditionsEditor } from './ConditionsEditor';
 import { newAction, newCondition } from './ruleOptions';
@@ -33,37 +39,35 @@ export function RuleEditor({ catalog, busy, error, onSave, onCancel }: Props) {
   const { definitions } = useAttributeDefinitions('conversation');
 
   return (
-    <form
-      className="flex flex-col gap-6"
+    <Stack
+      component="form"
+      spacing={3}
       onSubmit={(e) => {
         e.preventDefault();
         onSave(rule);
       }}
     >
-      <label>
-        <span className="field-label">Nome da regra</span>
-        <input
-          className="field"
-          value={rule.name}
-          maxLength={120}
-          required
-          onChange={(e) => setRule({ ...rule, name: e.target.value })}
-        />
-      </label>
-      <label>
-        <span className="field-label">Evento</span>
-        <select
-          className="field"
-          value={rule.event_name}
-          onChange={(e) => setRule({ ...rule, event_name: e.target.value })}
-        >
-          {Object.entries(AUTOMATION_EVENTS).map(([id, label]) => (
-            <option key={id} value={id}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <TextField
+        label="Nome da regra"
+        size="small"
+        value={rule.name}
+        onChange={(e) => setRule({ ...rule, name: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 120, required: true } }}
+      />
+      <TextField
+        select
+        label="Evento"
+        size="small"
+        value={rule.event_name}
+        onChange={(e) => setRule({ ...rule, event_name: e.target.value })}
+        slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
+      >
+        {Object.entries(AUTOMATION_EVENTS).map(([id, label]) => (
+          <option key={id} value={id}>
+            {label}
+          </option>
+        ))}
+      </TextField>
       <ConditionsEditor
         conditions={rule.conditions}
         catalog={catalog}
@@ -75,7 +79,19 @@ export function RuleEditor({ catalog, busy, error, onSave, onCancel }: Props) {
         catalog={catalog}
         onChange={(actions) => setRule((r) => ({ ...r, actions }))}
       />
-      <ModalFooter busy={busy} submit="Criar automação" onCancel={onCancel} error={error} />
-    </form>
+      {error && (
+        <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+        <Button type="button" variant="outlined" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="contained" disabled={busy}>
+          Criar automação
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

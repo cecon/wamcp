@@ -1,75 +1,155 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog, Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http } from '../api';
 import type { Catalog, Label } from '../types';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Overlay';
-import { Cell, ModalFooter, RowActions, SettingsHeader, SettingsPage, Table } from '../ui/Settings';
 import { useAction } from './useAction';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 interface Props {
   catalog: Catalog;
   onChange: () => Promise<void>;
 }
 
-/** Chatwoot Labels: Name | Description | Color | Actions, with the add/edit modal. */
+/**
+ * Tela piloto do lote 1 (Configurações → Etiquetas) sobre o C3Theme: painel, tabela de dados, diálogo de ação e
+ * campos do MUI. Os contratos continuam iguais (título, busca, contagem, "Adicionar etiqueta",
+ * "Editar/Excluir <nome>") para os testes e o uso não mudarem.
+ */
 export function LabelsPage({ catalog, onChange }: Props) {
   const [q, setQ] = useState(''),
     [editing, setEditing] = useState<Label | 'new' | null>(null);
   const { error, run } = useAction();
-  const visible = catalog.labels.filter((l) => l.title.includes(q.toLowerCase()));
+  const visible = catalog.labels.filter((label) => label.title.includes(q.toLowerCase()));
+  const count = `${catalog.labels.length} etiqueta${catalog.labels.length === 1 ? '' : 's'}`;
+
+  const columns: ColumnDef<Label>[] = [
+    {
+      id: 'title',
+      header: 'Nome',
+      accessorKey: 'title',
+      cell: (info) => (
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {info.row.original.title}
+        </Typography>
+      ),
+    },
+    {
+      id: 'description',
+      header: 'Descrição',
+      accessorFn: (label) => label.description || '—',
+      cell: (info) => (
+        <Typography variant="body2" color="text.secondary">
+          {String(info.getValue())}
+        </Typography>
+      ),
+    },
+    {
+      id: 'color',
+      header: 'Cor',
+      accessorFn: (label) => label.color,
+      cell: (info) => (
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 16,
+              height: 16,
+              borderRadius: 0.5,
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: info.row.original.color,
+            }}
+          />
+          <Typography variant="caption">{info.row.original.color}</Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Ações',
+      cell: (info) => (
+        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+          <IconButton
+            size="small"
+            aria-label={`Editar ${info.row.original.title}`}
+            onClick={() => setEditing(info.row.original)}
+          >
+            <Pencil size={14} />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="error"
+            aria-label={`Excluir ${info.row.original.title}`}
+            onClick={() =>
+              void run(async () => {
+                await http(`/labels/${info.row.original.id}`, 'DELETE');
+                await onChange();
+              })
+            }
+          >
+            <Trash2 size={14} />
+          </IconButton>
+        </Stack>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Etiquetas"
         description="Etiquetas ajudam a categorizar e priorizar conversas. Você pode adicioná-las pelo painel da conversa."
         search={{ value: q, onChange: setQ, placeholder: 'Pesquisar etiquetas…' }}
-        count={`${catalog.labels.length} etiqueta${catalog.labels.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Adicionar etiqueta" onClick={() => setEditing('new')} />}
+        count={count}
+        action={
+          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEditing('new')}>
+            Adicionar etiqueta
+          </Button>
+        }
       />
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      <Table
-        headers={['Nome', 'Descrição', 'Cor', 'Ações']}
-        rows={visible.length}
-        empty="Nenhuma etiqueta ainda."
-      >
-        {visible.map((l) => (
-          <tr key={l.id}>
-            <Cell className="font-medium text-n-slate-12">{l.title}</Cell>
-            <Cell>{l.description || '—'}</Cell>
-            <Cell>
-              <span className="flex items-center gap-2">
-                <span className="size-4 rounded border border-n-weak" style={{ background: l.color }} />
-                {l.color}
-              </span>
-            </Cell>
-            <Cell className="w-24">
-              <RowActions
-                labelFor={l.title}
-                onEdit={() => setEditing(l)}
-                onDelete={() =>
-                  void run(async () => {
-                    await http(`/labels/${l.id}`, 'DELETE');
-                    await onChange();
-                  })
-                }
-              />
-            </Cell>
-          </tr>
-        ))}
-      </Table>
+      <Panel flush>
+        {error && (
+          <Box sx={{ p: 2 }}>
+            <SettingsC3Error>{error}</SettingsC3Error>
+          </Box>
+        )}
+        <DataTable
+          rows={visible}
+          columns={columns}
+          getRowId={(label) => String(label.id)}
+          paginate={visible.length > 10}
+          empty="Nenhuma etiqueta ainda."
+          ariaLabel="Etiquetas"
+        />
+      </Panel>
       {editing && (
-        <LabelModal
+        <LabelDialog
           label={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={onChange}
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }
 
-function LabelModal({
+/** Criar/editar etiqueta no `ActionDialog` do pacote (mesmos campos e regras de antes). */
+function LabelDialog({
   label,
   onClose,
   onSaved,
@@ -84,58 +164,62 @@ function LabelModal({
     color: label?.color || '#2781F6',
   });
   const { error, busy, run } = useAction();
+  const dirty =
+    form.title !== (label?.title || '') ||
+    form.description !== (label?.description || '') ||
+    form.color !== (label?.color || '#2781F6');
+
   return (
-    <Modal
+    <ActionDialog
+      open
       title={label ? 'Editar etiqueta' : 'Adicionar etiqueta'}
       description="O nome vira minúsculas e sem espaços."
+      confirmLabel={label ? 'Salvar' : 'Criar'}
+      backLabel="Cancelar"
+      dirty={dirty}
+      loading={busy}
+      error={error}
       onClose={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          const body = { ...form, description: form.description.trim() || null };
+          await http(label ? `/labels/${label.id}` : '/labels', label ? 'PATCH' : 'POST', body);
+          await onSaved();
+          onClose();
+        })
+      }
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            const body = { ...form, description: form.description.trim() || null };
-            await http(label ? `/labels/${label.id}` : '/labels', label ? 'PATCH' : 'POST', body);
-            await onSaved();
-            onClose();
-          });
-        }}
-      >
-        <label>
-          <span className="field-label">Nome da etiqueta</span>
-          <input
-            className="field"
-            value={form.title}
-            maxLength={40}
-            required
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <TextField
+          label="Nome da etiqueta"
+          size="small"
+          required
+          value={form.title}
+          onChange={(event) => setForm({ ...form, title: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 40 } }}
+        />
+        <TextField
+          label="Descrição"
+          size="small"
+          multiline
+          minRows={2}
+          value={form.description}
+          onChange={(event) => setForm({ ...form, description: event.target.value })}
+          slotProps={{ htmlInput: { maxLength: 200 } }}
+        />
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          <Typography variant="body2">Cor</Typography>
+          <Box
+            component="input"
+            type="color"
+            aria-label="Cor"
+            value={form.color}
+            onChange={(event) => setForm({ ...form, color: event.target.value })}
+            sx={{ width: 40, height: 32, p: 0, border: 0, bgcolor: 'transparent', cursor: 'pointer' }}
           />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <textarea
-            className="field"
-            value={form.description}
-            maxLength={200}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Cor</span>
-          <span className="flex h-8 w-fit items-center gap-2 rounded-lg bg-n-button-color px-2 text-sm outline outline-1 -outline-offset-1 outline-n-container">
-            <input
-              type="color"
-              aria-label="Cor"
-              value={form.color}
-              onChange={(e) => setForm({ ...form, color: e.target.value })}
-              className="size-5 cursor-pointer rounded-md border-0 bg-transparent p-0"
-            />
-            {form.color.toUpperCase()}
-          </span>
-        </label>
-        <ModalFooter busy={busy} submit={label ? 'Salvar' : 'Criar'} onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+          <Typography variant="caption">{form.color.toUpperCase()}</Typography>
+        </Stack>
+      </Stack>
+    </ActionDialog>
   );
 }

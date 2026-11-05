@@ -7,6 +7,8 @@ mod engine_support;
 mod event_webhook_support;
 mod events_support;
 mod github_support;
+
+mod github_handoff;
 mod helpdesk_support;
 mod mcp_support;
 mod media_support;
@@ -59,6 +61,7 @@ mod github_app;
 mod github_channel;
 mod github_events;
 mod github_redelivery;
+mod github_repeats;
 mod helpdesk_api;
 mod helpdesk_api_assignment;
 mod helpdesk_api_conversations;

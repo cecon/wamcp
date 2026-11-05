@@ -1,6 +1,11 @@
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
 import type { Realtime } from './api';
 import { NotificationBulkActions, NotificationList } from './notifications/NotificationList';
 import { useNotifications } from './notifications/useNotifications';
+import C3Provider from './c3/C3Provider';
 
 interface Props {
   realtime: Realtime;
@@ -8,19 +13,43 @@ interface Props {
   onOpen: (displayId: number) => void;
 }
 
-/** Chatwoot "Inbox" view: the agent's notification feed, newest first. */
+/** Caixa de entrada ("Inbox") no C3Theme (lote 5): cabeçalho e moldura do pacote; a lista de notificações segue no app. */
 export function NotificationsPage({ realtime, onUnread, onOpen }: Props) {
   const actions = useNotifications(realtime, onUnread);
   return (
-    <section
-      aria-label="Caixa de entrada"
-      className="flex h-full w-full flex-col bg-n-surface-1 md:w-[400px] md:border-r md:border-n-weak"
-    >
-      <header className="flex h-[3.25rem] items-center justify-between gap-2 px-4">
-        <h1 className="text-base font-medium text-n-slate-12">Caixa de entrada</h1>
-        <NotificationBulkActions actions={actions} />
-      </header>
-      <NotificationList actions={actions} onOpen={onOpen} />
-    </section>
+    <C3Provider>
+      <Box
+        component="section"
+        aria-label="Caixa de entrada"
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          width: { xs: '100%', md: 400 },
+          flexShrink: 0,
+          bgcolor: 'background.paper',
+          borderRight: { md: 1 },
+          borderColor: 'divider',
+        }}
+      >
+        <Box
+          component="header"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            px: 2,
+            minHeight: 52,
+          }}
+        >
+          <Typography variant="h5" component="h1">
+            Caixa de entrada
+          </Typography>
+          <NotificationBulkActions actions={actions} />
+        </Box>
+        <NotificationList actions={actions} onOpen={onOpen} />
+      </Box>
+    </C3Provider>
   );
 }

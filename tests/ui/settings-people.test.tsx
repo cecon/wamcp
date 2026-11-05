@@ -147,7 +147,7 @@ describe('teams', () => {
   it('creates teams and opens a team page', async () => {
     const api = fakeApi({ 'POST /teams': { id: 6 } });
     const { user, onNavigate } = renderSettings('teams');
-    expect(screen.getByText(/1 membro\(s\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 membro\(s\)/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Criar novo time' }));
     const dialog = screen.getByRole('dialog', { name: 'Criar novo time' });
     await user.type(within(dialog).getByLabelText('Nome do time'), 'Vendas');
@@ -169,7 +169,7 @@ describe('teams', () => {
       'DELETE /teams/5': { ok: true },
     });
     const { user, onNavigate } = renderSettings('teams', 5);
-    expect(screen.getByRole('heading', { name: 'Financeiro' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Financeiro' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Membro Admin' })).toBeChecked());
     await user.click(screen.getByRole('switch', { name: 'Membro Maria Souza' }));
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Membro Maria Souza' })).toBeChecked());
@@ -183,10 +183,10 @@ describe('teams', () => {
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith({ page: 'settings', section: 'teams' }));
   });
 
-  it('shows the empty list', () => {
+  it('shows the empty list', async () => {
     fakeApi({});
     renderSettings('teams', undefined, { ...catalog, teams: [] });
-    expect(screen.getByText('Nenhum time ainda.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum time ainda.')).toBeInTheDocument();
   });
 });
 
@@ -194,7 +194,7 @@ describe('inboxes', () => {
   it('lists inboxes and opens their settings', async () => {
     fakeApi({});
     const { user, onNavigate } = renderSettings('inboxes');
-    expect(screen.getByText(/WhatsApp · \+5511999999999 · conectado/)).toBeInTheDocument();
+    expect(await screen.findByText(/WhatsApp · \+5511999999999 · conectado/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Configurar Suporte' }));
     expect(onNavigate).toHaveBeenCalledWith({ page: 'settings', section: 'inboxes', id: 10 });
   });
@@ -210,7 +210,7 @@ describe('inboxes', () => {
       'PUT /inboxes/10/working_hours': [],
     });
     const { user, onNavigate } = renderSettings('inboxes', 10);
-    const name = screen.getByLabelText('Nome da caixa');
+    const name = await screen.findByLabelText('Nome da caixa');
     await user.clear(name);
     await user.type(name, 'Vendas');
     await user.click(screen.getByRole('button', { name: 'Renomear' }));
@@ -235,7 +235,7 @@ describe('inboxes', () => {
     await user.click(screen.getByRole('switch', { name: 'Acesso Maria Souza' }));
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Acesso Maria Souza' })).toBeChecked());
 
-    await user.click(screen.getByRole('tab', { name: 'Horário e mensagens' }));
+    await user.click(await screen.findByRole('tab', { name: 'Horário e mensagens' }));
     expect(await screen.findByLabelText('Abre Segunda')).toHaveValue('08:00');
     expect(screen.getByLabelText('Abre Domingo')).toBeDisabled();
     await user.click(screen.getByRole('switch', { name: 'Saudação' }));
@@ -284,7 +284,7 @@ describe('inboxes', () => {
       },
     });
     const { user, view } = renderSettings('inboxes', 10);
-    await user.click(screen.getByRole('tab', { name: 'Horário e mensagens' }));
+    await user.click(await screen.findByRole('tab', { name: 'Horário e mensagens' }));
     await user.click(screen.getByRole('button', { name: 'Salvar mensagens automáticas' }));
     expect(await screen.findByText('Fuso horário inválido')).toBeInTheDocument();
     view.unmount();

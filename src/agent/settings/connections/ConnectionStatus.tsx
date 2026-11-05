@@ -1,23 +1,43 @@
-import { cn } from '../../ui/cn';
+// material-ui
+import Box from '@mui/material/Box';
+
 import { statusLabel } from './model';
+
+const TONE: Record<string, { bgcolor: string; color: string }> = {
+  connected: { bgcolor: 'var(--color-n-teal-3)', color: 'var(--color-n-teal-11)' },
+  pair: { bgcolor: 'var(--color-n-amber-3)', color: 'var(--color-n-amber-11)' },
+  error: { bgcolor: 'var(--color-n-ruby-2)', color: 'var(--color-n-ruby-11)' },
+  default: { bgcolor: 'var(--color-n-slate-3)', color: 'var(--color-n-slate-11)' },
+};
 
 /** Status pill: green when connected, amber while pairing, slate otherwise. */
 export function ConnectionStatus({ status }: { status: string }) {
   const tone =
     status === 'connected'
-      ? 'bg-n-teal-3 text-n-teal-11'
+      ? TONE.connected
       : ['qr', 'connecting', 'reconnecting'].includes(status)
-        ? 'bg-n-amber-3 text-n-amber-11'
+        ? TONE.pair
         : status === 'error'
-          ? 'bg-n-ruby-2 text-n-ruby-11'
-          : 'bg-n-slate-3 text-n-slate-11';
+          ? TONE.error
+          : TONE.default;
   return (
-    <span
-      className={cn('inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-xs font-medium', tone)}
+    <Box
+      component="span"
       data-status={status}
+      sx={{
+        display: 'inline-flex',
+        height: 24,
+        alignItems: 'center',
+        gap: 0.75,
+        borderRadius: 1,
+        px: 1,
+        fontSize: 12,
+        fontWeight: 500,
+        ...tone,
+      }}
     >
-      <span className="size-1.5 rounded-full bg-current" />
+      <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'currentColor' }} />
       {statusLabel(status)}
-    </span>
+    </Box>
   );
 }

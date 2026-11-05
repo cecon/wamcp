@@ -1,12 +1,22 @@
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { Bot, UserRound, Wrench } from 'lucide-react';
+
 import type { RosterAgent, Salary, Skill } from '../../adminTypes';
-import { cn } from '../../ui/cn';
 import { RowActions } from '../../ui/Settings';
 import { phone, roleLabel, runtimeLabel } from '../directory/labels';
 import { MemberAvatar } from './MemberAvatar';
 import { salaryLabel, skillIdsOf, statusOf } from './format';
 
-const TONE = { online: 'bg-n-teal-9', busy: 'bg-n-amber-9', offline: 'bg-n-slate-8' };
+const TONE = {
+  online: 'var(--color-n-teal-9)',
+  busy: 'var(--color-n-amber-9)',
+  offline: 'var(--color-n-slate-8)',
+};
 
 interface Props {
   agent: RosterAgent;
@@ -32,72 +42,160 @@ export function MemberCard({ agent, skills, salary, you, selected, onOpen, onEdi
       ? [agent.user_email, phone(agent.whatsapp_jid)].filter(Boolean).join(' · ')
       : [runtimeLabel(agent.runtime), agent.model].filter(Boolean).join(' · ');
   return (
-    <article
+    <Box
+      component="article"
       aria-label={agent.name}
-      className={cn(
-        'flex flex-col gap-3 rounded-xl bg-n-solid-2 p-4 outline outline-1 -outline-offset-1 transition-colors',
-        selected ? 'outline-n-brand' : 'outline-n-weak hover:outline-n-slate-6',
-        !agent.active && 'opacity-60',
-      )}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5,
+        borderRadius: 3,
+        bgcolor: 'var(--color-n-solid-2)',
+        p: 2,
+        border: 1,
+        borderColor: selected ? 'primary.main' : 'divider',
+        opacity: agent.active ? 1 : 0.6,
+        transition: 'border-color 0.15s',
+        '&:hover': { borderColor: selected ? 'primary.main' : 'var(--color-n-slate-6)' },
+      }}
     >
-      <div className="flex items-start gap-3">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
         <MemberAvatar choices={agent.avatar} kind={agent.kind} seed={agent.id} size={48} />
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <ButtonBase
             onClick={onOpen}
             aria-label={`Abrir ${agent.name}`}
-            className="block max-w-full truncate text-start font-medium text-n-slate-12 hover:underline"
+            sx={{ display: 'block', maxWidth: '100%', justifySelf: 'flex-start', textAlign: 'start' }}
           >
-            {agent.name}
-            {you && <span className="text-n-slate-10"> (você)</span>}
-          </button>
-          <span className="block truncate text-xs text-n-slate-11">{agent.profile_name ?? '—'}</span>
+            <Typography
+              component="span"
+              variant="body1"
+              sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {agent.name}
+              {you && (
+                <Box component="span" sx={{ color: 'var(--color-n-slate-10)' }}>
+                  {' '}
+                  (você)
+                </Box>
+              )}
+            </Typography>
+          </ButtonBase>
+          <Typography
+            component="span"
+            variant="caption"
+            color="text.secondary"
+            noWrap
+            sx={{ display: 'block' }}
+          >
+            {agent.profile_name ?? '—'}
+          </Typography>
           {agent.role && roleLabel(agent.role) !== agent.profile_name && (
-            <span className="block text-xs text-n-slate-11">{roleLabel(agent.role)}</span>
+            <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {roleLabel(agent.role)}
+            </Typography>
           )}
-        </div>
+        </Box>
         <RowActions labelFor={agent.name} onEdit={onEdit} onDelete={onDelete} />
-      </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5',
-            agent.kind === 'ai' ? 'bg-n-iris-9/15 text-n-slate-12' : 'bg-n-slate-4 text-n-slate-12',
-          )}
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center', fontSize: 12 }}>
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            borderRadius: 1,
+            px: 0.75,
+            py: 0.25,
+            bgcolor:
+              agent.kind === 'ai'
+                ? 'color-mix(in srgb, var(--color-n-iris-9) 15%, transparent)'
+                : 'var(--color-n-slate-4)',
+            color: 'var(--color-n-slate-12)',
+          }}
         >
           {agent.kind === 'ai' ? <Bot size={12} /> : <UserRound size={12} />}
           {agent.system ? 'Sistema' : agent.kind === 'ai' ? 'IA' : 'Pessoa'}
-        </span>
-        <span className="inline-flex items-center gap-1 text-n-slate-11">
-          <span className={cn('size-2 rounded-full', TONE[status.tone])} aria-hidden />
+        </Box>
+        <Box
+          component="span"
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'var(--color-n-slate-11)' }}
+        >
+          <Box
+            component="span"
+            aria-hidden
+            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: TONE[status.tone] }}
+          />
           {status.label}
-        </span>
-        <span className="ms-auto font-medium text-n-slate-12" title="Salário digital">
+        </Box>
+        <Box
+          component="span"
+          title="Salário digital"
+          sx={{ ml: 'auto', fontWeight: 500, color: 'var(--color-n-slate-12)' }}
+        >
           {salaryLabel(agent, salary)}
-        </span>
-      </div>
-      {contact && <p className="truncate text-xs break-all text-n-slate-11">{contact}</p>}
+        </Box>
+      </Stack>
+      {contact && (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          noWrap
+          sx={{ display: 'block', wordBreak: 'break-all' }}
+        >
+          {contact}
+        </Typography>
+      )}
       {(own.length > 0 || agent.credential_count > 0) && (
-        <div className="flex flex-wrap items-center gap-1 text-xs">
+        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', alignItems: 'center', fontSize: 12 }}>
           {own.slice(0, 3).map((s) => (
-            <span key={s.id} className="rounded-md bg-n-alpha-2 px-1.5 py-0.5 text-n-slate-11">
+            <Box
+              key={s.id}
+              component="span"
+              sx={{
+                borderRadius: 1,
+                bgcolor: 'var(--color-n-alpha-2)',
+                px: 0.75,
+                py: 0.25,
+                color: 'var(--color-n-slate-11)',
+              }}
+            >
               {s.name}
-            </span>
+            </Box>
           ))}
-          {own.length > 3 && <span className="text-n-slate-10">+{own.length - 3}</span>}
+          {own.length > 3 && (
+            <Typography component="span" variant="caption" color="text.secondary">
+              +{own.length - 3}
+            </Typography>
+          )}
           {tools > 0 && (
-            <span className="ms-auto inline-flex items-center gap-1 text-n-slate-10" title="Ferramentas">
+            <Box
+              component="span"
+              title="Ferramentas"
+              sx={{
+                ml: 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                color: 'var(--color-n-slate-10)',
+              }}
+            >
               <Wrench size={12} /> {tools}
-            </span>
+            </Box>
           )}
           {agent.credential_count > 0 && (
-            <span className="block w-full text-n-slate-10">
+            <Typography
+              component="span"
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', width: '100%' }}
+            >
               {agent.credential_count} credencia{agent.credential_count === 1 ? 'l' : 'is'}
-            </span>
+            </Typography>
           )}
-        </div>
+        </Stack>
       )}
-    </article>
+    </Box>
   );
 }

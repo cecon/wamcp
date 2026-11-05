@@ -66,6 +66,9 @@ async fn the_administrator_creates_the_app_from_a_manifest_and_installs_it() {
         json!({ "id": 77, "slug": "wamcp-agente", "pem": "-----BEGIN RSA PRIVATE KEY-----", "webhook_secret": SECRET,
                 "html_url": "https://github.com/apps/wamcp-agente", "owner": { "login": "cecon" } }),
     );
+    // A conversion GitHub refuses leaves the state alive: reloading the callback finishes it.
+    let refused = get(&f, &format!("/api/github/app/callback?state={state}&code=velho")).await;
+    assert_eq!(refused.status, 400, "{}", refused.text);
     let back = get(&f, &format!("/api/github/app/callback?state={state}&code=c0de")).await;
     assert_eq!(back.status, 303, "{}", back.text);
     assert_eq!(
@@ -168,4 +171,14 @@ async fn a_repository_connected_with_a_token_moves_to_the_app_when_it_is_install
         helpdesk.github_token(&channel).await.unwrap(),
         "ghs_/app/installations/5/access_tokens"
     );
+
+    // Removing the App (to create it again) puts the channel back on its token.
+    let maria = c.f.agent(&c.admin, "maria@example.com", "agent", false).await;
+    assert_eq!(maria.call("DELETE", "/github_app", None).await.status, 403);
+    let removed = c.admin.call("DELETE", "/github_app", None).await;
+    assert_eq!(removed.status, 200, "{:?}", removed.body);
+    assert_eq!(removed.body["app"], Value::Null);
+    let channel = helpdesk.core.repo.github_channel(c.inbox).unwrap().unwrap();
+    assert_eq!(channel.installation_id, None);
+    assert_eq!(helpdesk.github_token(&channel).await.unwrap(), "ghp_teste");
 }

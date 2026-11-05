@@ -92,6 +92,7 @@ async fn the_agent_checks_approves_merges_and_ignores_the_echoes() {
         ("review", json!({ "event": "APPROVE", "body": "Diff e checks ok." })),
         ("merge", json!({ "method": "squash" })),
         ("labels", json!({ "add": ["aprovado"], "remove": ["em revisão"] })),
+        ("run_jobs", json!({ "run_id": 41 })),
     ];
     let (c, runtime) = served(script, "Aprovado e mesclado.").await;
     let repo = format!("/repos/{REPO}");
@@ -113,6 +114,12 @@ async fn the_agent_checks_approves_merges_and_ignores_the_echoes() {
         json!({ "check_runs": [{
         "name": "quality", "status": "completed", "conclusion": "success",
         "html_url": format!("https://github.com/{REPO}/actions/runs/41/job/124") }] }),
+    );
+    answer(
+        &c,
+        &format!("GET {repo}/actions/runs/41/jobs?per_page=100"),
+        json!({ "jobs": [{ "id": 124, "name": "engine", "status": "completed", "conclusion": "failure",
+        "steps": [{ "name": "Checkout", "conclusion": "success" }, { "name": "cargo test", "conclusion": "failure" }] }] }),
     );
     answer(
         &c,
@@ -138,6 +145,7 @@ async fn the_agent_checks_approves_merges_and_ignores_the_echoes() {
         "{results:?}"
     );
     assert!(results.iter().all(|r| !r.starts_with("erro")), "{results:?}");
+    assert!(results[4].contains(r#""failed_steps":["cargo test"]"#), "{results:?}");
 
     let calls = c.f.github.calls.lock().clone();
     let find = |method: &str, path: &str| {
@@ -260,7 +268,7 @@ async fn the_tools_only_serve_a_run_in_progress_on_this_computer() {
         c.f.public(request("POST", "/mcp-github", Some(call), &[("authorization", &auth)]))
             .await;
     assert_eq!(listed.status, 200, "{:?}", listed.body);
-    assert_eq!(listed.body["result"]["tools"].as_array().unwrap().len(), 12);
+    assert_eq!(listed.body["result"]["tools"].as_array().unwrap().len(), 13);
     let tunnel = [("authorization", auth.as_str()), ("cf-connecting-ip", "1.2.3.4")];
     let ping = json!({ "jsonrpc": "2.0", "id": 2, "method": "ping" });
     assert_eq!(

@@ -1,4 +1,9 @@
 import { useEffect } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
 import type { RuntimeStatus } from '../../adminTypes';
 import { useFetch } from '../../useFetch';
 import { RUNTIMES } from './labels';
@@ -27,10 +32,25 @@ export function RuntimeSelect({ value, onChange, pickInstalled }: Props) {
   }, [pickInstalled, current, firstInstalled, onChange]);
 
   return (
-    <div>
-      <label>
-        <span className="field-label">Runtime</span>
-        <select className="field" value={value} onChange={(e) => onChange(e.target.value)}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        <Typography component="span" variant="body2">
+          Runtime
+        </Typography>
+        <Box
+          component="select"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          sx={{
+            height: 40,
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            px: 1,
+          }}
+        >
           {RUNTIMES.map((r) => {
             const missing = status(r.value)?.available === false;
             return (
@@ -39,17 +59,24 @@ export function RuntimeSelect({ value, onChange, pickInstalled }: Props) {
               </option>
             );
           })}
-        </select>
-      </label>
+        </Box>
+      </Box>
       {current && (
-        <span className={`mt-1 block text-xs ${current.available ? 'text-n-slate-11' : 'text-n-ruby-11'}`}>
+        <Typography
+          component="span"
+          variant="caption"
+          sx={{
+            display: 'block',
+            color: current.available ? 'var(--color-n-slate-11)' : 'var(--color-n-ruby-11)',
+          }}
+        >
           {current.available
             ? `Encontrado em ${current.detail}`
             : `Não instalado neste computador. ${INSTALL[value] ?? ''}`}
           {value === 'opencode' &&
             ' Usa o modelo provedor/modelo com a credencial de API deste agente (OPENROUTER_API_KEY para o OpenRouter).'}
-        </span>
+        </Typography>
       )}
-    </div>
+    </Box>
   );
 }

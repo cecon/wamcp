@@ -1,35 +1,71 @@
 import type { ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Contact as ContactIcon, MessageCircle, MessageSquareText } from 'lucide-react';
+
 import { timeAgo } from '../api';
 import type { SearchResults as Results } from '../parityTypes';
 import { STATUS_LABEL } from '../labels';
 import { Avatar } from '../ui/Avatar';
 import { Highlight } from './Highlight';
 
+const rowSx = {
+  display: 'flex',
+  width: '100%',
+  alignItems: 'flex-start',
+  gap: 1.5,
+  borderRadius: 1,
+  px: 1,
+  py: 1,
+  textAlign: 'left',
+  justifyContent: 'flex-start',
+  '&:hover': { bgcolor: 'action.hover' },
+} as const;
+
 function Section({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-1">
-      <h2 className="flex items-center gap-2 px-2 pb-1 text-sm font-medium text-n-slate-11">
+    <Box component="section" aria-label={title} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <Typography
+        variant="subtitle2"
+        component="h2"
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, pb: 0.5, color: 'text.secondary' }}
+      >
         {icon} {title}
-      </h2>
-      <ul className="flex flex-col">{children}</ul>
-    </section>
+      </Typography>
+      <Box component="ul" sx={{ display: 'flex', flexDirection: 'column', listStyle: 'none', m: 0, p: 0 }}>
+        {children}
+      </Box>
+    </Box>
   );
 }
 
 function Hit({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left hover:bg-n-alpha-1"
-      >
+    <Box component="li">
+      <ButtonBase onClick={onClick} sx={rowSx}>
         {children}
-      </button>
-    </li>
+      </ButtonBase>
+    </Box>
   );
 }
+
+const Line = ({ children }: { children: ReactNode }) => (
+  <Typography component="span" variant="body2" noWrap sx={{ display: 'block', fontWeight: 500 }}>
+    {children}
+  </Typography>
+);
+
+const Meta = ({ children }: { children: ReactNode }) => (
+  <Typography component="span" variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+    {children}
+  </Typography>
+);
 
 interface Props {
   results: Results;
@@ -42,21 +78,21 @@ interface Props {
 export function SearchResults({ results, term, onOpenConversation, onOpenContact }: Props) {
   const { conversations = [], contacts = [], messages = [] } = results;
   return (
-    <div className="flex flex-col gap-6">
+    <Stack spacing={3}>
       {conversations.length > 0 && (
         <Section title="Conversas" icon={<MessageCircle size={14} />}>
           {conversations.map((c) => (
             <Hit key={c.id} onClick={() => onOpenConversation(c.display_id)}>
               <Avatar name={c.contact_name || c.contact_phone} size={32} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-n-slate-12">
+              <Box component="span" sx={{ minWidth: 0, flex: 1 }}>
+                <Line>
                   <Highlight text={`#${c.display_id}`} term={term} /> ·{' '}
                   <Highlight text={c.contact_name || c.contact_phone || 'Contato'} term={term} />
-                </span>
-                <span className="block truncate text-xs text-n-slate-11">
+                </Line>
+                <Meta>
                   {c.inbox_name} · {STATUS_LABEL[c.status]} · {timeAgo(c.last_activity_at)}
-                </span>
-              </span>
+                </Meta>
+              </Box>
             </Hit>
           ))}
         </Section>
@@ -66,14 +102,14 @@ export function SearchResults({ results, term, onOpenConversation, onOpenContact
           {contacts.map((c) => (
             <Hit key={c.id} onClick={() => onOpenContact(c.id)}>
               <Avatar name={c.name || c.phone_number} size={32} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-n-slate-12">
+              <Box component="span" sx={{ minWidth: 0, flex: 1 }}>
+                <Line>
                   <Highlight text={c.name || 'Sem nome'} term={term} />
-                </span>
-                <span className="block truncate text-xs text-n-slate-11">
+                </Line>
+                <Meta>
                   <Highlight text={[c.phone_number, c.email].filter(Boolean).join(' · ')} term={term} />
-                </span>
-              </span>
+                </Meta>
+              </Box>
             </Hit>
           ))}
         </Section>
@@ -83,20 +119,36 @@ export function SearchResults({ results, term, onOpenConversation, onOpenContact
           {messages.map((m) => (
             <Hit key={m.id} onClick={() => onOpenConversation(m.display_id)}>
               <Avatar name={m.contact_name} size={32} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-n-slate-12">
+              <Box component="span" sx={{ minWidth: 0, flex: 1 }}>
+                <Line>
                   {m.contact_name || 'Contato'} · #{m.display_id}
-                  <span className="ml-2 text-xs font-normal text-n-slate-11">{timeAgo(m.created_at)}</span>
-                </span>
-                <span className="line-clamp-2 text-sm text-n-slate-11">
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{ ml: 1, fontWeight: 400, color: 'text.secondary' }}
+                  >
+                    {timeAgo(m.created_at)}
+                  </Typography>
+                </Line>
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
                   {m.message_type === 'outgoing' && 'Equipe: '}
                   <Highlight text={m.content} term={term} />
-                </span>
-              </span>
+                </Typography>
+              </Box>
             </Hit>
           ))}
         </Section>
       )}
-    </div>
+    </Stack>
   );
 }

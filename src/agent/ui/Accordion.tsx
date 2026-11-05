@@ -1,7 +1,13 @@
 import { useState, type ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+
+// third-party
 import { Minus, Plus } from 'lucide-react';
 
-/** Chatwoot ContactPanel accordion section (title bar with +/− and a padded body). */
+/** Seção acordeão do C3Theme: barra de título com +/− e corpo que desmonta ao fechar. */
 export function Accordion({
   title,
   open: initial = false,
@@ -13,21 +19,28 @@ export function Accordion({
 }) {
   const [open, setOpen] = useState(initial);
   return (
-    <section>
-      <button
+    <Box component="section">
+      <Button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-lg bg-n-slate-2 px-4 py-2 text-sm text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak"
+        variant="text"
+        fullWidth
+        endIcon={open ? <Minus size={16} /> : <Plus size={16} />}
+        sx={{
+          justifyContent: 'space-between',
+          borderRadius: 1,
+          bgcolor: 'action.hover',
+          px: 2,
+          py: 1,
+          textTransform: 'none',
+          color: 'text.primary',
+          fontSize: 14,
+        }}
       >
         {title}
-        {open ? (
-          <Minus size={16} className="text-n-blue-11" />
-        ) : (
-          <Plus size={16} className="text-n-blue-11" />
-        )}
-      </button>
-      {open && <div className="rounded-b-lg px-2 py-4">{children}</div>}
-    </section>
+      </Button>
+      {open && <Box sx={{ borderRadius: '0 0 8px 8px', px: 1, py: 2 }}>{children}</Box>}
+    </Box>
   );
 }

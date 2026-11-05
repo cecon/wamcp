@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsRouter } from '../../src/agent/settings/SettingsRouter';
+// Pré-carrega o chunk do C3Theme (Atributos migrados) fora do tempo do teste, que é longo sob carga.
+import '../../src/agent/settings/AttributesPage';
 import { ContactPanel } from '../../src/agent/conversations/ContactPanel';
 import type { AttributeDefinition } from '../../src/agent/types';
 import { fakeApi, status } from './fake-api';
@@ -51,7 +53,7 @@ describe('custom attribute settings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Adicionar atributo' }));
     let dialog = screen.getByRole('dialog', { name: 'Adicionar atributo' });
-    await user.type(within(dialog).getByLabelText('Nome de exibição'), 'Nível');
+    await user.type(within(dialog).getByLabelText(/Nome de exibição/), 'Nível');
     await user.selectOptions(within(dialog).getByLabelText('Tipo'), 'list');
     await user.type(within(dialog).getByLabelText(/Opções da lista/), 'ouro, prata,');
     await user.click(within(dialog).getByRole('button', { name: 'Criar' }));
@@ -69,7 +71,7 @@ describe('custom attribute settings', () => {
     await user.click(screen.getByRole('button', { name: 'Adicionar atributo' }));
     dialog = screen.getByRole('dialog', { name: 'Adicionar atributo' });
     await user.selectOptions(within(dialog).getByLabelText('Aplica-se a'), 'contact');
-    await user.type(within(dialog).getByLabelText('Nome de exibição'), 'Duplicado');
+    await user.type(within(dialog).getByLabelText(/Nome de exibição/), 'Duplicado');
     await user.type(within(dialog).getByLabelText('Chave'), 'cpf');
     await user.type(within(dialog).getByLabelText('Padrão (regex)'), '^\\d{{11}$');
     await user.type(within(dialog).getByLabelText('Dica do padrão'), '11 dígitos');
@@ -88,8 +90,8 @@ describe('custom attribute settings', () => {
     await user.click(screen.getByRole('button', { name: 'Editar Plano' }));
     dialog = screen.getByRole('dialog', { name: 'Editar atributo' });
     expect(within(dialog).getByLabelText('Chave')).toBeDisabled();
-    await user.clear(within(dialog).getByLabelText('Nome de exibição'));
-    await user.type(within(dialog).getByLabelText('Nome de exibição'), 'Plano atual');
+    await user.clear(within(dialog).getByLabelText(/Nome de exibição/));
+    await user.type(within(dialog).getByLabelText(/Nome de exibição/), 'Plano atual');
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
       expect(api.called('PATCH', '/custom_attribute_definitions/1')[0].body).toMatchObject({

@@ -1,4 +1,15 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { SelectField } from '@c3theme/ui';
+
 import type { AttributeDefinition, FilterValue } from '../types';
 import { parseAttribute, patternError } from './attributeValue';
 
@@ -38,54 +49,69 @@ export function AttributeInput({ definition: d, value, onSave }: Props) {
     }
   }
   const hint = d.regex_cue || d.attribute_description;
+  const feedback = error ? (
+    <Typography variant="caption" role="alert" sx={{ display: 'block', color: 'error.main' }}>
+      {error}
+    </Typography>
+  ) : (
+    hint && (
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+        {hint}
+      </Typography>
+    )
+  );
+
+  if (d.attribute_display_type === 'checkbox')
+    return (
+      <Box>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Checkbox
+            size="small"
+            checked={value === true}
+            onChange={(event) => void commit(event.target.checked)}
+            slotProps={{ input: { 'aria-label': label } }}
+          />
+          <Typography variant="body2">{label}</Typography>
+        </Stack>
+        {feedback}
+      </Box>
+    );
+
   return (
-    <div className="flex flex-col gap-1">
-      {d.attribute_display_type === 'checkbox' ? (
-        <label className="flex items-center gap-2 text-sm text-n-slate-12">
-          <input type="checkbox" checked={value === true} onChange={(e) => void commit(e.target.checked)} />
-          {label}
-        </label>
+    <Box>
+      {d.attribute_display_type === 'list' ? (
+        <SelectField
+          native
+          label={label}
+          size="small"
+          emptyLabel="—"
+          value={current}
+          options={d.attribute_values.map((option) => ({ value: option, label: option }))}
+          onChange={(next) => void commit(next)}
+        />
       ) : (
-        <label className="block">
-          <span className="mb-1 block text-sm text-n-slate-12">{label}</span>
-          {d.attribute_display_type === 'list' ? (
-            <select className="field" value={current} onChange={(e) => void commit(e.target.value || null)}>
-              <option value="">—</option>
-              {d.attribute_values.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              className="field"
-              type={INPUT_TYPE[d.attribute_display_type] || 'text'}
-              value={draft}
-              step="any"
-              onChange={(e) => {
-                setDraft(e.target.value);
-                if (d.attribute_display_type === 'date') void commit(parseAttribute(d, e.target.value));
-              }}
-              onBlur={() => {
-                if (d.attribute_display_type !== 'date') void commit(parseAttribute(d, draft));
-              }}
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter') return;
-                e.preventDefault();
-                void commit(parseAttribute(d, draft));
-              }}
-            />
-          )}
-        </label>
+        <TextField
+          label={label}
+          size="small"
+          fullWidth
+          type={INPUT_TYPE[d.attribute_display_type] || 'text'}
+          value={draft}
+          slotProps={{ htmlInput: { step: 'any' } }}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            if (d.attribute_display_type === 'date') void commit(parseAttribute(d, event.target.value));
+          }}
+          onBlur={() => {
+            if (d.attribute_display_type !== 'date') void commit(parseAttribute(d, draft));
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            void commit(parseAttribute(d, draft));
+          }}
+        />
       )}
-      {error ? (
-        <p role="alert" className="text-xs text-n-ruby-11">
-          {error}
-        </p>
-      ) : (
-        hint && <p className="text-xs text-n-slate-11">{hint}</p>
-      )}
-    </div>
+      {feedback}
+    </Box>
   );
 }

@@ -1,13 +1,26 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Plus, Settings, UsersRound } from 'lucide-react';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { Catalog, Team, User } from '../types';
 import type { Route } from '../route';
 import { Avatar } from '../ui/Avatar';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter, SettingsHeader, SettingsPage, Toggle } from '../ui/Settings';
+import { Toggle } from '../ui/Settings';
 import { useAction } from './useAction';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 interface Props {
   catalog: Catalog;
@@ -16,46 +29,81 @@ interface Props {
   onChange: () => Promise<void>;
 }
 
-/** Chatwoot Teams: icon-tile list, "Create new team" modal, and a team page with members. */
+/** Times no C3Theme (lote 30): lista, “criar novo time” e a página do time com membros. */
 export function TeamsPage({ catalog, teamId, onNavigate, onChange }: Props) {
   const [creating, setCreating] = useState(false);
   const team = teamId ? catalog.teams.find((t) => t.id === teamId) : undefined;
   if (team) return <TeamDetail team={team} catalog={catalog} onNavigate={onNavigate} onChange={onChange} />;
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Times"
         description="Times agrupam agentes por responsabilidade. Uma conversa direcionada ao time pode ser atribuída a um membro online."
         count={`${catalog.teams.length} time${catalog.teams.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Criar novo time" onClick={() => setCreating(true)} />}
+        action={
+          <Button variant="contained" startIcon={<Plus size={14} />} onClick={() => setCreating(true)}>
+            Criar novo time
+          </Button>
+        }
       />
-      <ul className="divide-y divide-n-weak border-t border-n-weak">
-        {catalog.teams.length === 0 && <li className="py-20 text-center text-base">Nenhum time ainda.</li>}
+      <Box component="ul" sx={{ borderTop: 1, borderColor: 'divider', listStyle: 'none', m: 0, p: 0 }}>
+        {catalog.teams.length === 0 && (
+          <Box component="li" sx={{ py: 10, textAlign: 'center' }}>
+            <Typography variant="body1">Nenhum time ainda.</Typography>
+          </Box>
+        )}
         {catalog.teams.map((t) => (
-          <li key={t.id} className="flex items-center justify-between gap-4 py-4">
-            <div className="flex min-w-0 items-center gap-4">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl text-n-slate-10 outline outline-1 -outline-offset-1 outline-n-weak">
+          <Stack
+            component="li"
+            key={t.id}
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              py: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
+            <Stack direction="row" spacing={2} sx={{ minWidth: 0, alignItems: 'center' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  width: 40,
+                  height: 40,
+                  flexShrink: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 2,
+                  color: 'text.disabled',
+                  border: 1,
+                  borderColor: 'divider',
+                }}
+              >
                 <UsersRound size={20} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-heading-3 truncate text-n-slate-12">{t.name}</p>
-                <p className="truncate text-sm text-n-slate-11">
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h6" component="p" noWrap>
+                  {t.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
                   {t.description || 'Sem descrição'} · {t.member_count ?? 0} membro(s)
-                </p>
-              </div>
-            </div>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Settings}
+                </Typography>
+              </Box>
+            </Stack>
+            <IconButton
               aria-label={`Configurar ${t.name}`}
               onClick={() => onNavigate({ page: 'settings', section: 'teams', id: t.id })}
-            />
-          </li>
+            >
+              <Settings size={16} />
+            </IconButton>
+          </Stack>
         ))}
-      </ul>
+      </Box>
       {creating && <TeamModal onClose={() => setCreating(false)} onSaved={onChange} />}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }
 
@@ -63,40 +111,40 @@ function TeamModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => P
   const [form, setForm] = useState({ name: '', description: '' });
   const { error, busy, run } = useAction();
   return (
-    <Modal title="Criar novo time" onClose={onClose}>
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            await http('/teams', 'POST', { name: form.name, description: form.description || null });
-            await onSaved();
-            onClose();
-          });
-        }}
-      >
-        <label>
-          <span className="field-label">Nome do time</span>
-          <input
-            className="field"
-            required
-            maxLength={80}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Descrição</span>
-          <textarea
-            className="field"
-            maxLength={500}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-        </label>
-        <ModalFooter busy={busy} submit="Criar time" onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+    <ActionDialog
+      open
+      title="Criar novo time"
+      confirmLabel="Criar time"
+      backLabel="Cancelar"
+      loading={busy}
+      error={error}
+      onClose={onClose}
+      onConfirm={() =>
+        void run(async () => {
+          await http('/teams', 'POST', { name: form.name, description: form.description || null });
+          await onSaved();
+          onClose();
+        })
+      }
+    >
+      <Stack spacing={2} sx={{ pt: 1 }}>
+        <TextField
+          label="Nome do time"
+          size="small"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
+        />
+        <TextField
+          label="Descrição"
+          multiline
+          minRows={2}
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          slotProps={{ htmlInput: { maxLength: 500 } }}
+        />
+      </Stack>
+    </ActionDialog>
   );
 }
 
@@ -126,13 +174,12 @@ function TeamDetail({ team, catalog, onNavigate, onChange }: DetailProps) {
       await onChange();
     });
   return (
-    <SettingsPage>
-      <SettingsHeader
-        title={team.name}
-        description={team.description || undefined}
-        back={{ label: 'Times', onClick: back }}
-      />
-      <section className="rounded-xl px-4 outline outline-1 -outline-offset-1 outline-n-weak">
+    <SettingsC3Page>
+      <SettingsC3Header title={team.name} description={team.description || undefined} />
+      <Button variant="text" onClick={back} sx={{ alignSelf: 'flex-start' }}>
+        ← Times
+      </Button>
+      <Box sx={{ borderRadius: 2, px: 2, border: 1, borderColor: 'divider' }}>
         <Toggle
           label="Atribuição automática no time"
           hint="Ao direcionar uma conversa ao time, um membro online a recebe em rodízio."
@@ -144,32 +191,46 @@ function TeamDetail({ team, catalog, onNavigate, onChange }: DetailProps) {
             })
           }
         />
-      </section>
-      <h2 className="text-heading-3 mt-2">Membros</h2>
-      <ul className="divide-y divide-n-weak border-t border-n-weak">
+      </Box>
+      <Typography variant="h6" component="h2" sx={{ mt: 1 }}>
+        Membros
+      </Typography>
+      <Box component="ul" sx={{ borderTop: 1, borderColor: 'divider', listStyle: 'none', m: 0, p: 0 }}>
         {catalog.agents
           .filter((a) => a.active)
           .map((a) => (
-            <li key={a.id} className="flex items-center justify-between gap-4 py-3">
-              <span className="flex items-center gap-3">
+            <Stack
+              component="li"
+              key={a.id}
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
+                py: 1.5,
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                 <Avatar name={a.name} size={32} status={a.availability} />
-                <span className="text-sm text-n-slate-12">{a.name}</span>
-              </span>
+                <Typography variant="body2">{a.name}</Typography>
+              </Stack>
               <Toggle
                 compact
                 label={`Membro ${a.name}`}
                 checked={members.includes(a.id)}
                 onChange={() => void toggle(a.id)}
               />
-            </li>
+            </Stack>
           ))}
-      </ul>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
+      </Box>
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
       <Button
-        color="ruby"
-        variant="faded"
-        className="self-start"
-        label="Excluir time"
+        color="error"
+        variant="outlined"
+        sx={{ alignSelf: 'flex-start' }}
         onClick={() =>
           void run(async () => {
             if (!window.confirm(`Excluir o time ${team.name}?`)) return;
@@ -178,7 +239,9 @@ function TeamDetail({ team, catalog, onNavigate, onChange }: DetailProps) {
             back();
           })
         }
-      />
-    </SettingsPage>
+      >
+        Excluir time
+      </Button>
+    </SettingsC3Page>
   );
 }
