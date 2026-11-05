@@ -9,17 +9,12 @@ use async_trait::async_trait;
 use common::{Fixture, Incoming};
 use parking_lot::Mutex;
 use serde_json::{json, Value};
-use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use wamcp_server::adapters::outbound::llm::claude_cli::parse_output;
-use wamcp_server::adapters::outbound::llm::codex_cli::{codex_arguments, parse_codex_answer};
 use wamcp_server::adapters::outbound::llm::LlmRouter;
 use wamcp_server::application::ports::{Completion, Llm, LlmRequest};
 use wamcp_server::domain::error::Result;
-use wamcp_server::domain::llm::openrouter_key;
-use wamcp_server::domain::model::SealedCredential;
 
 /// Records every request and always answers `reply`; reports itself installed at `location`.
 struct FakeRuntime {
@@ -259,53 +254,6 @@ async fn runtimes_list_says_what_is_installed() {
     assert_eq!(list[2]["available"], false, "registered but not installed");
     let agent = s.f.agent(&s.admin, "op@example.com", "agent", false).await;
     assert_eq!(agent.get("/agent_runtimes").await.status, 403);
-}
-
-#[test]
-fn openrouter_key_prefers_the_named_credential_else_the_only_key() {
-    let credential = |name: &str, kind: &str| SealedCredential {
-        name: name.into(),
-        kind: kind.into(),
-        secret: format!("sealed-{name}"),
-    };
-    let both = [credential("ERP", "api_key"), credential("openrouter_api_key", "secret")];
-    assert_eq!(openrouter_key(&both).unwrap().name, "openrouter_api_key");
-    let only = [credential("CHAVE", "bearer"), credential("SENHA", "basic")];
-    assert_eq!(openrouter_key(&only).unwrap().name, "CHAVE");
-    let many = [credential("A", "api_key"), credential("B", "api_key")];
-    assert_eq!(openrouter_key(&many), None, "ambiguous");
-}
-
-#[test]
-fn codex_and_claude_outputs_are_read_back() {
-    let request = LlmRequest {
-        provider: "codex_cli".into(),
-        model: Some("gpt-5-mini".into()),
-        system: "Sistema".into(),
-        prompt: "Cliente: oi".into(),
-        schema: json!({ "type": "object" }),
-        api_key: None,
-        mcp: None,
-    };
-    let args = codex_arguments(&request, Path::new("s.json"), Path::new("a.txt"));
-    let after = |flag: &str| args[args.iter().position(|a| a == flag).unwrap() + 1].clone();
-    assert_eq!(args[0], "exec");
-    assert_eq!(after("--sandbox"), "read-only");
-    assert_eq!(after("--output-schema"), "s.json");
-    assert_eq!(after("--output-last-message"), "a.txt");
-    assert_eq!(after("--model"), "gpt-5-mini");
-    assert_eq!(args.last().unwrap(), "-", "prompt from stdin");
-    assert!(!args.iter().any(|a| a.contains("oi")));
-
-    let fenced = "```json\n{\"reply\":\"Oi\",\"handoff\":false}\n```";
-    assert_eq!(parse_codex_answer(fenced, b"").unwrap()["reply"], "Oi");
-    let error = parse_codex_answer("", b"warn\nNot logged in\n")
-        .unwrap_err()
-        .to_string();
-    assert!(error.contains("Not logged in"));
-
-    let inline = br#"{"type":"result","is_error":false,"result":"{\"reply\":\"Oi\",\"handoff\":true}"}"#;
-    assert_eq!(parse_output(inline, b"").unwrap()["handoff"], true);
 }
 
 #[tokio::test]

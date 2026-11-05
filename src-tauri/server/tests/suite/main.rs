@@ -27,6 +27,7 @@ mod agent_directory;
 mod agent_profiles;
 mod agent_schedules;
 mod ai_agents_answer;
+mod ai_runtime_outputs;
 mod chat_media;
 mod contact_book;
 mod contact_csv;

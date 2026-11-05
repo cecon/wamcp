@@ -6,6 +6,7 @@
 //! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
 mod chat;
+mod conclude;
 mod github_tools;
 mod record;
 mod scheduled;
@@ -15,7 +16,6 @@ use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
 use super::ports::{Llm, LlmRequest, SecretBox};
 use super::system_agent::SystemAgent;
-use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::github;
 use crate::domain::llm::{
@@ -263,35 +263,7 @@ impl LlmBotService {
         let Some(answer) = parse_answer(&completion.answer) else {
             return fail("Resposta da LLM fora do formato esperado");
         };
-        // A person may have taken the conversation while the model was thinking. When the agent
-        // itself forwarded it to its supervisor during the run, its answer still goes out.
-        let current = core.repo.conversation_by_id(conversation_id)?;
-        if !forwarded && current.as_ref().is_none_or(|c| !self.can_answer(c, &responder)) {
-            return Ok(());
-        }
-        let actor = Actor::Bot { inbox_id: inbox.id };
-        if !answer.reply.is_empty() {
-            self.helpdesk
-                .reply(&actor, conversation.display_id, &answer.reply, false)
-                .await?;
-        }
-        if answer.handoff || forwarded {
-            // Regra do produto: se a IA não resolve, a conversa obrigatoriamente vai para um humano
-            // (o encaminhamento ao responsável direto já entregou para uma pessoa).
-            let target = core
-                .repo
-                .conversation_by_id(conversation.id)?
-                .unwrap_or_else(|| conversation.clone());
-            if target.assignee_id.is_none() {
-                self.helpdesk
-                    .handoff_to_human(&actor, &target, "a IA não conseguiu resolver")?;
-            }
-        } else if answer.resolve {
-            // O objetivo da conversa foi atingido: a IA encerra como qualquer atendente.
-            self.helpdesk
-                .toggle_status(&actor, conversation.display_id, "resolved", None)?;
-        }
-        Ok(())
+        self.conclude(&inbox, &conversation, &responder, answer, forwarded).await
     }
 
     /// O vigia usa para pedir ao agente que decida de novo sobre uma conversa parada.
