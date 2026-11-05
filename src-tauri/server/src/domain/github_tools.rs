@@ -136,6 +136,6 @@ mod tests {
             (Some(41), Some(124))
         );
         assert_eq!(segment("bug fix/ç"), "bug%20fix%2F%C3%A7");
-        assert_eq!(github_tools().len(), 12);
+        assert_eq!(github_tools().len(), 13);
     }
 }
