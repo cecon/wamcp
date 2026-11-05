@@ -13,7 +13,7 @@ mod serves;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
-use super::ports::{Llm, LlmRequest, SecretBox, TokenUsage};
+use super::ports::{Llm, LlmRequest, SecretBox};
 use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
@@ -22,7 +22,7 @@ use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
 };
-use crate::domain::model::{ChatMessage, Inbox, LlmUsage, Message, BOT_LLM, CHAT_USER};
+use crate::domain::model::{ChatMessage, Inbox, Message, BOT_LLM, CHAT_USER};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
