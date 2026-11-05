@@ -22,7 +22,7 @@ chrono-tz = { version = "0.10", features = ["case-insensitive"] }
 futures = "0.3"
 hex = "0.4"
 hmac = "0.13"
-parking_lot = "0.12"
+parking_lot = "0.13"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 rand = "0.10"
 regex = "1"
@@ -39,7 +39,7 @@ thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "limit", "set-header"] }
+tower-http = { version = "0.7", features = ["fs", "limit", "set-header"] }
 tracing = "0.1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
