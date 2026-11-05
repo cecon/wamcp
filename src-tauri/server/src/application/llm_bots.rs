@@ -8,6 +8,7 @@ mod admin;
 mod chat;
 mod github_tools;
 mod scheduled;
+mod serves;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
@@ -16,7 +17,6 @@ use super::system_agent::SystemAgent;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail, Result};
 use crate::domain::github;
-use crate::domain::helpdesk::bot_answers;
 use crate::domain::llm::{
     agent_instructions, answer_schema, answers_customers, build_prompt, openrouter_key, parse_answer, SYSTEM,
     TRANSCRIPT_LIMIT,
@@ -126,8 +126,13 @@ impl LlmBotService {
         if matches!(self.system_target(&conversation), Ok(Some(_))) {
             return true;
         }
-        let inbox = core.inbox(conversation.inbox_id);
-        bot_answers(&conversation) && inbox.is_ok_and(|i| matches!(self.responder(&i), Ok(Some(_))))
+        let Ok(inbox) = core.inbox(conversation.inbox_id) else {
+            return false;
+        };
+        let Ok(Some(responder)) = self.responder(&inbox) else {
+            return false;
+        };
+        self.can_answer(&conversation, &responder)
     }
 
     /// Who answers the inbox: its AI agent (when it may answer customers), else its `llm` bot. The
@@ -217,7 +222,10 @@ impl LlmBotService {
             return self.answer_admin(&conversation, &agent, admin).await;
         }
         let inbox = core.inbox(conversation.inbox_id)?;
-        let Some(responder) = self.responder(&inbox)?.filter(|_| bot_answers(&conversation)) else {
+        let Some(responder) = self
+            .responder(&inbox)?
+            .filter(|responder| self.can_answer(&conversation, responder))
+        else {
             return Ok(());
         };
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
@@ -246,7 +254,7 @@ impl LlmBotService {
         };
         // A person may have taken the conversation while the model was thinking.
         let current = core.repo.conversation_by_id(conversation_id)?;
-        if current.is_none_or(|c| !bot_answers(&c)) {
+        if current.is_none_or(|c| !self.can_answer(&c, &responder)) {
             return Ok(());
         }
         let actor = Actor::Bot { inbox_id: inbox.id };

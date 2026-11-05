@@ -73,6 +73,7 @@ async fn the_agent_keeps_answering_after_a_handoff_while_nobody_takes_the_conver
     let comment = json!({ "action": "created", "sender": { "login": "maria" }, "repository": repository(),
         "issue": { "number": 11, "title": "Corrige login", "pull_request": {} }, "comment": { "body": "E agora?" } });
     c.deliver("issue_comment", "h2", &comment, None).await;
+    println!("AFTER={:?}", c.conversations().await);
     assert_eq!(
         handoff.requests.lock().len(),
         2,
