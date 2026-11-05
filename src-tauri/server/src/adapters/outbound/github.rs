@@ -172,7 +172,7 @@ impl GithubApi for MemoryGithub {
     }
 
     async fn create_hook(&self, _token: &str, repo: &str, url: &str, secret: &str, _events: &[&str]) -> Result<i64> {
-        if self.refuse_hooks.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.refuse_hooks.load(std::sync::atomic::Ordering::Relaxed) || _token == "ghp_sem_webhook" {
             return fail_with("O token não tem acesso a isso no GitHub (Resource not accessible)", 422);
         }
         let mut hooks = self.hooks.lock();

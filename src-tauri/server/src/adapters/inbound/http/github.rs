@@ -8,7 +8,7 @@ use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 use serde::Deserialize;
 
@@ -53,6 +53,25 @@ async fn retry_hook(
     ok(setup)
 }
 
+#[derive(Deserialize)]
+struct Token {
+    token: String,
+}
+
+async fn replace_token(
+    State(state): State<AppState>,
+    current: CurrentUser,
+    Path(inbox): Path<String>,
+    Body(body): Body<Token>,
+) -> ApiResult<Response> {
+    let setup = state
+        .support()
+        .helpdesk
+        .replace_github_token(&current.actor(), id(&inbox)?, &body.token, &state.public_url)
+        .await?;
+    ok(setup)
+}
+
 fn header<'a>(headers: &'a HeaderMap, name: &str) -> &'a str {
     headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or_default()
 }
@@ -83,6 +102,7 @@ pub fn routes() -> Router<AppState> {
         .route("/github_channels", post(connect))
         .route("/inboxes/{id}/github", get(setup))
         .route("/inboxes/{id}/github/hook", post(retry_hook))
+        .route("/inboxes/{id}/github/token", put(replace_token))
 }
 
 /// Mounted outside `/api/v1`: GitHub calls it from its servers.
