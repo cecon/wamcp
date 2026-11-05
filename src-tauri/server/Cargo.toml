@@ -39,7 +39,7 @@ thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "limit", "set-header"] }
+tower-http = { version = "0.7", features = ["fs", "limit", "set-header"] }
 tracing = "0.1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
