@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import AgentApp from '../../src/agent/AgentApp';
 import '../../src/agent/shell/C3Workspace';
 import { FakeEventSource, fakeApi } from './fake-api';
 import { workspaceRoutes } from './fixtures';
+import { navFind } from './nav';
 
 const run = (id: string, over: Record<string, unknown> = {}) => ({
   id,
@@ -29,7 +31,6 @@ afterEach(() => window.history.replaceState({}, '', '/'));
 
 describe('Agentes ao vivo', () => {
   it('agrupa as sessões por agente e segue os eventos do stream', async () => {
-    window.history.replaceState({}, '', '/agents-live');
     FakeEventSource.instances = [];
     fakeApi({
       ...workspaceRoutes(),
@@ -38,7 +39,10 @@ describe('Agentes ao vivo', () => {
         run('conversation:8', { state: 'queued', detail: null, started_at: null }),
       ],
     });
+    const user = userEvent.setup();
     render(<AgentApp />);
+    await screen.findByRole('heading', { name: 'Conversas' }, { timeout: 8000 });
+    await user.click(await navFind(/Agentes ao vivo/));
 
     expect(
       await screen.findByRole('heading', { name: 'Agentes ao vivo' }, { timeout: 8000 }),
