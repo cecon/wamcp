@@ -26,6 +26,8 @@ pub struct Core {
     pub repo: Arc<dyn Repository>,
     pub bus: Arc<EventBus>,
     pub clock: Arc<dyn Clock>,
+    /// The AI agents' runs going on now ("Em execução").
+    pub runs: Arc<super::agent_runs::AgentRuns>,
 }
 
 impl Core {

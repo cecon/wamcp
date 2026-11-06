@@ -84,6 +84,8 @@ export type Route =
   | { page: 'contacts'; contactId?: number }
   /** Private chats with AI agents inside the app. */
   | { page: 'agent_chat'; agentId?: number }
+  /** Execuções dos agentes de IA em andamento ("Agentes ao vivo"). */
+  | { page: 'agent_runs' }
   | { page: 'reports'; section?: ReportSection }
   | { page: 'search' }
   | { page: 'profile' }

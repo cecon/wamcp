@@ -25,6 +25,7 @@ mod agent_chat_sessions;
 mod agent_chats;
 mod agent_directory;
 mod agent_profiles;
+mod agent_runs;
 mod agent_schedules;
 mod ai_agents_answer;
 mod chat_media;
