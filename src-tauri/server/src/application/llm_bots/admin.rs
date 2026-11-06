@@ -36,7 +36,8 @@ impl LlmBotService {
         let (Some(_), Some(url)) = (&self.system, self.mcp_url.get()) else {
             return Ok(());
         };
-        let repo = &self.helpdesk.core.repo;
+        let (core, repo) = (&self.helpdesk.core, &self.helpdesk.core.repo);
+        let run = super::runs::run_id(super::Target::Conversation(conversation.id));
         let messages = repo.messages(conversation.id, None, SYSTEM_TRANSCRIPT_LIMIT)?;
         let last = messages
             .iter()
@@ -52,7 +53,7 @@ impl LlmBotService {
                 Thread::Conversation(conversation.id),
                 &messages,
                 url,
-                &|_| {},
+                &|step| core.runs.step(&run, &super::runs::step_text(&step)),
             )
             .await?;
         let actor = Actor::Bot {

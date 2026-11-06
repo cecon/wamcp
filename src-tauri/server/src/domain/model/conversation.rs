@@ -81,6 +81,18 @@ pub struct ConversationFilters {
     pub limit: Option<crate::domain::roles::ConversationLimit>,
 }
 
+impl ConversationFilters {
+    /// The statuses the list keeps: none for `all`; `active` is open and pending together (people
+    /// and the inbox's AI agent, which works in `pending`); any other status is itself.
+    pub fn statuses(&self) -> Option<[&str; 2]> {
+        match self.status.as_deref()? {
+            "all" => None,
+            "active" => Some(["open", "pending"]),
+            status => Some([status, status]),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ConversationCounts {
     pub mine: i64,

@@ -51,6 +51,8 @@ export function routeToPath(route: Route): string {
       return route.contactId ? `/contacts?contact=${route.contactId}` : '/contacts';
     case 'agent_chat':
       return route.agentId ? `/agent-chat?agent=${route.agentId}` : '/agent-chat';
+    case 'agent_runs':
+      return '/agents-live';
     case 'reports':
       return route.section && route.section !== 'overview' ? `/reports?section=${route.section}` : '/reports';
     case 'search':
@@ -91,6 +93,8 @@ export function pathToRoute(pathname: string, search: string): Route {
       return { page: 'contacts', contactId: numberParam(params, 'contact') };
     case '/agent-chat':
       return { page: 'agent_chat', agentId: numberParam(params, 'agent') };
+    case '/agents-live':
+      return { page: 'agent_runs' };
     case '/reports': {
       const section = stringParam(params, 'section');
       return { page: 'reports', section: REPORT_SECTIONS.find((value) => value === section) ?? 'overview' };
