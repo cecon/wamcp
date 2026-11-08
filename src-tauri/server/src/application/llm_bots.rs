@@ -5,6 +5,7 @@
 //! conversation at a time, with another one afterwards if the contact wrote meanwhile. The same queue
 //! answers the chats people logged in to the app have with AI agents (`chat`).
 mod admin;
+mod bridge;
 mod chat;
 mod github_tools;
 mod live;
@@ -47,6 +48,8 @@ pub struct LlmBotService {
     system: Option<SystemAgent>,
     /// The app's own MCP endpoint for the system agent, known once the server listens.
     mcp_url: Arc<OnceLock<String>>,
+    /// The agentic engine, for agents that run there (see `bridge.rs`).
+    engine: Arc<OnceLock<super::engine::EngineService>>,
 }
 
 /// What an answer is for: a customer's conversation or a person's chat with an AI agent.
@@ -82,6 +85,7 @@ impl LlmBotService {
             idle: Arc::default(),
             system: None,
             mcp_url: Arc::default(),
+            engine: Arc::default(),
         }
     }
 
@@ -89,6 +93,12 @@ impl LlmBotService {
     pub fn with_system(mut self, system: SystemAgent, mcp_url: Arc<OnceLock<String>>) -> Self {
         self.system = Some(system);
         self.mcp_url = mcp_url;
+        self
+    }
+
+    /// Sends the turns of agents that run on the engine through it, once it is attached.
+    pub fn with_engine(mut self, engine: Arc<OnceLock<super::engine::EngineService>>) -> Self {
+        self.engine = engine;
         self
     }
 
@@ -209,7 +219,16 @@ impl LlmBotService {
             }
             None => build_prompt(&inbox.name, Some(&request.prompt), &messages),
         };
-        if let Some(summary) = self.earlier_summary(conversation.id, &messages, &responder).await {
+        let summary = self.earlier_summary(conversation.id, &messages, &responder).await;
+        if let Some(agent) = responder.agent_id {
+            if self
+                .answer_by_engine(&conversation, &inbox, agent, summary.as_deref(), &messages)
+                .await?
+            {
+                return Ok(());
+            }
+        }
+        if let Some(summary) = summary {
             request.prompt = with_summary(&summary, &request.prompt);
         }
         let (completion, forwarded) = self

@@ -92,6 +92,7 @@ mod oauth_consent;
 mod oauth_desktop;
 mod oauth_golden;
 mod oauth_lifecycle;
+mod plugin_bridge;
 mod plugins;
 mod profile_skills;
 mod reports_v2;

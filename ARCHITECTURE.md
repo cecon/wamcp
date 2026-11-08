@@ -54,6 +54,8 @@ Uma conversa espera o seu agente de IA enquanto está `pending` e a última mens
 - **Encerrar.** Interrompe a resposta em andamento (o futuro é descartado e o processo do runtime morre junto), não envia nada e passa a conversa para as pessoas da caixa (`open`). Um pedido do motor é cancelado com tudo o que ele delegou, e as execuções em andamento são canceladas no runtime.
 - **Resumo.** Numa conversa com mais mensagens do que a janela do prompt (40), o começo chega ao agente como resumo, feito pelo próprio modelo do agente e guardado em `conversation_summaries`. Ele é refeito só quando a janela passa do que ele cobre, cobrindo tudo menos as 20 mensagens mais novas. Uma falha no resumo não impede a resposta.
 
+- **Ponte para o motor.** Quando o agente da caixa roda num runtime do motor (hoje o OpenCode), a vez do cliente vira um pedido do motor em nome do contato (`application/llm_bots/bridge.rs`): o agente trabalha com as ferramentas dos plugins que tem permissão de usar, nunca as `internal_only`, e a resposta do `concluir` vai para a conversa. Os outros agentes respondem direto pelo modelo, sem ferramentas.
+
 A tela fica em Configurações → Agentes ao vivo (`/api/v1/agents/live`).
 
 ## Eventos MCP

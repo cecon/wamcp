@@ -90,7 +90,20 @@ impl LiveService {
         Ok(())
     }
 
+    /// Stops the answer (and the engine request answering it, if any) and hands the conversation to people.
     pub async fn stop_conversation(&self, actor: &Actor, conversation_id: i64) -> Result<()> {
+        require_admin(actor)?;
+        // The engine first, so a request finishing right now cannot still post its answer.
+        if let (Some(engine), Some(conversation)) = (self.engine.get(), self.repo.conversation_by_id(conversation_id)?)
+        {
+            let account = conversation.account_id;
+            for activity in engine.store.activities(account, 200)? {
+                let open = !status::is_final(&activity.status) && activity.parent_id.is_none();
+                if open && activity.conversation_id == Some(conversation_id) {
+                    engine.cancel(account, activity.id).await?;
+                }
+            }
+        }
         self.answers()?.stop_conversation(actor, conversation_id).await
     }
 

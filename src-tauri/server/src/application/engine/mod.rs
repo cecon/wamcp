@@ -76,6 +76,11 @@ impl EngineService {
         list
     }
 
+    /// Whether `id` is one of the engine's runtimes.
+    pub fn has_runtime(&self, id: &str) -> bool {
+        self.runtimes.contains_key(id)
+    }
+
     fn runtime_for(&self, agent: &EngineAgent) -> Result<(String, Arc<dyn AgentRuntime>)> {
         let id = agent
             .runtime

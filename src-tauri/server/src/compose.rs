@@ -217,7 +217,8 @@ impl App {
         support.agents.attach_llm(llm.clone());
         let secrets = support.agents.secrets.clone();
         let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2)
-            .with_system(support.system.clone(), self.mcp_url.clone());
+            .with_system(support.system.clone(), self.mcp_url.clone())
+            .with_engine(support.engine.clone());
         support.schedules.attach(bots.clone());
         let _ = support.answers.set(bots.clone());
         let listener = bots.clone();
