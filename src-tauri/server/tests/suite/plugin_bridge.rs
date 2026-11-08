@@ -115,7 +115,10 @@ async fn customers_get_answers_made_with_the_agents_plugin_tools() {
                     seen.tools = turn.tools.clone();
                     seen.tool_answer = answer.content.clone();
                 }
-                let reply = format!("Oi! O {}.", answer.content["resultado"]["prazo"].as_str().unwrap_or("?"));
+                let reply = format!(
+                    "Oi! O {}.",
+                    answer.content["resultado"]["prazo"].as_str().unwrap_or("?")
+                );
                 turn.call("concluir", json!({ "resposta": reply })).await;
                 Outcome::Done
             })
@@ -137,7 +140,11 @@ async fn customers_get_answers_made_with_the_agents_plugin_tools() {
         !seen.tools.contains(&"contador.enviar_lembrete".to_string()),
         "internal-only tools stay out of a customer's turn"
     );
-    assert_eq!(seen.tool_answer["resultado"]["prazo"], "DAS vence no dia 20", "{}", seen.tool_answer);
+    assert_eq!(
+        seen.tool_answer["resultado"]["prazo"], "DAS vence no dia 20",
+        "{}",
+        seen.tool_answer
+    );
     assert_eq!(f.wa.sent().last().unwrap().text, "Oi! O DAS vence no dia 20.");
     assert_eq!(*direct.calls.lock(), 0, "the engine answered, not the direct path");
 }

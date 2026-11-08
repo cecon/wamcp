@@ -162,7 +162,13 @@ O que os agentes de IA sabem fazer vem dos plugins. Em **Configurações → Plu
 }
 ```
 
-Para que o app busque as atualizações, instale pelo endereço do `plugin.json` (HTTPS): o botão **Atualizar** baixa de novo e instala quando a versão (`1.2.3`) é maior, mantendo credenciais, estado e permissões. Uma versão mais antiga que a instalada é recusada. Use `"kind": "mcp"` para chamar uma ferramenta de um servidor MCP (`remote_name` se o nome lá for outro) e `"internal_only": true` para uma ferramenta que nunca pode rodar em resposta a uma mensagem de cliente.
+Para que o app busque as atualizações, instale pelo endereço do `plugin.json` (HTTPS): o botão **Atualizar** baixa de novo e instala quando a versão (`1.2.3`) é maior, mantendo credenciais, estado e permissões. Uma versão mais antiga que a instalada é recusada. Use `"kind": "mcp"` para chamar uma ferramenta de um servidor MCP (`remote_name` se o nome lá for outro). Três marcas protegem os dados:
+
+- `"internal_only": true`: a ferramenta nunca roda em resposta a uma mensagem de cliente, só em rotinas e pedidos internos.
+- `"contact_scoped": true`: quando um cliente escreve, o app põe o contato da conversa em `contato` (`telefone`, `nome`), e o modelo não consegue pedir dados de outra pessoa.
+- `"sensitive": true` (e `"side_effects": true`): a ferramenta espera a aprovação de uma pessoa, conforme a política do agente.
+
+Um plugin também pode sugerir rotinas (`"schedules": [{"name", "cron", "prompt"}]`), que o administrador cria em **Plugins → Criar rotina** escolhendo os agentes. As ferramentas só valem para agentes que rodam no motor (runtime OpenCode). O app traz o plugin **Mensagens**, cuja ferramenta `mensagens.enviar_whatsapp` deixa o agente escrever primeiro para um contato, sempre com aprovação na política padrão. O plugin de exemplo completo é o [Contador](plugins/contador/README.md).
 
 ## Arquitetura e qualidade
 

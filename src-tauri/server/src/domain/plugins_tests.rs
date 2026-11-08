@@ -48,3 +48,12 @@ fn versions_compare_by_number() {
     assert_eq!(version("1.0.0.1"), None);
     assert_eq!(version("v1.0.0"), None);
 }
+
+#[test]
+fn schedules_need_a_valid_cron() {
+    let mut json = manifest("https://erp.exemplo.com/mcp", "mcp");
+    json["schedules"] = serde_json::json!([{"name": "Cobrar", "cron": "0 9 5 * *", "prompt": "Cobre os documentos."}]);
+    assert_eq!(parse(&json, false).unwrap().schedules[0].cron, "0 9 5 * *");
+    json["schedules"][0]["cron"] = serde_json::json!("todo dia");
+    assert!(parse(&json, false).is_err());
+}

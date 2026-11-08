@@ -3,7 +3,9 @@
 use crate::adapters::outbound::finance_mock::{self, FinanceMock};
 use crate::adapters::outbound::plugin_transport::HttpPluginTransport;
 use crate::application::engine::{EngineDeps, EngineService, HelpdeskChannel};
+use crate::application::helpdesk::HelpdeskService;
 use crate::application::oauth::OAuthService;
+use crate::application::plugins::messaging::{self, MessagingTools};
 use crate::application::plugins::PluginService;
 use crate::application::ports::{AgentRuntime, BusinessTools, EngineRepo, Repository, SecretBox};
 use crate::compose::App;
@@ -42,10 +44,13 @@ impl App {
 
 /// The plugin service with the plugins that ship with the app (the simulated finance system).
 /// A failure to install them leaves the app without plugins, never without its other services.
-pub fn plugins(repo: Arc<dyn Repository>, secrets: Arc<dyn SecretBox>) -> PluginService {
+pub fn plugins(repo: Arc<dyn Repository>, secrets: Arc<dyn SecretBox>, helpdesk: HelpdeskService) -> PluginService {
     let transport = Arc::new(HttpPluginTransport::new());
     let finance: (serde_json::Value, Arc<dyn BusinessTools>) = (finance_mock::manifest(), Arc::new(FinanceMock));
-    PluginService::new(repo.clone(), secrets.clone(), transport.clone(), vec![finance]).unwrap_or_else(|error| {
+    let messaging: (serde_json::Value, Arc<dyn BusinessTools>) =
+        (messaging::manifest(), Arc::new(MessagingTools(helpdesk)));
+    let builtins = vec![finance, messaging];
+    PluginService::new(repo.clone(), secrets.clone(), transport.clone(), builtins).unwrap_or_else(|error| {
         tracing::error!(%error, "plugins do app não instalados");
         PluginService::new(repo, secrets, transport, Vec::new()).expect("sem plugins não há o que instalar")
     })

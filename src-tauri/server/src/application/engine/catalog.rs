@@ -40,6 +40,21 @@ impl EngineService {
             .collect()
     }
 
+    /// The contact whose message started the activity (or the one it was delegated from).
+    pub(super) fn customer_of(&self, activity: &Activity) -> Option<i64> {
+        let mut current = Some(activity.clone());
+        for _ in 0..MAX_DEPTH {
+            let item = current?;
+            if let Some(id) = item.requester.strip_prefix("contact:") {
+                return id.parse().ok();
+            }
+            current = item
+                .parent_id
+                .and_then(|parent| self.store.activity(item.account_id, parent).ok().flatten());
+        }
+        None
+    }
+
     /// Whether the activity (or one it was delegated from) came from a customer's message.
     pub(super) fn answers_customer(&self, activity: &Activity) -> bool {
         let mut current = Some(activity.clone());

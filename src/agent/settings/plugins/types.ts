@@ -5,7 +5,15 @@ export interface PluginTool {
   side_effects: boolean;
   sensitive: boolean;
   internal_only: boolean;
+  contact_scoped?: boolean;
   endpoint: { kind: 'http' | 'mcp' | 'builtin'; url: string; credential?: string | null };
+}
+
+export interface PluginSchedule {
+  name: string;
+  description: string;
+  cron: string;
+  prompt: string;
 }
 
 export interface Plugin {
@@ -17,6 +25,7 @@ export interface Plugin {
     skills: { name: string; description: string }[];
     tools: PluginTool[];
     credentials: { name: string; help: string }[];
+    schedules: PluginSchedule[];
   };
   enabled: boolean;
   builtin: boolean;

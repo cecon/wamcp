@@ -15,6 +15,8 @@ pub struct ToolDef {
     pub sensitive: bool,
     /// Never offered to a run that answers a customer's message.
     pub internal_only: bool,
+    /// Gets the turn's real contact in `contato` when a customer's message started the turn.
+    pub contact_scoped: bool,
     /// JSON Schema of the arguments (MCP `inputSchema`).
     pub input_schema: Value,
 }
@@ -32,6 +34,7 @@ fn builtin(name: &str, description: &str, props: Value, required: &[&str]) -> To
         side_effects: false,
         sensitive: false,
         internal_only: false,
+        contact_scoped: false,
         input_schema: json!({"type": "object", "properties": props, "required": required}),
     }
 }
@@ -77,6 +80,7 @@ pub fn from_plugin(manifest: &Manifest, tool: &PluginTool) -> ToolDef {
         side_effects: tool.side_effects,
         sensitive: tool.sensitive,
         internal_only: tool.internal_only,
+        contact_scoped: tool.contact_scoped,
         input_schema: tool.input_schema.clone(),
     }
 }

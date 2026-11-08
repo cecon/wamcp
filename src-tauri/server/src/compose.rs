@@ -140,7 +140,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = avatar_worker.clone();
     bus.subscribe(move |e| worker.push(e));
-    let plugins = crate::engine_setup::plugins(ports.repo.clone(), ports.secrets.clone());
+    let plugins = crate::engine_setup::plugins(ports.repo.clone(), ports.secrets.clone(), helpdesk.clone());
     let (engine, answers, live) = crate::engine_setup::live(ports.repo.clone());
     let agents = AgentDirectory {
         core: core.clone(),

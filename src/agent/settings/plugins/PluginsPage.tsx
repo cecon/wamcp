@@ -8,7 +8,8 @@ import { Cell, RowActions, SettingsHeader, SettingsPage, Table, Toggle } from '.
 import { useAction } from '../useAction';
 import { CredentialsModal } from './CredentialsModal';
 import { InstallModal } from './InstallModal';
-import type { Plugin, UpdateOutcome } from './types';
+import { RoutineModal } from './RoutineModal';
+import type { Plugin, PluginSchedule, UpdateOutcome } from './types';
 
 const KIND = { http: 'HTTP', mcp: 'MCP', builtin: 'do app' };
 
@@ -18,7 +19,8 @@ export function PluginsPage() {
   const { data, error, reload } = useFetch<Plugin[]>('/plugins');
   const [installing, setInstalling] = useState(false),
     [credentials, setCredentials] = useState<Plugin | null>(null),
-    [removing, setRemoving] = useState<Plugin | null>(null);
+    [removing, setRemoving] = useState<Plugin | null>(null),
+    [routine, setRoutine] = useState<{ plugin: Plugin; routine: PluginSchedule } | null>(null);
   const toggling = useAction();
   const [notice, setNotice] = useState('');
   const plugins = data || [];
@@ -56,6 +58,16 @@ export function PluginsPage() {
                   {manifest.skills.length} skill{manifest.skills.length === 1 ? '' : 's'}
                   {plugin.builtin && ' · vem com o app'}
                 </span>
+                {(manifest.schedules || []).map((r) => (
+                  <button
+                    key={r.name}
+                    type="button"
+                    className="block text-sm text-n-brand hover:underline"
+                    onClick={() => setRoutine({ plugin, routine: r })}
+                  >
+                    Criar rotina: {r.name}
+                  </button>
+                ))}
                 {missing.length > 0 && (
                   <span className="block text-sm text-n-amber-11">
                     Falta configurar: {missing.map((c) => c.name).join(', ')}
@@ -69,7 +81,8 @@ export function PluginsPage() {
                     <span className="text-xs">
                       ({KIND[tool.endpoint.kind]}
                       {tool.side_effects ? ', altera dados' : ''}
-                      {tool.internal_only ? ', só interno' : ''})
+                      {tool.internal_only ? ', só interno' : ''}
+                      {tool.contact_scoped ? ', só do próprio cliente' : ''})
                     </span>
                   </span>
                 ))}
@@ -134,6 +147,14 @@ export function PluginsPage() {
           );
         })}
       </Table>
+      {routine && (
+        <RoutineModal
+          plugin={routine.plugin}
+          routine={routine.routine}
+          onClose={() => setRoutine(null)}
+          onCreated={(name) => setNotice(`Rotina “${name}” criada em Agendamentos.`)}
+        />
+      )}
       {installing && <InstallModal onClose={() => setInstalling(false)} onSaved={reload} />}
       {credentials && (
         <CredentialsModal plugin={credentials} onClose={() => setCredentials(null)} onSaved={reload} />

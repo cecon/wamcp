@@ -44,6 +44,9 @@ O que um agente sabe fazer vem dos plugins. Um plugin é um manifesto (`plugin.j
 - **Ferramentas.** Cada uma se chama `<plugin>.<ferramenta>` e é servida fora do processo: `http` (um `POST` com os argumentos em JSON) ou `mcp` (`initialize` e `tools/call` por Streamable HTTP). Só se aceita HTTPS, ou HTTP para o próprio computador. O transporte (`adapters/outbound/plugin_transport.rs`) não segue redirecionamentos, tem prazo de 30 s e lê no máximo 1 MiB. Os plugins que vêm com o app (hoje `financeiro`, de demonstração) usam `builtin`.
 - **Credenciais.** Ficam seladas pela `SecretBox`. O servidor aplica a credencial como `Authorization: Bearer` na chamada; o modelo nunca a vê, e a API só diz quais já têm valor.
 - **Skills.** Entram na biblioteca como `<nome do plugin>: <skill>`, com as ferramentas do plugin, e acompanham instalação, atualização e remoção.
+- **Dados do cliente.** Uma ferramenta `contact_scoped` recebe em `contato` o contato da conversa quando um cliente começou a vez (`EngineService::scope_to_contact`), e o que o modelo mandou no lugar é ignorado.
+- **Rotinas.** O manifesto pode sugerir rotinas (`schedules`, com cron validado). O administrador as cria em Agendamentos escolhendo os agentes. A rotina de um agente do motor vira um pedido do motor (`schedule:<id>`), com as ferramentas internas.
+- **Mensagens.** O plugin do próprio app `mensagens` (`application/plugins/messaging.rs`) oferece `enviar_whatsapp`: `internal_only`, `sensitive` e com efeito externo, então na política padrão cada envio espera aprovação.
 - **Motor.** `PluginService` é o `BusinessTools` do motor. O catálogo (`application/engine/catalog.rs`) junta as ferramentas internas e as dos plugins ligados; cada agente ainda precisa da permissão da ferramenta. Uma ferramenta `internal_only` nunca é oferecida nem executada numa execução que responde a uma mensagem de cliente, para limitar injeção de prompt.
 
 ## Agentes ao vivo

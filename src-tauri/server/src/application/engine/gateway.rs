@@ -77,8 +77,27 @@ impl EngineService {
             tools::CONCLUDE => self.conclude(&caller, &args).await,
             tools::REMEMBER => self.remember(&caller, &args),
             tools::RECALL => self.recall(&caller, &args),
-            _ => self.business_call(&caller, &tool, args).await,
+            _ => {
+                let args = self.scope_to_contact(&caller, &tool, args)?;
+                self.business_call(&caller, &tool, args).await
+            }
         }
+    }
+
+    /// In a customer's turn a contact-scoped tool gets that customer, whatever the model asked for.
+    fn scope_to_contact(&self, caller: &Caller, tool: &ToolDef, mut args: Value) -> Result<Value> {
+        if !tool.contact_scoped || !self.answers_customer(&caller.activity) {
+            return Ok(args);
+        }
+        let identity = match self.customer_of(&caller.activity) {
+            Some(id) => self.store.contact_identity(id)?,
+            None => None,
+        };
+        let Some((phone, name)) = identity else {
+            return fail("Esta ferramenta só responde sobre o contato da conversa, e ele não foi encontrado");
+        };
+        args["contato"] = json!({"telefone": phone, "nome": name});
+        Ok(args)
     }
 
     async fn business_call(&self, caller: &Caller, tool: &ToolDef, args: Value) -> Result<Value> {

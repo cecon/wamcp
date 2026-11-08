@@ -2,6 +2,7 @@
 //! keeps their skills in the skill library, and serves their tools to the engine as its
 //! `BusinessTools`: a tool call goes to the plugin's endpoint with the credential applied here,
 //! so the model never sees it.
+pub mod messaging;
 mod skills;
 mod updates;
 

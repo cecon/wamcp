@@ -64,6 +64,7 @@ mod tests {
             side_effects,
             sensitive,
             internal_only,
+            contact_scoped: false,
             input_schema: serde_json::json!({}),
         }
     }

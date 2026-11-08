@@ -57,10 +57,14 @@ impl HttpPluginTransport {
         if bytes.len() > MAX_BODY {
             return fail("A ferramenta respondeu mais de 1 MiB");
         }
+        let body = String::from_utf8_lossy(&bytes).into_owned();
         if !status.is_success() {
-            return fail(format!("A ferramenta respondeu HTTP {}", status.as_u16()));
+            return fail(match refusal(&body) {
+                Some(reason) => format!("A ferramenta respondeu HTTP {}: {reason}", status.as_u16()),
+                None => format!("A ferramenta respondeu HTTP {}", status.as_u16()),
+            });
         }
-        Ok((session, String::from_utf8_lossy(&bytes).into_owned()))
+        Ok((session, body))
     }
 }
 
@@ -68,6 +72,15 @@ impl Default for HttpPluginTransport {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// The reason a tool gave for refusing (`erro`, `error` or `message` of a JSON body), kept short.
+fn refusal(body: &str) -> Option<String> {
+    let value: Value = serde_json::from_str(body).ok()?;
+    let reason = ["erro", "error", "message"]
+        .iter()
+        .find_map(|key| value.get(key).and_then(Value::as_str))?;
+    Some(reason.chars().take(300).collect())
 }
 
 /// The JSON-RPC message of a JSON or SSE (`data:` lines) answer.
@@ -167,5 +180,10 @@ mod tests {
         let failed = json!({"result": {"isError": true, "content": [{"type": "text", "text": "sem estoque"}]}});
         assert!(tool_result(&failed).is_err());
         assert!(tool_result(&json!({"error": {"message": "x"}})).is_err());
+        assert_eq!(
+            refusal(r#"{"erro": "Cliente não encontrado"}"#).as_deref(),
+            Some("Cliente não encontrado")
+        );
+        assert_eq!(refusal("<html>"), None);
     }
 }

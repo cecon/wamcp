@@ -45,6 +45,10 @@ pub struct PluginTool {
     /// Never offered to a run that answers a customer's message (prompt injection).
     #[serde(default)]
     pub internal_only: bool,
+    /// About the customer of the turn: when a customer's message started it, the server puts the
+    /// real contact in `contato` (`telefone`, `nome`) and the model cannot pick another one.
+    #[serde(default)]
+    pub contact_scoped: bool,
     pub endpoint: Endpoint,
 }
 
@@ -54,6 +58,17 @@ pub struct PluginSkill {
     #[serde(default)]
     pub description: String,
     pub instructions: String,
+}
+
+/// A routine the plugin suggests (cobrar documentos todo dia 5): the administrator creates it in
+/// Agendamentos choosing which agents work on it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PluginSchedule {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub cron: String,
+    pub prompt: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -76,6 +91,8 @@ pub struct Manifest {
     pub tools: Vec<PluginTool>,
     #[serde(default)]
     pub credentials: Vec<CredentialDef>,
+    #[serde(default)]
+    pub schedules: Vec<PluginSchedule>,
 }
 
 fn empty_schema() -> Value {
@@ -173,6 +190,14 @@ fn validate(m: &Manifest, builtin: bool) -> Result<()> {
     }
     if m.credentials.iter().any(|c| !slug(&c.name)) {
         return fail("Nome de credencial inválido");
+    }
+    for routine in &m.schedules {
+        if routine.name.trim().is_empty() || routine.prompt.trim().is_empty() {
+            return fail("Cada rotina precisa de nome e tarefa");
+        }
+        if super::cron::Cron::parse(&routine.cron).is_err() {
+            return fail(format!("Expressão cron inválida na rotina {}", routine.name));
+        }
     }
     Ok(())
 }

@@ -26,6 +26,7 @@ const plugin = (id: string, name: string, extra: Partial<Plugin> = {}): Plugin =
       },
     ],
     credentials: [{ name: 'token', help: 'Chave da loja' }],
+    schedules: [],
   },
   enabled: true,
   builtin: false,
@@ -147,5 +148,45 @@ describe('Plugins settings', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Instalar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(api.called('POST', '/plugins').map((c) => c.body)).toEqual([{ id: 'ruim' }, { id: 'delivery' }]);
+  });
+
+  it('creates the routine a plugin suggests for the agents chosen', async () => {
+    const contador = plugin('contador', 'Contador', {
+      manifest: {
+        ...plugin('contador', 'Contador').manifest,
+        schedules: [
+          { name: 'Cobrar documentos', description: 'Todo dia 3', cron: '0 9 3 * *', prompt: 'Cobre.' },
+        ],
+      },
+    });
+    const api = fakeApi({
+      'GET /plugins': [contador],
+      'GET /agent_directory': [
+        { id: 7, name: 'Cora', kind: 'ai' },
+        { id: 8, name: 'Sistema', kind: 'ai', system: true },
+        { id: 9, name: 'Bia', kind: 'human' },
+      ],
+      'POST /agent_schedules': { id: 1 },
+    });
+    const user = renderPlugins();
+    await user.click(await screen.findByRole('button', { name: 'Criar rotina: Cobrar documentos' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Criar a rotina “Cobrar documentos”' });
+    expect(within(dialog).queryByLabelText('Sistema')).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Bia')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Criar rotina' }));
+    expect(await within(dialog).findByText('Escolha pelo menos um agente')).toBeInTheDocument();
+    await user.click(within(dialog).getByLabelText('Cora'));
+    await user.click(within(dialog).getByRole('button', { name: 'Criar rotina' }));
+    await waitFor(() =>
+      expect(api.called('POST', '/agent_schedules')[0]?.body).toEqual({
+        name: 'Contador: Cobrar documentos',
+        cron: '0 9 3 * *',
+        prompt: 'Cobre.',
+        agent_ids: [7],
+      }),
+    );
+    expect(
+      await screen.findByText('Rotina “Contador: Cobrar documentos” criada em Agendamentos.'),
+    ).toBeInTheDocument();
   });
 });
