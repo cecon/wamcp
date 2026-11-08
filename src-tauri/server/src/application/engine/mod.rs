@@ -5,6 +5,7 @@ mod approvals;
 mod catalog;
 mod channel;
 mod conclude;
+mod control;
 mod delegate;
 mod drive;
 mod gateway;

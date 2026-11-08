@@ -19,6 +19,7 @@ import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
 import { AppSettingsPage } from './app/AppSettingsPage';
 import { EnginePage } from './engine/EnginePage';
+import { LiveAgentsPage } from './live/LiveAgentsPage';
 import { SchedulesPage } from './schedules/SchedulesPage';
 
 interface Props {
@@ -71,6 +72,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       ) : (
         <InboxesPage catalog={catalog} onNavigate={onNavigate} onChange={onChange} />
       );
+    case 'live':
+      return <LiveAgentsPage />;
     case 'engine':
       return <EnginePage />;
     case 'schedules':

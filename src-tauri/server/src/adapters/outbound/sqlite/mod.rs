@@ -23,6 +23,7 @@ mod github;
 mod github_schema;
 mod inboxes;
 mod insights;
+mod live;
 mod macros;
 mod messages;
 mod migrations;

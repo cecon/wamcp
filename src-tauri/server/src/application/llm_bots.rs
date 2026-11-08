@@ -7,7 +7,11 @@
 mod admin;
 mod chat;
 mod github_tools;
+mod live;
 mod scheduled;
+mod summary;
+
+pub use live::LiveAnswer;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
@@ -21,6 +25,7 @@ use crate::domain::llm::{
     TRANSCRIPT_LIMIT,
 };
 use crate::domain::model::{ChatMessage, Inbox, LlmUsage, Message, BOT_LLM, CHAT_USER};
+use crate::domain::summary::with_summary;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -36,7 +41,7 @@ pub struct LlmBotService {
     debounce: Duration,
     slots: Arc<Semaphore>,
     /// Conversations and chats with a scheduled or running answer; `true` = someone wrote again meanwhile.
-    queued: Arc<Mutex<HashMap<Target, bool>>>,
+    queued: Arc<Mutex<HashMap<Target, live::Pending>>>,
     running: Arc<AtomicUsize>,
     idle: Arc<Notify>,
     system: Option<SystemAgent>,
@@ -170,42 +175,6 @@ impl LlmBotService {
         }))
     }
 
-    fn schedule(&self, target: Target) {
-        {
-            let mut queued = self.queued.lock();
-            if let Some(again) = queued.get_mut(&target) {
-                *again = true;
-                return;
-            }
-            queued.insert(target, false);
-        }
-        self.running.fetch_add(1, Ordering::AcqRel);
-        let this = self.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(this.debounce).await;
-                this.queued.lock().insert(target, false);
-                if let Ok(_slot) = this.slots.acquire().await {
-                    let outcome = match target {
-                        Target::Conversation(id) => this.answer(id).await,
-                        Target::Chat(id) => this.answer_chat(id).await,
-                    };
-                    if let Err(error) = outcome {
-                        tracing::warn!(%error, ?target, "robô de LLM não respondeu");
-                    }
-                }
-                let mut queued = this.queued.lock();
-                if queued.get(&target) != Some(&true) {
-                    queued.remove(&target);
-                    break;
-                }
-            }
-            if this.running.fetch_sub(1, Ordering::AcqRel) == 1 {
-                this.idle.notify_waiters();
-            }
-        });
-    }
-
     /// Asks the agent's runtime for the next reply and sends it (or hands off) as the inbox bot.
     async fn answer(&self, conversation_id: i64) -> Result<()> {
         let core = &self.helpdesk.core;
@@ -219,6 +188,10 @@ impl LlmBotService {
         let Some(responder) = self.responder(&inbox)?.filter(|_| conversation.status == "pending") else {
             return Ok(());
         };
+        // A paused agent answers later, when it is resumed.
+        if responder.agent_id.is_some_and(|id| self.paused(id)) {
+            return Ok(());
+        }
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
         // Already answered (by a person or an earlier run): nothing new from the contact.
         let last = messages
@@ -236,6 +209,9 @@ impl LlmBotService {
             }
             None => build_prompt(&inbox.name, Some(&request.prompt), &messages),
         };
+        if let Some(summary) = self.earlier_summary(conversation.id, &messages, &responder).await {
+            request.prompt = with_summary(&summary, &request.prompt);
+        }
         let (completion, forwarded) = self
             .complete_for(&inbox, &conversation, request, responder.agent_id)
             .await?;

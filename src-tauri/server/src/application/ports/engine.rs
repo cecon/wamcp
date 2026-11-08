@@ -119,6 +119,11 @@ pub trait ReplyChannel: Send + Sync {
 /// Engine storage. Every query is scoped to `account_id` unless it says otherwise.
 pub trait EngineRepo: Send + Sync {
     fn engine_agent(&self, account_id: i64, agent_id: i64) -> Result<Option<EngineAgent>>;
+    /// Paused agents start no run until they are resumed.
+    fn agent_paused(&self, agent_id: i64) -> Result<bool> {
+        let _ = agent_id;
+        Ok(false)
+    }
     /// Active AI agents of the organization that have the skill (their own or their profile's).
     fn agents_with_skill(&self, account_id: i64, skill: &str) -> Result<Vec<EngineAgent>>;
     /// Every active AI agent of the organization (the competence directory).

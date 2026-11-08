@@ -22,6 +22,7 @@ pub mod error;
 mod github;
 mod github_app;
 pub mod input;
+mod live;
 mod macros;
 mod message_actions;
 mod messages;
@@ -84,6 +85,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
         .merge(plugins::routes())
+        .merge(live::routes())
         .merge(roles::routes())
         .merge(admin::routes(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))

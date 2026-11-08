@@ -66,3 +66,18 @@ pub fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(
             }
     })
 }
+
+type Slot<T> = Arc<std::sync::OnceLock<T>>;
+
+/// The slots the engine and the conversation answers fill once attached, and the live view over both.
+pub fn live(
+    repo: Arc<dyn Repository>,
+) -> (
+    Slot<EngineService>,
+    Slot<crate::application::llm_bots::LlmBotService>,
+    crate::application::live::LiveService,
+) {
+    let (engine, answers) = (Slot::default(), Slot::default());
+    let live = crate::application::live::LiveService::new(repo, answers.clone(), engine.clone());
+    (engine, answers, live)
+}

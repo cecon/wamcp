@@ -6,6 +6,7 @@ mod catalog;
 mod engine;
 mod external;
 mod github;
+mod live;
 mod mirror;
 mod people;
 mod plugins;
@@ -18,6 +19,7 @@ pub use catalog::*;
 pub use engine::*;
 pub use external::*;
 pub use github::*;
+pub use live::*;
 pub use mirror::*;
 pub use people::*;
 pub use plugins::*;
@@ -53,6 +55,7 @@ pub trait Repository:
     + AgentBotRepo
     + AgentsRepo
     + PluginRepo
+    + LiveRepo
     + AgentChatRepo
     + AgentScheduleRepo
     + RoleRepo
@@ -89,8 +92,7 @@ impl<T> Repository for T where
         + AgentBotRepo
         + AgentsRepo
         + PluginRepo
-        + AgentChatRepo
-        + AgentScheduleRepo
+        + LiveRepo
         + AgentChatRepo
         + AgentScheduleRepo
         + RoleRepo

@@ -242,5 +242,13 @@ pub fn steps() -> Vec<String> {
          CREATE TABLE plugin_credentials(plugin_id TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
            name TEXT NOT NULL,secret TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(plugin_id,name));"
             .into(),
+        // v39: agentes ao vivo: os agentes pausados (não respondem nem começam execuções até serem
+        // retomados) e o resumo do começo das conversas longas que o agente atende
+        "CREATE TABLE agent_pauses(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+           paused_at INTEGER NOT NULL);
+         CREATE TABLE conversation_summaries(
+           conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+           summary TEXT NOT NULL,upto_message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL);"
+            .into(),
     ]
 }

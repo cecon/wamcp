@@ -19,6 +19,7 @@ export type SettingsSection =
   | 'audit'
   | 'custom_roles'
   | 'engine'
+  | 'live'
   | 'schedules'
   | 'connections'
   | 'app';

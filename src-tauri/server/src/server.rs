@@ -173,6 +173,12 @@ pub async fn run(config: Config) -> Result<Running> {
         Some(format!("http://127.0.0.1:{}/engine/mcp", addr.port())),
     );
     let mut tasks = app.start_jobs();
+    // Conversations left waiting for their AI agent (the app stopped mid-answer) are answered now.
+    if let Some(bots) = &app.llm_bots {
+        if let Err(error) = bots.recover() {
+            tracing::warn!(%error, "AI answers not recovered");
+        }
+    }
     tasks.push(tokio::spawn(async move {
         if let Err(error) = engine.recover().await {
             tracing::warn!(%error, "engine recovery failed");

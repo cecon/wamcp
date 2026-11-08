@@ -141,6 +141,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     let worker = avatar_worker.clone();
     bus.subscribe(move |e| worker.push(e));
     let plugins = crate::engine_setup::plugins(ports.repo.clone(), ports.secrets.clone());
+    let (engine, answers, live) = crate::engine_setup::live(ports.repo.clone());
     let agents = AgentDirectory {
         core: core.clone(),
         secrets: ports.secrets.clone(),
@@ -151,7 +152,9 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         chats: crate::application::agent_chats::AgentChatService { core: core.clone() },
         schedules: crate::application::agent_schedules::AgentScheduleService::new(core.clone()),
         agents,
-        engine: Arc::default(),
+        engine,
+        answers,
+        live,
         plugins,
         avatars,
         accounts: AccountService {
@@ -216,6 +219,7 @@ impl App {
         let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2)
             .with_system(support.system.clone(), self.mcp_url.clone());
         support.schedules.attach(bots.clone());
+        let _ = support.answers.set(bots.clone());
         let listener = bots.clone();
         support.bus.subscribe(move |e| listener.on_event(e));
         self.llm_bots = Some(bots);

@@ -46,6 +46,16 @@ O que um agente sabe fazer vem dos plugins. Um plugin é um manifesto (`plugin.j
 - **Skills.** Entram na biblioteca como `<nome do plugin>: <skill>`, com as ferramentas do plugin, e acompanham instalação, atualização e remoção.
 - **Motor.** `PluginService` é o `BusinessTools` do motor. O catálogo (`application/engine/catalog.rs`) junta as ferramentas internas e as dos plugins ligados; cada agente ainda precisa da permissão da ferramenta. Uma ferramenta `internal_only` nunca é oferecida nem executada numa execução que responde a uma mensagem de cliente, para limitar injeção de prompt.
 
+## Agentes ao vivo
+
+Uma conversa espera o seu agente de IA enquanto está `pending` e a última mensagem pública é do contato. A fila de respostas (`application/llm_bots/live.rs`) é esse estado da própria conversa, então sobrevive a um reinício: ao subir, `recover` agenda todas as conversas que ainda esperam. Os pedidos do motor já ficam no banco e são retomados por `EngineService::recover`.
+
+- **Pausar.** Fica em `agent_pauses`. Um agente pausado não responde conversas e não começa pedidos do motor (os pedidos esperam na fila); delegar para ele é recusado. Retomar responde o que chegou e roda o que esperava.
+- **Encerrar.** Interrompe a resposta em andamento (o futuro é descartado e o processo do runtime morre junto), não envia nada e passa a conversa para as pessoas da caixa (`open`). Um pedido do motor é cancelado com tudo o que ele delegou, e as execuções em andamento são canceladas no runtime.
+- **Resumo.** Numa conversa com mais mensagens do que a janela do prompt (40), o começo chega ao agente como resumo, feito pelo próprio modelo do agente e guardado em `conversation_summaries`. Ele é refeito só quando a janela passa do que ele cobre, cobrindo tudo menos as 20 mensagens mais novas. Uma falha no resumo não impede a resposta.
+
+A tela fica em Configurações → Agentes ao vivo (`/api/v1/agents/live`).
+
 ## Eventos MCP
 
 `application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.
