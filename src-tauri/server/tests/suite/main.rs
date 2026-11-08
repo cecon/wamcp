@@ -25,6 +25,7 @@ mod agent_directory;
 mod agent_profiles;
 mod agent_schedules;
 mod ai_agents_answer;
+mod channels;
 mod chat_media;
 mod contact_book;
 mod contact_csv;

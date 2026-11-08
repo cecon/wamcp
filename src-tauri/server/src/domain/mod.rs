@@ -6,6 +6,7 @@ pub mod agent_schedules;
 pub mod agents;
 pub mod audit;
 pub mod automation;
+pub mod channel;
 pub mod contacts;
 pub mod cron;
 pub mod csat;

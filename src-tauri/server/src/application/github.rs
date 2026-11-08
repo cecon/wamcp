@@ -3,14 +3,12 @@
 use super::core::Events;
 use super::crypto::{random_secret, valid_hub_signature};
 use super::helpdesk::HelpdeskService;
-use super::ports::SendRequest;
+use super::inbound::Incoming;
 use crate::domain::actor::Actor;
 use crate::domain::error::{fail_with, Result};
-use crate::domain::github::{self, comment_target, marked, parse, valid_repo, GithubEvent, EVENTS, GITHUB};
-use crate::domain::helpdesk::{initial_status, route_incoming, Route};
-use crate::domain::model::{
-    ContactChanges, ContactInbox, ConversationChanges as Changes, GithubChannel, Inbox, Message, NewMessage,
-};
+use crate::domain::github::{self, parse, valid_repo, GithubEvent, EVENTS};
+use crate::domain::helpdesk::route_incoming;
+use crate::domain::model::{ContactChanges, ContactInbox, GithubChannel, Inbox, Message, NewMessage};
 use serde::Serialize;
 use serde_json::{json, Value};
 
@@ -169,80 +167,32 @@ impl HelpdeskService {
         let ci = self.github_contact(inbox, event, events)?;
         let now = core.clock.now();
         let latest = repo.latest_conversation(ci.id)?;
-        let status =
-            initial_status(inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some() || inbox.ai_agent_id.is_some());
-        let conversation = match (route_incoming(latest.as_ref(), inbox), latest) {
-            (Route::Ignore, _) => return Ok(None),
-            (Route::Reuse { reopen: false }, Some(latest)) => latest,
-            (Route::Reuse { reopen: true }, Some(latest)) => {
-                let changes = Changes {
-                    status: Some(status.into()),
-                    snoozed_until: Some(None),
-                    ..Default::default()
-                };
-                let reopened = core.update(latest.id, changes)?;
-                events.push("conversation.status_changed", &reopened);
-                reopened
+        let incoming = Incoming {
+            inbox,
+            contact_inbox: &ci,
+            route: route_incoming(latest.as_ref(), inbox),
+            latest,
+            at: now,
+            awaits_team: true,
+        };
+        self.receive(incoming, events, |conversation, events| {
+            let message = repo.insert_message(&NewMessage {
+                conversation_id: conversation.id,
+                inbox_id: inbox.id,
+                message_type: "incoming".into(),
+                content: Some(event.text.clone()),
+                content_type: Some("text".into()),
+                sender_type: Some("contact".into()),
+                sender_id: Some(ci.contact_id),
+                source_id: Some(source_id),
+                content_attributes: json!({ "github_sender": event.sender, "url": event.thread.url }),
+                created_at: now,
+                ..NewMessage::default()
+            })?;
+            if let Some(message) = &message {
+                events.push("message.created", message);
             }
-            _ => {
-                let created = repo.create_conversation(inbox.id, &ci, status, now)?;
-                events.push("conversation.created", &created);
-                created
-            }
-        };
-        let message = repo.insert_message(&NewMessage {
-            conversation_id: conversation.id,
-            inbox_id: inbox.id,
-            message_type: "incoming".into(),
-            content: Some(event.text.clone()),
-            content_type: Some("text".into()),
-            sender_type: Some("contact".into()),
-            sender_id: Some(ci.contact_id),
-            source_id: Some(source_id),
-            content_attributes: json!({ "github_sender": event.sender, "url": event.thread.url }),
-            created_at: now,
-            ..NewMessage::default()
-        })?;
-        if let Some(message) = &message {
-            events.push("message.created", message);
-        }
-        let changes = Changes {
-            last_activity_at: Some(conversation.last_activity_at.max(now)),
-            waiting_since: Some(Some(conversation.waiting_since.unwrap_or(now))),
-            ..Default::default()
-        };
-        let updated = core.update(conversation.id, changes)?;
-        core.auto_assign(updated, events)?;
-        Ok(message)
-    }
-
-    /// Sends a stored reply through the inbox's channel.
-    pub(crate) async fn send_out(&self, message: &Message, inbox: &Inbox, request: SendRequest) -> Result<String> {
-        if inbox.channel_type != GITHUB {
-            let request = self.sign_for_whatsapp(message, inbox, request);
-            return self.whatsapp.send_message(&inbox.session_id, &request).await;
-        }
-        if request.media.is_some() {
-            return fail_with("Anexos não vão para o GitHub; escreva a resposta em texto", 422);
-        }
-        let text = request.text.unwrap_or_default();
-        self.comment_on_github(inbox, &request.jid, &text).await?;
-        Ok(String::new())
-    }
-
-    /// Posts a reply as a comment on the conversation's pull request or issue. The repository's
-    /// activity conversation has nowhere to post: its replies stay in the app.
-    pub(crate) async fn comment_on_github(&self, inbox: &Inbox, source: &str, text: &str) -> Result<()> {
-        let Some((_, number)) = comment_target(source) else {
-            return Ok(());
-        };
-        let Some(channel) = self.core.repo.github_channel(inbox.id)? else {
-            return fail_with("Canal do GitHub não encontrado", 422);
-        };
-        let token = self.github_token(&channel).await?;
-        self.github
-            .comment(&token, &channel.repo, number, &marked(text))
-            .await
-            .map(|_| ())
+            Ok(message)
+        })
     }
 }

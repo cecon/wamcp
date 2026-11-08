@@ -1,12 +1,11 @@
 //! WhatsApp → helpdesk: live messages, CSAT answers, delivery receipts and snooze wake-ups.
 use super::core::Events;
 use super::helpdesk::HelpdeskService;
+use super::inbound::Incoming;
 use crate::domain::actor::Actor;
 use crate::domain::csat::{awaiting_csat, parse_rating};
 use crate::domain::error::Result;
-use crate::domain::helpdesk::{
-    initial_status, is_support_jid, phone_from_jid, route_incoming, route_own_message, Route,
-};
+use crate::domain::helpdesk::{is_support_jid, phone_from_jid, route_incoming, route_own_message, Route};
 use crate::domain::model::{
     ContactChanges, ContactInbox, Conversation, ConversationChanges as Changes, CsatResponse, Inbox, Message,
     NewAttachment, NewMessage, WaMessage,
@@ -155,7 +154,7 @@ impl HelpdeskService {
     }
 
     fn route(&self, session_id: &str, d: &WaMessage, events: &mut Events) -> Result<Option<Message>> {
-        let (core, repo) = (&self.core, &self.core.repo);
+        let repo = &self.core.repo;
         let Some(inbox) = repo.inbox_for_session(session_id)? else {
             return Ok(None);
         };
@@ -182,41 +181,17 @@ impl HelpdeskService {
         } else {
             route_incoming(latest.as_ref(), &inbox)
         };
-        let status =
-            initial_status(inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some() || inbox.ai_agent_id.is_some());
-        let conversation = match (route, latest) {
-            (Route::Ignore, _) => return Ok(None),
-            (Route::Create, _) | (Route::Reuse { .. }, None) => {
-                let created = repo.create_conversation(inbox.id, &ci, status, d.ts)?;
-                events.push("conversation.created", &created);
-                created
-            }
-            (Route::Reuse { reopen: true }, Some(latest)) => {
-                let changes = Changes {
-                    status: Some(status.into()),
-                    snoozed_until: Some(None),
-                    csat_requested_at: Some(None),
-                    ..Default::default()
-                };
-                let reopened = core.update(latest.id, changes)?;
-                events.push("conversation.status_changed", &reopened);
-                reopened
-            }
-            (Route::Reuse { reopen: false }, Some(latest)) => latest,
+        let incoming = Incoming {
+            inbox: &inbox,
+            contact_inbox: &ci,
+            latest,
+            route,
+            at: d.ts,
+            awaits_team: !d.from_me && !muted,
         };
-        let message = self.store_incoming(&conversation, &ci, d, events)?;
-        let mut changes = Changes {
-            last_activity_at: Some(conversation.last_activity_at.max(d.ts)),
-            ..Default::default()
-        };
-        if !d.from_me && !muted {
-            changes.waiting_since = Some(Some(conversation.waiting_since.unwrap_or(d.ts)));
-        }
-        let updated = core.update(conversation.id, changes)?;
-        if !d.from_me && !muted {
-            core.auto_assign(updated, events)?;
-        }
-        Ok(message)
+        self.receive(incoming, events, |conversation, events| {
+            self.store_incoming(conversation, &ci, d, events)
+        })
     }
 
     /// Delivery receipts only move a message forward (sent → delivered → read), or mark it failed.

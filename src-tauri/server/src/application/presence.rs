@@ -1,4 +1,5 @@
 //! Typing indicators in both directions and read receipts for messages the agent has seen.
+use super::channels::Address;
 use super::helpdesk::HelpdeskService;
 use super::ports::Typing;
 use crate::domain::actor::Actor;
@@ -58,10 +59,11 @@ impl HelpdeskService {
         if !private {
             let inbox = self.core.inbox(conversation.inbox_id)?;
             // Best effort: a disconnected session must not break the composer.
-            let _ = self
-                .whatsapp
-                .typing(&inbox.session_id, &conversation.contact_jid, state)
-                .await;
+            let to = Address {
+                inbox: &inbox,
+                contact: &conversation.contact_jid,
+            };
+            let _ = self.channel(&inbox).typing(self, to, state).await;
         }
         let user = json!({ "type": "user", "id": actor.user_id(), "name": actor.name() });
         self.core.emit(
@@ -86,11 +88,14 @@ impl HelpdeskService {
             return Ok(());
         }
         let inbox = self.core.inbox(conversation.inbox_id)?;
-        if inbox.channel_type != "whatsapp" {
+        let channel = self.channel(&inbox);
+        if !channel.capabilities().presence {
             return Ok(());
         }
-        self.whatsapp
-            .mark_read(&inbox.session_id, &conversation.contact_jid, &unread)
-            .await
+        let to = Address {
+            inbox: &inbox,
+            contact: &conversation.contact_jid,
+        };
+        channel.mark_read(self, to, &unread).await
     }
 }

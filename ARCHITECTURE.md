@@ -28,6 +28,15 @@ A porta de repositório também oferece `media`, limitada por sessão, conversa 
 
 Interfaces pequenas e injeção explícita evitam contêiner de dependências ou hierarquias desnecessárias. Regras de autorização ficam no domínio; use cases fazem orquestração; transporte e SQL ficam nos adaptadores.
 
+## Canais
+
+Cada caixa de entrada tem um canal (`channel_type`: hoje `whatsapp` e `github`). Os casos de uso nunca comparam o tipo: pedem o canal da caixa (`application/channels`) e as suas capacidades (`domain/channel.rs`: mídia, reações, apagar para todos, presença, bloqueio e iniciar conversa).
+
+- **Entrada.** O canal transforma o seu evento numa mensagem do contato e chama `HelpdeskService::receive` (`application/inbound.rs`). Ali fica a regra única de roteamento: conversa nova, reaproveitada ou reaberta, depois a atualização da conversa e a atribuição automática. O canal só acha o contato, a rota e grava a própria mensagem.
+- **Saída.** `Channel::send` entrega a resposta (WhatsApp com a assinatura do agente; GitHub como comentário). Reações, apagar, digitação, confirmação de leitura e bloqueio são métodos opcionais: o padrão é "não há neste canal".
+
+Para adicionar um canal: as capacidades em `domain/channel.rs`, uma implementação de `Channel` em `application/channels/`, a entrada do evento chamando `receive`, e a tabela `channel_<tipo>` com a caixa.
+
 ## Eventos MCP
 
 `application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.
