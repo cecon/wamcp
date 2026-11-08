@@ -90,3 +90,66 @@ async fn administrators_install_plugins_whose_tools_carry_the_sealed_credential(
     let skills = admin.get("/skills").await.body.to_string();
     assert!(!skills.contains("Delivery: Atender pedido"), "{skills}");
 }
+
+/// Serves `plugin.json` with whatever manifest the test puts in `current`.
+async fn manifest_server(current: std::sync::Arc<parking_lot::Mutex<Value>>) -> String {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let router = Router::new().route(
+        "/plugin.json",
+        axum::routing::get(move || {
+            let current = current.clone();
+            async move { Json(current.lock().clone()) }
+        }),
+    );
+    tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    format!("http://{address}/plugin.json")
+}
+
+#[tokio::test]
+async fn plugins_installed_from_an_address_update_to_newer_versions_only() {
+    let f = Fixture::new().await;
+    let admin = f.bootstrap().await;
+    let tool = endpoint().await;
+    let current = std::sync::Arc::new(parking_lot::Mutex::new(manifest(&tool)));
+    let url = manifest_server(current.clone()).await;
+
+    let installed = admin.post("/plugins", json!({ "url": url })).await;
+    assert_eq!(installed.status, 201, "{:?}", installed.body);
+    assert_eq!(installed.body["source"], url.as_str());
+    let set = admin
+        .put("/plugins/delivery/credentials/token", json!({"value": "s3gredo"}))
+        .await;
+    assert_eq!(set.status, 200);
+
+    let same = admin.post("/plugins/delivery/update", json!({})).await;
+    assert_eq!(same.status, 200, "{:?}", same.body);
+    assert_eq!(same.body["updated"], false);
+
+    current.lock()["version"] = json!("1.1.0");
+    current.lock()["skills"][0]["instructions"] = json!("Confirme o endereço também.");
+    let newer = admin.post("/plugins/delivery/update", json!({})).await;
+    assert_eq!(newer.status, 200, "{:?}", newer.body);
+    assert_eq!(newer.body["updated"], true);
+    assert_eq!(newer.body["previous_version"], "1.0.0");
+    assert_eq!(newer.body["plugin"]["manifest"]["version"], "1.1.0");
+    assert_eq!(
+        newer.body["plugin"]["credentials_set"],
+        json!(["token"]),
+        "credentials stay"
+    );
+    assert!(admin
+        .get("/skills")
+        .await
+        .body
+        .to_string()
+        .contains("Confirme o endereço também."));
+
+    let older = admin.post("/plugins", manifest(&tool)).await;
+    assert_eq!(older.status, 409, "no silent downgrade: {:?}", older.body);
+    let mut bad = manifest(&tool);
+    bad["version"] = json!("um");
+    assert_eq!(admin.post("/plugins", bad).await.status, 400);
+    let pasted = admin.post("/plugins/financeiro/update", json!({})).await;
+    assert_eq!(pasted.status, 422, "not installed from an address");
+}

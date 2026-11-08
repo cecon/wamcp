@@ -94,6 +94,14 @@ impl Manifest {
     }
 }
 
+/// `major.minor.patch` (an optional `-suffix` is ignored when comparing).
+pub fn version(value: &str) -> Option<(u64, u64, u64)> {
+    let core = value.trim().split(['-', '+']).next()?;
+    let mut parts = core.split('.').map(|p| p.parse::<u64>().ok());
+    let parsed = (parts.next()??, parts.next()??, parts.next()??);
+    parts.next().is_none().then_some(parsed)
+}
+
 fn slug(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 40
@@ -126,8 +134,11 @@ fn validate(m: &Manifest, builtin: bool) -> Result<()> {
     if !slug(&m.id) {
         return fail("O id do plugin usa só letras minúsculas, números, - e _ (até 40)");
     }
-    if m.name.trim().is_empty() || m.name.chars().count() > 80 || m.version.trim().is_empty() {
-        return fail("Informe nome (até 80 caracteres) e versão do plugin");
+    if m.name.trim().is_empty() || m.name.chars().count() > 80 {
+        return fail("Informe o nome do plugin (até 80 caracteres)");
+    }
+    if version(&m.version).is_none() {
+        return fail("A versão do plugin segue o formato 1.2.3");
     }
     let mut names: Vec<&str> = Vec::new();
     for tool in &m.tools {

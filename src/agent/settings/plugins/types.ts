@@ -22,5 +22,14 @@ export interface Plugin {
   builtin: boolean;
   installed: string;
   updated: string;
+  /** Where it was installed from (`https://…/plugin.json`), for updates. */
+  source: string | null;
   credentials_set: string[];
+}
+
+/** `POST /plugins/{id}/update`. */
+export interface UpdateOutcome {
+  updated: boolean;
+  previous_version: string;
+  plugin: Plugin;
 }

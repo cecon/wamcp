@@ -1,12 +1,12 @@
 //! Plugins (administrators): list, install from a manifest, turn on or off, fill in the
-//! credentials their tools use and remove them.
+//! credentials their tools use, update the ones installed from an address and remove them.
 use super::auth::CurrentUser;
 use super::error::{created, done, ok, ApiResult};
 use super::input::Body;
 use super::state::AppState;
 use axum::extract::{Path, State};
 use axum::response::Response;
-use axum::routing::{get, patch, put};
+use axum::routing::{get, patch, post, put};
 use axum::Router;
 use serde::Deserialize;
 use serde_json::Value;
@@ -20,7 +20,20 @@ async fn install(
     current: CurrentUser,
     Body(manifest): Body<Value>,
 ) -> ApiResult<Response> {
-    created(state.support().plugins.install(&current.actor(), &manifest)?)
+    let plugins = &state.support().plugins;
+    // `{"url": "https://…/plugin.json"}` installs from an address (and remembers it for updates).
+    match manifest
+        .get("url")
+        .and_then(Value::as_str)
+        .filter(|_| manifest.get("id").is_none())
+    {
+        Some(url) => created(plugins.install_from(&current.actor(), url).await?),
+        None => created(plugins.install(&current.actor(), &manifest)?),
+    }
+}
+
+async fn update(State(state): State<AppState>, current: CurrentUser, Path(id): Path<String>) -> ApiResult<Response> {
+    ok(state.support().plugins.update(&current.actor(), &id).await?)
 }
 
 #[derive(Deserialize)]
@@ -65,5 +78,6 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/plugins", get(list).post(install))
         .route("/plugins/{id}", patch(toggle).delete(remove))
+        .route("/plugins/{id}/update", post(update))
         .route("/plugins/{id}/credentials/{name}", put(credential))
 }

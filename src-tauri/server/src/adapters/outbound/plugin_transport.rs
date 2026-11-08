@@ -113,6 +113,28 @@ impl PluginTransport for HttpPluginTransport {
         }
     }
 
+    async fn manifest(&self, url: &str) -> Result<Value> {
+        if !crate::domain::plugins::allowed_url(url) {
+            return fail("Endereço do plugin: use HTTPS (HTTP só local)");
+        }
+        let response = match self.client.get(url).header("accept", "application/json").send().await {
+            Ok(response) => response,
+            Err(error) => return fail(format!("Não consegui baixar o plugin: {}", error.without_url())),
+        };
+        let status = response.status();
+        let bytes = response.bytes().await.unwrap_or_default();
+        if !status.is_success() {
+            return fail(format!("O endereço do plugin respondeu HTTP {}", status.as_u16()));
+        }
+        if bytes.len() > MAX_BODY {
+            return fail("O manifesto passa de 1 MiB");
+        }
+        match serde_json::from_slice(&bytes) {
+            Ok(value) => Ok(value),
+            Err(_) => fail("O endereço não devolveu um plugin.json válido"),
+        }
+    }
+
     async fn mcp(&self, url: &str, bearer: Option<&str>, tool: &str, args: &Value) -> Result<Value> {
         let initialize = json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
             "protocolVersion": "2025-06-18", "capabilities": {},

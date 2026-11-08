@@ -89,7 +89,7 @@ O download exige a sessão conectada, tem limite de 10 MiB e espera de até 30 s
 - `tunnel.token`: credencial local do Cloudflare Tunnel.
 - `media/<sessão>/<AAAA>/<MM>/`: anexos das conversas.
 
-O SQLite é criado automaticamente no PC da instalação. Nenhum histórico ou token é incluído no instalador ou enviado ao GitHub. Para backup, encerre o aplicativo e copie a pasta de dados. O banco não é criptografado; ele usa as proteções do perfil do Windows.
+O SQLite é criado automaticamente no PC da instalação. Nenhum histórico ou token é incluído no instalador ou enviado ao GitHub. Antes de cada atualização que muda o esquema do banco, o app guarda uma cópia em `backups/wamcp-v<versão>-<data>.sqlite` (ficam as 3 mais novas); para desfazer uma atualização, encerre o app e coloque a cópia no lugar de `wamcp.sqlite`. Para um backup completo, encerre o aplicativo e copie a pasta de dados. O banco não é criptografado; ele usa as proteções do perfil do Windows.
 
 ## Túnel
 
@@ -100,6 +100,21 @@ Configure o hostname público para `http://127.0.0.1:17382`. O aplicativo inicia
 O backend embutido escuta em uma única porta (`0.0.0.0:17382`) com o app web, a API, o MCP e o OAuth. A janela do Tauri abre `http://127.0.0.1:17382/app/`; outros computadores da rede abrem `http://<ip-deste-pc>:17382/app/` no navegador (o endereço aparece em Configurações > Aplicativo). Todos entram com e-mail e senha; o primeiro administrador só pode ser criado no próprio computador. Iniciar com o Windows, túnel e atualização aparecem apenas na janela do aplicativo. Libere a porta 17382 no firewall do Windows para a rede local.
 
 `wamcp.cappyfy.com` é o endereço desta implantação. Execute o conector em apenas um computador com estas sessões: réplicas com bancos diferentes não compartilham contas ou tokens. Para outra implantação, adapte `publicUrl` e configure um hostname/túnel próprio.
+
+## Servidor Linux e Docker
+
+O mesmo backend roda num servidor Linux, sem a janela, a bandeja e o túnel do Windows. Com Docker:
+
+```sh
+docker compose up -d --build
+```
+
+- Os dados ficam no volume `wamcp-data` (`/data` no contêiner), com as cópias automáticas em `/data/backups`.
+- A imagem já traz o Claude Code e o OpenCode para os agentes de IA. Para escolher outros, use `docker compose build --build-arg AGENT_CLIS="@openai/codex"` (vazio: nenhum). Entre na conta de cada um com `docker compose exec wamcp claude` ou `docker compose exec wamcp opencode auth login`.
+- O primeiro administrador só pode ser criado a partir do próprio servidor. Abra um túnel SSH (`ssh -L 17382:127.0.0.1:17382 seu-servidor`), acesse `http://127.0.0.1:17382/app/` no seu computador e crie a conta. Depois, pareie o WhatsApp pelo app, como no Windows.
+- O compose usa a rede do host e escuta só em `127.0.0.1`. Para acessar de fora, ponha um proxy com HTTPS na frente (Caddy, nginx) ou troque `WAMCP_BIND` para `0.0.0.0`.
+
+Sem Docker: `npm ci && npm run build`, depois `cargo build --manifest-path src-tauri/Cargo.toml -p wamcp-server --release`, e rode `src-tauri/target/release/wamcp-server` com `WAMCP_WEB_DIR=dist` e `WAMCP_DATA_DIR=/caminho/dos/dados`.
 
 ## Eventos no ChatGPT
 
@@ -147,7 +162,7 @@ O que os agentes de IA sabem fazer vem dos plugins. Em **Configurações → Plu
 }
 ```
 
-Use `"kind": "mcp"` para chamar uma ferramenta de um servidor MCP (`remote_name` se o nome lá for outro) e `"internal_only": true` para uma ferramenta que nunca pode rodar em resposta a uma mensagem de cliente.
+Para que o app busque as atualizações, instale pelo endereço do `plugin.json` (HTTPS): o botão **Atualizar** baixa de novo e instala quando a versão (`1.2.3`) é maior, mantendo credenciais, estado e permissões. Uma versão mais antiga que a instalada é recusada. Use `"kind": "mcp"` para chamar uma ferramenta de um servidor MCP (`remote_name` se o nome lá for outro) e `"internal_only": true` para uma ferramenta que nunca pode rodar em resposta a uma mensagem de cliente.
 
 ## Arquitetura e qualidade
 

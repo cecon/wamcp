@@ -6,6 +6,7 @@ mod agent_schedules;
 mod agents;
 mod attachments;
 mod automation;
+mod backup;
 mod catalog;
 mod contact_book;
 mod contacts;

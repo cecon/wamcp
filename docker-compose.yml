@@ -1,0 +1,16 @@
+# WAMCP num servidor Linux. A rede do host faz o app ver os acessos locais como locais: o primeiro
+# administrador só pode ser criado a partir do próprio servidor (por exemplo por um túnel SSH).
+services:
+  wamcp:
+    build: .
+    image: wamcp
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      # 127.0.0.1: só o próprio servidor (use um proxy HTTPS na frente); 0.0.0.0: a rede toda.
+      WAMCP_BIND: 127.0.0.1
+    volumes:
+      - wamcp-data:/data
+
+volumes:
+  wamcp-data:

@@ -250,5 +250,7 @@ pub fn steps() -> Vec<String> {
            conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
            summary TEXT NOT NULL,upto_message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL);"
             .into(),
+        // v40: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
+        "ALTER TABLE plugins ADD COLUMN source TEXT;".into(),
     ]
 }

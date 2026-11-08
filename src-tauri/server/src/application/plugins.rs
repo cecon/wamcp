@@ -3,13 +3,14 @@
 //! `BusinessTools`: a tool call goes to the plugin's endpoint with the credential applied here,
 //! so the model never sees it.
 mod skills;
+mod updates;
 
 use super::ports::{BusinessTools, InstalledPlugin, PluginTransport, Repository, SecretBox};
 use crate::domain::actor::Actor;
 use crate::domain::engine::tools::{from_plugin, ToolDef};
 use crate::domain::error::{fail, fail_with, Result};
 use crate::domain::helpdesk::require_admin;
-use crate::domain::plugins::{parse, EndpointKind, Manifest, PluginTool};
+use crate::domain::plugins::{parse, version, EndpointKind, Manifest, PluginTool};
 use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
@@ -78,7 +79,7 @@ impl PluginService {
         })
     }
 
-    fn find(&self, id: &str) -> Result<InstalledPlugin> {
+    pub(super) fn find(&self, id: &str) -> Result<InstalledPlugin> {
         match self.repo.plugin(id)? {
             Some(plugin) => Ok(plugin),
             None => fail_with("Plugin não encontrado", 404),
@@ -92,6 +93,18 @@ impl PluginService {
         let previous = self.repo.plugin(&manifest.id)?;
         if previous.as_ref().is_some_and(|p| p.builtin) {
             return fail_with("Este id pertence a um plugin do próprio app", 409);
+        }
+        if let Some(installed) = previous
+            .as_ref()
+            .filter(|p| version(&p.manifest.version) > version(&manifest.version))
+        {
+            return fail_with(
+                format!(
+                    "A versão {} é mais antiga que a instalada ({}); remova o plugin para voltar",
+                    manifest.version, installed.manifest.version
+                ),
+                409,
+            );
         }
         let mut saved = None;
         self.repo.transaction_dyn(&mut || {

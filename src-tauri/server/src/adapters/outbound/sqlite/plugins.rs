@@ -6,12 +6,21 @@ use crate::domain::error::Result;
 use crate::domain::plugins::Manifest;
 use rusqlite::OptionalExtension;
 
-fn installed(row: &rusqlite::Row<'_>) -> rusqlite::Result<(String, i64, i64, String, String)> {
-    Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+type Row = (String, i64, i64, String, String, Option<String>);
+
+fn installed(row: &rusqlite::Row<'_>) -> rusqlite::Result<Row> {
+    Ok((
+        row.get(0)?,
+        row.get(1)?,
+        row.get(2)?,
+        row.get(3)?,
+        row.get(4)?,
+        row.get(5)?,
+    ))
 }
 
-fn decode(parts: (String, i64, i64, String, String)) -> Option<InstalledPlugin> {
-    let (json, enabled, builtin, installed, updated) = parts;
+fn decode(parts: Row) -> Option<InstalledPlugin> {
+    let (json, enabled, builtin, installed, updated, source) = parts;
     let manifest: Manifest = serde_json::from_str(&json).ok()?;
     Some(InstalledPlugin {
         manifest,
@@ -19,10 +28,11 @@ fn decode(parts: (String, i64, i64, String, String)) -> Option<InstalledPlugin> 
         builtin: builtin != 0,
         installed,
         updated,
+        source,
     })
 }
 
-const SELECT: &str = "SELECT manifest,enabled,builtin,installed,updated FROM plugins";
+const SELECT: &str = "SELECT manifest,enabled,builtin,installed,updated,source FROM plugins";
 
 impl PluginRepo for SqliteStore {
     fn plugins(&self) -> Result<Vec<InstalledPlugin>> {
@@ -65,6 +75,12 @@ impl PluginRepo for SqliteStore {
             vec![int(i64::from(enabled)), text(iso(now_ms())), text(id)],
         )
         .map(drop)
+    }
+
+    fn set_plugin_source(&self, id: &str, source: Option<&str>) -> Result<()> {
+        let source = source.map_or(rusqlite::types::Value::Null, text);
+        self.exec("UPDATE plugins SET source=? WHERE id=?", vec![source, text(id)])
+            .map(drop)
     }
 
     fn delete_plugin(&self, id: &str) -> Result<()> {

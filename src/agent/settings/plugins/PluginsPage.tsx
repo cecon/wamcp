@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, Plus } from 'lucide-react';
+import { KeyRound, Plus, RefreshCw } from 'lucide-react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { Button } from '../../ui/Button';
@@ -8,7 +8,7 @@ import { Cell, RowActions, SettingsHeader, SettingsPage, Table, Toggle } from '.
 import { useAction } from '../useAction';
 import { CredentialsModal } from './CredentialsModal';
 import { InstallModal } from './InstallModal';
-import type { Plugin } from './types';
+import type { Plugin, UpdateOutcome } from './types';
 
 const KIND = { http: 'HTTP', mcp: 'MCP', builtin: 'do app' };
 
@@ -20,6 +20,7 @@ export function PluginsPage() {
     [credentials, setCredentials] = useState<Plugin | null>(null),
     [removing, setRemoving] = useState<Plugin | null>(null);
   const toggling = useAction();
+  const [notice, setNotice] = useState('');
   const plugins = data || [];
 
   return (
@@ -31,6 +32,11 @@ export function PluginsPage() {
         action={<Button icon={Plus} label="Instalar plugin" onClick={() => setInstalling(true)} />}
       />
       {(error || toggling.error) && <p className="text-sm text-n-ruby-11">{error || toggling.error}</p>}
+      {notice && (
+        <p role="status" className="text-sm text-n-teal-11">
+          {notice}
+        </p>
+      )}
       <Table
         headers={['Plugin', 'Ferramentas', 'Ativo', '']}
         rows={plugins.length}
@@ -81,8 +87,34 @@ export function PluginsPage() {
                   }
                 />
               </Cell>
-              <Cell className="w-32">
+              <Cell className="w-40">
                 <div className="flex justify-end gap-1">
+                  {plugin.source && (
+                    <Button
+                      color="slate"
+                      variant="faded"
+                      size="sm"
+                      icon={RefreshCw}
+                      aria-label={`Atualizar ${manifest.name}`}
+                      disabled={toggling.busy}
+                      onClick={() =>
+                        void toggling.run(async () => {
+                          setNotice('');
+                          const outcome = await http<UpdateOutcome>(
+                            `/plugins/${manifest.id}/update`,
+                            'POST',
+                            {},
+                          );
+                          setNotice(
+                            outcome.updated
+                              ? `${manifest.name} atualizado de ${outcome.previous_version} para ${outcome.plugin.manifest.version}.`
+                              : `${manifest.name} já está na versão mais nova (${outcome.previous_version}).`,
+                          );
+                          reload();
+                        })
+                      }
+                    />
+                  )}
                   {manifest.credentials.length > 0 && (
                     <Button
                       color="slate"

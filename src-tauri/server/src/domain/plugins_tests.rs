@@ -38,3 +38,13 @@ fn builtin_endpoints_and_undeclared_credentials_are_refused() {
     id["id"] = json!("Com Espaço");
     assert!(parse(&id, false).is_err());
 }
+
+#[test]
+fn versions_compare_by_number() {
+    assert_eq!(version("1.10.0"), Some((1, 10, 0)));
+    assert!(version("1.10.0") > version("1.9.3"));
+    assert_eq!(version("2.0.0-beta"), Some((2, 0, 0)));
+    assert_eq!(version("1.0"), None);
+    assert_eq!(version("1.0.0.1"), None);
+    assert_eq!(version("v1.0.0"), None);
+}

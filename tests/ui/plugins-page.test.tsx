@@ -31,6 +31,7 @@ const plugin = (id: string, name: string, extra: Partial<Plugin> = {}): Plugin =
   builtin: false,
   installed: '',
   updated: '',
+  source: null,
   credentials_set: [],
   ...extra,
 });
@@ -49,6 +50,40 @@ function renderPlugins() {
 }
 
 describe('Plugins settings', () => {
+  it('installs from an address and updates a plugin installed that way', async () => {
+    const delivery = plugin('delivery', 'Delivery', { source: 'https://loja.example/plugin.json' });
+    let updated = false;
+    const api = fakeApi({
+      'GET /plugins': () => [delivery],
+      'POST /plugins': delivery,
+      'POST /plugins/delivery/update': () => {
+        const outcome = {
+          updated,
+          previous_version: '1.0.0',
+          plugin: { ...delivery, manifest: { ...delivery.manifest, version: '1.1.0' } },
+        };
+        updated = true;
+        return outcome;
+      },
+    });
+    const user = renderPlugins();
+    await user.click(await screen.findByRole('button', { name: 'Atualizar Delivery' }));
+    expect(await screen.findByText('Delivery já está na versão mais nova (1.0.0).')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Atualizar Delivery' }));
+    expect(await screen.findByText('Delivery atualizado de 1.0.0 para 1.1.0.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Instalar plugin' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Instalar plugin' });
+    await user.type(
+      within(dialog).getByLabelText('Endereço do plugin.json'),
+      'https://loja.example/plugin.json',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Instalar' }));
+    await waitFor(() =>
+      expect(api.called('POST', '/plugins')[0]?.body).toEqual({ url: 'https://loja.example/plugin.json' }),
+    );
+  });
+
   it('lists plugins, toggles one, fills a credential and removes it', async () => {
     const delivery = plugin('delivery', 'Delivery');
     const api = fakeApi({

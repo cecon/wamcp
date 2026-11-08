@@ -13,6 +13,8 @@ pub struct InstalledPlugin {
     pub builtin: bool,
     pub installed: String,
     pub updated: String,
+    /// Where the manifest was installed from (`https://…/plugin.json`), to check for updates.
+    pub source: Option<String>,
 }
 
 /// The installed plugins and their sealed credentials.
@@ -22,6 +24,7 @@ pub trait PluginRepo {
     /// Inserts or replaces the plugin's manifest (an update keeps `enabled` and the credentials).
     fn save_plugin(&self, manifest: &Manifest, builtin: bool) -> Result<InstalledPlugin>;
     fn set_plugin_enabled(&self, id: &str, enabled: bool) -> Result<()>;
+    fn set_plugin_source(&self, id: &str, source: Option<&str>) -> Result<()>;
     fn delete_plugin(&self, id: &str) -> Result<()>;
     /// The names of the credentials that have a value.
     fn plugin_credential_names(&self, id: &str) -> Result<Vec<String>>;
@@ -37,4 +40,6 @@ pub trait PluginTransport: Send + Sync {
     async fn http(&self, url: &str, bearer: Option<&str>, args: &Value) -> Result<Value>;
     /// `tools/call` on an MCP server over Streamable HTTP.
     async fn mcp(&self, url: &str, bearer: Option<&str>, tool: &str, args: &Value) -> Result<Value>;
+    /// `GET` of a plugin manifest (JSON).
+    async fn manifest(&self, url: &str) -> Result<Value>;
 }
