@@ -32,6 +32,8 @@ pub struct Support {
     pub system: crate::application::system_agent::SystemAgent,
     /// The agentic engine, attached once the server knows its own address (MCP endpoint for runtimes).
     pub engine: Arc<std::sync::OnceLock<crate::application::engine::EngineService>>,
+    /// The installed plugins: what the agents can do (the engine's business tools).
+    pub plugins: crate::application::plugins::PluginService,
     /// Contact photos fetched from WhatsApp.
     pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,

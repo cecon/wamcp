@@ -3,9 +3,9 @@
 use super::EngineService;
 use crate::application::ports::{ToolGateway, ToolInfo, ToolReply};
 use crate::domain::engine::activity::{self as status, call};
-use crate::domain::engine::grants::{decide, Decision};
+use crate::domain::engine::grants::{self, decide, Decision};
 use crate::domain::engine::model::{Activity, EngineAgent, Evidence, Run, ToolCall};
-use crate::domain::engine::tools::{self, ToolDef, TOOLS};
+use crate::domain::engine::tools::{self, ToolDef};
 use crate::domain::error::{fail, Error, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -39,31 +39,16 @@ impl ToolGateway for EngineService {
 
     fn list_tools(&self, token: &str) -> Vec<ToolInfo> {
         match self.caller(token) {
-            Ok(caller) => self.tools_for(&caller.agent),
+            Ok(caller) => {
+                let from_customer = self.answers_customer(&caller.activity);
+                self.tools_for(&caller.agent, from_customer)
+            }
             Err(_) => Vec::new(),
         }
     }
 }
 
 impl EngineService {
-    /// Built-in tools and the business tools the agent has a grant for.
-    pub(super) fn tools_for(&self, agent: &EngineAgent) -> Vec<ToolInfo> {
-        let granted: Vec<String> = self
-            .store
-            .grants(agent.account_id, agent.id)
-            .map(|grants| grants.into_iter().map(|g| g.tool).collect())
-            .unwrap_or_default();
-        TOOLS
-            .iter()
-            .filter(|tool| tool.builtin || granted.iter().any(|g| g == tool.name))
-            .map(|tool| ToolInfo {
-                name: tool.name.into(),
-                description: tool.description.into(),
-                input_schema: tools::input_schema(tool.name),
-            })
-            .collect()
-    }
-
     pub(super) fn caller(&self, token: &str) -> Result<Caller> {
         let Some(run) = self.store.run_by_token(token)? else {
             return fail("Credencial de execução inválida");
@@ -81,24 +66,24 @@ impl EngineService {
         if status::is_final(&caller.activity.status) {
             return fail("A atividade já terminou");
         }
-        let Some(tool) = tools::find(name) else {
+        let Some(tool) = self.tool(caller.run.account_id, name) else {
             return fail(format!("Ferramenta desconhecida: {name}"));
         };
         if !args.is_object() {
             return fail("Os argumentos precisam ser um objeto JSON");
         }
-        match tool.name {
+        match tool.name.as_str() {
             tools::DELEGATE => self.delegate(&caller, &args).await,
             tools::CONCLUDE => self.conclude(&caller, &args).await,
             tools::REMEMBER => self.remember(&caller, &args),
             tools::RECALL => self.recall(&caller, &args),
-            _ => self.business_call(&caller, tool, args).await,
+            _ => self.business_call(&caller, &tool, args).await,
         }
     }
 
     async fn business_call(&self, caller: &Caller, tool: &ToolDef, args: Value) -> Result<Value> {
         let (account, activity, agent) = (caller.run.account_id, &caller.activity, &caller.agent);
-        let key = call_key(tool.name, &args);
+        let key = call_key(&tool.name, &args);
         if let Some(previous) = self.store.tool_call_by_key(activity.id, &key)? {
             // Failed and denied calls are decided again (the tool may be back, a grant may exist now).
             if previous.status != call::FAILED && previous.status != call::DENIED {
@@ -111,14 +96,17 @@ impl EngineService {
             .into_iter()
             .find(|g| g.tool == tool.name);
         let policy = self.store.policy(account, agent.id)?;
-        let coordinator = agent.role.as_deref() == Some("coordinator");
+        let who = grants::Caller {
+            coordinator: agent.role.as_deref() == Some("coordinator"),
+            from_customer: self.answers_customer(activity),
+        };
         let draft = ToolCall {
             id: 0,
             account_id: account,
             activity_id: activity.id,
             run_id: caller.run.id,
             agent_id: agent.id,
-            tool: tool.name.into(),
+            tool: tool.name.clone(),
             args: args.clone(),
             call_key: key,
             status: call::FAILED.into(),
@@ -132,7 +120,7 @@ impl EngineService {
             tool,
             grant.as_ref().map(|g| g.effect.as_str()),
             &policy.execution_policy,
-            coordinator,
+            who,
         ) {
             Decision::Deny(reason) => {
                 self.save_call(ToolCall {

@@ -124,6 +124,31 @@ npm run test:e2e
 npm run desktop:build
 ```
 
+## Plugins
+
+O que os agentes de IA sabem fazer vem dos plugins. Em **Configurações → Plugins**, cole ou escolha um `plugin.json` com skills, ferramentas (HTTP ou servidor MCP) e as credenciais que elas usam. Depois libere as ferramentas para cada agente em **Motor de agentes**. As credenciais ficam seladas no app e o modelo nunca as vê. Exemplo mínimo:
+
+```json
+{
+  "id": "delivery",
+  "name": "Delivery",
+  "version": "1.0.0",
+  "skills": [{ "name": "Atender pedido", "instructions": "Anote o pedido, confirme o endereço e o total." }],
+  "credentials": [{ "name": "token", "help": "Chave da API da loja" }],
+  "tools": [
+    {
+      "name": "anotar_pedido",
+      "description": "Registra um pedido na loja",
+      "input_schema": { "type": "object", "properties": { "item": { "type": "string" } } },
+      "side_effects": true,
+      "endpoint": { "kind": "http", "url": "https://loja.example/api/pedido", "credential": "token" }
+    }
+  ]
+}
+```
+
+Use `"kind": "mcp"` para chamar uma ferramenta de um servidor MCP (`remote_name` se o nome lá for outro) e `"internal_only": true` para uma ferramenta que nunca pode rodar em resposta a uma mensagem de cliente.
+
 ## Arquitetura e qualidade
 
 Arquitetura hexagonal: domínio puro, casos de uso com portas injetadas, adaptadores de entrada HTTP/MCP e de saída SQLite/WhatsApp. Consulte [ARCHITECTURE.md](ARCHITECTURE.md).

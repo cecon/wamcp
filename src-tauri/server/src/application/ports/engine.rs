@@ -99,9 +99,13 @@ pub trait AgentRuntime: Send + Sync {
     async fn run_status(&self, external_id: &str) -> Result<RunState>;
 }
 
-/// Business tools behind grants (the MVP has a simulated finance system).
+/// Business tools behind grants: the tools of the installed plugins.
 #[async_trait]
 pub trait BusinessTools: Send + Sync {
+    /// The tools on offer (`<plugin>.<tool>`).
+    fn tools(&self, _account_id: i64) -> Vec<crate::domain::engine::tools::ToolDef> {
+        Vec::new()
+    }
     /// `Err` = the tool is unavailable; a domain answer ("not found") is `Ok`.
     async fn call(&self, account_id: i64, tool: &str, args: &Value) -> Result<Value>;
 }

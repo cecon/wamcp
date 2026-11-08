@@ -44,7 +44,7 @@ impl EngineService {
             agent: agent.clone(),
             system: prompt::system(agent, &directory, &memories),
             input: self.run_input(activity)?,
-            tools: self.tools_for(agent),
+            tools: self.tools_for(agent, self.answers_customer(activity)),
             token,
             mcp_url: self.mcp_url.clone(),
             gateway: Arc::new(self.clone()) as Arc<dyn ToolGateway>,

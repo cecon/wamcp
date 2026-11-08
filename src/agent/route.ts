@@ -12,6 +12,7 @@ export type SettingsSection =
   | 'canned'
   | 'automation'
   | 'skills'
+  | 'plugins'
   | 'macros'
   | 'sla'
   | 'webhooks'

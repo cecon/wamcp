@@ -24,7 +24,6 @@ use crate::application::sessions::{McpService, SessionService};
 use crate::application::system_agent::SystemAgent;
 use crate::application::webhooks::WebhookService;
 use crate::application::whatsapp_sink::WhatsAppSink;
-use crate::domain::events::EventOwner;
 use axum::Router;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, OnceLock};
@@ -65,21 +64,6 @@ pub struct App {
     pub mcp_url: Arc<OnceLock<String>>,
 }
 
-fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&EventOwner) -> bool + Send + Sync> {
-    Arc::new(move |owner: &EventOwner| {
-        let exists = matches!(repo.session(&owner.session_id), Ok(Some(_)));
-        exists
-            && match owner.principal_kind.as_str() {
-                "oauth" => oauth.event_principal(&owner.session_id, &owner.principal_id).is_some(),
-                "token" => matches!(
-                    repo.event_principal(&owner.session_id, &owner.principal_id),
-                    Ok(Some(_))
-                ),
-                _ => false,
-            }
-    })
-}
-
 /// Builds every service and subscribes the event listeners (must run inside a Tokio runtime).
 pub fn compose(ports: Ports, settings: Settings) -> App {
     let bus = Arc::new(EventBus::default());
@@ -118,7 +102,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         ports.repo.clone(),
         ports.callback.clone(),
         ports.clock.clone(),
-        authorizer(ports.repo.clone(), oauth.clone()),
+        crate::engine_setup::authorizer(ports.repo.clone(), oauth.clone()),
     );
 
     let listener = notifications.clone();
@@ -156,7 +140,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = avatar_worker.clone();
     bus.subscribe(move |e| worker.push(e));
-
+    let plugins = crate::engine_setup::plugins(ports.repo.clone(), ports.secrets.clone());
     let agents = AgentDirectory {
         core: core.clone(),
         secrets: ports.secrets.clone(),
@@ -168,6 +152,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         schedules: crate::application::agent_schedules::AgentScheduleService::new(core.clone()),
         agents,
         engine: Arc::default(),
+        plugins,
         avatars,
         accounts: AccountService {
             core: core.clone(),

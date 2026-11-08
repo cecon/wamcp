@@ -4,7 +4,6 @@ use super::EngineService;
 use crate::domain::actor::Actor;
 use crate::domain::engine::grants::{EFFECTS, POLICIES};
 use crate::domain::engine::model::{AgentPolicy, Memory};
-use crate::domain::engine::tools::{self, TOOLS};
 use crate::domain::error::{fail, fail_with, Result};
 use crate::domain::helpdesk::require_admin;
 use serde_json::{json, Value};
@@ -76,7 +75,9 @@ impl EngineService {
     /// Grants or removes (`effect` `None`) a business tool for an agent.
     pub fn grant(&self, account_id: i64, agent_id: i64, tool: &str, effect: Option<&str>) -> Result<Value> {
         let agent = self.agent(account_id, agent_id)?;
-        if tools::find(tool).is_none_or(|t| t.builtin) {
+        // A grant of an uninstalled plugin's tool can still be removed.
+        let known = self.tool(account_id, tool);
+        if known.as_ref().is_some_and(|t| t.builtin) || (known.is_none() && effect.is_some()) {
             return fail("Ferramenta desconhecida ou que não precisa de permissão");
         }
         if effect.is_some_and(|e| !EFFECTS.contains(&e)) {
@@ -98,12 +99,13 @@ impl EngineService {
     }
 
     /// The tool catalog (for the UI) and the runtimes with whether each can run here.
-    pub fn catalog(&self) -> Value {
-        let tools: Vec<Value> = TOOLS
-            .iter()
+    pub fn catalog(&self, account_id: i64) -> Value {
+        let tools: Vec<Value> = self
+            .tools(account_id)
+            .into_iter()
             .map(|t| {
                 json!({"name": t.name, "description": t.description, "builtin": t.builtin,
-                "side_effects": t.side_effects, "sensitive": t.sensitive})
+                "side_effects": t.side_effects, "sensitive": t.sensitive, "internal_only": t.internal_only})
             })
             .collect();
         let runtimes: Vec<Value> = self

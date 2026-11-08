@@ -18,14 +18,25 @@ pub enum Decision {
     Deny(String),
 }
 
+/// Who asked for the run that calls the tool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Caller {
+    pub coordinator: bool,
+    /// The run answers a customer's message: its text may try to steer the agent.
+    pub from_customer: bool,
+}
+
 /// `grant` is the effect granted to the agent for this tool (`None` = no grant).
-pub fn decide(tool: &ToolDef, grant: Option<&str>, policy: &str, coordinator: bool) -> Decision {
+pub fn decide(tool: &ToolDef, grant: Option<&str>, policy: &str, caller: Caller) -> Decision {
     // Delegating, concluding and memory belong to every agent; coordinators never do anything else.
     if tool.builtin {
         return Decision::Allow;
     }
-    if coordinator {
+    if caller.coordinator {
         return Decision::Deny(format!("Coordenadores não executam ferramentas ({})", tool.name));
+    }
+    if caller.from_customer && tool.internal_only {
+        return Decision::Deny(format!("{} só roda em pedidos da equipe, não de clientes", tool.name));
     }
     let Some(effect) = grant else {
         return Decision::Deny(format!("Sem permissão para {}", tool.name));
@@ -43,26 +54,64 @@ pub fn decide(tool: &ToolDef, grant: Option<&str>, policy: &str, coordinator: bo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::engine::tools::find;
+    use crate::domain::engine::tools::{builtins, DELEGATE};
+
+    fn tool(side_effects: bool, sensitive: bool, internal_only: bool) -> ToolDef {
+        ToolDef {
+            name: "financeiro.x".into(),
+            description: String::new(),
+            builtin: false,
+            side_effects,
+            sensitive,
+            internal_only,
+            input_schema: serde_json::json!({}),
+        }
+    }
+
+    const OPERATOR: Caller = Caller {
+        coordinator: false,
+        from_customer: false,
+    };
 
     #[test]
     fn denies_without_grant_and_asks_for_sensitive() {
-        let pay = find("financeiro.consultar_pagamento").unwrap();
-        assert!(matches!(decide(pay, None, WITHIN_GRANTS, false), Decision::Deny(_)));
-        assert_eq!(decide(pay, Some(ALLOW), WITHIN_GRANTS, false), Decision::Allow);
-        assert_eq!(decide(pay, Some(APPROVAL), WITHIN_GRANTS, false), Decision::Approval);
-        assert!(matches!(
-            decide(pay, Some(ALLOW), WITHIN_GRANTS, true),
-            Decision::Deny(_)
-        ));
-        let charge = find("financeiro.registrar_cobranca").unwrap();
+        let pay = tool(false, false, false);
+        assert!(matches!(decide(&pay, None, WITHIN_GRANTS, OPERATOR), Decision::Deny(_)));
+        assert_eq!(decide(&pay, Some(ALLOW), WITHIN_GRANTS, OPERATOR), Decision::Allow);
         assert_eq!(
-            decide(charge, Some(ALLOW), APPROVAL_FOR_SENSITIVE, false),
+            decide(&pay, Some(APPROVAL), WITHIN_GRANTS, OPERATOR),
             Decision::Approval
         );
-        assert_eq!(decide(charge, Some(ALLOW), SUGGEST_ONLY, false), Decision::Approval);
-        assert_eq!(decide(charge, Some(ALLOW), WITHIN_GRANTS, false), Decision::Allow);
-        let delegate = find("delegar").unwrap();
-        assert_eq!(decide(delegate, None, SUGGEST_ONLY, true), Decision::Allow);
+        let coordinator = Caller {
+            coordinator: true,
+            ..OPERATOR
+        };
+        assert!(matches!(
+            decide(&pay, Some(ALLOW), WITHIN_GRANTS, coordinator),
+            Decision::Deny(_)
+        ));
+        let charge = tool(true, true, false);
+        assert_eq!(
+            decide(&charge, Some(ALLOW), APPROVAL_FOR_SENSITIVE, OPERATOR),
+            Decision::Approval
+        );
+        assert_eq!(decide(&charge, Some(ALLOW), SUGGEST_ONLY, OPERATOR), Decision::Approval);
+        assert_eq!(decide(&charge, Some(ALLOW), WITHIN_GRANTS, OPERATOR), Decision::Allow);
+        let delegate = builtins().into_iter().find(|t| t.name == DELEGATE).unwrap();
+        assert_eq!(decide(&delegate, None, SUGGEST_ONLY, coordinator), Decision::Allow);
+    }
+
+    #[test]
+    fn internal_tools_never_run_for_a_customer_message() {
+        let internal = tool(false, false, true);
+        let customer = Caller {
+            from_customer: true,
+            ..OPERATOR
+        };
+        assert!(matches!(
+            decide(&internal, Some(ALLOW), WITHIN_GRANTS, customer),
+            Decision::Deny(_)
+        ));
+        assert_eq!(decide(&internal, Some(ALLOW), WITHIN_GRANTS, OPERATOR), Decision::Allow);
     }
 }

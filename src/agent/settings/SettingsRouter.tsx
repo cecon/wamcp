@@ -13,6 +13,7 @@ import { AuditLogPage } from './AuditLogPage';
 import { AccountPage } from './AccountPage';
 import { SlaPage } from './SlaPage';
 import { SkillsPage } from './directory/SkillsPage';
+import { PluginsPage } from './plugins/PluginsPage';
 import { OrganizationPage } from './members/OrganizationPage';
 import { CustomRolesPage } from './roles/CustomRolesPage';
 import { ConnectionsPage } from './connections/ConnectionsPage';
@@ -49,6 +50,8 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return <CannedPage />;
     case 'automation':
       return <AutomationPage catalog={catalog} />;
+    case 'plugins':
+      return <PluginsPage />;
     case 'skills':
       return <SkillsPage />;
     case 'macros':

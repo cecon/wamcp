@@ -8,6 +8,7 @@ mod external;
 mod github;
 mod mirror;
 mod people;
+mod plugins;
 mod support;
 
 pub use agent_chats::*;
@@ -19,6 +20,7 @@ pub use external::*;
 pub use github::*;
 pub use mirror::*;
 pub use people::*;
+pub use plugins::*;
 pub use support::*;
 
 use crate::domain::error::Result;
@@ -50,6 +52,7 @@ pub trait Repository:
     + SlaRepo
     + AgentBotRepo
     + AgentsRepo
+    + PluginRepo
     + AgentChatRepo
     + AgentScheduleRepo
     + RoleRepo
@@ -85,6 +88,7 @@ impl<T> Repository for T where
         + SlaRepo
         + AgentBotRepo
         + AgentsRepo
+        + PluginRepo
         + AgentChatRepo
         + AgentScheduleRepo
         + AgentChatRepo

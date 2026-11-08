@@ -1,96 +1,84 @@
-//! The tools the engine serves to agents. Built-in tools belong to every run; the others need a grant.
+//! The tools the engine serves to agents. Built-in tools belong to every run; the others come
+//! from the installed plugins and need a grant.
+use crate::domain::plugins::{Manifest, PluginTool};
 use serde_json::{json, Value};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ToolDef {
-    pub name: &'static str,
-    pub description: &'static str,
+    pub name: String,
+    pub description: String,
     /// Every run has it (delegate, conclude, memory); no grant needed.
     pub builtin: bool,
     /// Changes something outside the engine (a charge, a message): needs approval under `suggest_only`.
     pub side_effects: bool,
     /// Needs approval under `approval_for_sensitive`.
     pub sensitive: bool,
+    /// Never offered to a run that answers a customer's message.
+    pub internal_only: bool,
+    /// JSON Schema of the arguments (MCP `inputSchema`).
+    pub input_schema: Value,
 }
 
 pub const DELEGATE: &str = "delegar";
 pub const CONCLUDE: &str = "concluir";
 pub const REMEMBER: &str = "memoria.lembrar";
 pub const RECALL: &str = "memoria.consultar";
-pub const CHECK_PAYMENT: &str = "financeiro.consultar_pagamento";
-pub const REGISTER_CHARGE: &str = "financeiro.registrar_cobranca";
 
-const fn builtin(name: &'static str, description: &'static str) -> ToolDef {
+fn builtin(name: &str, description: &str, props: Value, required: &[&str]) -> ToolDef {
     ToolDef {
-        name,
-        description,
+        name: name.into(),
+        description: description.into(),
         builtin: true,
         side_effects: false,
         sensitive: false,
+        internal_only: false,
+        input_schema: json!({"type": "object", "properties": props, "required": required}),
     }
 }
 
-pub const TOOLS: [ToolDef; 6] = [
-    builtin(
-        DELEGATE,
-        "Delega um pedido ao agente da organização que tem a skill indicada e devolve a resposta dele.",
-    ),
-    builtin(
-        CONCLUDE,
-        "Conclui a atividade com a resposta final, citando os ids das evidências usadas.",
-    ),
-    builtin(
-        REMEMBER,
-        "Guarda uma memória do agente (episódica, semântica ou operacional).",
-    ),
-    builtin(RECALL, "Consulta as memórias visíveis para o agente."),
-    ToolDef {
-        name: CHECK_PAYMENT,
-        description: "Consulta se um cliente pagou: status, valor e data do pagamento (dados fictícios).",
-        builtin: false,
-        side_effects: false,
-        sensitive: false,
-    },
-    ToolDef {
-        name: REGISTER_CHARGE,
-        description: "Registra uma cobrança para um cliente (simulada).",
-        builtin: false,
-        side_effects: true,
-        sensitive: true,
-    },
-];
-
-pub fn find(name: &str) -> Option<&'static ToolDef> {
-    TOOLS.iter().find(|tool| tool.name == name)
-}
-
-/// JSON Schema of each tool's arguments (MCP `inputSchema`).
-pub fn input_schema(name: &str) -> Value {
-    let (props, required): (Value, &[&str]) = match name {
-        DELEGATE => (
+/// Delegating, concluding and memory: every run has them.
+pub fn builtins() -> Vec<ToolDef> {
+    vec![
+        builtin(
+            DELEGATE,
+            "Delega um pedido ao agente da organização que tem a skill indicada e devolve a resposta dele.",
             json!({"skill": {"type": "string"}, "pedido": {"type": "string"}, "motivo": {"type": "string"}}),
             &["skill", "pedido"],
         ),
-        CONCLUDE => (
-            json!({"resposta": {"type": "string"},
-                   "evidencias": {"type": "array", "items": {"type": "string"}}}),
+        builtin(
+            CONCLUDE,
+            "Conclui a atividade com a resposta final, citando os ids das evidências usadas.",
+            json!({"resposta": {"type": "string"}, "evidencias": {"type": "array", "items": {"type": "string"}}}),
             &["resposta"],
         ),
-        REMEMBER => (
+        builtin(
+            REMEMBER,
+            "Guarda uma memória do agente (episódica, semântica ou operacional).",
             json!({"conteudo": {"type": "string"},
                    "tipo": {"enum": ["episodic", "semantic", "operational"]},
                    "escopo": {"enum": ["private", "organization"]}}),
             &["conteudo"],
         ),
-        RECALL => (json!({"termo": {"type": "string"}}), &[]),
-        CHECK_PAYMENT => (json!({"cliente": {"type": "string"}}), &["cliente"]),
-        REGISTER_CHARGE => (
-            json!({"cliente": {"type": "string"}, "valor": {"type": "number"}}),
-            &["cliente", "valor"],
+        builtin(
+            RECALL,
+            "Consulta as memórias visíveis para o agente.",
+            json!({"termo": {"type": "string"}}),
+            &[],
         ),
-        _ => (json!({}), &[]),
-    };
-    json!({"type": "object", "properties": props, "required": required})
+    ]
+}
+
+/// A plugin tool as the engine sees it.
+pub fn from_plugin(manifest: &Manifest, tool: &PluginTool) -> ToolDef {
+    ToolDef {
+        name: manifest.tool_name(tool),
+        description: tool.description.clone(),
+        builtin: false,
+        side_effects: tool.side_effects,
+        sensitive: tool.sensitive,
+        internal_only: tool.internal_only,
+        input_schema: tool.input_schema.clone(),
+    }
 }
 
 /// A required string argument, trimmed and non-empty.

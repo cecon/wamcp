@@ -154,8 +154,8 @@ async fn forget(State(state): State<AppState>, current: CurrentUser, Path(raw): 
 }
 
 async fn catalog(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
-    account(&current)?;
-    ok(engine(&state)?.catalog())
+    let account = account(&current)?;
+    ok(engine(&state)?.catalog(account))
 }
 
 pub fn routes() -> Router<AppState> {

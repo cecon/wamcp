@@ -26,6 +26,7 @@ mod macros;
 mod message_actions;
 mod messages;
 mod notifications;
+mod plugins;
 pub mod rate_limit;
 mod reports;
 mod roles;
@@ -82,6 +83,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(github_app::routes())
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
+        .merge(plugins::routes())
         .merge(roles::routes())
         .merge(admin::routes(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))

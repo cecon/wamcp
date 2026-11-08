@@ -28,6 +28,7 @@ mod messages;
 mod migrations;
 mod mirror;
 mod notifications;
+mod plugins;
 mod reports;
 mod roles;
 mod schema;

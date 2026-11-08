@@ -22,6 +22,7 @@ pub mod media;
 pub mod model;
 pub mod notifications;
 pub mod oauth;
+pub mod plugins;
 pub mod reports;
 pub mod roles;
 pub mod salary;

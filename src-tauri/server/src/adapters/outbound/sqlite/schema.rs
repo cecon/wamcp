@@ -234,5 +234,13 @@ pub fn steps() -> Vec<String> {
            created TEXT NOT NULL);
          ALTER TABLE channel_github ADD COLUMN installation_id INTEGER;"
             .into(),
+        // v38: plugins (o que um agente sabe fazer): o manifesto de cada plugin instalado e os
+        // valores cifrados das credenciais que as ferramentas dele usam
+        "CREATE TABLE plugins(id TEXT PRIMARY KEY,manifest TEXT NOT NULL CHECK(json_valid(manifest)),
+           enabled INTEGER NOT NULL DEFAULT 1,builtin INTEGER NOT NULL DEFAULT 0,installed TEXT NOT NULL,
+           updated TEXT NOT NULL);
+         CREATE TABLE plugin_credentials(plugin_id TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+           name TEXT NOT NULL,secret TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(plugin_id,name));"
+            .into(),
     ]
 }

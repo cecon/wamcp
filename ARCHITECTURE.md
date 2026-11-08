@@ -37,6 +37,15 @@ Cada caixa de entrada tem um canal (`channel_type`: hoje `whatsapp` e `github`).
 
 Para adicionar um canal: as capacidades em `domain/channel.rs`, uma implementação de `Channel` em `application/channels/`, a entrada do evento chamando `receive`, e a tabela `channel_<tipo>` com a caixa.
 
+## Plugins
+
+O que um agente sabe fazer vem dos plugins. Um plugin é um manifesto (`plugin.json`, validado em `domain/plugins.rs`) com skills (instruções), ferramentas e as credenciais que elas usam. O administrador instala, liga ou desliga e preenche as credenciais em Configurações → Plugins (`/api/v1/plugins`).
+
+- **Ferramentas.** Cada uma se chama `<plugin>.<ferramenta>` e é servida fora do processo: `http` (um `POST` com os argumentos em JSON) ou `mcp` (`initialize` e `tools/call` por Streamable HTTP). Só se aceita HTTPS, ou HTTP para o próprio computador. O transporte (`adapters/outbound/plugin_transport.rs`) não segue redirecionamentos, tem prazo de 30 s e lê no máximo 1 MiB. Os plugins que vêm com o app (hoje `financeiro`, de demonstração) usam `builtin`.
+- **Credenciais.** Ficam seladas pela `SecretBox`. O servidor aplica a credencial como `Authorization: Bearer` na chamada; o modelo nunca a vê, e a API só diz quais já têm valor.
+- **Skills.** Entram na biblioteca como `<nome do plugin>: <skill>`, com as ferramentas do plugin, e acompanham instalação, atualização e remoção.
+- **Motor.** `PluginService` é o `BusinessTools` do motor. O catálogo (`application/engine/catalog.rs`) junta as ferramentas internas e as dos plugins ligados; cada agente ainda precisa da permissão da ferramenta. Uma ferramenta `internal_only` nunca é oferecida nem executada numa execução que responde a uma mensagem de cliente, para limitar injeção de prompt.
+
 ## Eventos MCP
 
 `application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.

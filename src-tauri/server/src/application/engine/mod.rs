@@ -2,6 +2,7 @@
 //! `AgentRuntime` port, tools served through the `ToolGateway` (delegation, conclusion, memory and
 //! granted business tools), approvals and startup recovery. See `docs/engine/spec.md`.
 mod approvals;
+mod catalog;
 mod channel;
 mod conclude;
 mod delegate;

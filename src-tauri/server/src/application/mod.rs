@@ -39,6 +39,7 @@ mod message_actions;
 pub mod notifications;
 pub mod oauth;
 mod oauth_tokens;
+pub mod plugins;
 pub mod ports;
 mod presence;
 pub mod replies;
