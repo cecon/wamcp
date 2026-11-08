@@ -106,15 +106,17 @@ O backend embutido escuta em uma única porta (`0.0.0.0:17382`) com o app web, a
 O mesmo backend roda num servidor Linux, sem a janela, a bandeja e o túnel do Windows. Com Docker:
 
 ```sh
-docker compose up -d --build
+C3THEME_TOKEN=<token com leitura do cecon/C3Theme> docker compose up -d --build
 ```
+
+O token só é usado para baixar o tema do app durante o build e não fica na imagem.
 
 - Os dados ficam no volume `wamcp-data` (`/data` no contêiner), com as cópias automáticas em `/data/backups`.
 - A imagem já traz o Claude Code e o OpenCode para os agentes de IA. Para escolher outros, use `docker compose build --build-arg AGENT_CLIS="@openai/codex"` (vazio: nenhum). Entre na conta de cada um com `docker compose exec wamcp claude` ou `docker compose exec wamcp opencode auth login`.
 - O primeiro administrador só pode ser criado a partir do próprio servidor. Abra um túnel SSH (`ssh -L 17382:127.0.0.1:17382 seu-servidor`), acesse `http://127.0.0.1:17382/app/` no seu computador e crie a conta. Depois, pareie o WhatsApp pelo app, como no Windows.
 - O compose usa a rede do host e escuta só em `127.0.0.1`. Para acessar de fora, ponha um proxy com HTTPS na frente (Caddy, nginx) ou troque `WAMCP_BIND` para `0.0.0.0`.
 
-Sem Docker: `npm ci && npm run build`, depois `cargo build --manifest-path src-tauri/Cargo.toml -p wamcp-server --release`, e rode `src-tauri/target/release/wamcp-server` com `WAMCP_WEB_DIR=dist` e `WAMCP_DATA_DIR=/caminho/dos/dados`.
+Sem Docker: instale as dependências como no CI (`pnpm install`, com o C3Theme), rode `pnpm run build`, depois `cargo build --manifest-path src-tauri/Cargo.toml -p wamcp-server --release`, e rode `src-tauri/target/release/wamcp-server` com `WAMCP_WEB_DIR=dist` e `WAMCP_DATA_DIR=/caminho/dos/dados`.
 
 ## Canal do GitHub
 

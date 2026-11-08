@@ -2,7 +2,10 @@
 # administrador só pode ser criado a partir do próprio servidor (por exemplo por um túnel SSH).
 services:
   wamcp:
-    build: .
+    build:
+      context: .
+      secrets:
+        - c3theme_token
     image: wamcp
     restart: unless-stopped
     network_mode: host
@@ -11,6 +14,11 @@ services:
       WAMCP_BIND: 127.0.0.1
     volumes:
       - wamcp-data:/data
+
+secrets:
+  # Token do GitHub com leitura do C3Theme (o tema do app), só para o build.
+  c3theme_token:
+    environment: C3THEME_TOKEN
 
 volumes:
   wamcp-data:
