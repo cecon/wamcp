@@ -65,6 +65,8 @@ mod tests {
         let restored = Connection::open(&copy).unwrap();
         let value: i64 = restored.query_row("SELECT x FROM t", [], |r| r.get(0)).unwrap();
         assert_eq!(value, 42);
+        // Windows does not delete a file that is still open.
+        drop(restored);
         for n in 0..5 {
             std::fs::write(dir.join("backups").join(format!("wamcp-v1-old{n}.sqlite")), b"").unwrap();
         }
