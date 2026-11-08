@@ -13,6 +13,7 @@ import { StatusChip } from '@c3theme/ui';
 import type { StatusTone } from '@c3theme/ui';
 
 import C3Provider from '../c3/C3Provider';
+import { AgentLink } from '../agentPage/AgentLink';
 import type { Route } from '../route';
 import { elapsed, KIND_LABEL, STATE_LABEL, type AgentRun } from './types';
 import { PausedAgents, PauseButton, StopButton } from './LiveControls';
@@ -176,7 +177,9 @@ export function AgentRunsPage({ runs, error, onNavigate, onChanged }: Props) {
             <Paper key={name} variant="outlined" sx={{ overflow: 'hidden' }}>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, px: 2, py: 1.5 }}>
                 <Typography variant="subtitle1" component="h2">
-                  {name}
+                  <AgentLink agentId={list[0].agent_id} enabled={controls.admin}>
+                    {name}
+                  </AgentLink>
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
                   {list.length === 1 ? '1 sessão' : `${list.length} sessões em paralelo`}

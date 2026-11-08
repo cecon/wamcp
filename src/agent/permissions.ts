@@ -30,6 +30,7 @@ export function canViewReports(user: User) {
 export function canOpen(user: User, route: Route) {
   if (route.page === 'contacts') return canManageContacts(user);
   if (route.page === 'reports') return canViewReports(user);
+  if (route.page === 'agent') return user.role === 'administrator';
   if (route.page === 'settings')
     return user.role === 'administrator' || AGENT_SECTIONS.includes(route.section);
   return true;

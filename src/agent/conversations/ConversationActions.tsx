@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import { Plus, X } from 'lucide-react';
 
 import { http } from '../api';
+import { AgentLink } from '../agentPage/AgentLink';
 import type { Catalog, Conversation, User } from '../types';
 import { PRIORITY_LABEL } from '../labels';
 import { useFetch } from '../useFetch';
@@ -96,8 +97,13 @@ export function ConversationActions({ conversation: c, user, catalog, onChange, 
         </Box>
         {!c.assignee_id && (c.assignee_agent_name || aiAgent) && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            Responsável: <strong>{c.assignee_agent_name ?? aiAgent?.name}</strong> (IA) — responde até um
-            humano assumir; se não resolver, passa automaticamente para uma pessoa.
+            Responsável:{' '}
+            <strong>
+              <AgentLink agentId={c.assignee_agent_id ?? aiAgent?.id} enabled={user.role === 'administrator'}>
+                {c.assignee_agent_name ?? aiAgent?.name}
+              </AgentLink>
+            </strong>{' '}
+            (IA) — responde até um humano assumir; se não resolver, passa automaticamente para uma pessoa.
           </Typography>
         )}
       </Box>
