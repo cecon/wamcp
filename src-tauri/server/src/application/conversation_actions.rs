@@ -52,6 +52,7 @@ impl HelpdeskService {
         team: Option<Option<i64>>,
     ) -> Result<Conversation> {
         let conversation = self.core.load(Some(actor), display_id)?;
+        let inbox = self.core.inbox(conversation.inbox_id)?;
         let (core, name) = (&self.core, actor.name());
         core.commit(Some(actor), |events| {
             let mut updated = conversation.clone();
@@ -85,6 +86,7 @@ impl HelpdeskService {
                         conversation.id,
                         Changes {
                             assignee_id: Some(assignee_id),
+                            assignee_agent_id: Some(assignee_id.map(|_| None).unwrap_or(inbox.ai_agent_id)),
                             ..Default::default()
                         },
                     )?;

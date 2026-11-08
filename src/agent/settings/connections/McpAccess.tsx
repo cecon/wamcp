@@ -1,14 +1,34 @@
 import { useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { KeyRound, Plus, Trash2 } from 'lucide-react';
+
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
-import { Button } from '../../ui/Button';
 import { ConfirmModal } from '../../ui/Confirm';
 import { SecretField } from '../../ui/SecretField';
 import { useAction } from '../useAction';
 import { formatDate, SCOPES, scopeLabel, sessionPath, type McpToken } from './model';
 
 const DAYS = [30, 90, 180, 365];
+
+const SELECT_SX = {
+  height: 40,
+  borderRadius: 1,
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  px: 1,
+} as const;
 
 /** Acesso MCP tab: the connection's MCP address and its Bearer tokens (shown once on creation). */
 export function McpAccess({ id, url }: { id: string; url: string }) {
@@ -27,13 +47,13 @@ export function McpAccess({ id, url }: { id: string; url: string }) {
     2,
   );
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <Box sx={{ display: 'flex', maxWidth: 768, flexDirection: 'column', gap: 3 }}>
       <SecretField label="Endereço MCP desta conexão" secret={url} copyLabel="Copiar endereço MCP" />
-      <p className="text-sm text-n-slate-11">
+      <Typography variant="body2" color="text.secondary">
         Cada token acessa somente esta conexão. Gere uma credencial diferente para cada integração.
-      </p>
-      <form
-        className="flex flex-wrap items-end gap-2"
+      </Typography>
+      <Box
+        component="form"
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
@@ -42,106 +62,146 @@ export function McpAccess({ id, url }: { id: string; url: string }) {
             reload();
           });
         }}
+        sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 1 }}
       >
-        <label className="min-w-48 flex-1">
-          <span className="field-label">Nome da integração</span>
-          <input
-            className="field"
-            required
-            maxLength={80}
-            value={form.name}
-            placeholder="Ex.: Claude Desktop"
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </label>
-        <label>
-          <span className="field-label">Permissão</span>
-          <select
-            className="field"
+        <TextField
+          label="Nome da integração"
+          size="small"
+          placeholder="Ex.: Claude Desktop"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
+          sx={{ minWidth: 192, flex: 1 }}
+        />
+        <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Typography component="span" variant="body2">
+            Permissão
+          </Typography>
+          <Box
+            component="select"
             value={form.scope}
             onChange={(e) => setForm({ ...form, scope: e.target.value })}
+            sx={SELECT_SX}
           >
             {SCOPES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          <span className="field-label">Validade</span>
-          <select
-            className="field"
+          </Box>
+        </Box>
+        <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Typography component="span" variant="body2">
+            Validade
+          </Typography>
+          <Box
+            component="select"
             value={form.days}
             onChange={(e) => setForm({ ...form, days: Number(e.target.value) })}
+            sx={SELECT_SX}
           >
             {DAYS.map((d) => (
               <option key={d} value={d}>
                 {d} dias
               </option>
             ))}
-          </select>
-        </label>
+          </Box>
+        </Box>
         <Button
           type="submit"
-          size="md"
-          icon={Plus}
-          label="Gerar token"
+          variant="contained"
+          startIcon={<Plus size={16} />}
           disabled={busy || !form.name.trim()}
-        />
-      </form>
+        >
+          Gerar token
+        </Button>
+      </Box>
       {(error || loadError) && (
-        <p role="alert" className="text-sm text-n-ruby-11">
+        <Alert severity="error" sx={{ fontSize: 14 }}>
           {error || loadError}
-        </p>
+        </Alert>
       )}
       {fresh?.token && (
-        <div className="flex flex-col gap-2 rounded-xl border border-n-amber-9 bg-n-amber-3 p-4">
-          <p className="text-sm font-medium text-n-amber-12">Copie agora. Este token só aparece uma vez.</p>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            borderRadius: 3,
+            border: 1,
+            borderColor: 'var(--color-n-amber-9)',
+            bgcolor: 'var(--color-n-amber-3)',
+            p: 2,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500, color: 'var(--color-n-amber-12)' }}>
+            Copie agora. Este token só aparece uma vez.
+          </Typography>
           <SecretField label="Token de acesso" secret={fresh.token} copyLabel="Copiar token" />
-          <p className="text-xs text-n-amber-12">Expira em {formatDate(fresh.expires)}.</p>
-          <Button
-            color="slate"
-            variant="link"
-            className="self-start"
-            label="Já copiei, ocultar token"
-            onClick={() => setFresh(null)}
-          />
-        </div>
+          <Typography variant="caption" sx={{ color: 'var(--color-n-amber-12)' }}>
+            Expira em {formatDate(fresh.expires)}.
+          </Typography>
+          <Button variant="text" onClick={() => setFresh(null)} sx={{ alignSelf: 'flex-start' }}>
+            Já copiei, ocultar token
+          </Button>
+        </Box>
       )}
-      <ul className="divide-y divide-n-weak border-t border-n-weak" aria-label="Tokens MCP">
+      <Box
+        component="ul"
+        aria-label="Tokens MCP"
+        sx={{ m: 0, p: 0, listStyle: 'none', borderTop: 1, borderColor: 'divider' }}
+      >
         {data && tokens.length === 0 && (
-          <li className="py-6 text-sm text-n-slate-11">Nenhum token criado para esta conexão.</li>
+          <Typography component="li" variant="body2" color="text.secondary" sx={{ py: 3 }}>
+            Nenhum token criado para esta conexão.
+          </Typography>
         )}
         {tokens.map((t) => (
-          <li key={t.id} className="flex items-center gap-3 py-3">
-            <KeyRound size={18} className="shrink-0 text-n-slate-10" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-n-slate-12">{t.name}</p>
-              <p className="text-xs text-n-slate-11">
+          <Stack
+            key={t.id}
+            component="li"
+            direction="row"
+            spacing={1.5}
+            sx={{ alignItems: 'center', py: 1.5, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Box component={KeyRound} size={18} sx={{ flexShrink: 0, color: 'var(--color-n-slate-10)' }} />
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                {t.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
                 {scopeLabel(t.scope)} · Expira em {formatDate(t.expires)}
                 {t.last_used ? ` · Último uso ${formatDate(t.last_used)}` : ''}
-              </p>
-            </div>
-            <Button
-              color="slate"
-              variant="faded"
-              icon={Trash2}
-              aria-label={`Revogar ${t.name}`}
-              onClick={() => setRevoking(t)}
-            />
-          </li>
+              </Typography>
+            </Box>
+            <IconButton aria-label={`Revogar ${t.name}`} onClick={() => setRevoking(t)}>
+              <Trash2 size={16} />
+            </IconButton>
+          </Stack>
         ))}
-      </ul>
-      <div>
-        <h3 className="text-heading-3 text-n-slate-12">Configuração do cliente</h3>
-        <p className="mb-2 text-sm text-n-slate-11">
+      </Box>
+      <Box>
+        <Typography variant="h6" component="h3">
+          Configuração do cliente
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Para clientes que aceitam URL HTTP (Streamable HTTP) e cabeçalhos personalizados.
-        </p>
-        <pre className="overflow-x-auto rounded-lg bg-n-solid-3 p-3 text-xs" aria-label="Configuração MCP">
+        </Typography>
+        <Box
+          component="pre"
+          aria-label="Configuração MCP"
+          sx={{
+            overflowX: 'auto',
+            borderRadius: 2,
+            bgcolor: 'var(--color-n-solid-3)',
+            p: 1.5,
+            fontSize: 12,
+            m: 0,
+          }}
+        >
           {config}
-        </pre>
-      </div>
+        </Box>
+      </Box>
       {revoking && (
         <ConfirmModal
           title={`Revogar ${revoking.name}?`}
@@ -155,6 +215,6 @@ export function McpAccess({ id, url }: { id: string; url: string }) {
           onClose={() => setRevoking(null)}
         />
       )}
-    </div>
+    </Box>
   );
 }

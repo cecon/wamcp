@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { LogOut, Monitor } from 'lucide-react';
+
 import { http } from '../api';
 import type { SessionInfo } from '../accountTypes';
 import { useAction } from '../settings/useAction';
-import { Button } from '../ui/Button';
 import { describeUserAgent, formatDateTime } from './browser';
 
 /** Active browser sessions (GET /profile/sessions): revoke one or every other session. */
@@ -22,56 +32,82 @@ export function SessionsSection() {
     });
 
   return (
-    <div className="flex flex-col gap-3">
-      {error && (
-        <p role="alert" className="text-sm text-n-ruby-11">
-          {error}
-        </p>
-      )}
-      <ul aria-label="Sessões ativas" className="divide-y divide-n-weak rounded-xl border border-n-weak">
+    <Stack spacing={1.5}>
+      {error && <Alert severity="error">{error}</Alert>}
+      <Box
+        component="ul"
+        aria-label="Sessões ativas"
+        sx={{ m: 0, p: 0, listStyle: 'none', borderRadius: 1.5, border: 1, borderColor: 'divider' }}
+      >
         {(sessions || []).map((s) => {
           const name = describeUserAgent(s.user_agent);
           return (
-            <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-              <Monitor size={18} className="shrink-0 text-n-slate-10" />
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-sm font-medium text-n-slate-12">
-                  {name}
+            <Box
+              component="li"
+              key={s.id}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                px: 2,
+                py: 1.5,
+                borderBottom: 1,
+                borderColor: 'divider',
+                '&:last-of-type': { borderBottom: 0 },
+              }}
+            >
+              <Box sx={{ flexShrink: 0, display: 'flex', color: 'text.disabled' }}>
+                <Monitor size={18} />
+              </Box>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {name}
+                  </Typography>
                   {s.current && (
-                    <span className="rounded-md bg-n-teal-3 px-1.5 text-xs text-n-teal-11">Esta sessão</span>
+                    <Chip
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      label="Esta sessão"
+                      sx={{ height: 20, fontSize: 11 }}
+                    />
                   )}
-                </p>
-                <p className="text-xs text-n-slate-11">
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
                   Entrou em {formatDateTime(s.created)} · Último acesso{' '}
                   {formatDateTime(s.last_seen || s.created)}
-                </p>
-              </div>
+                </Typography>
+              </Box>
               {!s.current && (
                 <Button
-                  color="ruby"
-                  variant="faded"
-                  size="xs"
-                  label="Encerrar"
+                  color="error"
+                  variant="outlined"
+                  size="small"
                   aria-label={`Encerrar sessão ${name}`}
                   disabled={busy}
                   onClick={() => revoke(`/profile/sessions/${s.id}`)}
-                />
+                >
+                  Encerrar
+                </Button>
               )}
-            </li>
+            </Box>
           );
         })}
-      </ul>
+      </Box>
       {sessions && others.length > 0 && (
         <Button
-          color="ruby"
-          variant="faded"
-          icon={LogOut}
-          className="self-start"
-          label="Encerrar outras sessões"
+          color="error"
+          variant="outlined"
+          size="small"
+          startIcon={<LogOut size={14} />}
+          sx={{ alignSelf: 'flex-start' }}
           disabled={busy}
           onClick={() => revoke('/profile/sessions')}
-        />
+        >
+          Encerrar outras sessões
+        </Button>
       )}
-    </div>
+    </Stack>
   );
 }

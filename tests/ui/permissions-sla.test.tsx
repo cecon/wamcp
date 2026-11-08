@@ -7,11 +7,11 @@ import { ConversationCard } from '../../src/agent/conversations/ConversationCard
 import { Reports } from '../../src/agent/Reports';
 import { canOpen } from '../../src/agent/permissions';
 import type { Conversation, User } from '../../src/agent/types';
+import * as navTools from './nav';
 import { fakeApi, status } from './fake-api';
 import { admin, contact, conversation, labels, maria, workspaceRoutes } from './fixtures';
 import { catalog, summary } from './report-fixtures';
 
-const nav = () => screen.getByRole('navigation');
 const withRole = (permissions: string[]): User => ({ ...maria, custom_role_id: 4, permissions });
 
 describe('navigation by permission', () => {
@@ -25,14 +25,16 @@ describe('navigation by permission', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     expect(await screen.findByRole('heading', { name: 'Conversas' })).toBeInTheDocument();
-    expect(within(nav()).queryByRole('button', { name: 'Contatos' })).not.toBeInTheDocument();
-    expect(within(nav()).queryByRole('button', { name: 'Configurações' })).not.toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Relatórios' }));
+    expect(navTools.navQuery('Contatos')).not.toBeInTheDocument();
+    expect(navTools.navQuery('Configurações')).not.toBeInTheDocument();
+    await navTools.click(user, 'Relatórios');
+    await navTools.click(user, 'Visão geral');
     expect(await screen.findByRole('heading', { name: 'Visão geral' })).toBeInTheDocument();
 
     // A contact reached from the global search shows the no-access page.
     await user.click(screen.getByRole('button', { name: 'Pesquisa global' }));
-    await user.type(screen.getByLabelText('Pesquisar mensagens, contatos ou conversas'), 'joão');
+    // A Busca é uma página lazy (chunk do C3Theme): espera o campo montar antes de digitar.
+    await user.type(await screen.findByLabelText('Pesquisar mensagens, contatos ou conversas'), 'joão');
     const contacts = await screen.findByRole('region', { name: 'Contatos' });
     await user.click(within(contacts).getByRole('button'));
     expect(await screen.findByText('Você não tem acesso a esta página')).toBeInTheDocument();
@@ -43,8 +45,8 @@ describe('navigation by permission', () => {
     const user = userEvent.setup();
     render(<AgentApp />);
     await screen.findByRole('heading', { name: 'Conversas' });
-    expect(within(nav()).queryByRole('button', { name: 'Relatórios' })).not.toBeInTheDocument();
-    await user.click(within(nav()).getByRole('button', { name: 'Contatos' }));
+    expect(navTools.navQuery('Relatórios')).not.toBeInTheDocument();
+    await navTools.click(user, 'Contatos');
     expect(await screen.findByRole('heading', { name: 'Contatos' })).toBeInTheDocument();
   });
 

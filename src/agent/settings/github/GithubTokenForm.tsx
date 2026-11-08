@@ -1,14 +1,22 @@
+// material-ui
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { useState } from 'react';
 import { http } from '../../api';
 import { useAction } from '../useAction';
 
-/** Replaces the token of a token-connected GitHub inbox; the server then creates the webhook. */
+/** Troca o token de uma caixa GitHub conectada por token; o servidor recria o webhook em seguida. */
 export function GithubTokenForm<T>({ inboxId, onSaved }: { inboxId: number; onSaved: (setup: T) => void }) {
   const [token, setToken] = useState('');
   const { error, busy, run } = useAction();
   return (
-    <form
-      className="flex flex-col gap-2"
+    <Stack
+      component="form"
+      spacing={1}
       onSubmit={(e) => {
         e.preventDefault();
         void run(async () => {
@@ -17,29 +25,29 @@ export function GithubTokenForm<T>({ inboxId, onSaved }: { inboxId: number; onSa
         });
       }}
     >
-      <label>
-        <span className="field-label">Novo token do GitHub</span>
-        <input
-          className="field"
-          type="password"
-          autoComplete="off"
-          placeholder="github_pat_…"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
-      </label>
-      <p className="text-xs text-n-slate-11">
+      <TextField
+        size="small"
+        label="Novo token do GitHub"
+        type="password"
+        autoComplete="off"
+        placeholder="github_pat_…"
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        sx={{ maxWidth: 420 }}
+      />
+      <Typography variant="caption" color="text.secondary">
         Fine-grained token com acesso a este repositório: Webhooks, Pull requests, Issues e Contents (leitura
         e escrita), Checks e Actions (leitura).
-      </p>
-      <button
+      </Typography>
+      <Button
         type="submit"
-        className="self-start text-sm font-medium text-n-blue-11 disabled:opacity-50"
+        variant="outlined"
         disabled={busy || !token.trim()}
+        sx={{ alignSelf: 'flex-start' }}
       >
         {busy ? 'Salvando…' : 'Salvar token e criar webhook'}
-      </button>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-    </form>
+      </Button>
+      {error && <Alert severity="error">{error}</Alert>}
+    </Stack>
   );
 }

@@ -5,7 +5,7 @@ import path from 'node:path';
 const dist = path.resolve('dist'),
   target = path.resolve('src-tauri', 'runtime', 'web');
 if (!existsSync(path.join(dist, 'index.html')))
-  throw new Error('Execute npm run build antes de copiar a interface web.');
+  throw new Error('Execute pnpm run build antes de copiar a interface web.');
 rmSync(target, { recursive: true, force: true });
 cpSync(dist, target, { recursive: true });
 console.log('Aplicativo web copiado para o runtime.');

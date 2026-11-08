@@ -1,12 +1,23 @@
-import type { ReactNode } from 'react';
-import { ArrowDownWideNarrow, ArrowUpDown } from 'lucide-react';
-import type { ConversationStatus } from '../types';
-import { SORT_LABEL, STATUS_LABEL } from '../labels';
-import { Button } from '../ui/Button';
-import { Dropdown } from '../ui/Overlay';
+import { useState, type ReactNode } from 'react';
 
-export type StatusFilter = ConversationStatus | 'all';
+// material-ui
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { ArrowDownWideNarrow, ArrowUpDown } from 'lucide-react';
+
+import type { ConversationStatus } from '../types';
+import { SORT_LABEL } from '../labels';
+
+/** `active` = open + pending: conversations with people and with the inbox's AI agent. */
+export type StatusFilter = ConversationStatus | 'active' | 'all';
 const CHIP: Record<StatusFilter, string> = {
+  active: 'Ativas',
   open: 'Abertas',
   pending: 'Pendentes',
   snoozed: 'Adiadas',
@@ -14,8 +25,9 @@ const CHIP: Record<StatusFilter, string> = {
   all: 'Todas',
 };
 
+/** Popover de seleção no C3Theme (lote 15): botão com `aria-label` e `select` nativo dentro do menu. */
 function SelectPopover<T extends string>({
-  icon,
+  icon: Icon,
   label,
   field,
   value,
@@ -29,39 +41,37 @@ function SelectPopover<T extends string>({
   options: Record<T, string>;
   onChange: (value: T) => void;
 }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
-    <Dropdown
-      className="w-72 p-3"
-      trigger={({ toggle }) => (
-        <Button color="slate" variant="faded" size="xs" icon={icon} aria-label={label} onClick={toggle} />
-      )}
-    >
-      {(close) => (
-        <label className="grid gap-1.5 text-sm text-n-slate-12">
+    <>
+      <IconButton size="small" aria-label={label} onClick={(event) => setAnchor(event.currentTarget)}>
+        <Icon size={16} />
+      </IconButton>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        <Box component="label" sx={{ display: 'grid', gap: 0.75, p: 1.5, fontSize: 14 }}>
           {field}
-          <select
-            className="field !h-8 !w-full !py-1"
+          <Box
+            component="select"
             value={value}
-            onChange={(e) => {
-              onChange(e.target.value as T);
-              close();
+            onChange={(event) => {
+              onChange(event.target.value as T);
+              setAnchor(null);
             }}
+            sx={{ height: 32, py: 0.5, px: 1, borderRadius: 1, border: 1, borderColor: 'divider' }}
           >
-            {(Object.keys(options) as T[]).map((s) => (
-              <option key={s} value={s}>
-                {options[s]}
+            {(Object.keys(options) as T[]).map((option) => (
+              <option key={option} value={option}>
+                {options[option]}
               </option>
             ))}
-          </select>
-        </label>
-      )}
-    </Dropdown>
+          </Box>
+        </Box>
+      </Menu>
+    </>
   );
 }
 
-const STATUS_OPTIONS = Object.fromEntries(
-  (Object.keys(STATUS_LABEL) as StatusFilter[]).map((s) => [s, CHIP[s]]),
-) as Record<StatusFilter, string>;
+const STATUS_OPTIONS: Record<StatusFilter, string> = { ...CHIP, active: 'Ativas (abertas e com a IA)' };
 
 interface Props {
   title: string;
@@ -74,19 +84,29 @@ interface Props {
   onSort: (sort: string) => void;
 }
 
-/** Chatwoot ChatList header: title, status chip, filter/folder actions, sort and status popovers. */
+/** Cabeçalho da lista de conversas no C3Theme (lote 15): título, chip de status, toolbar e popovers. */
 export function ChatListHeader({ title, status, sort, filtering, toolbar, onStatus, onSort }: Props) {
   return (
-    <header className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-2 px-3 py-2">
-      <div className="flex min-w-0 items-center">
-        <h1 className="truncate text-base font-medium text-n-slate-12">{title}</h1>
-        {!filtering && (
-          <span className="mx-1 rounded-md bg-n-slate-3 px-2 py-1 text-xxs capitalize text-n-slate-12">
-            {CHIP[status]}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-1">
+    <Stack
+      component="header"
+      direction="row"
+      spacing={1}
+      sx={{
+        minHeight: 52,
+        px: 1.5,
+        py: 1,
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Stack direction="row" spacing={0.5} sx={{ minWidth: 0, alignItems: 'center' }}>
+        <Typography variant="h6" component="h1" noWrap sx={{ fontSize: '1rem', fontWeight: 500 }}>
+          {title}
+        </Typography>
+        {!filtering && <Chip size="small" label={CHIP[status]} sx={{ textTransform: 'capitalize' }} />}
+      </Stack>
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
         {toolbar}
         {!filtering && (
           <>
@@ -108,7 +128,7 @@ export function ChatListHeader({ title, status, sort, filtering, toolbar, onStat
             />
           </>
         )}
-      </div>
-    </header>
+      </Stack>
+    </Stack>
   );
 }

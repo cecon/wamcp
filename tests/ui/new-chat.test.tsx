@@ -30,7 +30,7 @@ describe('Nova conversa from the Conversas list', () => {
     );
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /ACME/ }));
-    await user.type(screen.getByLabelText('Mensagem'), 'Seu boleto vence amanhã.');
+    await user.type(await screen.findByLabelText('Mensagem'), 'Seu boleto vence amanhã.');
     await user.click(screen.getByRole('button', { name: 'Enviar' }));
     await waitFor(() => expect(onConversation).toHaveBeenCalledWith(12));
     expect(api.called('POST', '/conversations')[0].body).toEqual({

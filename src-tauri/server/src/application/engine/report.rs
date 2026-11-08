@@ -2,11 +2,14 @@
 //! picture of an activity tree (delegations, runs, tool calls, evidence, messages and audit).
 use super::EngineService;
 use crate::domain::actor::Actor;
+use crate::domain::engine::activity::is_final;
 use crate::domain::engine::grants::{EFFECTS, POLICIES};
 use crate::domain::engine::model::{AgentPolicy, Memory};
 use crate::domain::error::{fail, fail_with, Result};
 use crate::domain::helpdesk::require_admin;
+use crate::domain::model::{AgentRun, RUN_ENGINE, RUN_QUEUED};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 
 impl EngineService {
     /// The organization of an administrator; the engine is administrators-only.
@@ -46,6 +49,33 @@ impl EngineService {
 
     pub fn list(&self, account_id: i64) -> Result<Value> {
         Ok(json!(self.store.activities(account_id, 100)?))
+    }
+
+    /// Activities not finished yet, as runs of "Em execução" (the engine keeps them in its tables).
+    pub fn active_runs(&self, account_id: i64) -> Result<Vec<AgentRun>> {
+        let names: HashMap<i64, String> = self
+            .store
+            .directory(account_id)?
+            .into_iter()
+            .map(|a| (a.id, a.name))
+            .collect();
+        let ms = |at: &str| chrono::DateTime::parse_from_rfc3339(at).map_or(0, |t| t.timestamp_millis());
+        let runs = self
+            .store
+            .activities(account_id, 100)?
+            .into_iter()
+            .filter(|a| !is_final(&a.status));
+        Ok(runs
+            .map(|a| {
+                let title: String = a.request.chars().take(120).collect();
+                let mut run = AgentRun::new(format!("{RUN_ENGINE}:{}", a.id), RUN_ENGINE, title);
+                (run.state, run.agent_id) = (a.status, Some(a.agent_id));
+                run.agent_name = names.get(&a.agent_id).cloned();
+                (run.queued_at, run.updated_at) = (ms(&a.created), ms(&a.updated));
+                run.started_at = (run.state != RUN_QUEUED).then_some(run.queued_at);
+                run
+            })
+            .collect())
     }
 
     pub fn policy(&self, account_id: i64, agent_id: i64) -> Result<Value> {

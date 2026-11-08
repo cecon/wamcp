@@ -20,6 +20,13 @@ pub trait GithubRepo {
     fn github_app(&self) -> Result<Option<GithubApp>>;
     /// Stores the GitHub App, replacing the previous one.
     fn save_github_app(&self, app: &GithubApp) -> Result<()>;
+    /// Forgets the GitHub App and unlinks every channel from its installations.
+    fn delete_github_app(&self) -> Result<()>;
+    /// Records an App creation on its way to GitHub (and forgets the expired ones).
+    fn save_github_manifest(&self, state: &str, owner: Option<&str>, until: i64, now: i64) -> Result<()>;
+    /// The live creation of `state`: `Some(owner)`, where the owner is the organization or `None`.
+    fn github_manifest(&self, state: &str, now: i64) -> Result<Option<Option<String>>>;
+    fn drop_github_manifest(&self, state: &str) -> Result<()>;
 }
 
 /// The GitHub REST API, called with the channel's token.

@@ -41,22 +41,46 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.gate.outputs.sha }}
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: npm
+          cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
-      - run: npm ci
+      - name: Authorize the private C3Theme git dependency
+        shell: bash
+        run: |
+          base="https://x-access-token:${{ secrets.C3THEME_TOKEN }}@github.com/"
+          git config --global --add url."$base".insteadOf "git@github.com:"
+          git config --global --add url."$base".insteadOf "ssh://git@github.com/"
+          git config --global --add url."$base".insteadOf "https://github.com/"
+      - name: Build the C3Theme packages from git
+        shell: bash
+        env:
+          C3THEME_TOKEN: ${{ secrets.C3THEME_TOKEN }}
+        run: |
+          sha=$(node -p "require('./package.json').dependencies['@c3theme/ui'].split('#')[1].split('&')[0]")
+          git clone --quiet "https://x-access-token:${C3THEME_TOKEN}@github.com/cecon/C3Theme.git" .c3theme
+          git -C .c3theme checkout --quiet "$sha"
+          (cd .c3theme && pnpm install --frozen-lockfile --reporter=append-only && pnpm --filter @c3theme/ui --filter @c3theme/chat build)
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Use the freshly built C3Theme packages
+        shell: bash
+        run: |
+          for pkg in ui chat; do
+            rm -rf "node_modules/@c3theme/$pkg/dist"
+            cp -R ".c3theme/packages/$pkg/dist" "node_modules/@c3theme/$pkg/dist"
+          done
       - name: Bump build version
         id: version
         run: node scripts/release-version.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npm run prepare:desktop
-      - run: npx tauri build
+      - run: pnpm run prepare:desktop
+      - run: pnpm exec tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       - name: Prepare signed update feed and checksums

@@ -1,11 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
-import { Mic, Paperclip } from 'lucide-react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+
 import { http, upload } from '../api';
 import type { Conversation, Message, User } from '../types';
-import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
 import { PendingFiles, RecorderBar, ReplyToBar } from './composer/ComposerParts';
-import { EmojiPicker } from './composer/ComposerPickers';
+import { ComposerToolbar } from './composer/ComposerToolbar';
 import { loadDraft, saveDraft, useTypingStatus } from './composer/composerState';
 import { useSuggestions } from './composer/useSuggestions';
 import { useVoiceRecorder } from './composer/useVoiceRecorder';
@@ -24,12 +28,9 @@ interface Props {
   agents?: User[];
 }
 
-const ICON =
-  'grid size-8 place-content-center rounded-lg text-n-slate-11 hover:bg-n-alpha-2 disabled:pointer-events-none disabled:opacity-50';
-
 /**
- * Chatwoot ReplyBox: Reply / Private Note pill toggle, editor, bottom panel with emoji, attachments,
- * voice note and Send. Typing "/shortcut" opens the canned responses picker, like CannedResponse.vue.
+ * Composer no C3Theme (lote 21): alternância Responder/Nota privada, editor, emoji, anexos, áudio e envio.
+ * “/atalho” abre respostas prontas e “@” menciona agentes, como no CannedResponse.vue.
  */
 export function ReplyBox({
   path,
@@ -48,8 +49,7 @@ export function ReplyBox({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [caret, setCaret] = useState(0);
-  const area = useRef<HTMLTextAreaElement>(null),
-    picker = useRef<HTMLInputElement>(null);
+  const area = useRef<HTMLTextAreaElement>(null);
   const typing = useTypingStatus(path, note);
   const recorder = useVoiceRecorder(setError);
   const blocked = disabled && !note;
@@ -151,7 +151,7 @@ export function ReplyBox({
   const canSend = (Boolean(text.trim()) || files.length > 0) && !busy && !blocked;
 
   return (
-    <div
+    <Box
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -160,42 +160,65 @@ export function ReplyBox({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
       }}
       onDrop={onDrop}
-      className={cn(
-        'relative mx-2 mb-2 rounded-xl border',
-        note ? 'border-n-amber-12/5 bg-n-solid-amber' : 'border-n-weak bg-n-solid-1',
-      )}
+      sx={{
+        position: 'relative',
+        mx: 1,
+        mb: 1,
+        borderRadius: 2,
+        border: 1,
+        borderColor: note ? 'warning.dark' : 'divider',
+        bgcolor: note ? 'var(--color-n-solid-amber)' : 'background.paper',
+      }}
     >
       {dragging && (
-        <div className="pointer-events-none absolute inset-0 z-10 grid place-content-center rounded-xl border-2 border-dashed border-n-brand bg-n-solid-1/90 text-sm text-n-blue-11">
-          Solte os arquivos para anexar
-        </div>
+        <Box
+          sx={{
+            pointerEvents: 'none',
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'grid',
+            placeContent: 'center',
+            borderRadius: 2,
+            border: 2,
+            borderStyle: 'dashed',
+            borderColor: 'primary.main',
+            bgcolor: 'rgba(0,0,0,0.03)',
+          }}
+        >
+          <Typography variant="body2" color="primary">
+            Solte os arquivos para anexar
+          </Typography>
+        </Box>
       )}
       {suggestions.popup}
-      <div className="flex h-[3.25rem] items-center justify-between pr-2 pl-3">
-        <div
-          role="tablist"
-          className="relative flex h-8 items-center rounded-full border border-n-weak bg-n-alpha-2 p-1 text-sm"
+      <Box
+        sx={{
+          display: 'flex',
+          height: 52,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pr: 1,
+          pl: 1.5,
+        }}
+      >
+        <Tabs
+          value={note ? 'note' : 'reply'}
+          onChange={(_event, value: string) => setNote(value === 'note')}
+          sx={{ minHeight: 32, '& .MuiTabs-indicator': { display: 'none' } }}
         >
-          {[
-            [false, 'Responder'],
-            [true, 'Nota privada'],
-          ].map(([isNote, label]) => (
-            <button
-              key={String(label)}
-              type="button"
-              role="tab"
-              aria-selected={note === isNote}
-              onClick={() => setNote(Boolean(isNote))}
-              className={cn(
-                'h-6 rounded-full px-2 transition-colors',
-                note === isNote ? 'bg-n-solid-1 font-medium text-n-slate-12 shadow-sm' : 'text-n-slate-11',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+          <Tab
+            value="reply"
+            label="Responder"
+            sx={{ minHeight: 32, py: 0, px: 1.25, textTransform: 'none', fontSize: 14 }}
+          />
+          <Tab
+            value="note"
+            label="Nota privada"
+            sx={{ minHeight: 32, py: 0, px: 1.25, textTransform: 'none', fontSize: 14 }}
+          />
+        </Tabs>
+      </Box>
       {replyTo && onCancelReply && <ReplyToBar message={replyTo} onCancel={onCancelReply} />}
       <PendingFiles files={files} onRemove={(i) => setFiles((list) => list.filter((_, j) => j !== i))} />
       {recorder.recording ? (
@@ -244,54 +267,33 @@ export function ReplyBox({
               void send();
             }
           }}
-          className="mt-2 block w-full resize-none bg-transparent px-3 text-sm text-n-slate-12 outline-none placeholder:text-n-slate-10 disabled:cursor-not-allowed"
+          style={{
+            marginTop: 8,
+            display: 'block',
+            width: '100%',
+            resize: 'none',
+            background: 'transparent',
+            border: 0,
+            outline: 'none',
+            padding: '0 12px',
+            fontSize: 14,
+            color: 'var(--color-n-slate-12)',
+            fontFamily: 'inherit',
+          }}
         />
       )}
-      <div className="flex items-center justify-between gap-2 p-3">
-        <div className="flex min-w-0 items-center gap-1">
-          <EmojiPicker onPick={insertAtCaret} disabled={blocked || recorder.recording} />
-          <button
-            type="button"
-            aria-label="Anexar arquivos"
-            title="Anexar arquivos"
-            disabled={blocked || recorder.recording}
-            onClick={() => picker.current?.click()}
-            className={ICON}
-          >
-            <Paperclip size={16} />
-          </button>
-          <input
-            ref={picker}
-            type="file"
-            multiple
-            hidden
-            data-testid="file-input"
-            onChange={(e) => {
-              addFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          {!note && (
-            <button
-              type="button"
-              aria-label="Gravar áudio"
-              title="Gravar áudio"
-              disabled={blocked || recorder.recording || busy}
-              onClick={() => void startRecording()}
-              className={ICON}
-            >
-              <Mic size={16} />
-            </button>
-          )}
-          <span className="ml-2 truncate text-xs text-n-ruby-11">{error}</span>
-        </div>
-        <Button
-          color={note ? 'amber' : 'blue'}
-          label={note ? 'Adicionar nota (↵)' : 'Enviar (↵)'}
-          disabled={!canSend || recorder.recording}
-          onClick={() => void send()}
-        />
-      </div>
-    </div>
+      <ComposerToolbar
+        note={note}
+        blocked={blocked}
+        recording={recorder.recording}
+        busy={busy}
+        error={error}
+        canSend={canSend}
+        onInsertEmoji={insertAtCaret}
+        onAddFiles={addFiles}
+        onRecord={() => void startRecording()}
+        onSend={() => void send()}
+      />
+    </Box>
   );
 }

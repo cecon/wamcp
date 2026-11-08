@@ -54,12 +54,12 @@ O que um agente sabe fazer vem dos plugins. Um plugin é um manifesto (`plugin.j
 Uma conversa espera o seu agente de IA enquanto está `pending` e a última mensagem pública é do contato. A fila de respostas (`application/llm_bots/live.rs`) é esse estado da própria conversa, então sobrevive a um reinício: ao subir, `recover` agenda todas as conversas que ainda esperam. Os pedidos do motor já ficam no banco e são retomados por `EngineService::recover`.
 
 - **Pausar.** Fica em `agent_pauses`. Um agente pausado não responde conversas e não começa pedidos do motor (os pedidos esperam na fila); delegar para ele é recusado. Retomar responde o que chegou e roda o que esperava.
-- **Encerrar.** Interrompe a resposta em andamento (o futuro é descartado e o processo do runtime morre junto), não envia nada e passa a conversa para as pessoas da caixa (`open`). Um pedido do motor é cancelado com tudo o que ele delegou, e as execuções em andamento são canceladas no runtime.
+- **Encerrar.** Interrompe a resposta em andamento (o futuro é descartado e o processo do runtime morre junto), não envia nada e passa a conversa para uma pessoa (`handoff_to_human`). Um pedido do motor é cancelado com tudo o que ele delegou, e as execuções em andamento são canceladas no runtime.
 - **Resumo.** Numa conversa com mais mensagens do que a janela do prompt (40), o começo chega ao agente como resumo, feito pelo próprio modelo do agente e guardado em `conversation_summaries`. Ele é refeito só quando a janela passa do que ele cobre, cobrindo tudo menos as 20 mensagens mais novas. Uma falha no resumo não impede a resposta.
 
 - **Ponte para o motor.** Quando o agente da caixa roda num runtime do motor (hoje o OpenCode), a vez do cliente vira um pedido do motor em nome do contato (`application/llm_bots/bridge.rs`): o agente trabalha com as ferramentas dos plugins que tem permissão de usar, nunca as `internal_only`, e a resposta do `concluir` vai para a conversa. Os outros agentes respondem direto pelo modelo, sem ferramentas.
 
-A tela fica em Configurações → Agentes ao vivo (`/api/v1/agents/live`).
+Os botões Pausar, Retomar, Encerrar e Cancelar ficam na tela "Agentes ao vivo" do menu, que lista as execuções do registro `agent_runs`; só administradores os veem (`/api/v1/agents/live`, `/api/v1/engine/activities/{id}/cancel`).
 
 ## Eventos MCP
 

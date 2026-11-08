@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http, query } from '../api';
 import type { Contact } from '../types';
-import { useAction } from '../settings/useAction';
 import { Avatar } from '../ui/Avatar';
-import { cn } from '../ui/cn';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
+import { useAction } from '../settings/useAction';
 
 interface Props {
   contact: Contact;
@@ -15,7 +23,7 @@ interface Props {
 
 const label = (c: Contact) => c.name || c.phone_number || c.email || `Contato ${c.id}`;
 
-/** Chatwoot MergeContact: pick the contact to keep; the current one moves into it and is removed. */
+/** "Mesclar contato" no C3Theme (lote 12): escolhe quem fica; o atual é movido e removido. */
 export function MergeModal({ contact, onClose, onMerged }: Props) {
   const [q, setQ] = useState(''),
     [results, setResults] = useState<Contact[]>([]),
@@ -32,62 +40,78 @@ export function MergeModal({ contact, onClose, onMerged }: Props) {
     );
     return () => clearTimeout(handle);
   }, [q, contact.id]);
-
+  const submit = () =>
+    void run(async () => {
+      if (!base) return;
+      const merged = await http<Contact>('/actions/contact_merge', 'POST', {
+        base_contact_id: base.id,
+        mergee_contact_id: contact.id,
+      });
+      onMerged(merged);
+      onClose();
+    });
   return (
-    <Modal
+    <ActionDialog
+      open
       title="Mesclar contato"
       description="Escolha o contato que será mantido. Conversas, notas, etiquetas e canais deste contato passam para ele."
+      confirmLabel="Mesclar"
+      backLabel="Cancelar"
+      loading={busy || !base}
+      error={error}
       onClose={onClose}
+      onConfirm={submit}
     >
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!base) return;
-          void run(async () => {
-            const merged = await http<Contact>('/actions/contact_merge', 'POST', {
-              base_contact_id: base.id,
-              mergee_contact_id: contact.id,
-            });
-            onMerged(merged);
-            onClose();
-          });
-        }}
-      >
-        <input
-          className="field"
-          aria-label="Pesquisar contato para mesclar"
-          placeholder="Nome, telefone ou e-mail…"
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        <TextField
+          size="small"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          placeholder="Nome, telefone ou e-mail…"
+          onChange={(event) => setQ(event.target.value)}
+          slotProps={{ htmlInput: { 'aria-label': 'Pesquisar contato para mesclar' } }}
         />
-        <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+        <Box
+          component="ul"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5,
+            listStyle: 'none',
+            m: 0,
+            p: 0,
+            maxHeight: 224,
+            overflowY: 'auto',
+          }}
+        >
           {q.trim() &&
-            results.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  aria-pressed={base?.id === c.id}
-                  onClick={() => setBase(c)}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-n-alpha-2',
-                    base?.id === c.id && 'bg-n-blue-3',
-                  )}
+            results.map((candidate) => (
+              <Box component="li" key={candidate.id}>
+                <Button
+                  fullWidth
+                  variant={base?.id === candidate.id ? 'contained' : 'text'}
+                  aria-pressed={base?.id === candidate.id}
+                  onClick={() => setBase(candidate)}
+                  startIcon={<Avatar name={label(candidate)} size={24} />}
+                  sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
                 >
-                  <Avatar name={label(c)} size={24} />
-                  <span className="flex-1 truncate">{label(c)}</span>
-                  <span className="text-xs text-n-slate-11">{c.phone_number}</span>
-                </button>
-              </li>
+                  <Box component="span" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {label(candidate)}
+                  </Box>
+                  <Typography variant="caption" component="span" sx={{ ml: 1, opacity: 0.7 }}>
+                    {candidate.phone_number}
+                  </Typography>
+                </Button>
+              </Box>
             ))}
-        </ul>
+        </Box>
         {base && (
-          <p className="rounded-lg bg-n-amber-3 p-3 text-sm text-n-amber-12">
-            “{label(contact)}” será mesclado em “{label(base)}” e removido. Esta ação não pode ser desfeita.
-          </p>
+          <Box sx={{ borderRadius: 1.5, bgcolor: 'warning.main', color: 'warning.contrastText', p: 1.5 }}>
+            <Typography variant="body2" color="inherit">
+              “{label(contact)}” será mesclado em “{label(base)}” e removido. Esta ação não pode ser desfeita.
+            </Typography>
+          </Box>
         )}
-        <ModalFooter busy={busy || !base} submit="Mesclar" onCancel={onClose} error={error} />
-      </form>
-    </Modal>
+      </Stack>
+    </ActionDialog>
   );
 }

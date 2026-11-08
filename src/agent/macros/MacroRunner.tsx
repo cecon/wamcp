@@ -1,9 +1,17 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
 import { Play } from 'lucide-react';
+
 import { http } from '../api';
 import type { Macro } from '../accountTypes';
 import type { Conversation } from '../types';
-import { Button } from '../ui/Button';
 import { executeMacro, useMacros, VISIBILITY_LABEL } from './useMacros';
 
 interface Props {
@@ -36,43 +44,68 @@ export function MacroRunner({ conversation, onChange }: Props) {
     }
   }
 
-  if (error) return <p className="text-sm text-n-ruby-11">{error}</p>;
+  if (error)
+    return (
+      <Typography variant="body2" color="error">
+        {error}
+      </Typography>
+    );
   if (loaded && macros.length === 0)
     return (
-      <p className="text-sm text-n-slate-11">
+      <Typography variant="body2" color="text.secondary">
         Nenhuma macro disponível. Crie macros em Configurações → Macros.
-      </p>
+      </Typography>
     );
   return (
-    <div className="flex flex-col gap-2">
-      <ul aria-label="Macros disponíveis" className="flex flex-col gap-1">
+    <Stack spacing={1}>
+      <Box
+        component="ul"
+        aria-label="Macros disponíveis"
+        sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, listStyle: 'none', m: 0, p: 0 }}
+      >
         {macros.map((m) => (
-          <li key={m.id} className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-n-alpha-1">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-n-slate-12">{m.name}</span>
-              <span className="text-xs text-n-slate-11">{VISIBILITY_LABEL[m.visibility]}</span>
-            </span>
-            <Button
-              color="slate"
-              variant="faded"
-              size="xs"
-              icon={Play}
+          <Box
+            component="li"
+            key={m.id}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              borderRadius: 1,
+              px: 1,
+              py: 0.5,
+              '&:hover': { bgcolor: 'action.hover' },
+            }}
+          >
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="body2" noWrap sx={{ display: 'block' }}>
+                {m.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {VISIBILITY_LABEL[m.visibility]}
+              </Typography>
+            </Box>
+            <IconButton
+              size="small"
               aria-label={`Executar ${m.name}`}
               title="Executar"
               disabled={running !== null}
               onClick={() => void run(m)}
-            />
-          </li>
+            >
+              <Play size={14} />
+            </IconButton>
+          </Box>
         ))}
-      </ul>
+      </Box>
       {result && (
-        <p
+        <Typography
+          variant="body2"
           role={result.ok ? 'status' : 'alert'}
-          className={`text-sm ${result.ok ? 'text-n-teal-11' : 'text-n-ruby-11'}`}
+          sx={{ color: result.ok ? 'success.main' : 'error.main' }}
         >
           {result.text}
-        </p>
+        </Typography>
       )}
-    </div>
+    </Stack>
   );
 }

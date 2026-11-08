@@ -1,7 +1,16 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Radio from '@mui/material/Radio';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import type { Macro, MacroVisibility } from '../accountTypes';
 import type { Action, Catalog } from '../types';
-import { ModalFooter } from '../ui/Settings';
 import { ActionsEditor } from './ActionsEditor';
 import { newAction } from './ruleOptions';
 
@@ -42,62 +51,85 @@ export function MacroEditor({ macro, catalog, isAdmin, busy, error, onSave, onCa
     actions: macro?.actions.length ? macro.actions : [newAction()],
   });
   return (
-    <form
-      className="flex flex-col gap-6"
+    <Stack
+      component="form"
+      spacing={3}
       onSubmit={(e) => {
         e.preventDefault();
         onSave(draft);
       }}
     >
-      <label>
-        <span className="field-label">Nome da macro</span>
-        <input
-          className="field"
-          value={draft.name}
-          maxLength={120}
-          required
-          placeholder="Digite um nome para sua macro"
-          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-        />
-      </label>
-      <fieldset>
-        <legend className="field-label">Visibilidade da macro</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+      <TextField
+        label="Nome da macro"
+        size="small"
+        value={draft.name}
+        placeholder="Digite um nome para sua macro"
+        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 120, required: true } }}
+      />
+      <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+        <Typography component="legend" variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>
+          Visibilidade da macro
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           {VISIBILITY.map((v) => {
             const locked = v.value === 'global' && !isAdmin;
+            const selected = draft.visibility === v.value;
             return (
-              <label
+              <FormControlLabel
                 key={v.value}
-                className={`flex cursor-pointer gap-2 rounded-xl p-3 outline outline-1 -outline-offset-1 ${
-                  draft.visibility === v.value ? 'outline-n-brand' : 'outline-n-weak'
-                } ${locked ? 'cursor-not-allowed opacity-60' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="macro-visibility"
-                  value={v.value}
-                  disabled={locked}
-                  checked={draft.visibility === v.value}
-                  onChange={() => setDraft({ ...draft, visibility: v.value })}
-                />
-                <span>
-                  <span className="block text-sm font-medium text-n-slate-12">{v.label}</span>
-                  <span className="block text-xs text-n-slate-11">
-                    {locked ? 'Somente administradores podem criar macros públicas.' : v.description}
-                  </span>
-                </span>
-              </label>
+                value={v.value}
+                checked={selected}
+                disabled={locked}
+                onChange={() => setDraft({ ...draft, visibility: v.value })}
+                control={<Radio name="macro-visibility" size="small" />}
+                sx={{
+                  alignItems: 'flex-start',
+                  m: 0,
+                  flex: 1,
+                  px: 1.5,
+                  py: 1,
+                  border: 1,
+                  borderColor: selected ? 'primary.main' : 'divider',
+                  borderRadius: 2,
+                  opacity: locked ? 0.6 : 1,
+                }}
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {v.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {locked ? 'Somente administradores podem criar macros públicas.' : v.description}
+                    </Typography>
+                  </Box>
+                }
+              />
             );
           })}
-        </div>
-      </fieldset>
+        </Stack>
+      </Box>
       <ActionsEditor
         actions={draft.actions}
         catalog={catalog}
         onChange={(actions) => setDraft((d) => ({ ...d, actions }))}
       />
-      <p className="text-xs text-n-slate-11">As ações são executadas na ordem em que aparecem.</p>
-      <ModalFooter busy={busy} submit="Salvar macro" onCancel={onCancel} error={error} />
-    </form>
+      <Typography variant="caption" color="text.secondary">
+        As ações são executadas na ordem em que aparecem.
+      </Typography>
+      {error && (
+        <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+        <Button type="button" variant="outlined" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="contained" disabled={busy}>
+          Salvar macro
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

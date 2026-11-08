@@ -92,7 +92,8 @@ describe('outside the desktop app', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderSettings('app');
     render(<UpdateNotice />);
-    expect(screen.getByText('Você não tem acesso a esta página')).toBeInTheDocument();
+    // A seção Aplicativo agora é lazy no C3Theme: espera o chunk montar antes de checar o NoAccess.
+    await vi.waitFor(() => expect(screen.getByText('Você não tem acesso a esta página')).toBeInTheDocument());
     await vi.advanceTimersByTimeAsync(FIRST_CHECK_MS * 2);
     expect(invokeMock).not.toHaveBeenCalled();
     vi.useRealTimers();

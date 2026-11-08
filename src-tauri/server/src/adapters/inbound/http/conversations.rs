@@ -15,12 +15,12 @@ use serde::Deserialize;
 fn filters(query: &Query) -> ApiResult<ConversationFilters> {
     let status = query.get("status").map_or("open", String::as_str);
     let mut statuses = STATUSES.to_vec();
-    statuses.push("all");
+    statuses.extend(["active", "all"]);
     let assignee = query.get("assignee_type").map_or("all", String::as_str);
     let trimmed = |key: &str, max| query.get(key).map(|v| text(v, 0, max)).transpose();
     Ok(ConversationFilters {
         status: Some(one_of(status, &statuses)?),
-        assignee_type: Some(one_of(assignee, &["me", "unassigned", "assigned", "all"])?),
+        assignee_type: Some(one_of(assignee, &["me", "unassigned", "ai", "assigned", "all"])?),
         inbox_id: optional_id(query, "inbox_id")?,
         team_id: optional_id(query, "team_id")?,
         label: trimmed("label", 40)?,

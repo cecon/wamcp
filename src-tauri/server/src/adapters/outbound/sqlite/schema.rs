@@ -234,7 +234,17 @@ pub fn steps() -> Vec<String> {
            created TEXT NOT NULL);
          ALTER TABLE channel_github ADD COLUMN installation_id INTEGER;"
             .into(),
-        // v38: plugins (o que um agente sabe fazer): o manifesto de cada plugin instalado e os
+        // v38: o agente de IA da caixa é o responsável enquanto atende; ao passar para um humano,
+        // o `assignee_id` humano assume e o agente é limpo.
+        "ALTER TABLE conversations ADD COLUMN assignee_agent_id INTEGER REFERENCES agents(id);
+         UPDATE conversations SET assignee_agent_id=(SELECT ai_agent_id FROM inboxes WHERE id=conversations.inbox_id)
+           WHERE assignee_id IS NULL AND status IN ('open','pending');
+         CREATE INDEX conversations_assignee_agent ON conversations(assignee_agent_id);"
+            .into(),
+        // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
+        // a volta do GitHub
+        "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
+        // v40: plugins (o que um agente sabe fazer): o manifesto de cada plugin instalado e os
         // valores cifrados das credenciais que as ferramentas dele usam
         "CREATE TABLE plugins(id TEXT PRIMARY KEY,manifest TEXT NOT NULL CHECK(json_valid(manifest)),
            enabled INTEGER NOT NULL DEFAULT 1,builtin INTEGER NOT NULL DEFAULT 0,installed TEXT NOT NULL,
@@ -242,7 +252,7 @@ pub fn steps() -> Vec<String> {
          CREATE TABLE plugin_credentials(plugin_id TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
            name TEXT NOT NULL,secret TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(plugin_id,name));"
             .into(),
-        // v39: agentes ao vivo: os agentes pausados (não respondem nem começam execuções até serem
+        // v41: agentes ao vivo: os agentes pausados (não respondem nem começam execuções até serem
         // retomados) e o resumo do começo das conversas longas que o agente atende
         "CREATE TABLE agent_pauses(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
            paused_at INTEGER NOT NULL);
@@ -250,7 +260,7 @@ pub fn steps() -> Vec<String> {
            conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
            summary TEXT NOT NULL,upto_message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL);"
             .into(),
-        // v40: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
+        // v42: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
         "ALTER TABLE plugins ADD COLUMN source TEXT;".into(),
     ]
 }

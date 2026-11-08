@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import type { ColumnDef } from '@tanstack/react-table';
+
+// third-party
 import { Plus } from 'lucide-react';
+
+// C3Theme
+import { Panel } from '@c3theme/ui';
+import { DataTable } from '@c3theme/ui/table';
+
 import { http } from '../api';
 import type { Catalog, Delivery, Webhook } from '../types';
 import { WEBHOOK_EVENTS } from '../labels';
-import { Button } from '../ui/Button';
 import { Modal } from '../ui/Overlay';
 import { SecretField as Secret } from '../ui/SecretField';
-import { Cell, ModalFooter, RowActions, SettingsHeader, SettingsPage, Table, Toggle } from '../ui/Settings';
+import { ModalFooter, RowActions, Toggle } from '../ui/Settings';
 import { DeliveriesPanel } from './DeliveriesPanel';
 import { useAction } from './useAction';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from './c3/SettingsC3';
 
 const SecretField = ({ secret }: { secret: string }) => (
   <Secret label="Segredo de assinatura" copyLabel="Copiar segredo" secret={secret} />
@@ -27,72 +41,101 @@ export function WebhooksPage({ catalog }: { catalog: Catalog }) {
   }, [load]);
   const visible = items.filter((w) => w.url.toLowerCase().includes(q.toLowerCase()));
 
+  const subscriptionsLabel = (w: Webhook) =>
+    `Eventos assinados: ${w.subscriptions.map((s) => WEBHOOK_EVENTS[s] || s).join(', ')}${
+      w.inbox_id ? ` · ${catalog.inboxes.find((i) => i.id === w.inbox_id)?.name || 'caixa removida'}` : ''
+    }`;
+  const columns: ColumnDef<Webhook>[] = [
+    {
+      id: 'url',
+      header: 'Endpoint do webhook',
+      accessorFn: (w) => w.url,
+      cell: (info) => (
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 500, wordBreak: 'break-all' }}>
+            {info.row.original.url}
+          </Typography>
+          <Typography variant="caption" component="span" color="text.secondary" sx={{ display: 'block' }}>
+            {subscriptionsLabel(info.row.original)}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'active',
+      header: 'Ativo',
+      accessorFn: (w) => (w.active ? 'Ativo' : 'Inativo'),
+      cell: (info) => (
+        <Toggle
+          compact
+          label={`Ativo ${info.row.original.url}`}
+          checked={Boolean(info.row.original.active)}
+          onChange={(active) =>
+            void run(async () => {
+              await http(`/webhooks/${info.row.original.id}`, 'PATCH', { active });
+              await load();
+            })
+          }
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Ações',
+      cell: (info) => (
+        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() =>
+              void run(async () =>
+                setDeliveries({
+                  hook: info.row.original,
+                  list: await http(`/webhooks/${info.row.original.id}/deliveries`),
+                }),
+              )
+            }
+          >
+            Entregas
+          </Button>
+          <RowActions
+            labelFor={info.row.original.url}
+            onEdit={() => setEditing(info.row.original)}
+            onDelete={() =>
+              void run(async () => {
+                await http(`/webhooks/${info.row.original.id}`, 'DELETE');
+                await load();
+              })
+            }
+          />
+        </Stack>
+      ),
+    },
+  ];
+
   return (
-    <SettingsPage>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Webhooks"
         description="Os eventos de webhook informam em tempo real o que acontece no atendimento. Cada POST leva a assinatura X-Wamcp-Signature (HMAC-SHA256 de “timestamp.corpo”) e falhas são reenviadas por até 5 tentativas."
         search={{ value: q, onChange: setQ, placeholder: 'Pesquisar webhooks…' }}
         count={`${items.length} webhook${items.length === 1 ? '' : 's'}`}
-        action={<Button icon={Plus} label="Adicionar novo webhook" onClick={() => setEditing('new')} />}
+        action={
+          <Button variant="contained" startIcon={<Plus size={14} />} onClick={() => setEditing('new')}>
+            Adicionar novo webhook
+          </Button>
+        }
       />
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
-      <Table
-        headers={['Endpoint do webhook', 'Ativo', 'Ações']}
-        rows={visible.length}
-        empty="Nenhum webhook cadastrado."
-      >
-        {visible.map((w) => (
-          <tr key={w.id}>
-            <Cell>
-              <span className="block font-medium break-all text-n-slate-12">{w.url}</span>
-              <span className="text-sm">
-                Eventos assinados: {w.subscriptions.map((s) => WEBHOOK_EVENTS[s] || s).join(', ')}
-                {w.inbox_id
-                  ? ` · ${catalog.inboxes.find((i) => i.id === w.inbox_id)?.name || 'caixa removida'}`
-                  : ''}
-              </span>
-            </Cell>
-            <Cell className="w-20">
-              <Toggle
-                compact
-                label={`Ativo ${w.url}`}
-                checked={Boolean(w.active)}
-                onChange={(active) =>
-                  void run(async () => {
-                    await http(`/webhooks/${w.id}`, 'PATCH', { active });
-                    await load();
-                  })
-                }
-              />
-            </Cell>
-            <Cell className="w-40">
-              <div className="flex justify-end gap-1">
-                <Button
-                  color="slate"
-                  variant="faded"
-                  label="Entregas"
-                  onClick={() =>
-                    void run(async () =>
-                      setDeliveries({ hook: w, list: await http(`/webhooks/${w.id}/deliveries`) }),
-                    )
-                  }
-                />
-                <RowActions
-                  labelFor={w.url}
-                  onEdit={() => setEditing(w)}
-                  onDelete={() =>
-                    void run(async () => {
-                      await http(`/webhooks/${w.id}`, 'DELETE');
-                      await load();
-                    })
-                  }
-                />
-              </div>
-            </Cell>
-          </tr>
-        ))}
-      </Table>
+      {error && <SettingsC3Error>{error}</SettingsC3Error>}
+      <Panel flush>
+        <DataTable
+          rows={visible}
+          columns={columns}
+          getRowId={(w) => String(w.id)}
+          empty="Nenhum webhook cadastrado."
+          ariaLabel="Webhooks"
+        />
+      </Panel>
       {editing && (
         <WebhookModal
           webhook={editing === 'new' ? null : editing}
@@ -108,7 +151,7 @@ export function WebhooksPage({ catalog }: { catalog: Catalog }) {
           onClose={() => setDeliveries(null)}
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }
 
@@ -229,7 +272,9 @@ function SecretView({ secret, onDone }: { secret: string; onDone: () => void }) 
       </p>
       <SecretField secret={secret} />
       <div className="flex justify-end">
-        <Button label="Concluir" onClick={onDone} />
+        <Button variant="contained" onClick={onDone}>
+          Concluir
+        </Button>
       </div>
     </div>
   );

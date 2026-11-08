@@ -223,3 +223,41 @@ async fn whatsapp_shows_who_answered_unless_the_inbox_turns_it_off() {
         "the helpdesk keeps the text as typed"
     );
 }
+
+#[tokio::test]
+async fn the_active_status_lists_open_and_pending_conversations_together() {
+    let f = Fixture::new().await;
+    let s = f.session("Suporte");
+    let admin = f.bootstrap().await;
+    for (n, jid) in ["5511900000001", "5511900000002", "5511900000003"].iter().enumerate() {
+        let (id, jid) = (format!("IN{n}"), format!("{jid}@s.whatsapp.net"));
+        f.incoming(
+            &s.id,
+            Incoming {
+                id: &id,
+                jid: &jid,
+                ..Default::default()
+            },
+        );
+    }
+    // 1 stays open, 2 goes to the AI (pending), 3 is resolved.
+    admin
+        .post("/conversations/2/toggle_status", json!({ "status": "pending" }))
+        .await;
+    admin
+        .post("/conversations/3/toggle_status", json!({ "status": "resolved" }))
+        .await;
+    let ids = |list: Value| -> Vec<i64> {
+        let mut ids: Vec<i64> = list
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["id"].as_i64().unwrap())
+            .collect();
+        ids.sort_unstable();
+        ids
+    };
+    assert_eq!(ids(admin.get("/conversations?status=active").await.body), vec![1, 2]);
+    assert_eq!(ids(admin.get("/conversations?status=open").await.body), vec![1]);
+    assert_eq!(admin.get("/conversations/meta?status=active").await.body["all"], 2);
+}

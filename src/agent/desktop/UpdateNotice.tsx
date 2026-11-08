@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { listen } from '@tauri-apps/api/event';
 import { Download, X } from 'lucide-react';
-import { Button } from '../ui/Button';
+
 import { CHECK_UPDATES_EVENT, desktop, isDesktop, nativeError } from './tauri';
 
 /** First automatic check after opening, then every six hours. */
@@ -66,33 +75,51 @@ export function UpdateNotice() {
   }
   if (!message) return null;
   return (
-    <div
+    <Paper
       role="status"
-      className="fixed right-4 bottom-4 z-50 flex w-96 max-w-[calc(100vw-2rem)] items-start gap-3 rounded-xl bg-n-solid-2 p-4 text-sm shadow-lg outline outline-1 outline-n-container"
+      elevation={8}
+      sx={{
+        position: 'fixed',
+        right: 16,
+        bottom: 16,
+        zIndex: 50,
+        display: 'flex',
+        width: 384,
+        maxWidth: 'calc(100vw - 2rem)',
+        alignItems: 'flex-start',
+        gap: 1.5,
+        borderRadius: 1.5,
+        border: 1,
+        borderColor: 'divider',
+        bgcolor: 'var(--color-n-solid-2)',
+        p: 2,
+      }}
     >
-      <Download size={18} className="mt-0.5 shrink-0 text-n-blue-11" />
-      <div className="min-w-0 flex-1">
-        {version && <p className="font-medium text-n-slate-12">WA MCP {version} disponível</p>}
-        <p className="text-n-slate-11">{message}</p>
+      <Box sx={{ flexShrink: 0, display: 'flex', pt: 0.25, color: 'primary.main' }}>
+        <Download size={18} />
+      </Box>
+      <Stack sx={{ minWidth: 0, flex: 1 }}>
+        {version && <Typography variant="subtitle2">WA MCP {version} disponível</Typography>}
+        <Typography variant="body2" color="text.secondary">
+          {message}
+        </Typography>
         {version && (
           <Button
-            className="mt-3"
+            variant="contained"
+            size="small"
+            sx={{ mt: 1.5, alignSelf: 'flex-start' }}
             disabled={installing}
-            label={installing ? 'Instalando…' : 'Reiniciar e atualizar'}
             onClick={() => void install()}
-          />
+          >
+            {installing ? 'Instalando…' : 'Reiniciar e atualizar'}
+          </Button>
         )}
-      </div>
+      </Stack>
       {!installing && (
-        <Button
-          variant="ghost"
-          color="slate"
-          size="xs"
-          icon={X}
-          aria-label="Fechar aviso de atualização"
-          onClick={() => setMessage('')}
-        />
+        <IconButton size="small" aria-label="Fechar aviso de atualização" onClick={() => setMessage('')}>
+          <X size={14} />
+        </IconButton>
       )}
-    </div>
+    </Paper>
   );
 }

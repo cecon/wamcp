@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { History } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+
+// third-party
+
 import { http, query, REALTIME_RECONNECTED, type Realtime } from '../api';
 import type { Catalog, Conversation, ConversationStatus, HistoryMessage, Message, User } from '../types';
-import { Button } from '../ui/Button';
 import { ConversationHeader } from './ConversationHeader';
 import { ConversationMenu } from './ConversationMenu';
 import { MessageList } from './MessageList';
 import { ReplyBox } from './ReplyBox';
 import { ContactPanel } from './ContactPanel';
+import { ConversationHistory } from './ConversationHistory';
 import { TypingIndicator } from './TypingIndicator';
 import { useConversationShortcuts } from './useConversationShortcuts';
+
+// Frente de chat da adoção: o thread do @c3theme/chat entra em chunk próprio e só com ?c3chat.
+const C3Thread = lazy(() => import('../chat/C3Thread').then((module) => ({ default: module.C3Thread })));
 
 interface Props {
   displayId: number;
@@ -26,7 +35,7 @@ const upsert = (list: Message[], message: Message) =>
     ? list.map((m) => (m.id === message.id ? message : m))
     : [...list, message].sort((a, b) => a.id - b.id);
 
-/** Chatwoot ConversationBox (header, messages, reply box) plus the contact panel on the right. */
+/** Thread da conversa no C3Theme (lote 17): cabeçalho, mensagens, compositor e painel do contato. */
 export function ConversationBox({
   displayId,
   user,
@@ -45,6 +54,10 @@ export function ConversationBox({
     [error, setError] = useState('');
   const bottom = useRef<HTMLDivElement>(null);
   const path = `/conversations/${displayId}`;
+  const c3Chat = new URLSearchParams(window.location.search).has('c3chat');
+  // O histórico bruto é do WhatsApp; um canal GitHub não tem esse histórico (o repositório é a fonte).
+  const inboxChannel = catalog.inboxes.find((i) => i.id === conversation?.inbox_id);
+  const whatsapp = inboxChannel?.channel_type !== 'github';
 
   const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
   const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
@@ -117,15 +130,36 @@ export function ConversationBox({
 
   if (!conversation)
     return (
-      <div className="flex flex-1 items-center justify-center border-l border-n-weak bg-n-surface-1 text-sm text-n-slate-11">
-        {error || 'Carregando…'}
-      </div>
+      <Box
+        sx={{
+          display: 'flex',
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderLeft: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          {error || 'Carregando…'}
+        </Typography>
+      </Box>
     );
   return (
     <>
-      <section
+      <Box
+        component="section"
         aria-label="Conversa"
-        className="flex min-w-0 flex-1 flex-col border-l border-n-weak bg-n-surface-1"
+        sx={{
+          display: 'flex',
+          minWidth: 0,
+          flex: 1,
+          flexDirection: 'column',
+          borderLeft: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
       >
         <ConversationHeader
           conversation={conversation}
@@ -144,65 +178,66 @@ export function ConversationBox({
             />
           }
         />
-        {error && <p className="px-4 pt-2 text-sm text-n-ruby-11">{error}</p>}
-        <div className="flex-1 overflow-y-auto pb-4">
-          <div className="flex justify-center gap-2 py-3">
-            {older && (
-              <Button
-                color="slate"
-                variant="faded"
-                size="xs"
-                label="Mensagens anteriores"
-                onClick={() => void loadOlder()}
-              />
-            )}
-            <Button
-              color="slate"
-              variant="faded"
-              size="xs"
-              icon={History}
-              label="Histórico do WhatsApp"
-              onClick={() => void loadHistory()}
+        {error && (
+          <Typography variant="body2" sx={{ px: 2, pt: 1, color: 'error.main' }}>
+            {error}
+          </Typography>
+        )}
+        {c3Chat ? (
+          <Suspense
+            fallback={
+              <Box sx={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Carregando conversa…
+                </Typography>
+              </Box>
+            }
+          >
+            <C3Thread
+              displayId={displayId}
+              contactName={
+                conversation.contact_name || conversation.contact_phone || conversation.contact_jid
+              }
+              currentUserId={user.id}
+              currentUserName={user.name}
+              realtime={realtime}
+              disabled={conversation.status === 'resolved'}
             />
-          </div>
-          {history && (
-            <div
-              aria-label="Histórico do WhatsApp"
-              className="mx-4 mb-3 rounded-xl border border-dashed border-n-strong p-3"
-            >
-              {history.length === 0 && (
-                <p className="text-sm text-n-slate-11">Sem histórico anterior sincronizado.</p>
-              )}
-              {history.map((h) => (
-                <p key={h.id} className="flex justify-between gap-3 py-0.5 text-xs text-n-slate-11">
-                  <span className={h.from_me ? 'text-n-blue-11' : 'text-n-slate-12'}>{h.body}</span>
-                  <span className="shrink-0">{new Date(h.ts * 1000).toLocaleString('pt-BR')}</span>
-                </p>
-              ))}
-            </div>
-          )}
-          <MessageList
-            messages={messages}
-            path={path}
-            currentUserId={user.id}
-            onUpsert={upsertOne}
-            onReply={setReplyTo}
-            onError={setError}
-          />
-          <div ref={bottom} />
-        </div>
-        <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
-        <ReplyBox
-          path={path}
-          disabled={conversation.status === 'resolved'}
-          conversation={conversation}
-          user={user}
-          agents={catalog.agents}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
-          onSent={upsertOne}
-        />
-      </section>
+          </Suspense>
+        ) : (
+          <>
+            <Box sx={{ flex: 1, overflowY: 'auto', pb: 2 }}>
+              <ConversationHistory
+                older={older}
+                onOlder={() => void loadOlder()}
+                whatsapp={whatsapp}
+                history={history}
+                onLoad={() => void loadHistory()}
+              />
+              <MessageList
+                messages={messages}
+                path={path}
+                currentUserId={user.id}
+                onUpsert={upsertOne}
+                onReply={setReplyTo}
+                onError={setError}
+              />
+              <div ref={bottom} />
+            </Box>
+            <TypingIndicator realtime={realtime} displayId={displayId} currentUserId={user.id} />
+            <ReplyBox
+              path={path}
+              disabled={conversation.status === 'resolved'}
+              conversation={conversation}
+              user={user}
+              agents={catalog.agents}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(null)}
+              onSent={upsertOne}
+            />
+          </>
+        )}
+      </Box>
       {panel && (
         <ContactPanel
           conversation={conversation}

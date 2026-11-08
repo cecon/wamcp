@@ -1,7 +1,14 @@
 import { useState } from 'react';
+
+// material-ui
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../../api';
 import type { AvatarChoices, RosterAgent } from '../../adminTypes';
-import { Button } from '../../ui/Button';
 import { useAction } from '../useAction';
 import { AVATAR_PARTS, CHOICE_LABELS, PART_LABELS, withDefaults, type AvatarPart } from './avatar';
 import { MemberAvatar } from './MemberAvatar';
@@ -12,9 +19,15 @@ export function AvatarEditor({ agent, onSaved }: { agent: RosterAgent; onSaved: 
   const { error, busy, run } = useAction();
   const parts = Object.keys(AVATAR_PARTS) as AvatarPart[];
   return (
-    <section aria-label="Personalização" className="flex flex-col gap-3">
-      <h3 className="text-heading-3 text-n-slate-12">Personalização</h3>
-      <div className="flex items-start gap-4">
+    <Box
+      component="section"
+      aria-label="Personalização"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
+    >
+      <Typography variant="h6" component="h3">
+        Personalização
+      </Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: 'flex-start' }}>
         <MemberAvatar
           choices={choices}
           kind={agent.kind}
@@ -22,29 +35,44 @@ export function AvatarEditor({ agent, onSaved }: { agent: RosterAgent; onSaved: 
           size={88}
           title="Prévia do avatar"
         />
-        <div className="grid flex-1 grid-cols-2 gap-2">
+        <Box
+          sx={{
+            display: 'grid',
+            flex: 1,
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 1,
+          }}
+        >
           {parts.map((part) => (
-            <label key={part}>
-              <span className="field-label">{PART_LABELS[part]}</span>
-              <select
-                className="field !h-8"
+            <Box key={part} component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography variant="body2">{PART_LABELS[part]}</Typography>
+              <Box
+                component="select"
                 value={choices[part]}
                 onChange={(e) => setChoices({ ...choices, [part]: e.target.value })}
+                sx={{
+                  height: 32,
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  color: 'text.primary',
+                  px: 1,
+                }}
               >
                 {AVATAR_PARTS[part].map((choice) => (
                   <option key={choice} value={choice}>
                     {CHOICE_LABELS[choice]}
                   </option>
                 ))}
-              </select>
-            </label>
+              </Box>
+            </Box>
           ))}
-        </div>
-      </div>
-      {error && <p className="text-sm text-n-ruby-11">{error}</p>}
+        </Box>
+      </Stack>
+      {error && <Alert severity="error">{error}</Alert>}
       <Button
-        className="self-end"
-        label="Salvar avatar"
+        variant="contained"
         disabled={busy}
         onClick={() =>
           void run(async () => {
@@ -52,7 +80,10 @@ export function AvatarEditor({ agent, onSaved }: { agent: RosterAgent; onSaved: 
             onSaved();
           })
         }
-      />
-    </section>
+        sx={{ alignSelf: 'flex-end' }}
+      >
+        Salvar avatar
+      </Button>
+    </Box>
   );
 }

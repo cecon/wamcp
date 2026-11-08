@@ -66,8 +66,13 @@ export async function nativeMock(page: Page, fail = false) {
   }, fail);
 }
 
-/** Sidebar → Configurações → the given settings page. */
+/** Menu do AppLayout → Configurações → a página pedida. */
 export async function openSettings(page: Page, label: string) {
-  await page.getByRole('button', { name: 'Configurações', exact: true }).click();
-  await page.getByRole('button', { name: label, exact: true }).click();
+  // No C3Theme, "Configurações" é o grupo (botão) e cada página é um link do menu.
+  const nav = page.getByRole('navigation');
+  const link = nav.getByRole('link', { name: label, exact: true });
+  if (!(await link.isVisible().catch(() => false))) {
+    await nav.getByRole('button', { name: 'Configurações', exact: true }).click();
+  }
+  await link.click();
 }

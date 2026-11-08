@@ -1,25 +1,22 @@
-//! "Agentes ao vivo": what each AI agent is doing now (the conversations and chats it is answering
-//! or about to answer, and its engine requests in progress), with pause, resume and stop.
+//! The controls of "Agentes ao vivo": pause and resume an AI agent, stop its answer in a
+//! conversation or chat (the engine request answering it too). What runs now is `agent_runs`.
 use super::engine::EngineService;
-use super::llm_bots::{LiveAnswer, LlmBotService};
+use super::llm_bots::LlmBotService;
 use super::ports::Repository;
 use crate::domain::actor::Actor;
 use crate::domain::engine::activity as status;
 use crate::domain::error::{fail_with, Result};
 use crate::domain::helpdesk::require_admin;
 use serde::Serialize;
-use serde_json::{json, Value};
 use std::sync::{Arc, OnceLock};
 
+/// An AI agent and whether it is paused. What it works on is in the run registry (`/agent_runs`).
 #[derive(Debug, Serialize)]
 pub struct LiveAgent {
     pub id: i64,
     pub name: String,
     pub active: bool,
     pub paused: bool,
-    pub answers: Vec<LiveAnswer>,
-    /// Engine requests not finished yet (`id`, `status`, `request`, `created`).
-    pub activities: Vec<Value>,
 }
 
 #[derive(Clone)]
@@ -48,28 +45,10 @@ impl LiveService {
     pub fn overview(&self, actor: &Actor) -> Result<Vec<LiveAgent>> {
         require_admin(actor)?;
         let paused = self.repo.paused_agents()?;
-        let answers = match self.answers.get() {
-            Some(service) => service.live(actor)?,
-            None => Vec::new(),
-        };
-        let activities = match (self.engine.get(), actor) {
-            (Some(engine), Actor::User(user)) => engine.store.activities(user.account_id, 200)?,
-            _ => Vec::new(),
-        };
         let agents = self.repo.agents()?.into_iter().filter(|a| a.kind == "ai");
         Ok(agents
             .map(|agent| LiveAgent {
                 paused: paused.contains(&agent.id),
-                answers: answers
-                    .iter()
-                    .filter(|a| a.agent_id == Some(agent.id))
-                    .cloned()
-                    .collect(),
-                activities: activities
-                    .iter()
-                    .filter(|a| a.agent_id == agent.id && !status::is_final(&a.status))
-                    .map(|a| json!({"id": a.id, "status": a.status, "request": a.request, "created": a.created}))
-                    .collect(),
                 id: agent.id,
                 name: agent.name,
                 active: agent.active,

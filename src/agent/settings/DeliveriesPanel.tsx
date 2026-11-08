@@ -1,13 +1,22 @@
+// material-ui
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { X } from 'lucide-react';
+
 import { formatTime } from '../api';
 import type { Delivery } from '../types';
 import { WEBHOOK_EVENTS } from '../labels';
-import { cn } from '../ui/cn';
-import { SidePanel } from '../ui/Overlay';
 
 const STATUS: Record<Delivery['status'], [string, string]> = {
-  pending: ['pendente', 'text-n-amber-11'],
-  sent: ['entregue', 'text-n-teal-11'],
-  failed: ['falhou', 'text-n-ruby-11'],
+  pending: ['pendente', 'warning.main'],
+  sent: ['entregue', 'success.main'],
+  failed: ['falhou', 'error.main'],
 };
 
 interface Props {
@@ -20,22 +29,47 @@ interface Props {
 /** Recent deliveries of a webhook or agent bot: event, time, status and attempts. */
 export function DeliveriesPanel({ target, list, onClose }: Props) {
   return (
-    <SidePanel title="Entregas recentes" onClose={onClose}>
-      <p className="mb-4 text-sm break-all text-n-slate-11">{target}</p>
-      {list.length === 0 && <p className="text-sm text-n-slate-11">Nenhuma entrega ainda.</p>}
-      <ul className="divide-y divide-n-weak">
-        {list.map((d) => (
-          <li key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span>
-              <span className="font-medium text-n-slate-12">{WEBHOOK_EVENTS[d.event] || d.event}</span>
-              <span className="text-n-slate-11"> · {formatTime(d.created_at)}</span>
-            </span>
-            <span className={cn('text-right', STATUS[d.status][1])}>
-              {STATUS[d.status][0]} ({d.attempts}x){d.last_error ? ` · ${d.last_error}` : ''}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </SidePanel>
+    <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+        Entregas recentes
+        <IconButton size="small" aria-label="Fechar" onClick={onClose}>
+          <X size={16} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, wordBreak: 'break-all' }}>
+          {target}
+        </Typography>
+        {list.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Nenhuma entrega ainda.
+          </Typography>
+        )}
+        <Stack divider={<hr />} component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+          {list.map((d) => (
+            <Stack
+              component="li"
+              key={d.id}
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: 'center', justifyContent: 'space-between', py: 1 }}
+            >
+              <Typography variant="body2">
+                <Typography component="span" sx={{ fontWeight: 600 }}>
+                  {WEBHOOK_EVENTS[d.event] || d.event}
+                </Typography>
+                <Typography component="span" variant="body2" color="text.secondary">
+                  {' '}
+                  · {formatTime(d.created_at)}
+                </Typography>
+              </Typography>
+              <Typography variant="body2" sx={{ color: STATUS[d.status][1], textAlign: 'right' }}>
+                {STATUS[d.status][0]} ({d.attempts}x){d.last_error ? ` · ${d.last_error}` : ''}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 }

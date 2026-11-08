@@ -133,27 +133,36 @@ async fn stopping_an_answer_hands_the_conversation_to_people() {
     let s = setup().await;
     *s.runtime.hang.lock() = true;
     s.write("IN1", "Tem pão?");
-    let mut live = Value::Null;
+    let mut runs = Value::Null;
     for _ in 0..200 {
-        live = s.live().await;
-        if live[0]["answers"][0]["running"] == true {
+        runs = s.admin.get("/agent_runs").await.body;
+        if runs[0]["state"] == "running" {
             break;
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    let answer = &live[0]["answers"][0];
-    assert_eq!(answer["kind"], "conversation", "{live}");
-    assert_eq!(answer["running"], true, "{live}");
-    let conversation = answer["id"].as_i64().unwrap();
+    let run = &runs[0];
+    assert_eq!(
+        (run["kind"].as_str(), run["state"].as_str()),
+        (Some("conversation"), Some("running")),
+        "{runs}"
+    );
+    let id: i64 = run["id"]
+        .as_str()
+        .unwrap()
+        .trim_start_matches("conversation:")
+        .parse()
+        .unwrap();
 
-    let url = format!("/agents/live/conversations/{conversation}/stop");
+    let url = format!("/agents/live/conversations/{id}/stop");
     assert_eq!(s.admin.post(&url, json!({})).await.status, 200);
     s.f.settle().await;
-    assert_eq!(s.live().await[0]["answers"], json!([]));
+    assert_eq!(s.admin.get("/agent_runs").await.body, json!([]));
     assert!(s.f.wa.sent().is_empty(), "nothing was sent");
-    let number = answer["display_id"].as_i64().unwrap();
-    let status = s.admin.get(&format!("/conversations/{number}")).await.body["status"].clone();
-    assert_eq!(status, "open", "people take it over");
+    let number = run["display_id"].as_i64().unwrap();
+    let conversation = s.admin.get(&format!("/conversations/{number}")).await.body;
+    assert_eq!(conversation["status"], "open", "a person takes it over");
+    assert!(conversation["assignee_id"].is_i64(), "{conversation}");
 
     let agent = s.f.agent(&s.admin, "bia@example.com", "agent", false).await;
     assert_eq!(agent.get("/agents/live").await.status, 403);

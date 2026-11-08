@@ -2,7 +2,7 @@
 //! tools are open to the run (`/mcp-github`, next to the system agent's endpoint on this computer).
 use super::LlmBotService;
 use crate::application::github_agent::GithubRun;
-use crate::application::ports::{Completion, LlmMcp, LlmRequest};
+use crate::application::ports::{Completion, LlmMcp, LlmRequest, Progress};
 use crate::domain::error::Result;
 use crate::domain::github_tools::{MCP_NAME, TOOLS_PROMPT};
 use crate::domain::model::{Conversation, Inbox};
@@ -17,9 +17,12 @@ impl LlmBotService {
         mut request: LlmRequest,
         agent_id: Option<i64>,
     ) -> Result<(Completion, bool)> {
+        let runs = &self.helpdesk.core.runs;
+        let run = super::runs::run_id(super::Target::Conversation(conversation.id));
+        let progress = |step: Progress| runs.step(&run, &super::runs::step_text(&step));
         let url = self.mcp_url.get().map(|url| url.replace("/mcp-system", "/mcp-github"));
         let Some(url) = url.filter(|_| inbox.github_repo.is_some() && request.provider == "claude_cli") else {
-            return Ok((self.llm.complete(&request).await?, false));
+            return Ok((self.llm.complete_live(&request, &progress).await?, false));
         };
         let helpdesk = &self.helpdesk;
         let token = helpdesk.open_github_run(GithubRun {
@@ -35,7 +38,7 @@ impl LlmBotService {
             url,
             token: token.clone(),
         });
-        let outcome = self.llm.complete(&request).await;
+        let outcome = self.llm.complete_live(&request, &progress).await;
         let forwarded = helpdesk.close_github_run(&token).is_some_and(|run| run.handoff);
         Ok((outcome?, forwarded))
     }

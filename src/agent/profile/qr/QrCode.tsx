@@ -1,4 +1,8 @@
 import { useMemo } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+
 import { encodeQr } from './encode';
 
 const QUIET = 4;
@@ -16,17 +20,18 @@ export function QrCode({ value, size = 192, label }: { value: string; size?: num
     return { path: d, extent: modules.length + QUIET * 2 };
   }, [value]);
   return (
-    <svg
-      role="img"
-      aria-label={label}
-      width={size}
-      height={size}
-      viewBox={`0 0 ${extent} ${extent}`}
-      shapeRendering="crispEdges"
-      className="rounded-lg"
-    >
-      <rect width={extent} height={extent} fill="#fff" />
-      <path d={path} fill="#000" />
-    </svg>
+    <Box sx={{ display: 'block', lineHeight: 0, borderRadius: 1 }}>
+      <svg
+        role="img"
+        aria-label={label}
+        width={size}
+        height={size}
+        viewBox={`0 0 ${extent} ${extent}`}
+        shapeRendering="crispEdges"
+      >
+        <rect width={extent} height={extent} fill="#fff" />
+        <path d={path} fill="#000" />
+      </svg>
+    </Box>
   );
 }

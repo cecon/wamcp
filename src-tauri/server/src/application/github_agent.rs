@@ -37,10 +37,10 @@ pub struct GithubRunState {
     runs: HashMap<String, GithubRun>,
     /// Events the agent's own actions will cause: (`owner/repo#12`, `pull_request.closed`, until).
     echoes: Vec<(String, String, i64)>,
-    /// GitHub App manifests on their way to GitHub: state → (until, organization or the account).
-    pub(crate) manifests: HashMap<String, (i64, Option<String>)>,
     /// Installation tokens of the GitHub App: installation → (token, valid until).
     pub(crate) tokens: HashMap<i64, (String, i64)>,
+    /// Workflows failing on a branch, already reported to the agent: `inbox|workflow|branch`.
+    pub(crate) failing: std::collections::HashSet<String>,
 }
 
 pub type GithubRuns = Arc<Mutex<GithubRunState>>;
@@ -138,6 +138,7 @@ impl HelpdeskService {
             "request_reviewers" => api.people(number()?, args, "reviewers").await,
             "labels" => api.labels(number()?, args).await,
             "rerun_failed" => api.rerun(args).await,
+            "run_jobs" => api.run_jobs(args).await,
             "forward" => self.forward(token, &run, args).await,
             _ => fail(format!("Ferramenta desconhecida: {name}")),
         }

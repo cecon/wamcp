@@ -1,10 +1,20 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { ActionDialog } from '@c3theme/ui';
+
 import { http } from '../api';
 import type { CustomRole } from '../adminTypes';
+import C3Provider from '../c3/C3Provider';
 import type { Catalog, Role, User } from '../types';
-import { Button } from '../ui/Button';
-import { Modal } from '../ui/Overlay';
-import { ModalFooter } from '../ui/Settings';
 import { useAction } from './useAction';
 
 interface Props {
@@ -14,6 +24,16 @@ interface Props {
   onClose: () => void;
   onSaved: () => Promise<void>;
 }
+
+const SELECT_SX = {
+  height: 40,
+  borderRadius: 1,
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+  color: 'text.primary',
+  px: 1,
+} as const;
 
 /** Add / edit agent: name, role, mandatory profile ("Perfil"); new agents also get e-mail, password and inboxes. */
 export function AgentModal({ agent, catalog, roles, onClose, onSaved }: Props) {
@@ -49,132 +69,132 @@ export function AgentModal({ agent, catalog, roles, onClose, onSaved }: Props) {
     });
 
   return (
-    <Modal
-      title={agent ? `Editar ${agent.name}` : 'Adicionar agente'}
-      description={agent ? undefined : 'Crie o acesso e escolha as caixas de entrada que o agente atende.'}
-      onClose={onClose}
-    >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(save);
-        }}
+    <C3Provider>
+      <ActionDialog
+        open
+        title={agent ? `Editar ${agent.name}` : 'Adicionar agente'}
+        description={agent ? undefined : 'Crie o acesso e escolha as caixas de entrada que o agente atende.'}
+        confirmLabel={agent ? 'Salvar' : 'Adicionar agente'}
+        backLabel="Cancelar"
+        loading={busy}
+        error={error || undefined}
+        onClose={onClose}
+        onConfirm={() => void run(save)}
       >
-        <label>
-          <span className="field-label">Nome do agente</span>
-          <input
-            className="field"
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            label="Nome do agente"
+            size="small"
             value={form.name}
-            maxLength={80}
-            required
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            slotProps={{ htmlInput: { required: true, maxLength: 80 } }}
           />
-        </label>
-        <label>
-          <span className="field-label">Função</span>
-          <select
-            className="field"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-          >
-            <option value="agent">Agente</option>
-            <option value="administrator">Administrador</option>
-          </select>
-        </label>
-        {roles.length > 0 && (
-          <label>
-            <span className="field-label">Perfil</span>
-            <select
-              className="field"
-              required
-              value={profile ?? ''}
-              onChange={(e) => setProfile(Number(e.target.value))}
+          <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography component="span" variant="body2">
+              Função
+            </Typography>
+            <Box
+              component="select"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+              sx={SELECT_SX}
             >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {!agent && (
-          <>
-            <label>
-              <span className="field-label">E-mail</span>
-              <input
-                className="field"
+              <option value="agent">Agente</option>
+              <option value="administrator">Administrador</option>
+            </Box>
+          </Box>
+          {roles.length > 0 && (
+            <Box component="label" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography component="span" variant="body2">
+                Perfil
+              </Typography>
+              <Box
+                component="select"
+                value={profile ?? ''}
+                onChange={(e) => setProfile(Number(e.target.value))}
+                sx={SELECT_SX}
+              >
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Box>
+            </Box>
+          )}
+          {!agent && (
+            <>
+              <TextField
+                label="E-mail"
                 type="email"
-                required
+                size="small"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
+                slotProps={{ htmlInput: { required: true } }}
               />
-            </label>
-            <label>
-              <span className="field-label">Senha inicial (mín. 10 caracteres)</span>
-              <input
-                className="field"
+              <TextField
+                label="Senha inicial (mín. 10 caracteres)"
                 type="password"
-                minLength={10}
-                required
+                size="small"
                 autoComplete="new-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
+                slotProps={{ htmlInput: { minLength: 10, required: true } }}
               />
-            </label>
-            <fieldset>
-              <legend className="field-label">Caixas de entrada</legend>
-              <div className="flex flex-col gap-2">
-                {catalog.inboxes.map((i) => (
-                  <label key={i.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="size-4 accent-n-brand"
-                      checked={inboxIds.includes(i.id)}
-                      onChange={() =>
-                        setInboxIds((ids) =>
-                          ids.includes(i.id) ? ids.filter((x) => x !== i.id) : [...ids, i.id],
-                        )
-                      }
-                    />
-                    {i.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          </>
-        )}
-        {agent?.mfa_enabled ? (
-          <div className="flex flex-col gap-1">
+              <Box component="fieldset" sx={{ border: 0, m: 0, p: 0 }}>
+                <Typography component="legend" variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                  Caixas de entrada
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {catalog.inboxes.map((i) => (
+                    <Box
+                      key={i.id}
+                      component="label"
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: 14 }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={inboxIds.includes(i.id)}
+                        onChange={() =>
+                          setInboxIds((ids) =>
+                            ids.includes(i.id) ? ids.filter((x) => x !== i.id) : [...ids, i.id],
+                          )
+                        }
+                        sx={{ p: 0.5 }}
+                      />
+                      {i.name}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </>
+          )}
+          {agent?.mfa_enabled ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Button
+                variant="outlined"
+                sx={{ alignSelf: 'flex-start' }}
+                onClick={() => once(() => http(`/agents/${agent.id}/mfa`, 'DELETE'))}
+              >
+                Redefinir verificação em duas etapas
+              </Button>
+              <Typography variant="caption" color="text.secondary">
+                Use quando o agente perder o aplicativo autenticador; ele entrará só com a senha.
+              </Typography>
+            </Box>
+          ) : null}
+          {agent && (
             <Button
-              color="slate"
-              variant="faded"
-              className="self-start"
-              label="Redefinir verificação em duas etapas"
-              onClick={() => once(() => http(`/agents/${agent.id}/mfa`, 'DELETE'))}
-            />
-            <span className="text-xs text-n-slate-11">
-              Use quando o agente perder o aplicativo autenticador; ele entrará só com a senha.
-            </span>
-          </div>
-        ) : null}
-        {agent && (
-          <Button
-            color="ruby"
-            variant="faded"
-            className="self-start"
-            label={agent.active ? 'Desativar acesso' : 'Reativar acesso'}
-            onClick={() => once(() => http(`/agents/${agent.id}`, 'PATCH', { active: !agent.active }))}
-          />
-        )}
-        <ModalFooter
-          busy={busy}
-          submit={agent ? 'Salvar' : 'Adicionar agente'}
-          onCancel={onClose}
-          error={error}
-        />
-      </form>
-    </Modal>
+              color="error"
+              variant="outlined"
+              sx={{ alignSelf: 'flex-start' }}
+              onClick={() => once(() => http(`/agents/${agent.id}`, 'PATCH', { active: !agent.active }))}
+            >
+              {agent.active ? 'Desativar acesso' : 'Reativar acesso'}
+            </Button>
+          )}
+        </Stack>
+      </ActionDialog>
+    </C3Provider>
   );
 }

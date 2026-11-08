@@ -155,4 +155,26 @@ describe('GitHub channel', () => {
     expect(await screen.findByText('O webhook foi criado no GitHub pelo app.')).toBeInTheDocument();
     expect(api.called('PUT', '/inboxes/2/github/token')[0].body).toEqual({ token: 'github_pat_novo' });
   });
+
+  it('removes the GitHub App so it can be created again', async () => {
+    let app: unknown = {
+      slug: 'jhon-ebmvhk',
+      owner: 'cecon',
+      html_url: 'https://github.com/apps/jhon-ebmvhk',
+      install_url: 'https://github.com/apps/jhon-ebmvhk/installations/new',
+    };
+    const api = fakeApi({
+      'GET /github_app': () => ({ app, repos: [] }),
+      'DELETE /github_app': () => {
+        app = null;
+        return { app: null, repos: [] };
+      },
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<GithubAppPanel />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Remover GitHub App' }));
+    expect(await screen.findByRole('button', { name: 'Criar GitHub App' })).toBeInTheDocument();
+    expect(api.called('DELETE', '/github_app')).toHaveLength(1);
+  });
 });

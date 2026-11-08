@@ -119,6 +119,9 @@ export interface Conversation {
   status: ConversationStatus;
   assignee_id: number | null;
   assignee_name: string | null;
+  /** Agente de IA responsável na caixa (enquanto nenhum humano assume). */
+  assignee_agent_id?: number | null;
+  assignee_agent_name?: string | null;
   team_id: number | null;
   team_name: string | null;
   labels: string[];
@@ -210,6 +213,8 @@ export interface AppNotification {
 export interface Meta {
   mine: number;
   unassigned: number;
+  /** Conversas com o agente de IA da caixa como responsável. */
+  ai?: number;
   all: number;
 }
 export interface Catalog {

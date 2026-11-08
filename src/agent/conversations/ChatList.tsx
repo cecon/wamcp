@@ -1,7 +1,14 @@
 import { useState, type ReactNode } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+
 import type { Catalog, Conversation, Meta } from '../types';
-import { Button } from '../ui/Button';
-import { cn } from '../ui/cn';
 import { BulkActionBar } from './BulkActionBar';
 import { ChatListHeader, type StatusFilter } from './ChatListHeader';
 import { ConversationCard } from './ConversationCard';
@@ -36,7 +43,7 @@ interface Props {
   onReload: () => void;
 }
 
-/** Chatwoot ChatList: header, Mine/Unassigned/All tabs, bulk action bar and the conversation cards. */
+/** Lista de conversas no C3Theme (lote 15): cabeçalho, abas Minhas/Não atribuídas/Todas (as atendidas pela IA aparecem em Todas), barra em lote e os cards. */
 export function ChatList({
   title,
   items,
@@ -58,9 +65,19 @@ export function ChatList({
     setChecked((list) => (value ? [...list, id] : list.filter((x) => x !== id)));
 
   return (
-    <section
+    <Box
+      component="section"
       aria-label="Lista de conversas"
-      className="flex h-full w-full shrink-0 flex-col bg-n-surface-1 md:w-[340px] 2xl:w-[412px]"
+      sx={{
+        display: 'flex',
+        height: '100%',
+        flexShrink: 0,
+        flexDirection: 'column',
+        bgcolor: 'background.paper',
+        borderRight: { md: 1 },
+        borderColor: 'divider',
+        width: { xs: '100%', md: 340, xl: 412 },
+      }}
     >
       <ChatListHeader
         title={title}
@@ -72,32 +89,43 @@ export function ChatList({
         onSort={on.onSort}
       />
       {!filtering && (
-        <nav role="tablist" className="flex h-10 items-end border-b border-n-weak px-3">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => on.onTab(t.id)}
-              className={cn(
-                'relative mx-2 flex items-center gap-1.5 py-2.5 text-sm font-medium first:ml-0',
-                tab === t.id ? 'text-n-blue-11' : 'text-n-slate-11 hover:text-n-slate-12',
-              )}
-            >
-              {t.label}
-              <span
-                className={cn(
-                  'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium',
-                  tab === t.id ? 'bg-n-blue-3 text-n-blue-11' : 'bg-n-alpha-1 text-n-slate-10',
-                )}
-              >
-                {meta[t.count]}
-              </span>
-              {tab === t.id && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-n-brand" />}
-            </button>
+        <Tabs
+          value={tab}
+          onChange={(_event, value: AssigneeType) => on.onTab(value)}
+          variant="fullWidth"
+          sx={{ minHeight: 40, borderBottom: 1, borderColor: 'divider', px: 1 }}
+        >
+          {TABS.map((item) => (
+            <Tab
+              key={item.id}
+              value={item.id}
+              sx={{ minHeight: 40, py: 1, textTransform: 'none' }}
+              label={
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                  <span>{item.label}</span>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'flex',
+                      height: 20,
+                      minWidth: 20,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 99,
+                      px: 0.75,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      bgcolor: tab === item.id ? 'primary.main' : 'action.hover',
+                      color: tab === item.id ? 'primary.contrastText' : 'text.secondary',
+                    }}
+                  >
+                    {meta[item.count] ?? 0}
+                  </Box>
+                </Stack>
+              }
+            />
           ))}
-        </nav>
+        </Tabs>
       )}
       {visible.length > 0 && (
         <BulkActionBar
@@ -112,37 +140,39 @@ export function ChatList({
           }}
         />
       )}
-      <div className="flex-1 overflow-y-auto">
-        {error && <p className="p-4 text-sm text-n-ruby-11">{error}</p>}
-        <ul>
-          {items.map((c) => (
+      <Box sx={{ flex: 1, overflowY: 'auto' }}>
+        {error && (
+          <Typography variant="body2" sx={{ p: 2, color: 'error.main' }}>
+            {error}
+          </Typography>
+        )}
+        <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+          {items.map((conversation) => (
             <ConversationCard
-              key={c.id}
-              conversation={c}
+              key={conversation.id}
+              conversation={conversation}
               labels={catalog.labels}
-              selected={selected === c.display_id}
-              onSelect={() => on.onSelect(c.display_id)}
-              checked={visible.includes(c.display_id)}
+              selected={selected === conversation.display_id}
+              onSelect={() => on.onSelect(conversation.display_id)}
+              checked={visible.includes(conversation.display_id)}
               selecting={visible.length > 0}
-              onCheck={(value) => toggle(c.display_id, value)}
+              onCheck={(value) => toggle(conversation.display_id, value)}
             />
           ))}
-        </ul>
+        </Box>
         {items.length === 0 && !error && (
-          <p className="p-4 text-center text-sm text-n-slate-11">Não há conversas ativas neste grupo.</p>
+          <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+            Não há conversas ativas neste grupo.
+          </Typography>
         )}
         {hasMore && (
-          <div className="p-3">
-            <Button
-              color="slate"
-              variant="faded"
-              className="w-full"
-              label="Carregar mais"
-              onClick={on.onMore}
-            />
-          </div>
+          <Box sx={{ p: 1.5 }}>
+            <Button fullWidth variant="outlined" onClick={on.onMore}>
+              Carregar mais
+            </Button>
+          </Box>
         )}
-      </div>
-    </section>
+      </Box>
+    </Box>
   );
 }

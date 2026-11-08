@@ -1,10 +1,28 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import Typography from '@mui/material/Typography';
+
+// third-party
+import { Search, X } from 'lucide-react';
+
 import { http, query } from '../api';
 import type { Contact, Inbox } from '../types';
 import type { ChatAgent } from '../agentChat/types';
-import { NewConversationModal } from '../contacts/NewConversationModal';
+import C3Provider from '../c3/C3Provider';
+// O modal de nova conversa usa o C3Theme (MUI): carrega em chunk próprio para o painel seguir leve.
+const NewConversationModal = lazy(() =>
+  import('../contacts/NewConversationModal').then((module) => ({ default: module.NewConversationModal })),
+);
 import { MemberAvatar } from '../settings/members/MemberAvatar';
-import { Modal } from '../ui/Overlay';
 
 interface Props {
   inboxes: Inbox[];
@@ -17,6 +35,37 @@ interface Props {
 
 const matches = (text: string | null | undefined, q: string) =>
   (text || '').toLocaleLowerCase('pt-BR').includes(q.toLocaleLowerCase('pt-BR'));
+
+const rowSx = {
+  display: 'flex',
+  width: '100%',
+  alignItems: 'center',
+  gap: 1.5,
+  borderRadius: 1,
+  px: 1,
+  py: 1,
+  textAlign: 'left',
+  justifyContent: 'flex-start',
+  '&:hover': { bgcolor: 'action.hover' },
+} as const;
+
+const GroupTitle = ({ children }: { children: string }) => (
+  <Typography
+    variant="caption"
+    component="h3"
+    sx={{
+      display: 'block',
+      mt: 2,
+      mb: 0.5,
+      fontWeight: 500,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      color: 'text.secondary',
+    }}
+  >
+    {children}
+  </Typography>
+);
 
 /** "Nova conversa" from the Conversas list: talk to one of your AI agents or write to a customer. */
 export function NewChatModal({ inboxes, onClose, onAgent, onConversation }: Props) {
@@ -43,68 +92,102 @@ export function NewChatModal({ inboxes, onClose, onAgent, onConversation }: Prop
 
   if (contact)
     return (
-      <NewConversationModal
-        contact={contact}
-        inboxes={inboxes}
-        onClose={() => setContact(null)}
-        onStarted={(c) => onConversation(c.display_id)}
-      />
+      <Suspense fallback={null}>
+        <NewConversationModal
+          contact={contact}
+          inboxes={inboxes}
+          onClose={() => setContact(null)}
+          onStarted={(c) => onConversation(c.display_id)}
+        />
+      </Suspense>
     );
   const shownAgents = agents.filter((a) => matches(a.name, q));
-  const item = 'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-n-alpha-1';
   return (
-    <Modal
-      title="Nova conversa"
-      description="Peça algo a um dos seus agentes de IA ou escreva para um cliente pelo WhatsApp."
-      onClose={onClose}
-    >
-      <input
-        className="field"
-        type="search"
-        aria-label="Buscar agente ou cliente"
-        placeholder="Buscar por nome ou telefone"
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-      />
-      {error && <p className="mt-2 text-sm text-n-ruby-11">{error}</p>}
-      <h3 className="mt-4 mb-1 text-xs font-medium text-n-slate-11 uppercase">Agentes</h3>
-      {shownAgents.length === 0 && <p className="px-2 text-sm text-n-slate-11">Nenhum agente de IA ativo.</p>}
-      <ul>
-        {shownAgents.map((a) => (
-          <li key={a.id}>
-            <button type="button" className={item} onClick={() => onAgent(a.id)}>
-              <MemberAvatar choices={a.avatar} kind="ai" seed={a.id} size={32} title={a.name} />
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-n-slate-12">{a.name}</span>
-                <span className="block truncate text-xs text-n-slate-11">
-                  {a.system ? 'Sistema · configura o app' : a.profile_name || 'Agente de IA'}
-                </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <h3 className="mt-4 mb-1 text-xs font-medium text-n-slate-11 uppercase">Clientes</h3>
-      {contacts.length === 0 && (
-        <p className="px-2 text-sm text-n-slate-11">
-          Nenhum contato encontrado. Cadastre o cliente em Contatos.
-        </p>
-      )}
-      <ul>
-        {contacts.slice(0, 8).map((c) => (
-          <li key={c.id}>
-            <button type="button" className={item} onClick={() => setContact(c)}>
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-n-slate-12">{c.name || c.phone_number}</span>
-                {c.name && c.phone_number && (
-                  <span className="block truncate text-xs text-n-slate-11">{c.phone_number}</span>
-                )}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Modal>
+    <C3Provider>
+      <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ pr: 7 }}>
+          Nova conversa
+          <IconButton
+            size="small"
+            aria-label="Fechar"
+            onClick={onClose}
+            sx={{ position: 'absolute', top: 10, right: 10 }}
+          >
+            <X size={16} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Peça algo a um dos seus agentes de IA ou escreva para um cliente pelo WhatsApp.
+          </Typography>
+          <OutlinedInput
+            fullWidth
+            size="small"
+            autoFocus
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Buscar por nome ou telefone"
+            startAdornment={
+              <InputAdornment position="start">
+                <Search size={16} />
+              </InputAdornment>
+            }
+            slotProps={{ input: { 'aria-label': 'Buscar agente ou cliente' } }}
+          />
+          {error && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+          <GroupTitle>Agentes</GroupTitle>
+          {shownAgents.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+              Nenhum agente de IA ativo.
+            </Typography>
+          )}
+          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
+            {shownAgents.map((a) => (
+              <Box component="li" key={a.id}>
+                <ButtonBase sx={rowSx} onClick={() => onAgent(a.id)}>
+                  <MemberAvatar choices={a.avatar} kind="ai" seed={a.id} size={32} title={a.name} />
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" noWrap sx={{ display: 'block' }}>
+                      {a.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                      {a.system ? 'Sistema · configura o app' : a.profile_name || 'Agente de IA'}
+                    </Typography>
+                  </Box>
+                </ButtonBase>
+              </Box>
+            ))}
+          </Box>
+          <GroupTitle>Clientes</GroupTitle>
+          {contacts.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+              Nenhum contato encontrado. Cadastre o cliente em Contatos.
+            </Typography>
+          )}
+          <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none' }}>
+            {contacts.slice(0, 8).map((c) => (
+              <Box component="li" key={c.id}>
+                <ButtonBase sx={rowSx} onClick={() => setContact(c)}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" noWrap sx={{ display: 'block' }}>
+                      {c.name || c.phone_number}
+                    </Typography>
+                    {c.name && c.phone_number && (
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                        {c.phone_number}
+                      </Typography>
+                    )}
+                  </Box>
+                </ButtonBase>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
+    </C3Provider>
   );
 }

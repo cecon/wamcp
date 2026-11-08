@@ -51,8 +51,8 @@ export function useVoiceRecorder(onError: (message: string) => void) {
     recorder.ondataavailable = (e) => {
       if (e.data.size) chunks.push(e.data);
     };
-    const started = Date.now();
-    const tick = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 250);
+    // Conta segundos por tique do intervalo (determinístico em testes de timer) em vez do relógio de parede.
+    const tick = setInterval(() => setElapsed((seconds) => seconds + 1), 1000);
     session.current.current = { recorder, stream, chunks, tick };
     recorder.start();
     setElapsed(0);

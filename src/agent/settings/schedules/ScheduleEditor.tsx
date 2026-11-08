@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Radio from '@mui/material/Radio';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
 import { http } from '../../api';
 import type { RosterAgent } from '../../adminTypes';
-import { ModalFooter, Toggle } from '../../ui/Settings';
 import { DEFAULT_TIMEZONE, PRESETS, formatTime, type AgentSchedule, type ScheduleDraft } from './types';
 
 interface Props {
@@ -60,102 +70,101 @@ export function ScheduleEditor({ schedule, agents, busy, error, onSave, onCancel
   const byInterval = draft.interval_minutes !== null;
 
   return (
-    <form
-      className="flex flex-col gap-5"
+    <Stack
+      component="form"
+      spacing={3}
       onSubmit={(e) => {
         e.preventDefault();
         onSave(draft);
       }}
     >
-      <label>
-        <span className="field-label">Nome</span>
-        <input
-          className="field"
-          value={draft.name}
-          maxLength={80}
-          required
-          placeholder="Ex.: Resumo das pendências"
-          onChange={(e) => set({ name: e.target.value })}
-        />
-      </label>
-      <label>
-        <span className="field-label">Quando</span>
-        <select
-          className="field"
-          value={custom ? 'custom' : presetOf(draft)}
-          onChange={(e) => pick(e.target.value)}
-        >
-          {PRESETS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-          <option value="custom">Personalizado…</option>
-        </select>
-      </label>
+      <TextField
+        label="Nome"
+        size="small"
+        value={draft.name}
+        placeholder="Ex.: Resumo das pendências"
+        onChange={(e) => set({ name: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 80, required: true } }}
+      />
+      <TextField
+        select
+        label="Quando"
+        size="small"
+        value={custom ? 'custom' : presetOf(draft)}
+        onChange={(e) => pick(e.target.value)}
+        slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
+      >
+        {PRESETS.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.label}
+          </option>
+        ))}
+        <option value="custom">Personalizado…</option>
+      </TextField>
       {custom && (
-        <div className="flex flex-col gap-3 rounded-xl p-3 outline outline-1 -outline-offset-1 outline-n-weak">
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="schedule-kind"
-                checked={!byInterval}
-                onChange={() => set({ cron: draft.cron || '0 9 * * *', interval_minutes: null })}
-              />
-              Por expressão cron
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="schedule-kind"
-                checked={byInterval}
-                onChange={() => set({ cron: null, interval_minutes: draft.interval_minutes || 30 })}
-              />
-              Por intervalo
-            </label>
-          </div>
-          {byInterval ? (
-            <label>
-              <span className="field-label">A cada quantos minutos</span>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                max={10080}
-                value={draft.interval_minutes ?? ''}
-                onChange={(e) => set({ interval_minutes: Number(e.target.value) || null })}
-              />
-            </label>
-          ) : (
-            <div>
-              <label>
-                <span className="field-label">Expressão cron</span>
-                <input
-                  className="field font-mono"
-                  value={draft.cron ?? ''}
-                  placeholder="minuto hora dia mês dia-da-semana"
-                  onChange={(e) => set({ cron: e.target.value })}
+        <Stack spacing={2} sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 2 }}>
+          <Stack direction="row" spacing={2}>
+            <FormControlLabel
+              control={
+                <Radio
+                  size="small"
+                  name="schedule-kind"
+                  checked={!byInterval}
+                  onChange={() => set({ cron: draft.cron || '0 9 * * *', interval_minutes: null })}
                 />
-              </label>
-              <span className="mt-1 block text-xs text-n-slate-11">
-                Ex.: <code>*/30 8-18 * * 1-5</code> = a cada 30 minutos, das 8h às 18h, de segunda a sexta.
-              </span>
-            </div>
-          )}
-          <label>
-            <span className="field-label">Fuso horário</span>
-            <input
-              className="field"
-              value={draft.timezone}
-              onChange={(e) => set({ timezone: e.target.value })}
+              }
+              label="Por expressão cron"
             />
-          </label>
-        </div>
+            <FormControlLabel
+              control={
+                <Radio
+                  size="small"
+                  name="schedule-kind"
+                  checked={byInterval}
+                  onChange={() => set({ cron: null, interval_minutes: draft.interval_minutes || 30 })}
+                />
+              }
+              label="Por intervalo"
+            />
+          </Stack>
+          {byInterval ? (
+            <TextField
+              label="A cada quantos minutos"
+              size="small"
+              type="number"
+              value={draft.interval_minutes ?? ''}
+              onChange={(e) => set({ interval_minutes: Number(e.target.value) || null })}
+              slotProps={{ htmlInput: { min: 1, max: 10080 } }}
+            />
+          ) : (
+            <Box>
+              <TextField
+                label="Expressão cron"
+                size="small"
+                fullWidth
+                value={draft.cron ?? ''}
+                placeholder="minuto hora dia mês dia-da-semana"
+                onChange={(e) => set({ cron: e.target.value })}
+                sx={{ '& input': { fontFamily: 'monospace' } }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Ex.: <code>*/30 8-18 * * 1-5</code> = a cada 30 minutos, das 8h às 18h, de segunda a sexta.
+              </Typography>
+            </Box>
+          )}
+          <TextField
+            label="Fuso horário"
+            size="small"
+            value={draft.timezone}
+            onChange={(e) => set({ timezone: e.target.value })}
+          />
+        </Stack>
       )}
-      <div className="text-xs text-n-slate-11" aria-live="polite">
+      <Typography variant="caption" color="text.secondary" aria-live="polite">
         {upcoming.error ? (
-          <span className="text-n-ruby-11">{upcoming.error}</span>
+          <Typography component="span" variant="caption" sx={{ color: 'error.main' }}>
+            {upcoming.error}
+          </Typography>
         ) : (
           upcoming.times.length > 0 && (
             <span>
@@ -163,46 +172,74 @@ export function ScheduleEditor({ schedule, agents, busy, error, onSave, onCancel
             </span>
           )
         )}
-      </div>
-      <label>
-        <span className="field-label">Tarefa</span>
-        <textarea
-          className="field min-h-28"
-          value={draft.prompt}
-          maxLength={8000}
-          required
-          placeholder="O que o agente deve fazer a cada execução. Ex.: Liste as conversas sem resposta há mais de 1 hora."
-          onChange={(e) => set({ prompt: e.target.value })}
-        />
-      </label>
-      <fieldset>
-        <legend className="field-label">Agentes inscritos</legend>
+      </Typography>
+      <TextField
+        label="Tarefa"
+        size="small"
+        multiline
+        minRows={4}
+        value={draft.prompt}
+        placeholder="O que o agente deve fazer a cada execução. Ex.: Liste as conversas sem resposta há mais de 1 hora."
+        onChange={(e) => set({ prompt: e.target.value })}
+        slotProps={{ htmlInput: { maxLength: 8000, required: true } }}
+      />
+      <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+        <Typography component="legend" variant="caption" sx={{ color: 'text.secondary', mb: 1 }}>
+          Agentes inscritos
+        </Typography>
         {agents.length === 0 ? (
-          <p className="text-sm text-n-slate-11">
+          <Typography variant="body2" color="text.secondary">
             Cadastre um agente de IA em Funcionários para inscrevê-lo.
-          </p>
+          </Typography>
         ) : (
-          <div className="flex flex-col gap-2">
+          <Stack sx={{ gap: 1 }}>
             {agents.map((a) => (
-              <label key={a.id} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={draft.agent_ids.includes(a.id)}
-                  onChange={(e) => toggleAgent(a.id, e.target.checked)}
-                />
-                {a.name}
-                {!a.active && <span className="text-xs text-n-slate-11">(inativo)</span>}
-              </label>
+              <FormControlLabel
+                key={a.id}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={draft.agent_ids.includes(a.id)}
+                    onChange={(e) => toggleAgent(a.id, e.target.checked)}
+                  />
+                }
+                label={
+                  <span>
+                    {a.name}
+                    {!a.active && (
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {' '}
+                        (inativo)
+                      </Typography>
+                    )}
+                  </span>
+                }
+              />
             ))}
-          </div>
+          </Stack>
         )}
-        <p className="mt-2 text-xs text-n-slate-11">
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           Cada agente trabalha sozinho com o próprio runtime; o resultado chega no seu chat com ele, em
           Agentes.
-        </p>
-      </fieldset>
-      <Toggle checked={draft.active} onChange={(active) => set({ active })} label="Ativo" />
-      <ModalFooter busy={busy} submit="Salvar agendamento" onCancel={onCancel} error={error} />
-    </form>
+        </Typography>
+      </Box>
+      <FormControlLabel
+        control={<Checkbox checked={draft.active} onChange={(e) => set({ active: e.target.checked })} />}
+        label="Ativo"
+      />
+      {error && (
+        <Typography role="alert" variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+        <Button type="button" variant="outlined" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" variant="contained" disabled={busy}>
+          Salvar agendamento
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

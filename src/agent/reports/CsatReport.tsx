@@ -1,16 +1,23 @@
 import { useState } from 'react';
+
+// material-ui
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+
+// third-party
 import { Download } from 'lucide-react';
+
 import { download, query } from '../api';
 import type { CsatMetrics } from '../parityTypes';
 import { useFetch } from '../useFetch';
-import { Button } from '../ui/Button';
 import { CsatResponses, RatingDistribution, type CsatRow } from './CsatResponses';
 import { formatNumber, formatPercent } from './metrics';
 import { reportQuery, useReportPeriod } from './period';
 import { ReportFilters } from './ReportFilters';
 import { ReportCard, ReportLayout, Stat } from './ReportParts';
 
-/** Chatwoot CSAT report: metric cards, rating distribution, the latest answers and the CSV export. */
+/** CSAT no C3Theme (lote 13): cards de métrica, distribuição das notas, respostas recentes e exportação CSV. */
 export function CsatReport() {
   const { period, range, setPeriod } = useReportPeriod();
   const [downloadError, setDownloadError] = useState('');
@@ -31,15 +38,23 @@ export function CsatReport() {
       title="CSAT"
       error={metrics.error || responses.error || downloadError}
       filters={
-        <div className="flex flex-wrap items-center gap-2">
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
           <ReportFilters period={period} onChange={setPeriod} grouping={false} />
-          <Button color="slate" icon={Download} label="Baixar CSV" onClick={exportCsv} />
-        </div>
+          <Button variant="outlined" startIcon={<Download size={16} />} onClick={exportCsv}>
+            Baixar CSV
+          </Button>
+        </Stack>
       }
     >
-      <div className="flex flex-col gap-4 md:flex-row">
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <ReportCard title="Satisfação" className="md:w-[60%]">
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
+              gap: 3,
+            }}
+          >
             <Stat label="Respostas" value={formatNumber(m?.total)} />
             <Stat label="Pesquisas enviadas" value={formatNumber(m?.sent)} />
             <Stat label="Taxa de resposta" value={formatPercent(m?.response_rate)} />
@@ -49,12 +64,12 @@ export function CsatReport() {
               hint="Notas 4 e 5"
             />
             <Stat label="Nota média" value={formatNumber(m?.average)} />
-          </div>
+          </Box>
         </ReportCard>
         <ReportCard title="Distribuição das notas" className="md:w-[40%]">
           <RatingDistribution ratings={m?.ratings || {}} total={m?.total || 0} />
         </ReportCard>
-      </div>
+      </Stack>
       <ReportCard title="Avaliações recentes">
         <CsatResponses rows={responses.data || []} />
       </ReportCard>
