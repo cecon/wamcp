@@ -74,7 +74,7 @@ describe('Plugins settings', () => {
     expect(await screen.findByText('Delivery atualizado de 1.0.0 para 1.1.0.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Instalar plugin' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Instalar plugin' });
+    const dialog = await screen.findByRole('dialog', { name: /^Instalar plugin/ });
     await user.type(
       within(dialog).getByLabelText('Endereço do plugin.json'),
       'https://loja.example/plugin.json',
@@ -106,7 +106,7 @@ describe('Plugins settings', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Credenciais de Delivery' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Credenciais de Delivery' });
+    const dialog = await screen.findByRole('dialog', { name: /^Credenciais de Delivery/ });
     await user.type(within(dialog).getByLabelText(/token/), 's3gredo');
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
     await waitFor(() =>
@@ -129,7 +129,7 @@ describe('Plugins settings', () => {
     const user = renderPlugins();
     expect(await screen.findByText('Nenhum plugin instalado.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Instalar plugin' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Instalar plugin' });
+    const dialog = await screen.findByRole('dialog', { name: /^Instalar plugin/ });
     const field = within(dialog).getByLabelText('Manifesto');
 
     await user.type(field, 'não é json');
@@ -170,7 +170,7 @@ describe('Plugins settings', () => {
     });
     const user = renderPlugins();
     await user.click(await screen.findByRole('button', { name: 'Criar rotina: Cobrar documentos' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Criar a rotina “Cobrar documentos”' });
+    const dialog = await screen.findByRole('dialog', { name: /^Criar a rotina “Cobrar documentos”/ });
     expect(within(dialog).queryByLabelText('Sistema')).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText('Bia')).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Criar rotina' }));
