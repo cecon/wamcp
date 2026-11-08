@@ -57,6 +57,7 @@ pub mod security;
 pub mod sessions;
 mod signature;
 mod sla;
+pub mod store;
 pub mod system_agent;
 mod teams;
 pub mod webhooks;

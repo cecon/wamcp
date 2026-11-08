@@ -70,6 +70,8 @@ const PluginsPage = lazy(() =>
   import('./plugins/PluginsPage').then((module) => ({ default: module.PluginsPage })),
 );
 
+const StorePage = lazy(() => import('./store/StorePage').then((module) => ({ default: module.StorePage })));
+
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
   user: User;
@@ -139,6 +141,12 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return (
         <LazyPage>
           <PluginsPage />
+        </LazyPage>
+      );
+    case 'store':
+      return (
+        <LazyPage>
+          <StorePage />
         </LazyPage>
       );
     case 'skills':

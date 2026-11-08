@@ -13,6 +13,7 @@ export type SettingsSection =
   | 'automation'
   | 'skills'
   | 'plugins'
+  | 'store'
   | 'macros'
   | 'sla'
   | 'webhooks'
@@ -37,6 +38,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   'attributes',
   'canned',
   'automation',
+  'store',
+  'plugins',
   'skills',
   'macros',
   'sla',

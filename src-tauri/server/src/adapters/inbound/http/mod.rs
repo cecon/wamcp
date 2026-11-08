@@ -35,6 +35,7 @@ mod roles;
 mod security;
 mod sla;
 pub mod state;
+mod store;
 mod teams;
 mod web_app;
 
@@ -87,6 +88,7 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
         .merge(plugins::routes())
+        .merge(store::routes())
         .merge(live::routes())
         .merge(roles::routes())
         .merge(admin::routes(state.clone()))

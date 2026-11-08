@@ -38,6 +38,8 @@ pub struct Support {
     pub live: crate::application::live::LiveService,
     /// The installed plugins: what the agents can do (the engine's business tools).
     pub plugins: crate::application::plugins::PluginService,
+    /// The store: skills and agent templates from a catalog at an address.
+    pub store: crate::application::store::StoreService,
     /// Contact photos fetched from WhatsApp.
     pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,
