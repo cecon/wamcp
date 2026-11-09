@@ -40,8 +40,8 @@ pub fn validate_agent(agent: &RosterAgentDraft) -> Result<()> {
         return fail("Função inválida");
     }
     if agent.kind == "human" {
-        if agent.runtime.is_some() || agent.model.is_some() || agent.instructions.is_some() {
-            return fail("Agentes humanos não têm runtime, modelo nem instruções");
+        if agent.runtime.is_some() || agent.model.is_some() || agent.instructions.is_some() || agent.goals.is_some() {
+            return fail("Agentes humanos não têm runtime, modelo, instruções nem objetivos");
         }
         if agent.whatsapp_jid.is_none() && agent.user_id.is_none() {
             return fail("Informe o WhatsApp ou o login do agente humano");

@@ -99,7 +99,7 @@ async fn llm_bots_answer_pending_conversations_as_the_bot() {
     );
     assert!(calls[0].prompt.contains("Somos a Padaria Sol."));
     assert!(calls[0].prompt.contains("Cliente: Que horas vocês abrem?"));
-    assert_eq!(calls[0].schema["required"], json!(["reply", "handoff"]));
+    assert_eq!(calls[0].schema["required"], json!(["reply", "handoff", "resolve"]));
     assert_eq!(f.wa.sent().last().unwrap().text, "Bom dia! Abrimos às 7h.");
     let conversation = admin.get("/conversations/1").await.body;
     assert_eq!(conversation["status"], "pending", "still with the bot");

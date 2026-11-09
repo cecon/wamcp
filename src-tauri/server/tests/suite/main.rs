@@ -30,6 +30,7 @@ mod agent_runs;
 mod agent_schedules;
 mod agents_live;
 mod ai_agents_answer;
+mod ai_runtime_outputs;
 mod channels;
 mod chat_bridge;
 mod chat_media;

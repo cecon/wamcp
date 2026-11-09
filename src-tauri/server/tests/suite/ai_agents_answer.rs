@@ -9,23 +9,19 @@ use async_trait::async_trait;
 use common::{Fixture, Incoming};
 use parking_lot::Mutex;
 use serde_json::{json, Value};
-use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use wamcp_server::adapters::outbound::llm::claude_cli::parse_output;
-use wamcp_server::adapters::outbound::llm::codex_cli::{codex_arguments, parse_codex_answer};
 use wamcp_server::adapters::outbound::llm::LlmRouter;
 use wamcp_server::application::ports::{Completion, Llm, LlmRequest};
 use wamcp_server::domain::error::Result;
-use wamcp_server::domain::llm::openrouter_key;
-use wamcp_server::domain::model::SealedCredential;
 
 /// Records every request and always answers `reply`; reports itself installed at `location`.
 struct FakeRuntime {
     calls: Mutex<Vec<LlmRequest>>,
     location: Option<String>,
     handoff: AtomicBool,
+    resolve: AtomicBool,
 }
 
 #[async_trait]
@@ -33,8 +29,10 @@ impl Llm for FakeRuntime {
     async fn complete(&self, request: &LlmRequest) -> Result<Completion> {
         self.calls.lock().push(request.clone());
         Ok(
-            json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.", "handoff": self.handoff.load(Ordering::Relaxed) })
-                .into(),
+            json!({ "reply": "Olá! Sou a Ana, da Padaria Sol.\n</parameter>\n</invoke>",
+                    "handoff": self.handoff.load(Ordering::Relaxed),
+                    "resolve": self.resolve.load(Ordering::Relaxed) })
+            .into(),
         )
     }
 
@@ -48,6 +46,7 @@ fn runtime(location: Option<&str>) -> Arc<FakeRuntime> {
         calls: Mutex::default(),
         location: location.map(String::from),
         handoff: AtomicBool::new(false),
+        resolve: AtomicBool::new(false),
     })
 }
 
@@ -134,7 +133,13 @@ async fn the_connected_ai_agent_answers_through_its_runtime_with_its_skills() {
     assert!(calls[0].prompt.contains("Cliente: Que horas vocês abrem?"));
     assert_eq!(calls[0].api_key, None);
     assert_eq!(s.f.wa.sent().last().unwrap().text, "Olá! Sou a Ana, da Padaria Sol.");
-    assert_eq!(s.admin.get("/conversations/1").await.body["status"], "pending");
+    let conversation = s.admin.get("/conversations/1").await.body;
+    assert_eq!(
+        conversation["status"], "open",
+        "the agent works open conversations like a person"
+    );
+    assert_eq!(conversation["assignee_agent_id"], ana);
+    assert_eq!(conversation["assignee_id"], Value::Null);
 
     // Deactivated, it stops answering (the conversation waits for a person).
     let mut off = ai(&p, "Ana", "operator");
@@ -151,27 +156,61 @@ async fn the_connected_ai_agent_answers_through_its_runtime_with_its_skills() {
 }
 
 #[tokio::test]
-async fn open_conversations_stay_with_people_until_handed_to_the_agent() {
+async fn conversations_with_a_person_stay_with_them_until_handed_to_the_agent() {
     let s = setup().await;
     let p = profiles(&s.admin).await;
     s.write("IN1", "Oi").await;
+    let me = s.admin.user["id"].clone();
+    let assign = |who: Value| {
+        s.admin
+            .post("/conversations/1/assignments", json!({ "assignee_id": who }))
+    };
+    assert_eq!(assign(me.clone()).await.status, 200);
     let ana = s.agent(ai(&p, "Ana", "operator")).await;
     assert_eq!(s.connect(Some(ana)).await.status, 200);
 
-    // Already open before the agent was connected: a person keeps it.
+    // A person is the assignee: the agent stays out.
     s.write("IN2", "Tem pão?").await;
-    assert_eq!(s.admin.get("/conversations/1").await.body["status"], "open");
+    let conversation = s.admin.get("/conversations/1").await.body;
+    assert_eq!(
+        (conversation["status"].clone(), conversation["assignee_id"].clone()),
+        (json!("open"), me)
+    );
     assert!(s.claude.calls.lock().is_empty());
 
-    // Handed to the agent ("pending"), it answers the waiting message right away.
-    let pending = json!({ "status": "pending" });
-    let handed = s.admin.post("/conversations/1/toggle_status", pending).await;
-    assert_eq!(handed.status, 200, "{:?}", handed.body);
+    // Handed to the agent (no person as assignee), it answers the waiting message right away and
+    // the conversation stays open, now assigned to it.
+    assert_eq!(assign(Value::Null).await.status, 200);
     s.f.settle().await;
     let calls = s.claude.calls.lock().clone();
     assert_eq!(calls.len(), 1);
     assert!(calls[0].prompt.contains("Cliente: Tem pão?"));
     assert_eq!(s.f.wa.sent().last().unwrap().text, "Olá! Sou a Ana, da Padaria Sol.");
+    let conversation = s.admin.get("/conversations/1").await.body;
+    assert_eq!(conversation["status"], "open");
+    assert_eq!(conversation["assignee_agent_id"], ana);
+}
+
+#[tokio::test]
+async fn the_agent_resolves_the_conversation_when_its_goal_is_reached() {
+    let s = setup().await;
+    let p = profiles(&s.admin).await;
+    let mut body = ai(&p, "Ana", "operator");
+    body["goals"] = json!("O cliente recebeu o horário de funcionamento.");
+    let saved = s.admin.post("/agent_directory", body).await.body;
+    assert_eq!(saved["goals"], "O cliente recebeu o horário de funcionamento.");
+    let ana = saved["id"].as_i64().unwrap();
+    assert_eq!(s.connect(Some(ana)).await.status, 200);
+    s.claude.resolve.store(true, Ordering::Relaxed);
+
+    s.write("IN1", "Que horas vocês abrem?").await;
+    let calls = s.claude.calls.lock().clone();
+    assert!(calls[0]
+        .prompt
+        .contains("critério para encerrar):\nO cliente recebeu o horário de funcionamento."));
+    assert_eq!(calls[0].schema["properties"]["resolve"]["type"], "boolean");
+    assert_eq!(s.f.wa.sent().last().unwrap().text, "Olá! Sou a Ana, da Padaria Sol.");
+    assert_eq!(s.admin.get("/conversations/1").await.body["status"], "resolved");
 }
 
 #[tokio::test]
@@ -221,53 +260,6 @@ async fn runtimes_list_says_what_is_installed() {
     assert_eq!(list[2]["available"], false, "registered but not installed");
     let agent = s.f.agent(&s.admin, "op@example.com", "agent", false).await;
     assert_eq!(agent.get("/agent_runtimes").await.status, 403);
-}
-
-#[test]
-fn openrouter_key_prefers_the_named_credential_else_the_only_key() {
-    let credential = |name: &str, kind: &str| SealedCredential {
-        name: name.into(),
-        kind: kind.into(),
-        secret: format!("sealed-{name}"),
-    };
-    let both = [credential("ERP", "api_key"), credential("openrouter_api_key", "secret")];
-    assert_eq!(openrouter_key(&both).unwrap().name, "openrouter_api_key");
-    let only = [credential("CHAVE", "bearer"), credential("SENHA", "basic")];
-    assert_eq!(openrouter_key(&only).unwrap().name, "CHAVE");
-    let many = [credential("A", "api_key"), credential("B", "api_key")];
-    assert_eq!(openrouter_key(&many), None, "ambiguous");
-}
-
-#[test]
-fn codex_and_claude_outputs_are_read_back() {
-    let request = LlmRequest {
-        provider: "codex_cli".into(),
-        model: Some("gpt-5-mini".into()),
-        system: "Sistema".into(),
-        prompt: "Cliente: oi".into(),
-        schema: json!({ "type": "object" }),
-        api_key: None,
-        mcp: None,
-    };
-    let args = codex_arguments(&request, Path::new("s.json"), Path::new("a.txt"));
-    let after = |flag: &str| args[args.iter().position(|a| a == flag).unwrap() + 1].clone();
-    assert_eq!(args[0], "exec");
-    assert_eq!(after("--sandbox"), "read-only");
-    assert_eq!(after("--output-schema"), "s.json");
-    assert_eq!(after("--output-last-message"), "a.txt");
-    assert_eq!(after("--model"), "gpt-5-mini");
-    assert_eq!(args.last().unwrap(), "-", "prompt from stdin");
-    assert!(!args.iter().any(|a| a.contains("oi")));
-
-    let fenced = "```json\n{\"reply\":\"Oi\",\"handoff\":false}\n```";
-    assert_eq!(parse_codex_answer(fenced, b"").unwrap()["reply"], "Oi");
-    let error = parse_codex_answer("", b"warn\nNot logged in\n")
-        .unwrap_err()
-        .to_string();
-    assert!(error.contains("Not logged in"));
-
-    let inline = br#"{"type":"result","is_error":false,"result":"{\"reply\":\"Oi\",\"handoff\":true}"}"#;
-    assert_eq!(parse_output(inline, b"").unwrap()["handoff"], true);
 }
 
 #[tokio::test]

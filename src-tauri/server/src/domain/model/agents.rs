@@ -22,6 +22,9 @@ pub struct RosterAgent {
     pub runtime: Option<String>,
     pub model: Option<String>,
     pub instructions: Option<String>,
+    /// AI agents: the goal of their conversations, i.e. when they may resolve one on their own.
+    #[serde(default)]
+    pub goals: Option<String>,
     pub active: bool,
     pub skill_ids: Vec<i64>,
     /// Skills inherited from the profile (on top of the agent's own).
@@ -59,6 +62,7 @@ pub struct RosterAgentDraft {
     pub runtime: Option<String>,
     pub model: Option<String>,
     pub instructions: Option<String>,
+    pub goals: Option<String>,
     pub active: bool,
     pub supervisor_id: Option<i64>,
 }

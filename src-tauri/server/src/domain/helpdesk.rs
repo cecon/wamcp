@@ -102,9 +102,11 @@ pub fn route_own_message(latest: Option<&Conversation>) -> Route {
     }
 }
 
-/// Bots handle new conversations in `pending` until they hand off to a human.
-pub fn initial_status(has_bot: bool) -> &'static str {
-    if has_bot {
+/// Conversations start `open`. The inbox's AI agent works them like any other agent: it is the
+/// assignee (`assignee_agent_id`) of an open conversation until a person takes it. Only a legacy
+/// inbox bot (webhook/`llm` bot without an AI agent of the roster) still serves `pending` ones.
+pub fn initial_status(has_ai_agent: bool, has_legacy_bot: bool) -> &'static str {
+    if has_legacy_bot && !has_ai_agent {
         "pending"
     } else {
         "open"

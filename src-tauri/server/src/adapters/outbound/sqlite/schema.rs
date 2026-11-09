@@ -270,5 +270,12 @@ pub fn steps() -> Vec<String> {
            copy INTEGER NOT NULL DEFAULT 0,last_event TEXT,notified TEXT,error TEXT,
            UNIQUE(activity_id,kind,target_id));"
             .into(),
+        // v44: o agente de IA trabalha como qualquer atendente: as conversas dele ficam abertas e
+        // atribuídas a ele, sem o status `pending` à parte (que fica só para robôs legados)
+        "UPDATE conversations SET status='open'
+           WHERE status='pending' AND inbox_id IN (SELECT id FROM inboxes WHERE ai_agent_id IS NOT NULL);"
+            .into(),
+        // v45: objetivos do agente de IA: quando ele pode encerrar (resolver) uma conversa sozinho
+        "ALTER TABLE agents ADD COLUMN goals TEXT;".into(),
     ]
 }

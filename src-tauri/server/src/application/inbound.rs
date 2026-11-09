@@ -46,8 +46,8 @@ impl HelpdeskService {
 
     fn conversation_for(&self, incoming: &Incoming<'_>, events: &mut Events) -> Result<Option<Conversation>> {
         let (core, inbox) = (&self.core, incoming.inbox);
-        let has_bot = inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some() || inbox.ai_agent_id.is_some();
-        let status = initial_status(has_bot);
+        let legacy_bot = inbox.agent_bot_enabled != 0 || inbox.agent_bot_id.is_some();
+        let status = initial_status(inbox.ai_agent_id.is_some(), legacy_bot);
         let conversation = match (incoming.route, incoming.latest.clone()) {
             (Route::Ignore, _) => return Ok(None),
             (Route::Create, _) | (Route::Reuse { .. }, None) => {

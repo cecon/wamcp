@@ -38,7 +38,8 @@ impl LiveRepo for SqliteStore {
     fn unanswered_conversations(&self) -> Result<Vec<i64>> {
         self.with(|db| {
             let mut statement = db.prepare(
-                "SELECT c.id FROM conversations c WHERE c.status='pending' AND (
+                "SELECT c.id FROM conversations c WHERE (c.status='pending'
+                   OR (c.status='open' AND c.assignee_id IS NULL AND c.assignee_agent_id IS NOT NULL)) AND (
                    SELECT m.message_type FROM conversation_messages m
                    WHERE m.conversation_id=c.id AND m.private=0 AND m.message_type<>'activity'
                    ORDER BY m.id DESC LIMIT 1)='incoming'

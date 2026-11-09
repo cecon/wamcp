@@ -108,6 +108,7 @@ impl StoreService {
             runtime: Some(template.runtime.clone()),
             model: template.model.clone(),
             instructions: Some(template.agent_instructions()),
+            goals: None,
             active: true,
             supervisor_id: None,
         };
