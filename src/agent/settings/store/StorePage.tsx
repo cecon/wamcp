@@ -14,7 +14,7 @@ import { StatusChip } from '@c3theme/ui';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { Button } from '../../ui/Button';
-import { SettingsHeader, SettingsPage } from '../../ui/Settings';
+import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import type { Plugin } from '../plugins/types';
 import { useAction } from '../useAction';
 import { AgentInstallModal } from './AgentInstallModal';
@@ -63,8 +63,8 @@ export function StorePage() {
     });
 
   return (
-    <SettingsPage wide>
-      <SettingsHeader
+    <SettingsC3Page>
+      <SettingsC3Header
         title="Loja"
         description="Agentes prontos e habilidades para instalar. Um agente da loja instala a habilidade dele, pede as credenciais, cria o agente, libera as ferramentas e cria as rotinas, tudo de uma vez."
         count={store ? `Lendo de ${store.default_source ? 'a loja do WAMCP' : store.source}` : undefined}
@@ -78,11 +78,7 @@ export function StorePage() {
           />
         }
       />
-      {(error || installing.error) && (
-        <Typography variant="body2" color="error">
-          {error || installing.error}
-        </Typography>
-      )}
+      {(error || installing.error) && <SettingsC3Error>{error || installing.error}</SettingsC3Error>}
       {notice && (
         <Typography role="status" variant="body2" color="success.main">
           {notice}
@@ -167,6 +163,6 @@ export function StorePage() {
           }}
         />
       )}
-    </SettingsPage>
+    </SettingsC3Page>
   );
 }

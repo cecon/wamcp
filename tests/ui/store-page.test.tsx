@@ -150,7 +150,7 @@ describe('Store', () => {
     await user.click(screen.getByRole('tab', { name: /Habilidades/ }));
     await user.click(screen.getByRole('button', { name: 'Instalar Contador' }));
     expect(await screen.findByRole('button', { name: 'Atualizar Contador' })).toBeInTheDocument();
-    expect(screen.getByText(/falta configurar: token/)).toBeInTheDocument();
+    expect(screen.getByText(/falta configurar: token/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Como ligar' })).toHaveAttribute(
       'href',
       'https://loja.example/contador',
