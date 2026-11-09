@@ -31,11 +31,15 @@ const Reports = lazy(() => import('./Reports').then((module) => ({ default: modu
 const ConversationsScreen = lazy(() =>
   import('./conversations/ConversationsScreen').then((module) => ({ default: module.ConversationsScreen })),
 );
+const AgentRunsPage = lazy(() =>
+  import('./agentRuns/AgentRunsPage').then((module) => ({ default: module.AgentRunsPage })),
+);
 const AgentChatScreen = lazy(() =>
   import('./agentChat/AgentChatScreen').then((module) => ({ default: module.AgentChatScreen })),
 );
 import { SettingsRouter } from './settings/SettingsRouter';
 import { useSavedViews } from './filters/useSavedViews';
+import { useAgentRuns } from './agentRuns/useAgentRuns';
 import { NotificationBell } from './notifications/NotificationBell';
 import { alertNotification } from './notifications/browserAlerts';
 import { ShortcutsModal } from './shortcuts/ShortcutsModal';
@@ -68,6 +72,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
   const [realtime] = useState<Realtime>(() => connectRealtime(setOnline));
   useEffect(() => () => realtime.close(), [realtime]);
   const { views, reload: reloadViews } = useSavedViews('conversation');
+  const agentRuns = useAgentRuns(realtime);
 
   const reloadCatalog = useCallback(async () => {
     const [inboxes, agents, teams, labels] = await Promise.all([
@@ -152,6 +157,11 @@ export function Workspace({ user, onUser, onLogout }: Props) {
           />
         </Suspense>
       )}
+      {route.page === 'agent_runs' && (
+        <Suspense fallback={<Loading />}>
+          <AgentRunsPage runs={agentRuns.runs} error={agentRuns.error} onNavigate={setRoute} />
+        </Suspense>
+      )}
       {route.page === 'notifications' && (
         <Suspense fallback={<Loading />}>
           <NotificationsPage realtime={realtime} onUnread={setUnread} onOpen={openConversation} />
@@ -225,6 +235,7 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             views={views}
             route={route}
             unread={unread}
+            running={agentRuns.runs.length}
             online={online}
             onNavigate={setRoute}
             onAvailability={setAvailability}

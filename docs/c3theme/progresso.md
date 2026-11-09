@@ -4,12 +4,13 @@ Gerado por `node scripts/c3-progresso.mjs` (o `--check` recusa este arquivo desa
 **migrada** quando importa MUI/`@c3theme/*`; conta como **pendente** quando ainda desenha com `className` e não
 usa o pacote. Arquivos sem interface (hooks, tipos) ficam fora. Spike, shell do C3Theme e bootstrap também.
 
-**164 de 164 telas migradas (100%)** · faltam 0
+**165 de 165 telas migradas (100%)** · faltam 0
 
 | Pasta | Migradas | Faltam |
 |---|---:|---:|
 | (raiz) | 4 / 4 | 0 |
 | agentChat | 6 / 6 | 0 |
+| agentRuns | 1 / 1 | 0 |
 | attributes | 2 / 2 | 0 |
 | auth | 3 / 3 | 0 |
 | chat | 3 / 3 | 0 |

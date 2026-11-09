@@ -30,7 +30,9 @@ impl LlmBotService {
         }
         let messages: Vec<Message> = history.iter().map(|m| m.as_message()).collect();
         let core = &self.helpdesk.core;
+        let run = super::runs::run_id(super::Target::Chat(chat.id));
         let progress = |step: Progress| {
+            core.runs.step(&run, &super::runs::step_text(&step));
             let event = json!({ "chat_id": chat.id, "user_id": chat.user_id, "agent_id": chat.agent_id, "step": step });
             core.emit("agent_chat.progress", &event, None);
         };

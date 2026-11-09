@@ -1,13 +1,12 @@
 //! Answers `pending` conversations of inboxes served by an AI agent of the roster (or a legacy `llm`
-//! bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
-//! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
-//! model asks to). Bursts are debounced and runs are limited; one run per
-//! conversation at a time, with another one afterwards if the contact wrote meanwhile. The same queue
-//! answers the chats people logged in to the app have with AI agents (`chat`).
+//! bot) through the agent's runtime, sending the reply as the inbox bot (handing off to humans when
+//! the model asks to). Bursts are debounced, runs are limited and one run per conversation at a time,
+//! once more if the contact wrote meanwhile. The same queue answers people's chats with AI agents.
 mod admin;
 mod chat;
 mod github_tools;
 mod record;
+mod runs;
 mod scheduled;
 mod serves;
 
@@ -182,17 +181,20 @@ impl LlmBotService {
             let mut queued = self.queued.lock();
             if let Some(again) = queued.get_mut(&target) {
                 *again = true;
+                self.helpdesk.core.runs.again(&runs::run_id(target));
                 return;
             }
             queued.insert(target, false);
         }
+        self.track(target);
         self.running.fetch_add(1, Ordering::AcqRel);
-        let this = self.clone();
+        let (this, run) = (self.clone(), runs::run_id(target));
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(this.debounce).await;
                 this.queued.lock().insert(target, false);
                 if let Ok(_slot) = this.slots.acquire().await {
+                    this.helpdesk.core.runs.start(&run);
                     let outcome = match target {
                         Target::Conversation(id) => this.answer(id).await,
                         Target::Chat(id) => this.answer_chat(id).await,
@@ -204,8 +206,11 @@ impl LlmBotService {
                 let mut queued = this.queued.lock();
                 if queued.get(&target) != Some(&true) {
                     queued.remove(&target);
+                    // Under the queue's lock: a new message right after this registers a new run.
+                    this.helpdesk.core.runs.finish(&run);
                     break;
                 }
+                this.helpdesk.core.runs.requeue(&run);
             }
             if this.running.fetch_sub(1, Ordering::AcqRel) == 1 {
                 this.idle.notify_waiters();

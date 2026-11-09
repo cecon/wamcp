@@ -4,6 +4,7 @@ pub mod accounts;
 mod action_runner;
 pub mod agent_bots;
 pub mod agent_chats;
+pub mod agent_runs;
 pub mod agent_schedules;
 pub mod agents;
 pub mod ai_watchdog;

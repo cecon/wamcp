@@ -7,7 +7,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
 
 // third-party
-import { Chart2, Message2, People, Setting2, Sms, User as UserIcon } from 'iconsax-reactjs';
+import { Activity, Chart2, Message2, People, Setting2, Sms, User as UserIcon } from 'iconsax-reactjs';
 import { Search, TextSearch } from 'lucide-react';
 
 // C3Theme
@@ -38,6 +38,8 @@ interface Props {
   views: CustomFilter[];
   route: Route;
   unread: number;
+  /** Sessões de agentes de IA em andamento (badge de "Agentes ao vivo"). */
+  running?: number;
   online: boolean;
   onNavigate: (route: Route) => void;
   onAvailability: (value: User['availability']) => void;
@@ -59,6 +61,7 @@ export function C3Shell({
   views,
   route,
   unread,
+  running = 0,
   online,
   onNavigate,
   onAvailability,
@@ -114,6 +117,13 @@ export function C3Shell({
         },
         { id: 'conversations', title: 'Conversas', icon: Message2, children: conversationItems },
         { id: 'agent-chat', title: 'Agentes', icon: UserIcon, url: to({ page: 'agent_chat' }) },
+        {
+          id: 'agent-runs',
+          title: 'Agentes ao vivo',
+          icon: Activity,
+          url: to({ page: 'agent_runs' }),
+          badge: running > 0 ? running : undefined,
+        },
         ...(canManageContacts(user)
           ? [{ id: 'contacts', title: 'Contatos', icon: People, url: to({ page: 'contacts' }) }]
           : []),

@@ -54,7 +54,7 @@ export function ConversationsScreen({
   views = [],
   onViewsChange = () => {},
 }: Props) {
-  const [status, setStatus] = useState<StatusFilter>('open'),
+  const [status, setStatus] = useState<StatusFilter>('active'),
     [tab, setTab] = useState<AssigneeType>('me'),
     [sort, setSort] = useState('last_activity_at_desc'),
     [starting, setStarting] = useState(false);
