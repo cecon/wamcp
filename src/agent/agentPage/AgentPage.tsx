@@ -3,12 +3,14 @@ import { useState } from 'react';
 // material-ui
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 // third-party
 import { MessageSquare, Pause, Pencil, Play } from 'lucide-react';
+
+// C3Theme
+import { Panel, StatusChip } from '@c3theme/ui';
 
 import C3Provider from '../c3/C3Provider';
 import type { Route } from '../route';
@@ -94,10 +96,12 @@ export function AgentPage({ agentId, catalog, runs, onNavigate, onRunsChanged }:
             <Typography variant="h4" component="h1" noWrap>
               {agent.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {role || 'Agente de IA'}
-              {!agent.active && ' · inativo'}
-            </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                {role || 'Agente de IA'}
+              </Typography>
+              {!agent.active && <StatusChip label="Inativo" tone="neutral" />}
+            </Stack>
           </Box>
           {controls.admin && (
             <Button
@@ -123,13 +127,15 @@ export function AgentPage({ agentId, catalog, runs, onNavigate, onRunsChanged }:
         {(data.error || controls.error) && (
           <Typography color="error">{data.error || controls.error}</Typography>
         )}
-        <Paper component="section" variant="outlined" aria-label="Resumo" sx={{ p: 2 }}>
-          {sentences.map((s) => (
-            <Typography key={s} variant="body1" sx={{ '& + &': { mt: 0.5 } }}>
-              {s}
-            </Typography>
-          ))}
-        </Paper>
+        <Box component="section" aria-label="Resumo">
+          <Panel>
+            {sentences.map((s) => (
+              <Typography key={s} variant="body1" sx={{ '& + &': { mt: 0.5 } }}>
+                {s}
+              </Typography>
+            ))}
+          </Panel>
+        </Box>
         <AttentionList
           items={items}
           busy={controls.busy}
@@ -138,30 +144,29 @@ export function AgentPage({ agentId, catalog, runs, onNavigate, onRunsChanged }:
           onResume={controls.admin ? () => void controls.setPaused(agent.id, false) : undefined}
         />
         {data.runs.length > 0 && (
-          <Paper component="section" variant="outlined" aria-label="Agora" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" component="h2" sx={{ mb: 1 }}>
-              Agora
-            </Typography>
-            {data.runs.map((run) => (
-              <Box key={run.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ width: 96 }}>
-                  {KIND_LABEL[run.kind]}
-                </Typography>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" noWrap>
-                    {run.title}
+          <Box component="section" aria-label="Agora">
+            <Panel title="Agora">
+              {data.runs.map((run) => (
+                <Box key={run.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ width: 96 }}>
+                    {KIND_LABEL[run.kind]}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                    {run.detail ?? (run.state === 'queued' ? 'Aguardando vaga do runtime' : 'Pensando…')}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>
+                      {run.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                      {run.detail ?? (run.state === 'queued' ? 'Aguardando vaga do runtime' : 'Pensando…')}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {elapsed(run.started_at ?? run.queued_at, data.now)}
                   </Typography>
+                  {controls.admin && <StopButton controls={controls} run={run} />}
                 </Box>
-                <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {elapsed(run.started_at ?? run.queued_at, data.now)}
-                </Typography>
-                {controls.admin && <StopButton controls={controls} run={run} />}
-              </Box>
-            ))}
-          </Paper>
+              ))}
+            </Panel>
+          </Box>
         )}
         <AgentSections
           data={data}
