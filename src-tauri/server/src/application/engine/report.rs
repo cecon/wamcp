@@ -5,6 +5,7 @@ use crate::domain::actor::Actor;
 use crate::domain::engine::activity::is_final;
 use crate::domain::engine::grants::{EFFECTS, POLICIES};
 use crate::domain::engine::model::{AgentPolicy, Memory};
+use crate::domain::engine::recipients::Recipient;
 use crate::domain::error::{fail, fail_with, Result};
 use crate::domain::helpdesk::require_admin;
 use crate::domain::model::{AgentRun, RUN_ENGINE, RUN_QUEUED};
@@ -39,12 +40,38 @@ impl EngineService {
                 "messages": self.store.messages(account_id, a.id)?,
             }));
         }
+        let recipients = self.store.recipients(account_id, root.id)?;
         Ok(json!({
             "activity": root,
+            "requester_name": self.requester_name(account_id, &root.requester, &recipients)?,
+            "recipients": recipients,
             "delegations": delegations,
             "tree": items,
             "audit": self.store.audit_events(account_id, root.id)?,
         }))
+    }
+
+    /// Who asked, in words: the person, the contact, the agent that delegated or the routine.
+    fn requester_name(&self, account_id: i64, requester: &str, recipients: &[Recipient]) -> Result<Option<String>> {
+        let Some((kind, raw)) = requester.split_once(':') else {
+            return Ok(None);
+        };
+        let id: i64 = raw.parse().unwrap_or_default();
+        Ok(match kind {
+            "user" => recipients.iter().find(|r| !r.copy).and_then(|r| r.name.clone()),
+            "contact" => self
+                .store
+                .contact_identity(id)?
+                .and_then(|(phone, name)| name.or(phone)),
+            "agent" => self
+                .store
+                .directory(account_id)?
+                .into_iter()
+                .find(|a| a.id == id)
+                .map(|a| a.name),
+            "schedule" => Some(format!("Rotina #{id}")),
+            _ => None,
+        })
     }
 
     pub fn list(&self, account_id: i64) -> Result<Value> {

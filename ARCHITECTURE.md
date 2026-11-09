@@ -61,6 +61,15 @@ Uma conversa espera o seu agente de IA enquanto está `pending` e a última mens
 
 Os botões Pausar, Retomar, Encerrar e Cancelar ficam na tela "Agentes ao vivo" do menu, que lista as execuções do registro `agent_runs`; só administradores os veem (`/api/v1/agents/live`, `/api/v1/engine/activities/{id}/cancel`).
 
+## Corrente do pedido
+
+Um pedido ao motor volta para quem pediu. Cada pedido raiz guarda os seus destinatários (`engine_recipients`, v43): quem pediu e as cópias que essa pessoa escolheu (pessoas do app ou contatos, até 10). Quando o pedido termina, falha, é cancelado ou para esperando aprovação, quem conduz o pedido (`EngineService::execute`, e também `cancel`) avisa cada destinatário uma vez por estado (`application/engine/notify.rs`). Assim, uma espera e depois o resultado viram dois avisos, e uma entrega que falha fica registrada no destinatário.
+
+- **Onde chega.** Uma pessoa recebe o aviso no chat dela com o agente que recebeu o pedido. Um contato recebe pelo WhatsApp. O chat de onde veio o pedido recebe a resposta como fala do agente (`HelpdeskChannel::deliver`). O cliente de uma conversa continua sendo respondido pelo `concluir`.
+- **Chat interno.** Com um agente que roda no motor, cada mensagem da pessoa vira um pedido em nome dela (`user:<id>`, `llm_bots/bridge.rs`). O agente pode delegar e usar as ferramentas dele, e a resposta, ou o motivo de ter parado, volta ao chat.
+- **Rotinas.** Quando a rotina de um agente do motor para esperando aprovação, quem a criou passa a ser destinatário do pedido e recebe o resultado depois da decisão.
+- **Tela.** O pedido em Motor de agentes mostra a corrente inteira: quem pediu, as delegações e para quem a resposta foi, com o que cada um já soube (`requester_name` e `recipients` em `GET /engine/activities/{id}`).
+
 ## Página do agente
 
 Clicar no nome de um agente de IA (Funcionários, Agentes ao vivo, Motor de agentes, Agendamentos, responsável da conversa) abre `/agent?id=N`, só para administradores. O topo mostra o que importa: um resumo em frases (conversas atendidas e passadas para pessoas, pedidos do motor, rotinas, custo do mês) e "Espera por você" (pausa, aprovações, erros e as conversas que ele passou adiante, com o motivo). Histórico, skills e ferramentas, memória e custo e configuração ficam embaixo, recolhidos.

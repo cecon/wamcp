@@ -29,6 +29,7 @@ pub mod roles;
 pub mod salary;
 pub mod schedule;
 pub mod sla;
+pub mod store;
 pub mod summary;
 pub mod system;
 pub mod totp;

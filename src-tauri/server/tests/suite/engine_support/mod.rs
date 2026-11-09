@@ -1,6 +1,5 @@
-//! Engine test harness: a scripted agent runtime (deterministic stand-in for OpenCode that calls the
-//! same tool gateway), an organization seeded with Lu (coordinator) and Anny (finance operator), a
-//! recording reply channel and the engine wired to them.
+//! Engine test harness: a scripted runtime (stand-in for OpenCode, same tool gateway), Lu (coordinator)
+//! and Anny (finance operator), a recording reply channel and the engine wired to them.
 #![allow(dead_code)]
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -16,6 +15,7 @@ use wamcp_server::application::engine::{EngineDeps, EngineService};
 use wamcp_server::application::ports::{
     AgentRuntime, EngineRepo, ReplyChannel, RunEvent, RunSpec, RunState, ToolGateway, ToolReply, Usage,
 };
+use wamcp_server::domain::engine::recipients::Delivery;
 use wamcp_server::domain::error::{fail, Result};
 
 /// One run as the script sees it: who runs, the input and the engine's tools behind the run's token.
@@ -123,16 +123,25 @@ impl AgentRuntime for ScriptedRuntime {
     }
 }
 
-/// Records what the engine posts to conversations.
+/// Records what the engine posts to conversations and people (contact 404 has no WhatsApp).
 #[derive(Default)]
 pub struct RecordingChannel {
     pub replies: Mutex<Vec<(i64, String)>>,
+    pub deliveries: Mutex<Vec<Delivery>>,
 }
 
 #[async_trait]
 impl ReplyChannel for RecordingChannel {
     async fn reply(&self, conversation_id: i64, text: &str) -> Result<()> {
         self.replies.lock().push((conversation_id, text.into()));
+        Ok(())
+    }
+
+    async fn deliver(&self, delivery: &Delivery) -> Result<()> {
+        if (delivery.kind.as_str(), delivery.target_id) == ("contact", 404) {
+            return fail("Não há caixa de WhatsApp para avisar o contato");
+        }
+        self.deliveries.lock().push(delivery.clone());
         Ok(())
     }
 }

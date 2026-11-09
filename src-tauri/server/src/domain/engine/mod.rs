@@ -6,6 +6,7 @@ pub mod delegation;
 pub mod grants;
 pub mod model;
 pub mod prompt;
+pub mod recipients;
 pub mod tools;
 
 /// Delegations allowed below a root activity (Lu → Anny is one hop).

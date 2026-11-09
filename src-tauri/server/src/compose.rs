@@ -149,10 +149,19 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         secrets: ports.secrets.clone(),
         llm: Arc::default(),
     };
+    let schedules = crate::application::agent_schedules::AgentScheduleService::new(core.clone());
+    let store = crate::application::store::StoreService {
+        repo: ports.repo.clone(),
+        plugins: plugins.clone(),
+        agents: agents.clone(),
+        schedules: schedules.clone(),
+        engine: engine.clone(),
+    };
     let support = Support {
         system: SystemAgent::new(agents.clone()),
         chats: crate::application::agent_chats::AgentChatService { core: core.clone() },
-        schedules: crate::application::agent_schedules::AgentScheduleService::new(core.clone()),
+        schedules,
+        store,
         agents,
         engine,
         answers,

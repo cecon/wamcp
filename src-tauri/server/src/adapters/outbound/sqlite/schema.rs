@@ -262,5 +262,13 @@ pub fn steps() -> Vec<String> {
             .into(),
         // v42: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
         "ALTER TABLE plugins ADD COLUMN source TEXT;".into(),
+        // v43: a corrente de um pedido do motor: quem é avisado quando ele termina, falha, é cancelado
+        // ou espera aprovação (quem pediu e as cópias), o que cada um já soube e se a entrega falhou
+        "CREATE TABLE engine_recipients(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL REFERENCES accounts(id),
+           activity_id INTEGER NOT NULL REFERENCES engine_activities(id) ON DELETE CASCADE,
+           kind TEXT NOT NULL CHECK(kind IN ('user','contact','chat')),target_id INTEGER NOT NULL,
+           copy INTEGER NOT NULL DEFAULT 0,last_event TEXT,notified TEXT,error TEXT,
+           UNIQUE(activity_id,kind,target_id));"
+            .into(),
     ]
 }

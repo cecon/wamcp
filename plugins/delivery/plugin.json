@@ -1,0 +1,115 @@
+{
+  "id": "delivery",
+  "name": "Delivery",
+  "version": "1.0.0",
+  "description": "Atende os pedidos de um delivery pelo WhatsApp: mostra o cardápio, calcula o pedido com os preços da loja, registra o pedido e responde sobre o status. Avisa o cliente quando o pedido atrasa.",
+  "credentials": [{ "name": "token", "help": "O DELIVERY_TOKEN com que o servidor da loja foi iniciado" }],
+  "skills": [
+    {
+      "name": "Atender pedidos",
+      "description": "Cardápio, montagem e fechamento do pedido",
+      "instructions": "Você atende os clientes de um delivery pelo WhatsApp, com mensagens curtas e cordiais em português.\n\n- Use `delivery.cardapio` para mostrar o que há (filtre por `termo` ou `categoria`) e para saber horário, taxa de entrega, tempo estimado e formas de pagamento. Mostre de 3 a 5 opções por mensagem, com nome e preço.\n- Monte o pedido com o cliente e calcule com `delivery.calcular_pedido`, usando os códigos do cardápio. Se ela apontar problemas, explique e corrija.\n- Antes de registrar, envie o resumo com cada item, a taxa e o total calculados pela ferramenta, peça o endereço completo e a forma de pagamento (e o troco, se for dinheiro) e espere o cliente confirmar.\n- Confirmado, registre com `delivery.fazer_pedido` e diga o número do pedido e a previsão.\n- Para \"cadê meu pedido\", use `delivery.status_pedido`. Ela sempre responde sobre o cliente desta conversa.\n- Nunca invente itens, preços, promoções ou prazos. Reclamação, troca, cancelamento ou pedido para falar com uma pessoa: avise que a equipe vai continuar e passe a conversa para uma pessoa."
+    },
+    {
+      "name": "Avisar atrasos",
+      "description": "Rotina: avisa os clientes de pedidos atrasados",
+      "instructions": "Na rotina de atrasos: use `delivery.pedidos_atrasados`. Para cada pedido, envie ao cliente com `mensagens.enviar_whatsapp` uma mensagem curta pedindo desculpas pelo atraso, com o número e o status do pedido, e registre com `delivery.registrar_aviso`. Conclua com a lista dos pedidos avisados."
+    }
+  ],
+  "tools": [
+    {
+      "name": "cardapio",
+      "description": "Itens disponíveis agora (filtre por termo ou categoria) e os dados da loja: horário, taxa, tempo estimado e pagamentos.",
+      "input_schema": {
+        "type": "object",
+        "properties": { "termo": { "type": "string" }, "categoria": { "type": "string" } }
+      },
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/cardapio", "credential": "token" }
+    },
+    {
+      "name": "calcular_pedido",
+      "description": "Calcula itens, taxa de entrega e total com os preços da loja e aponta problemas (item indisponível, quantidade).",
+      "input_schema": {
+        "type": "object",
+        "required": ["itens"],
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["codigo"],
+              "properties": {
+                "codigo": { "type": "string" },
+                "quantidade": { "type": "integer" },
+                "observacao": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/calcular_pedido", "credential": "token" }
+    },
+    {
+      "name": "fazer_pedido",
+      "description": "Registra o pedido confirmado do cliente desta conversa e devolve o número e a previsão.",
+      "input_schema": {
+        "type": "object",
+        "required": ["itens", "endereco", "pagamento"],
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["codigo"],
+              "properties": {
+                "codigo": { "type": "string" },
+                "quantidade": { "type": "integer" },
+                "observacao": { "type": "string" }
+              }
+            }
+          },
+          "endereco": { "type": "string" },
+          "pagamento": { "type": "string", "description": "Uma das formas de pagamento do cardápio" },
+          "troco_para": { "type": "number" }
+        }
+      },
+      "side_effects": true,
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/fazer_pedido", "credential": "token" }
+    },
+    {
+      "name": "status_pedido",
+      "description": "Os últimos pedidos do cliente desta conversa, com status e previsão.",
+      "input_schema": { "type": "object", "properties": {} },
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/status_pedido", "credential": "token" }
+    },
+    {
+      "name": "pedidos_atrasados",
+      "description": "Pedidos abertos que passaram da previsão e cujo cliente ainda não foi avisado.",
+      "input_schema": { "type": "object", "properties": {} },
+      "internal_only": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/pedidos_atrasados", "credential": "token" }
+    },
+    {
+      "name": "registrar_aviso",
+      "description": "Marca que o cliente do pedido foi avisado do atraso.",
+      "input_schema": {
+        "type": "object",
+        "required": ["numero"],
+        "properties": { "numero": { "type": "integer" } }
+      },
+      "side_effects": true,
+      "internal_only": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8791/registrar_aviso", "credential": "token" }
+    }
+  ],
+  "schedules": [
+    {
+      "name": "Avisar pedidos atrasados",
+      "description": "A cada 20 minutos, das 18h às 23h",
+      "cron": "*/20 18-23 * * *",
+      "prompt": "Avise os clientes dos pedidos atrasados, seguindo a skill \"Delivery: Avisar atrasos\"."
+    }
+  ]
+}
