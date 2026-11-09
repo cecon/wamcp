@@ -30,7 +30,9 @@ impl LlmBotService {
         }
         let messages: Vec<Message> = history.iter().map(|m| m.as_message()).collect();
         let core = &self.helpdesk.core;
+        let run = super::runs::run_id(super::Target::Chat(chat.id));
         let progress = |step: Progress| {
+            core.runs.step(&run, &super::runs::step_text(&step));
             let event = json!({ "chat_id": chat.id, "user_id": chat.user_id, "agent_id": chat.agent_id, "step": step });
             core.emit("agent_chat.progress", &event, None);
         };
@@ -42,8 +44,14 @@ impl LlmBotService {
         let (role, content) = if session_full(spent) {
             (CHAT_ERROR, SESSION_FULL.to_string())
         } else {
-            match self.chat_turn(&chat, &messages, &progress).await {
-                Ok(reply) => (CHAT_AGENT, reply),
+            // On the engine the request may delegate and wait for approvals; the engine posts the
+            // answer (or why it stopped) in this chat itself.
+            match self.chat_by_engine(&chat, &messages).await {
+                Ok(true) => return Ok(()),
+                Ok(false) => match self.chat_turn(&chat, &messages, &progress).await {
+                    Ok(reply) => (CHAT_AGENT, reply),
+                    Err(error) => (CHAT_ERROR, format!("Não consegui responder: {error}")),
+                },
                 Err(error) => (CHAT_ERROR, format!("Não consegui responder: {error}")),
             }
         };

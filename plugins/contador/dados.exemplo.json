@@ -1,0 +1,25 @@
+{
+  "clientes": [
+    {
+      "nome": "Ana Souza",
+      "telefone": "+5511988887777",
+      "regime": "MEI",
+      "documentos": [
+        { "mes": "2026-11", "tipo": "extrato bancário", "recebido": false },
+        { "mes": "2026-11", "tipo": "notas fiscais emitidas", "recebido": true }
+      ]
+    },
+    {
+      "nome": "Padaria Sol Ltda",
+      "telefone": "+5511977776666",
+      "regime": "Simples",
+      "documentos": [{ "mes": "2026-11", "tipo": "folha de pagamento", "recebido": false }]
+    }
+  ],
+  "prazos": [
+    { "regime": "MEI", "obrigacao": "DAS-MEI", "dia": 20 },
+    { "regime": "Simples", "obrigacao": "DAS do Simples Nacional", "dia": 20 },
+    { "regime": "todos", "obrigacao": "Enviar os documentos do mês ao escritório", "dia": 5 }
+  ],
+  "solicitacoes": []
+}

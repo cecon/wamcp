@@ -9,7 +9,7 @@ use super::core::Core;
 use super::event_bus::Envelope;
 use crate::domain::actor::Performer;
 use crate::domain::error::{fail, HelpdeskError, Result};
-use crate::domain::model::{Conversation, User};
+use crate::domain::model::{run_visible, Conversation, User};
 use crate::domain::notifications::{is_enabled, mentioned_user_ids, NOTIFICATION_TYPES};
 use serde_json::{json, Value};
 
@@ -204,6 +204,21 @@ impl NotificationService {
         // Notifications and chats with AI agents are private, also to other administrators.
         if envelope.event.starts_with("notification.") || envelope.event.starts_with("agent_chat.") {
             return data["user_id"].as_i64() == Some(user.id);
+        }
+        if envelope.event.starts_with("agent_run.") {
+            let admin = user.role == "administrator";
+            let inboxes = if admin {
+                Vec::new()
+            } else {
+                self.core.repo.member_inbox_ids(user.id).unwrap_or_default()
+            };
+            return run_visible(
+                data["owner_id"].as_i64(),
+                data["inbox_id"].as_i64(),
+                user.id,
+                admin,
+                &inboxes,
+            );
         }
         if user.role == "administrator" {
             return true;

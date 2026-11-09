@@ -10,6 +10,7 @@ pub mod llm;
 pub mod media_storage;
 pub mod opencode;
 pub mod password;
+pub mod plugin_transport;
 pub mod secret_box;
 pub mod sqlite;
 pub mod webhook_sender;

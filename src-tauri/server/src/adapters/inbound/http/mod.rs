@@ -6,6 +6,8 @@ mod admin;
 mod agent_bots;
 mod agent_chats;
 mod agent_directory;
+mod agent_history;
+mod agent_runs;
 mod agent_runtimes;
 mod agent_schedules;
 mod audit;
@@ -22,16 +24,19 @@ pub mod error;
 mod github;
 mod github_app;
 pub mod input;
+mod live;
 mod macros;
 mod message_actions;
 mod messages;
 mod notifications;
+mod plugins;
 pub mod rate_limit;
 mod reports;
 mod roles;
 mod security;
 mod sla;
 pub mod state;
+mod store;
 mod teams;
 mod web_app;
 
@@ -76,12 +81,17 @@ fn helpdesk_api(state: &AppState) -> Router<AppState> {
         .merge(sla::routes())
         .merge(agent_bots::routes())
         .merge(agent_directory::routes())
+        .merge(agent_history::routes())
         .merge(agent_chats::routes())
+        .merge(agent_runs::routes())
         .merge(agent_schedules::routes())
         .merge(github::routes())
         .merge(github_app::routes())
         .merge(agent_runtimes::routes())
         .merge(engine::routes())
+        .merge(plugins::routes())
+        .merge(store::routes())
+        .merge(live::routes())
         .merge(roles::routes())
         .merge(admin::routes(state.clone()))
         .layer(axum::middleware::from_fn_with_state(state.clone(), audit::record))

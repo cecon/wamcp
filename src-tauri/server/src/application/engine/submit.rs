@@ -19,6 +19,10 @@ pub struct Submission {
     pub idempotency_key: Option<String>,
     pub priority: i64,
     pub deadline: Option<String>,
+    /// The internal chat the request came from: the answer goes back there.
+    pub reply_chat: Option<i64>,
+    /// Who else hears how it went: `("user", id)` or `("contact", id)`.
+    pub copies: Vec<(String, i64)>,
 }
 
 impl EngineService {
@@ -28,6 +32,7 @@ impl EngineService {
         if request.is_empty() || request.chars().count() > 4000 {
             return fail("O pedido precisa ter entre 1 e 4000 caracteres");
         }
+        super::notify::check_copies(&s.copies)?;
         let agent = self.agent(s.account_id, s.agent_id)?;
         if !self.store.policy(s.account_id, agent.id)?.enabled {
             return fail("O motor está desligado para este agente");
@@ -45,6 +50,9 @@ impl EngineService {
             correlation_id: uuid::Uuid::new_v4().simple().to_string(),
         };
         let (activity, created) = self.store.create_activity(&draft)?;
+        if created {
+            self.add_recipients(&activity, s)?;
+        }
         let outcome = if created { "created" } else { "duplicate" };
         self.audit(
             s.account_id,
@@ -83,6 +91,8 @@ impl EngineService {
         let result = self.drive_activity(account_id, id).await;
         self.active.lock().remove(&id);
         result?;
+        // The driver of a root activity tells its recipients how it ended (or that it waits).
+        self.tell_recipients(account_id, id).await;
         self.load(account_id, id)
     }
 
@@ -91,6 +101,9 @@ impl EngineService {
             let activity = self.load(account_id, id)?;
             if status::is_final(&activity.status) || activity.status == status::WAITING_APPROVAL {
                 return Ok(());
+            }
+            if activity.parent_id.is_none() && self.store.agent_paused(activity.agent_id)? {
+                return self.hold(&activity);
             }
             if activity.status == status::QUEUED
                 && !self.store.move_activity(id, status::QUEUED, status::RUNNING, None)?

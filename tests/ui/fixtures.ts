@@ -114,6 +114,7 @@ export function workspaceRoutes(user: User = admin): Record<string, Route> {
     'GET /teams': [team],
     'GET /labels': labels,
     'GET /notifications/unread_count': { unread: 3 },
+    'GET /agent_runs': [],
     'GET /conversations': [conversation],
     'GET /conversations/meta': { mine: 1, unassigned: 4, all: 9 },
     'GET /conversations/7': conversation,

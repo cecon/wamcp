@@ -32,6 +32,14 @@ pub struct Support {
     pub system: crate::application::system_agent::SystemAgent,
     /// The agentic engine, attached once the server knows its own address (MCP endpoint for runtimes).
     pub engine: Arc<std::sync::OnceLock<crate::application::engine::EngineService>>,
+    /// Who answers the conversations served by AI agents, once `attach_llm` gave it a provider.
+    pub answers: Arc<std::sync::OnceLock<crate::application::llm_bots::LlmBotService>>,
+    /// "Agentes ao vivo": what each AI agent is doing, pause and stop.
+    pub live: crate::application::live::LiveService,
+    /// The installed plugins: what the agents can do (the engine's business tools).
+    pub plugins: crate::application::plugins::PluginService,
+    /// The store: skills and agent templates from a catalog at an address.
+    pub store: crate::application::store::StoreService,
     /// Contact photos fetched from WhatsApp.
     pub avatars: AvatarService,
     pub helpdesk: HelpdeskService,

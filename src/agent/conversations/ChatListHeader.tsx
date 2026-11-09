@@ -12,10 +12,12 @@ import Typography from '@mui/material/Typography';
 import { ArrowDownWideNarrow, ArrowUpDown } from 'lucide-react';
 
 import type { ConversationStatus } from '../types';
-import { SORT_LABEL, STATUS_LABEL } from '../labels';
+import { SORT_LABEL } from '../labels';
 
-export type StatusFilter = ConversationStatus | 'all';
+/** `active` = open + pending: conversations with people and with the inbox's AI agent. */
+export type StatusFilter = ConversationStatus | 'active' | 'all';
 const CHIP: Record<StatusFilter, string> = {
+  active: 'Ativas',
   open: 'Abertas',
   pending: 'Pendentes',
   snoozed: 'Adiadas',
@@ -69,9 +71,7 @@ function SelectPopover<T extends string>({
   );
 }
 
-const STATUS_OPTIONS = Object.fromEntries(
-  (Object.keys(STATUS_LABEL) as StatusFilter[]).map((s) => [s, CHIP[s]]),
-) as Record<StatusFilter, string>;
+const STATUS_OPTIONS: Record<StatusFilter, string> = { ...CHIP, active: 'Ativas (abertas e com a IA)' };
 
 interface Props {
   title: string;

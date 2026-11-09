@@ -4,6 +4,7 @@ use crate::domain::engine::model::{
     Activity, ActivityDraft, AgentMessage, AgentPolicy, AuditEvent, Delegation, EngineAgent, Evidence, Memory, Run,
     ToolCall, ToolGrant,
 };
+use crate::domain::engine::recipients::Recipient;
 use crate::domain::error::Result;
 use async_trait::async_trait;
 use serde_json::Value;
@@ -99,22 +100,42 @@ pub trait AgentRuntime: Send + Sync {
     async fn run_status(&self, external_id: &str) -> Result<RunState>;
 }
 
-/// Business tools behind grants (the MVP has a simulated finance system).
+/// Business tools behind grants: the tools of the installed plugins.
 #[async_trait]
 pub trait BusinessTools: Send + Sync {
+    /// The tools on offer (`<plugin>.<tool>`).
+    fn tools(&self, _account_id: i64) -> Vec<crate::domain::engine::tools::ToolDef> {
+        Vec::new()
+    }
     /// `Err` = the tool is unavailable; a domain answer ("not found") is `Ok`.
     async fn call(&self, account_id: i64, tool: &str, args: &Value) -> Result<Value>;
 }
 
-/// Where a root activity's final answer goes: the conversation it came from.
+/// Where a root activity's final answer goes: the conversation it came from, and the people and
+/// contacts who hear about the request (`deliver`).
 #[async_trait]
 pub trait ReplyChannel: Send + Sync {
     async fn reply(&self, conversation_id: i64, text: &str) -> Result<()>;
+    /// Tells one recipient how the request went (their chat with the agent, the chat it came from or WhatsApp).
+    async fn deliver(&self, delivery: &crate::domain::engine::recipients::Delivery) -> Result<()> {
+        let _ = delivery;
+        crate::domain::error::fail("Este canal não avisa pessoas")
+    }
 }
 
 /// Engine storage. Every query is scoped to `account_id` unless it says otherwise.
 pub trait EngineRepo: Send + Sync {
     fn engine_agent(&self, account_id: i64, agent_id: i64) -> Result<Option<EngineAgent>>;
+    /// The phone and name of a contact, for tools about the customer of the turn.
+    fn contact_identity(&self, contact_id: i64) -> Result<Option<(Option<String>, Option<String>)>> {
+        let _ = contact_id;
+        Ok(None)
+    }
+    /// Paused agents start no run until they are resumed.
+    fn agent_paused(&self, agent_id: i64) -> Result<bool> {
+        let _ = agent_id;
+        Ok(false)
+    }
     /// Active AI agents of the organization that have the skill (their own or their profile's).
     fn agents_with_skill(&self, account_id: i64, skill: &str) -> Result<Vec<EngineAgent>>;
     /// Every active AI agent of the organization (the competence directory).
@@ -194,4 +215,31 @@ pub trait EngineRepo: Send + Sync {
     /// A corrected version that supersedes `id`.
     fn correct_memory(&self, account_id: i64, id: i64, content: &str) -> Result<Option<Memory>>;
     fn forget_memory(&self, account_id: i64, id: i64) -> Result<bool>;
+
+    /// Adds who hears about the activity (ignored when already there); `told`: the state they already know.
+    fn add_recipient(
+        &self,
+        account_id: i64,
+        activity_id: i64,
+        kind: &str,
+        target_id: i64,
+        copy: bool,
+        told: Option<&str>,
+    ) -> Result<()> {
+        let _ = (account_id, activity_id, kind, target_id, copy, told);
+        Ok(())
+    }
+    fn recipients(&self, account_id: i64, activity_id: i64) -> Result<Vec<Recipient>> {
+        let _ = (account_id, activity_id);
+        Ok(Vec::new())
+    }
+    /// Compare-and-set: whether the recipient was not yet told about `event` (and now is being told).
+    fn claim_recipient(&self, id: i64, event: &str) -> Result<bool> {
+        let _ = (id, event);
+        Ok(false)
+    }
+    fn recipient_error(&self, id: i64, error: &str) -> Result<()> {
+        let _ = (id, error);
+        Ok(())
+    }
 }

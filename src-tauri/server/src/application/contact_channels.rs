@@ -1,4 +1,5 @@
 //! Contact actions that reach WhatsApp: blocking, profile pictures and starting a conversation.
+use super::channels::Address;
 use super::helpdesk::HelpdeskService;
 use super::replies::Draft;
 use crate::domain::actor::Actor;
@@ -14,13 +15,20 @@ impl HelpdeskService {
             ..Default::default()
         };
         let updated = self.update_contact(actor, id, &changes)?;
-        for channel in self.core.repo.contact_channels(id)? {
-            if let Err(error) = self
-                .whatsapp
-                .block(&channel.session_id, &channel.source_id, blocked)
-                .await
-            {
-                tracing::warn!(%error, session = %channel.session_id, "falha ao bloquear contato no WhatsApp");
+        for place in self.core.repo.contact_channels(id)? {
+            let Ok(inbox) = self.core.inbox(place.inbox_id) else {
+                continue;
+            };
+            let channel = self.channel(&inbox);
+            if !channel.capabilities().block {
+                continue;
+            }
+            let to = Address {
+                inbox: &inbox,
+                contact: &place.source_id,
+            };
+            if let Err(error) = channel.block(self, to, blocked).await {
+                tracing::warn!(%error, inbox = inbox.id, "falha ao bloquear contato no canal");
             }
         }
         Ok(updated)
@@ -37,8 +45,8 @@ impl HelpdeskService {
     ) -> Result<Conversation> {
         let contact = self.find_contact(contact_id)?;
         let inbox = self.core.inbox(inbox_id)?;
-        if inbox.channel_type != "whatsapp" {
-            return fail_with("Conversas do GitHub começam pelos eventos do repositório", 422);
+        if !self.channel(&inbox).capabilities().starts_conversations {
+            return fail_with("Neste canal, as conversas começam pelos eventos do próprio canal", 422);
         }
         if !actor.is_admin() && !self.core.member_inbox_ids(actor)?.contains(&inbox.id) {
             return fail_with("Sem acesso a esta caixa de entrada", 403);

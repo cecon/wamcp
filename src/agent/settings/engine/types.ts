@@ -14,6 +14,8 @@ export interface EngineActivity {
   conversation_id: number | null;
   correlation_id: string;
   attempts: number;
+  /** The answer to the customer's conversation: `sending` or `sent`. */
+  reply_state?: 'sending' | 'sent' | null;
   created: string;
   updated: string;
 }
@@ -75,8 +77,24 @@ export interface EngineDelegation {
   hops: number;
 }
 
+/** Who hears about a request (`user`: their chat with the agent; `chat`: the chat it came from; `contact`: WhatsApp). */
+export interface EngineRecipient {
+  id: number;
+  kind: 'user' | 'contact' | 'chat';
+  target_id: number;
+  copy: boolean;
+  /** The last state they were told about. */
+  last_event: ActivityStatus | null;
+  notified: string | null;
+  error: string | null;
+  name: string | null;
+}
+
 export interface ActivityDetail {
   activity: EngineActivity;
+  /** Who asked, in words (older servers send nothing). */
+  requester_name?: string | null;
+  recipients?: EngineRecipient[];
   delegations: EngineDelegation[];
   tree: {
     activity: EngineActivity;

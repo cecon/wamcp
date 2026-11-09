@@ -1,5 +1,6 @@
 //! Outgoing messages: text, files and voice notes, optionally answering (quoting) another message.
 //! Agent, bot or automation replies; automated messages carry their origin in content_attributes.
+use super::channels::Address;
 use super::core::Events;
 use super::helpdesk::HelpdeskService;
 use super::ports::{Quote, SendRequest};
@@ -233,7 +234,12 @@ impl HelpdeskService {
         actor: &Actor,
     ) -> Result<Message> {
         let repo = &self.core.repo;
-        let updated = match self.send_out(&message, inbox, request).await {
+        let contact = request.jid.clone();
+        let to = Address {
+            inbox,
+            contact: &contact,
+        };
+        let updated = match self.channel(inbox).send(self, &message, to, request).await {
             Ok(_) => {
                 let current = repo.message(message.id)?.unwrap_or(message);
                 // A delivery receipt may already have advanced the status while the send was in flight.

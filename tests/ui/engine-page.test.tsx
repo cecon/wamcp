@@ -122,7 +122,32 @@ describe('agentic engine page', () => {
     const api = fakeApi({
       'GET /engine/activities': [activity(1, 10, 'waiting_approval'), activity(2, 11, 'waiting_approval', 1)],
       'GET /agent_directory': [ai(10, 'Lu', 'coordinator'), ai(11, 'Anny', 'operator')],
-      'GET /engine/activities/1': detail,
+      'GET /engine/activities/1': {
+        ...detail,
+        requester_name: 'Eduardo',
+        recipients: [
+          {
+            id: 1,
+            kind: 'user',
+            target_id: 1,
+            copy: false,
+            last_event: 'waiting_approval',
+            notified: '2026-10-28T12:00:06Z',
+            error: null,
+            name: 'Eduardo',
+          },
+          {
+            id: 2,
+            kind: 'contact',
+            target_id: 9,
+            copy: true,
+            last_event: 'waiting_approval',
+            notified: null,
+            error: 'Não há caixa de WhatsApp',
+            name: 'Maria',
+          },
+        ],
+      },
       'POST /engine/tool_calls/9/decision': { id: 9, status: 'ok' },
     });
     const user = renderEngine();
@@ -130,6 +155,14 @@ describe('agentic engine page', () => {
     expect(await screen.findByText('1 pedido')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'O cliente ACME pagou?' }));
     const panel = await screen.findByRole('dialog', { name: 'Pedido #1' });
+    // The chain in one read: who asked, who delegated to whom and who hears about it.
+    const chain = await within(panel).findByRole('region', { name: 'Corrente do pedido' });
+    expect(within(chain).getByText('Eduardo pediu a Lu.')).toBeInTheDocument();
+    expect(
+      within(chain).getByText('Lu delegou a Anny, pela skill consultar_pagamento (aguardando aprovação).'),
+    ).toBeInTheDocument();
+    expect(within(chain).getByText(/avisado: aguardando aprovação/)).toBeInTheDocument();
+    expect(within(chain).getByText(/não chegou: Não há caixa de WhatsApp/)).toBeInTheDocument();
     const anny = await within(panel).findByRole('region', { name: 'Atividade de Anny' });
     expect(
       within(anny).getByText(/delegado por Lu \(skill consultar_pagamento, salto 1\)/),
@@ -199,6 +232,7 @@ describe('agentic engine page', () => {
     expect(api.called('POST', '/engine/activities')[0].body).toEqual({
       agent_id: 10,
       request: 'Lu, o cliente ACME pagou?',
+      copies: [],
     });
     await user.click(screen.getByRole('button', { name: 'Fechar' }));
 

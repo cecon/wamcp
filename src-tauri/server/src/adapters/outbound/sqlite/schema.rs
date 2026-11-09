@@ -244,12 +244,38 @@ pub fn steps() -> Vec<String> {
         // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
         // a volta do GitHub
         "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
-        // v40: o agente de IA trabalha como qualquer atendente: as conversas dele ficam abertas e
+        // v40: plugins (o que um agente sabe fazer): o manifesto de cada plugin instalado e os
+        // valores cifrados das credenciais que as ferramentas dele usam
+        "CREATE TABLE plugins(id TEXT PRIMARY KEY,manifest TEXT NOT NULL CHECK(json_valid(manifest)),
+           enabled INTEGER NOT NULL DEFAULT 1,builtin INTEGER NOT NULL DEFAULT 0,installed TEXT NOT NULL,
+           updated TEXT NOT NULL);
+         CREATE TABLE plugin_credentials(plugin_id TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+           name TEXT NOT NULL,secret TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(plugin_id,name));"
+            .into(),
+        // v41: agentes ao vivo: os agentes pausados (não respondem nem começam execuções até serem
+        // retomados) e o resumo do começo das conversas longas que o agente atende
+        "CREATE TABLE agent_pauses(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+           paused_at INTEGER NOT NULL);
+         CREATE TABLE conversation_summaries(
+           conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+           summary TEXT NOT NULL,upto_message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL);"
+            .into(),
+        // v42: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
+        "ALTER TABLE plugins ADD COLUMN source TEXT;".into(),
+        // v43: a corrente de um pedido do motor: quem é avisado quando ele termina, falha, é cancelado
+        // ou espera aprovação (quem pediu e as cópias), o que cada um já soube e se a entrega falhou
+        "CREATE TABLE engine_recipients(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL REFERENCES accounts(id),
+           activity_id INTEGER NOT NULL REFERENCES engine_activities(id) ON DELETE CASCADE,
+           kind TEXT NOT NULL CHECK(kind IN ('user','contact','chat')),target_id INTEGER NOT NULL,
+           copy INTEGER NOT NULL DEFAULT 0,last_event TEXT,notified TEXT,error TEXT,
+           UNIQUE(activity_id,kind,target_id));"
+            .into(),
+        // v44: o agente de IA trabalha como qualquer atendente: as conversas dele ficam abertas e
         // atribuídas a ele, sem o status `pending` à parte (que fica só para robôs legados)
         "UPDATE conversations SET status='open'
            WHERE status='pending' AND inbox_id IN (SELECT id FROM inboxes WHERE ai_agent_id IS NOT NULL);"
             .into(),
-        // v41: objetivos do agente de IA: quando ele pode encerrar (resolver) uma conversa sozinho
+        // v45: objetivos do agente de IA: quando ele pode encerrar (resolver) uma conversa sozinho
         "ALTER TABLE agents ADD COLUMN goals TEXT;".into(),
     ]
 }

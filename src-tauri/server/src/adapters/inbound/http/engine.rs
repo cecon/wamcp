@@ -29,11 +29,20 @@ async fn activities(State(state): State<AppState>, current: CurrentUser) -> ApiR
 }
 
 #[derive(Deserialize)]
+struct Copy {
+    kind: String,
+    id: i64,
+}
+
+#[derive(Deserialize)]
 struct NewActivity {
     agent_id: i64,
     request: String,
     conversation_id: Option<i64>,
     idempotency_key: Option<String>,
+    /// Who else hears how it went: people of the app (`user`) or contacts (`contact`).
+    #[serde(default)]
+    copies: Vec<Copy>,
 }
 
 async fn start(
@@ -48,6 +57,7 @@ async fn start(
         requester: format!("user:{}", current.user.id),
         conversation_id: body.conversation_id,
         idempotency_key: optional_text(body.idempotency_key.as_deref(), 1, 200)?,
+        copies: body.copies.into_iter().map(|c| (c.kind, c.id)).collect(),
         ..Submission::default()
     };
     created(engine(&state)?.start(&submission)?)
@@ -154,8 +164,8 @@ async fn forget(State(state): State<AppState>, current: CurrentUser, Path(raw): 
 }
 
 async fn catalog(State(state): State<AppState>, current: CurrentUser) -> ApiResult<Response> {
-    account(&current)?;
-    ok(engine(&state)?.catalog())
+    let account = account(&current)?;
+    ok(engine(&state)?.catalog(account))
 }
 
 pub fn routes() -> Router<AppState> {

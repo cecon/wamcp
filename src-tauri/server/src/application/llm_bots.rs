@@ -1,16 +1,19 @@
 //! Answers the conversations assigned to the AI agent of an inbox (or the `pending` ones of a legacy
-//! `llm` bot): when the contact writes, the conversation is sent to the agent's runtime with its model,
-//! instructions and skills, and the reply goes out as the inbox bot (handing off to humans when the
-//! model asks to). Bursts are debounced and runs are limited; one run per
-//! conversation at a time, with another one afterwards if the contact wrote meanwhile. The same queue
-//! answers the chats people logged in to the app have with AI agents (`chat`).
+//! `llm` bot) through the agent's runtime, sending the reply as the inbox bot (handing off to humans
+//! or resolving when the model asks to). Bursts are debounced, runs are limited and one run per
+//! conversation at a time, once more if the contact wrote meanwhile. The same queue answers people's
+//! chats with AI agents.
 mod admin;
+mod bridge;
 mod chat;
 mod conclude;
 mod github_tools;
+mod live;
 mod record;
+mod runs;
 mod scheduled;
 mod serves;
+mod summary;
 
 use super::event_bus::Envelope;
 use super::helpdesk::HelpdeskService;
@@ -23,6 +26,7 @@ use crate::domain::llm::{
     TRANSCRIPT_LIMIT,
 };
 use crate::domain::model::{ChatMessage, Inbox, Message, BOT_LLM, CHAT_USER};
+use crate::domain::summary::with_summary;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -38,12 +42,14 @@ pub struct LlmBotService {
     debounce: Duration,
     slots: Arc<Semaphore>,
     /// Conversations and chats with a scheduled or running answer; `true` = someone wrote again meanwhile.
-    queued: Arc<Mutex<HashMap<Target, bool>>>,
+    queued: Arc<Mutex<HashMap<Target, live::Pending>>>,
     running: Arc<AtomicUsize>,
     idle: Arc<Notify>,
     system: Option<SystemAgent>,
     /// The app's own MCP endpoint for the system agent, known once the server listens.
     mcp_url: Arc<OnceLock<String>>,
+    /// The agentic engine, for agents that run there (see `bridge.rs`).
+    engine: Arc<OnceLock<super::engine::EngineService>>,
 }
 
 /// What an answer is for: a customer's conversation or a person's chat with an AI agent.
@@ -79,6 +85,7 @@ impl LlmBotService {
             idle: Arc::default(),
             system: None,
             mcp_url: Arc::default(),
+            engine: Arc::default(),
         }
     }
 
@@ -86,6 +93,12 @@ impl LlmBotService {
     pub fn with_system(mut self, system: SystemAgent, mcp_url: Arc<OnceLock<String>>) -> Self {
         self.system = Some(system);
         self.mcp_url = mcp_url;
+        self
+    }
+
+    /// Sends the turns of agents that run on the engine through it, once it is attached.
+    pub fn with_engine(mut self, engine: Arc<OnceLock<super::engine::EngineService>>) -> Self {
+        self.engine = engine;
         self
     }
 
@@ -186,42 +199,6 @@ impl LlmBotService {
         }))
     }
 
-    fn schedule(&self, target: Target) {
-        {
-            let mut queued = self.queued.lock();
-            if let Some(again) = queued.get_mut(&target) {
-                *again = true;
-                return;
-            }
-            queued.insert(target, false);
-        }
-        self.running.fetch_add(1, Ordering::AcqRel);
-        let this = self.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(this.debounce).await;
-                this.queued.lock().insert(target, false);
-                if let Ok(_slot) = this.slots.acquire().await {
-                    let outcome = match target {
-                        Target::Conversation(id) => this.answer(id).await,
-                        Target::Chat(id) => this.answer_chat(id).await,
-                    };
-                    if let Err(error) = outcome {
-                        tracing::warn!(%error, ?target, "robô de LLM não respondeu");
-                    }
-                }
-                let mut queued = this.queued.lock();
-                if queued.get(&target) != Some(&true) {
-                    queued.remove(&target);
-                    break;
-                }
-            }
-            if this.running.fetch_sub(1, Ordering::AcqRel) == 1 {
-                this.idle.notify_waiters();
-            }
-        });
-    }
-
     /// Asks the agent's runtime for the next reply and sends it (or hands off) as the inbox bot.
     async fn answer(&self, conversation_id: i64) -> Result<()> {
         let core = &self.helpdesk.core;
@@ -238,6 +215,10 @@ impl LlmBotService {
         else {
             return Ok(());
         };
+        // A paused agent answers later, when it is resumed.
+        if responder.agent_id.is_some_and(|id| self.paused(id)) {
+            return Ok(());
+        }
         let conversation = self.helpdesk.ensure_ai_responsible(&conversation)?;
         let messages = core.repo.messages(conversation.id, None, TRANSCRIPT_LIMIT)?;
         // Already answered (by a person or an earlier run): nothing new from the contact.
@@ -256,6 +237,18 @@ impl LlmBotService {
             }
             None => build_prompt(&inbox.name, Some(&request.prompt), &messages),
         };
+        let summary = self.earlier_summary(conversation.id, &messages, &responder).await;
+        if let Some(agent) = responder.agent_id {
+            if self
+                .answer_by_engine(&conversation, &inbox, agent, summary.as_deref(), &messages)
+                .await?
+            {
+                return Ok(());
+            }
+        }
+        if let Some(summary) = summary {
+            request.prompt = with_summary(&summary, &request.prompt);
+        }
         let (completion, forwarded) = self
             .complete_for(&inbox, &conversation, request, responder.agent_id)
             .await?;

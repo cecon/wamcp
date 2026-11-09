@@ -12,6 +12,8 @@ export type SettingsSection =
   | 'canned'
   | 'automation'
   | 'skills'
+  | 'plugins'
+  | 'store'
   | 'macros'
   | 'sla'
   | 'webhooks'
@@ -36,6 +38,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   'attributes',
   'canned',
   'automation',
+  'store',
+  'plugins',
   'skills',
   'macros',
   'sla',
@@ -84,6 +88,10 @@ export type Route =
   | { page: 'contacts'; contactId?: number }
   /** Private chats with AI agents inside the app. */
   | { page: 'agent_chat'; agentId?: number }
+  /** Execuções dos agentes de IA em andamento ("Agentes ao vivo"). */
+  | { page: 'agent_runs' }
+  /** Página de um agente de IA: o que faz agora, o que espera por você, histórico, skills, memória e custo. */
+  | { page: 'agent'; agentId: number }
   | { page: 'reports'; section?: ReportSection }
   | { page: 'search' }
   | { page: 'profile' }

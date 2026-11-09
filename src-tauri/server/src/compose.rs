@@ -3,6 +3,7 @@
 use crate::adapters::inbound::http::public_router;
 use crate::adapters::inbound::http::state::{AppState, Limits, Services, Support, WebDir};
 use crate::application::accounts::AccountService;
+use crate::application::agent_runs::AgentRuns;
 use crate::application::agents::AgentDirectory;
 use crate::application::auto_replies::AutoReplyService;
 use crate::application::automations::AutomationService;
@@ -24,7 +25,6 @@ use crate::application::sessions::{McpService, SessionService};
 use crate::application::system_agent::SystemAgent;
 use crate::application::webhooks::WebhookService;
 use crate::application::whatsapp_sink::WhatsAppSink;
-use crate::domain::events::EventOwner;
 use axum::Router;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, OnceLock};
@@ -65,21 +65,6 @@ pub struct App {
     pub mcp_url: Arc<OnceLock<String>>,
 }
 
-fn authorizer(repo: Arc<dyn Repository>, oauth: OAuthService) -> Arc<dyn Fn(&EventOwner) -> bool + Send + Sync> {
-    Arc::new(move |owner: &EventOwner| {
-        let exists = matches!(repo.session(&owner.session_id), Ok(Some(_)));
-        exists
-            && match owner.principal_kind.as_str() {
-                "oauth" => oauth.event_principal(&owner.session_id, &owner.principal_id).is_some(),
-                "token" => matches!(
-                    repo.event_principal(&owner.session_id, &owner.principal_id),
-                    Ok(Some(_))
-                ),
-                _ => false,
-            }
-    })
-}
-
 /// Builds every service and subscribes the event listeners (must run inside a Tokio runtime).
 pub fn compose(ports: Ports, settings: Settings) -> App {
     let bus = Arc::new(EventBus::default());
@@ -87,6 +72,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         repo: ports.repo.clone(),
         bus: bus.clone(),
         clock: ports.clock.clone(),
+        runs: Arc::new(AgentRuns::new(bus.clone())),
     };
     let helpdesk = HelpdeskService {
         core: core.clone(),
@@ -118,7 +104,7 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
         ports.repo.clone(),
         ports.callback.clone(),
         ports.clock.clone(),
-        authorizer(ports.repo.clone(), oauth.clone()),
+        crate::engine_setup::authorizer(ports.repo.clone(), oauth.clone()),
     );
 
     let listener = notifications.clone();
@@ -156,18 +142,31 @@ pub fn compose(ports: Ports, settings: Settings) -> App {
     }));
     let worker = avatar_worker.clone();
     bus.subscribe(move |e| worker.push(e));
-
+    let plugins = crate::engine_setup::plugins(ports.repo.clone(), ports.secrets.clone(), helpdesk.clone());
+    let (engine, answers, live) = crate::engine_setup::live(ports.repo.clone());
     let agents = AgentDirectory {
         core: core.clone(),
         secrets: ports.secrets.clone(),
         llm: Arc::default(),
     };
+    let schedules = crate::application::agent_schedules::AgentScheduleService::new(core.clone());
+    let store = crate::application::store::StoreService {
+        repo: ports.repo.clone(),
+        plugins: plugins.clone(),
+        agents: agents.clone(),
+        schedules: schedules.clone(),
+        engine: engine.clone(),
+    };
     let support = Support {
         system: SystemAgent::new(agents.clone()),
         chats: crate::application::agent_chats::AgentChatService { core: core.clone() },
-        schedules: crate::application::agent_schedules::AgentScheduleService::new(core.clone()),
+        schedules,
+        store,
         agents,
-        engine: Arc::default(),
+        engine,
+        answers,
+        live,
+        plugins,
         avatars,
         accounts: AccountService {
             core: core.clone(),
@@ -229,8 +228,10 @@ impl App {
         support.agents.attach_llm(llm.clone());
         let secrets = support.agents.secrets.clone();
         let bots = LlmBotService::new(support.helpdesk.clone(), llm, secrets, debounce, 2)
-            .with_system(support.system.clone(), self.mcp_url.clone());
+            .with_system(support.system.clone(), self.mcp_url.clone())
+            .with_engine(support.engine.clone());
         support.schedules.attach(bots.clone());
+        let _ = support.answers.set(bots.clone());
         let listener = bots.clone();
         support.bus.subscribe(move |e| listener.on_event(e));
         self.llm_bots = Some(bots);

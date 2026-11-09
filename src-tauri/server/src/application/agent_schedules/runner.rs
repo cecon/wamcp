@@ -7,9 +7,14 @@ use crate::application::agent_chats::post_chat_message;
 use crate::domain::agent_schedules::{next_run, runs_schedules};
 use crate::domain::error::{fail, Result};
 use crate::domain::model::{
-    AgentSchedule, ScheduleRun, CHAT_AGENT, CHAT_ERROR, RUN_DONE, RUN_FAILED, RUN_RUNNING, RUN_SKIPPED,
+    AgentRun, AgentSchedule, ScheduleRun, CHAT_AGENT, CHAT_ERROR, RUN_DONE, RUN_FAILED, RUN_RUNNING, RUN_SCHEDULE,
+    RUN_SKIPPED,
 };
 use std::sync::atomic::Ordering;
+
+fn run_id(schedule_id: i64, agent_id: i64) -> String {
+    format!("{RUN_SCHEDULE}:{schedule_id}:{agent_id}")
+}
 
 impl AgentScheduleService {
     /// After a restart: runs that were going on when the app stopped did not finish.
@@ -53,6 +58,7 @@ impl AgentScheduleService {
                 }
             };
             runs.push(run.clone());
+            self.track(schedule, *agent_id);
             self.pending.fetch_add(1, Ordering::AcqRel);
             let this = self.clone();
             let schedule = schedule.clone();
@@ -61,6 +67,7 @@ impl AgentScheduleService {
                     tracing::warn!(%error, schedule = schedule.id, run = run.id, "agendamento não registrado");
                 }
                 this.running.lock().remove(&key);
+                this.core.runs.finish(&run_id(schedule.id, run.agent_id));
                 if this.pending.fetch_sub(1, Ordering::AcqRel) == 1 {
                     this.idle.notify_waiters();
                 }
@@ -81,6 +88,7 @@ impl AgentScheduleService {
             return fail("os runtimes dos agentes ainda não foram carregados");
         };
         let _slot = self.slots.acquire().await;
+        self.core.runs.start(&run_id(schedule.id, agent.id));
         bots.run_scheduled(&agent, schedule, run.id).await
     }
 
@@ -111,6 +119,18 @@ impl AgentScheduleService {
         let chat = repo.agent_chat(user, run.agent_id)?;
         post_chat_message(&self.core, chat.id, role, &message)?;
         Ok(())
+    }
+
+    /// Shows the run in "Em execução" while it waits for a slot and works.
+    fn track(&self, schedule: &AgentSchedule, agent_id: i64) {
+        let mut run = AgentRun::new(
+            run_id(schedule.id, agent_id),
+            RUN_SCHEDULE,
+            format!("Agendamento · {}", schedule.name),
+        );
+        run.agent_id = Some(agent_id);
+        run.agent_name = self.core.repo.agent(agent_id).ok().flatten().map(|a| a.name);
+        self.core.runs.queue(run);
     }
 
     /// Waits until no run is going on (tests and shutdown).

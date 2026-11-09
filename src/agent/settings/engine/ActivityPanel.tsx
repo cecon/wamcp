@@ -16,6 +16,7 @@ import { Check, X } from 'lucide-react';
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
 import { useAction } from '../useAction';
+import { ChainSummary } from './ChainSummary';
 import { StatusPill } from './StatusPill';
 import { CALL_STATUS, isFinal, type ActivityDetail, type EngineRun } from './types';
 
@@ -72,6 +73,7 @@ export function ActivityPanel({ id, name, onClose, onChanged }: Props) {
               Carregando…
             </Typography>
           )}
+          {data && <ChainSummary detail={data} name={name} />}
           {data?.tree.map(({ activity, runs, tool_calls, evidence, messages }) => {
             const delegation = data.delegations.find((d) => d.activity_id === activity.id);
             return (

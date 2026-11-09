@@ -41,9 +41,9 @@ pub(super) fn limit_clause(limit: &ConversationLimit, args: &mut Vec<Sql>) -> St
 /// WHERE clauses shared by the list and the tab counters.
 fn scope(f: &ConversationFilters) -> (Vec<String>, Vec<Sql>) {
     let (mut wheres, mut args) = (Vec::new(), Vec::new());
-    if let Some(status) = f.status.as_deref().filter(|s| *s != "all") {
-        wheres.push("c.status=?".to_string());
-        args.push(text(status));
+    if let Some(statuses) = f.statuses() {
+        wheres.push("c.status IN (?,?)".to_string());
+        args.extend(statuses.map(text));
     }
     match f.conversation_type.as_deref() {
         Some("unattended") => wheres.push("(c.first_reply_at IS NULL OR c.waiting_since IS NOT NULL)".into()),

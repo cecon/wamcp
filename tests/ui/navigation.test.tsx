@@ -38,6 +38,7 @@ describe('navegação por URL', () => {
   it('preserva contato, agente e conexão de Configurações', () => {
     expect(roundTrip({ page: 'contacts', contactId: 9 })).toEqual({ page: 'contacts', contactId: 9 });
     expect(roundTrip({ page: 'agent_chat', agentId: 5 })).toEqual({ page: 'agent_chat', agentId: 5 });
+    expect(roundTrip({ page: 'agent', agentId: 3 })).toEqual({ page: 'agent', agentId: 3 });
     expect(roundTrip({ page: 'settings', section: 'connections', connectionId: 'gh-1' })).toEqual({
       page: 'settings',
       section: 'connections',

@@ -1,0 +1,100 @@
+{
+  "id": "contador",
+  "name": "Contador",
+  "version": "1.0.0",
+  "description": "Atende os clientes de um escritório de contabilidade: tira dúvidas sobre a situação de cada um, cobra os documentos do mês e lembra os prazos. Decisões ficam com o contador.",
+  "credentials": [
+    { "name": "token", "help": "O CONTADOR_TOKEN com que o servidor do escritório foi iniciado" }
+  ],
+  "skills": [
+    {
+      "name": "Atendimento ao cliente",
+      "description": "Dúvidas do cliente sobre documentos e prazos",
+      "instructions": "Você atende clientes de um escritório de contabilidade pelo WhatsApp.\n\n- Para saber a situação do cliente (documentos que faltam e próximos prazos), use `contador.situacao_do_cliente`. Ela sempre responde sobre o cliente desta conversa.\n- Para prazos em geral, use `contador.prazos`.\n- Quando o cliente disser que mandou um documento, registre com `contador.registrar_documento`; uma pessoa do escritório confere antes.\n- Não decida nada que seja decisão do contador: mudar de regime, abrir ou fechar empresa, parcelar dívida, valores de imposto que não estejam na ferramenta, contratar serviço. Nesses casos, registre com `contador.pedir_contador` e diga ao cliente que o contador responsável vai retornar.\n- Nunca invente valores, datas ou regras fiscais. Responda curto e em português."
+    },
+    {
+      "name": "Cobrar documentos",
+      "description": "Rotina: pede os documentos que faltam",
+      "instructions": "Na rotina de cobrança: use `contador.pendencias` para ver quem não mandou os documentos do mês. Para cada cliente, envie uma mensagem curta e educada com `mensagens.enviar_whatsapp`, dizendo quais documentos faltam e até quando mandar. Cada envio espera a aprovação de uma pessoa. Conclua com a lista de quem foi cobrado."
+    },
+    {
+      "name": "Lembrar prazos",
+      "description": "Rotina: avisa os clientes dos prazos próximos",
+      "instructions": "Na rotina de prazos: use `contador.prazos` com `dias: 5` e `contador.pendencias` com `todos: true` para saber quem é de cada regime. Avise cada cliente do regime afetado com `mensagens.enviar_whatsapp`. Conclua com quem foi avisado."
+    }
+  ],
+  "tools": [
+    {
+      "name": "situacao_do_cliente",
+      "description": "Documentos que faltam e próximos prazos do cliente desta conversa.",
+      "input_schema": {
+        "type": "object",
+        "properties": { "telefone": { "type": "string", "description": "Só em rotinas internas" } }
+      },
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8790/situacao", "credential": "token" }
+    },
+    {
+      "name": "prazos",
+      "description": "Obrigações fiscais que vencem nos próximos dias (padrão: 30).",
+      "input_schema": { "type": "object", "properties": { "dias": { "type": "integer" } } },
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8790/prazos", "credential": "token" }
+    },
+    {
+      "name": "registrar_documento",
+      "description": "Registra que o cliente desta conversa disse ter enviado um documento.",
+      "input_schema": {
+        "type": "object",
+        "required": ["tipo"],
+        "properties": { "tipo": { "type": "string" }, "mes": { "type": "string", "description": "AAAA-MM" } }
+      },
+      "side_effects": true,
+      "sensitive": true,
+      "contact_scoped": true,
+      "endpoint": {
+        "kind": "http",
+        "url": "http://127.0.0.1:8790/registrar_documento",
+        "credential": "token"
+      }
+    },
+    {
+      "name": "pedir_contador",
+      "description": "Registra um pedido do cliente desta conversa que precisa de decisão do contador.",
+      "input_schema": {
+        "type": "object",
+        "required": ["pedido"],
+        "properties": { "pedido": { "type": "string" } }
+      },
+      "side_effects": true,
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8790/pedir_contador", "credential": "token" }
+    },
+    {
+      "name": "pendencias",
+      "description": "Clientes com documentos do mês faltando (com `todos: true`, todos os clientes e seus regimes).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "mes": { "type": "string", "description": "AAAA-MM" },
+          "todos": { "type": "boolean" }
+        }
+      },
+      "internal_only": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8790/pendencias", "credential": "token" }
+    }
+  ],
+  "schedules": [
+    {
+      "name": "Cobrar documentos do mês",
+      "description": "Todo dia 3, às 9h",
+      "cron": "0 9 3 * *",
+      "prompt": "Cobre dos clientes os documentos do mês que ainda faltam, seguindo a skill \"Contador: Cobrar documentos\"."
+    },
+    {
+      "name": "Lembrar prazos",
+      "description": "Dias 15 e 28, às 9h",
+      "cron": "0 9 15,28 * *",
+      "prompt": "Avise os clientes dos prazos que vencem nos próximos 5 dias, seguindo a skill \"Contador: Lembrar prazos\"."
+    }
+  ]
+}
