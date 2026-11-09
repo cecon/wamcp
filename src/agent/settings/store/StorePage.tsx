@@ -3,9 +3,13 @@ import { BookOpen, Download, Link2, RefreshCw } from 'lucide-react';
 
 // material-ui
 import Link from '@mui/material/Link';
+import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { StatusChip } from '@c3theme/ui';
 
 import { http } from '../../api';
 import { useFetch } from '../../useFetch';
@@ -20,24 +24,19 @@ import type { Installed, Store, StoreAgent } from './types';
 
 type View = 'agents' | 'skills';
 
-/** What is installed here of a skill, in one line. */
+/** What is installed here of a skill, in one line of status chips. */
 function InstalledLine({ installed, store }: { installed: Installed | null; store: string }) {
   if (!installed) return null;
   const missing = installed.credentials_missing;
   return (
-    <Typography variant="body2" component="span" sx={{ fontSize: 13 }}>
-      <Typography component="span" color="success.main" sx={{ fontSize: 13 }}>
-        Instalado v{installed.version}
-        {installed.enabled ? '' : ' (desativado)'}
-      </Typography>
-      {installed.update && <span> · v{store} disponível</span>}
-      {missing.length > 0 && (
-        <Typography component="span" color="warning.main" sx={{ fontSize: 13 }}>
-          {' '}
-          · falta configurar: {missing.join(', ')}
-        </Typography>
-      )}
-    </Typography>
+    <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
+      <StatusChip
+        label={`Instalado v${installed.version}${installed.enabled ? '' : ' (desativado)'}`}
+        tone={installed.enabled ? 'success' : 'neutral'}
+      />
+      {installed.update && <StatusChip label={`v${store} disponível`} tone="info" />}
+      {missing.length > 0 && <StatusChip label={`Falta configurar: ${missing.join(', ')}`} tone="warning" />}
+    </Stack>
   );
 }
 
