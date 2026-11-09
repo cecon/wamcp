@@ -58,3 +58,16 @@ impl PluginService {
         })
     }
 }
+
+impl PluginService {
+    /// Downloads and checks a manifest without installing it (the store shows what it brings).
+    pub async fn preview(&self, url: &str) -> Result<crate::domain::plugins::Manifest> {
+        let json = self.transport.manifest(url.trim()).await?;
+        crate::domain::plugins::parse(&json, false)
+    }
+
+    /// Downloads a JSON document the store needs (its catalog).
+    pub async fn fetch_json(&self, url: &str) -> Result<serde_json::Value> {
+        self.transport.manifest(url.trim()).await
+    }
+}

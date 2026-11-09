@@ -1,0 +1,52 @@
+{
+  "loja": {
+    "nome": "Pizzaria Bom Sabor",
+    "horario": "Todos os dias, das 18h às 23h",
+    "taxa_entrega": 7,
+    "tempo_estimado_min": 45,
+    "pagamentos": ["Pix", "cartão na entrega", "dinheiro"]
+  },
+  "itens": [
+    {
+      "codigo": "P01",
+      "nome": "Pizza margherita grande",
+      "categoria": "pizzas",
+      "preco": 59.9,
+      "descricao": "Molho de tomate, muçarela, tomate e manjericão",
+      "disponivel": true
+    },
+    {
+      "codigo": "P02",
+      "nome": "Pizza calabresa grande",
+      "categoria": "pizzas",
+      "preco": 54.9,
+      "descricao": "Muçarela, calabresa fatiada e cebola",
+      "disponivel": true
+    },
+    {
+      "codigo": "P03",
+      "nome": "Pizza quatro queijos grande",
+      "categoria": "pizzas",
+      "preco": 64.9,
+      "descricao": "Muçarela, provolone, parmesão e gorgonzola",
+      "disponivel": false
+    },
+    {
+      "codigo": "B01",
+      "nome": "Refrigerante 2 litros",
+      "categoria": "bebidas",
+      "preco": 12,
+      "descricao": "Cola ou guaraná",
+      "disponivel": true
+    },
+    {
+      "codigo": "S01",
+      "nome": "Petit gâteau",
+      "categoria": "sobremesas",
+      "preco": 18,
+      "descricao": "Com sorvete de creme",
+      "disponivel": true
+    }
+  ],
+  "pedidos": []
+}

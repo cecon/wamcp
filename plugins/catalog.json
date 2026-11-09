@@ -1,0 +1,113 @@
+{
+  "name": "Loja do WAMCP",
+  "plugins": [
+    {
+      "id": "contador",
+      "name": "Contador",
+      "description": "Situação de cada cliente do escritório, documentos do mês, prazos fiscais e pedidos para o contador.",
+      "category": "Contabilidade",
+      "icon": "calculator",
+      "version": "1.0.0",
+      "url": "contador/plugin.json",
+      "docs": "https://github.com/cecon/wamcp/tree/main/plugins/contador"
+    },
+    {
+      "id": "delivery",
+      "name": "Delivery",
+      "description": "Cardápio, cálculo do pedido com os preços da loja, registro do pedido, status e aviso de atraso.",
+      "category": "Vendas",
+      "icon": "bike",
+      "version": "1.0.0",
+      "url": "delivery/plugin.json",
+      "docs": "https://github.com/cecon/wamcp/tree/main/plugins/delivery"
+    },
+    {
+      "id": "suporte",
+      "name": "Suporte",
+      "description": "Base de conhecimento, abertura e consulta de chamados e retorno dos chamados parados.",
+      "category": "Atendimento",
+      "icon": "life-buoy",
+      "version": "1.0.0",
+      "url": "suporte/plugin.json",
+      "docs": "https://github.com/cecon/wamcp/tree/main/plugins/suporte"
+    }
+  ],
+  "agents": [
+    {
+      "id": "contador",
+      "name": "Contador",
+      "description": "Atende os clientes do escritório de contabilidade, cobra os documentos do mês e lembra os prazos. Decisões ficam com o contador.",
+      "category": "Contabilidade",
+      "icon": "calculator",
+      "version": "1.0.0",
+      "plugin": "contador",
+      "agent_name": "Assistente do escritório",
+      "instructions": "Você é o assistente de um escritório de contabilidade e conversa com os clientes pelo WhatsApp. Seja cordial, objetivo e fale como alguém do escritório, sem jargão fiscal desnecessário. Tudo o que for decisão do contador vira um pedido registrado, nunca uma resposta sua.",
+      "goals": [
+        "Nenhum cliente com documento do mês atrasado sem ter sido cobrado",
+        "Todo cliente avisado dos prazos do seu regime antes do vencimento",
+        "Toda dúvida que exige o contador registrada com o pedido do cliente"
+      ],
+      "tools": [
+        { "tool": "contador.situacao_do_cliente" },
+        { "tool": "contador.prazos" },
+        { "tool": "contador.registrar_documento" },
+        { "tool": "contador.pedir_contador" },
+        { "tool": "contador.pendencias" },
+        { "tool": "mensagens.enviar_whatsapp" }
+      ],
+      "schedules": ["Cobrar documentos do mês", "Lembrar prazos"]
+    },
+    {
+      "id": "delivery",
+      "name": "Atendente de delivery",
+      "description": "Mostra o cardápio, monta e registra o pedido com os preços da loja, responde sobre o status e avisa quando atrasa.",
+      "category": "Vendas",
+      "icon": "bike",
+      "version": "1.0.0",
+      "plugin": "delivery",
+      "agent_name": "Atendente do delivery",
+      "instructions": "Você é o atendente do delivery da loja no WhatsApp. Atenda como alguém da equipe: rápido, simpático e sem enrolar. O preço e o prazo que valem são sempre os das ferramentas da loja.",
+      "goals": [
+        "Todo pedido registrado com o resumo confirmado pelo cliente",
+        "Nenhum valor diferente do calculado pela loja",
+        "Todo cliente com pedido atrasado avisado antes de reclamar"
+      ],
+      "tools": [
+        { "tool": "delivery.cardapio" },
+        { "tool": "delivery.calcular_pedido" },
+        { "tool": "delivery.fazer_pedido" },
+        { "tool": "delivery.status_pedido" },
+        { "tool": "delivery.pedidos_atrasados" },
+        { "tool": "delivery.registrar_aviso" },
+        { "tool": "mensagens.enviar_whatsapp" }
+      ],
+      "schedules": ["Avisar pedidos atrasados"]
+    },
+    {
+      "id": "suporte",
+      "name": "Suporte técnico",
+      "description": "Resolve pelo WhatsApp o que a base de conhecimento responde, abre chamados para o resto e dá retorno dos chamados parados.",
+      "category": "Atendimento",
+      "icon": "life-buoy",
+      "version": "1.0.0",
+      "plugin": "suporte",
+      "agent_name": "Suporte",
+      "instructions": "Você é o suporte técnico da empresa no WhatsApp. Conduza o cliente com calma, um passo por mensagem, e confirme se cada passo funcionou antes do próximo.",
+      "goals": [
+        "Resolver na conversa o que a base de conhecimento responde",
+        "Todo problema sem solução vira chamado, com o que o cliente já tentou",
+        "Nenhum chamado parado sem notícia para o cliente"
+      ],
+      "tools": [
+        { "tool": "suporte.buscar_artigo" },
+        { "tool": "suporte.abrir_chamado" },
+        { "tool": "suporte.meus_chamados" },
+        { "tool": "suporte.chamados_parados" },
+        { "tool": "suporte.registrar_retorno" },
+        { "tool": "mensagens.enviar_whatsapp" }
+      ],
+      "schedules": ["Retorno de chamados parados"]
+    }
+  ]
+}
