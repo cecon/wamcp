@@ -34,6 +34,9 @@ const ConversationsScreen = lazy(() =>
 const AgentRunsPage = lazy(() =>
   import('./agentRuns/AgentRunsPage').then((module) => ({ default: module.AgentRunsPage })),
 );
+const AgentPage = lazy(() =>
+  import('./agentPage/AgentPage').then((module) => ({ default: module.AgentPage })),
+);
 const AgentChatScreen = lazy(() =>
   import('./agentChat/AgentChatScreen').then((module) => ({ default: module.AgentChatScreen })),
 );
@@ -164,6 +167,18 @@ export function Workspace({ user, onUser, onLogout }: Props) {
             error={agentRuns.error}
             onNavigate={setRoute}
             onChanged={agentRuns.reload}
+          />
+        </Suspense>
+      )}
+      {route.page === 'agent' && allowed && (
+        <Suspense fallback={<Loading />}>
+          <AgentPage
+            key={route.agentId}
+            agentId={route.agentId}
+            catalog={catalog}
+            runs={agentRuns.runs}
+            onNavigate={setRoute}
+            onRunsChanged={agentRuns.reload}
           />
         </Suspense>
       )}

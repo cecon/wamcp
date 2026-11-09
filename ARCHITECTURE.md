@@ -61,6 +61,12 @@ Uma conversa espera o seu agente de IA enquanto está `pending` e a última mens
 
 Os botões Pausar, Retomar, Encerrar e Cancelar ficam na tela "Agentes ao vivo" do menu, que lista as execuções do registro `agent_runs`; só administradores os veem (`/api/v1/agents/live`, `/api/v1/engine/activities/{id}/cancel`).
 
+## Página do agente
+
+Clicar no nome de um agente de IA (Funcionários, Agentes ao vivo, Motor de agentes, Agendamentos, responsável da conversa) abre `/agent?id=N`, só para administradores. O topo mostra o que importa: um resumo em frases (conversas atendidas e passadas para pessoas, pedidos do motor, rotinas, custo do mês) e "Espera por você" (pausa, aprovações, erros e as conversas que ele passou adiante, com o motivo). Histórico, skills e ferramentas, memória e custo e configuração ficam embaixo, recolhidos.
+
+O histórico vem de `GET /api/v1/agent_directory/{id}/history?days=30`: as conversas saem de `llm_usage` e de `engine_activities` do agente, e a passagem para uma pessoa é a nota de atividade de `handoff_to_human` ("Assistente IA passou a conversa para … (motivo)"). O resto reaproveita as APIs das outras telas (`/agent_runs`, `/engine/activities`, `/engine/agents/{id}/memories`, `/agent_directory/salaries`, `/agents/live`).
+
 ## Eventos MCP
 
 `application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.
