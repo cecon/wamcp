@@ -66,6 +66,9 @@ function LazyPage({ children }: { children: ReactNode }) {
     </Suspense>
   );
 }
+const PluginsPage = lazy(() =>
+  import('./plugins/PluginsPage').then((module) => ({ default: module.PluginsPage })),
+);
 
 interface Props {
   route: Extract<Route, { page: 'settings' }>;
@@ -130,6 +133,12 @@ export function SettingsRouter({ route, user, catalog, onNavigate, onChange }: P
       return (
         <LazyPage>
           <AutomationPage catalog={catalog} />
+        </LazyPage>
+      );
+    case 'plugins':
+      return (
+        <LazyPage>
+          <PluginsPage />
         </LazyPage>
       );
     case 'skills':

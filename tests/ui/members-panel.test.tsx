@@ -154,7 +154,7 @@ describe('Funcionários', () => {
     await user.click(within(pane).getByRole('tab', { name: 'Ferramentas' }));
     expect(within(pane).getByText('reply_conversation')).toBeInTheDocument();
     await user.click(within(pane).getByRole('tab', { name: 'Memória' }));
-    expect(within(pane).getByText(/runtime agêntico/)).toBeInTheDocument();
+    expect(within(pane).getByText(/na página dele/)).toBeInTheDocument();
 
     await user.click(within(pane).getByRole('tab', { name: 'Configurações' }));
     await user.selectOptions(within(pane).getByLabelText('Responde a'), '2');

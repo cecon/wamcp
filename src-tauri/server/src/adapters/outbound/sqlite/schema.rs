@@ -244,5 +244,23 @@ pub fn steps() -> Vec<String> {
         // v39: a criação do GitHub App em andamento sobrevive a um reinício do app entre o clique e
         // a volta do GitHub
         "CREATE TABLE github_app_manifest(state TEXT PRIMARY KEY,owner TEXT,until INTEGER NOT NULL);".into(),
+        // v40: plugins (o que um agente sabe fazer): o manifesto de cada plugin instalado e os
+        // valores cifrados das credenciais que as ferramentas dele usam
+        "CREATE TABLE plugins(id TEXT PRIMARY KEY,manifest TEXT NOT NULL CHECK(json_valid(manifest)),
+           enabled INTEGER NOT NULL DEFAULT 1,builtin INTEGER NOT NULL DEFAULT 0,installed TEXT NOT NULL,
+           updated TEXT NOT NULL);
+         CREATE TABLE plugin_credentials(plugin_id TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+           name TEXT NOT NULL,secret TEXT NOT NULL,updated TEXT NOT NULL,PRIMARY KEY(plugin_id,name));"
+            .into(),
+        // v41: agentes ao vivo: os agentes pausados (não respondem nem começam execuções até serem
+        // retomados) e o resumo do começo das conversas longas que o agente atende
+        "CREATE TABLE agent_pauses(agent_id INTEGER PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+           paused_at INTEGER NOT NULL);
+         CREATE TABLE conversation_summaries(
+           conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+           summary TEXT NOT NULL,upto_message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL);"
+            .into(),
+        // v42: de onde o plugin foi instalado (a URL do plugin.json), para buscar atualizações
+        "ALTER TABLE plugins ADD COLUMN source TEXT;".into(),
     ]
 }

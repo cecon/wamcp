@@ -21,7 +21,14 @@ impl EngineService {
             Some(existing) => existing.activity_id,
             None => {
                 let chain = self.store.chain(parent.id)?;
-                let candidates = self.store.agents_with_skill(account, &skill)?;
+                let mut candidates = self.store.agents_with_skill(account, &skill)?;
+                let found = candidates.len();
+                candidates.retain(|a| !self.store.agent_paused(a.id).unwrap_or(false));
+                if candidates.is_empty() && found > 0 {
+                    return fail(format!(
+                        "Os agentes com a skill \"{skill}\" estão pausados; tente mais tarde"
+                    ));
+                }
                 // Someone outside the chain if possible; otherwise the cycle check below refuses it.
                 let outside = candidates.iter().find(|a| a.id != from.id && !chain.contains(&a.id));
                 let Some(to) = outside.or_else(|| candidates.iter().find(|a| a.id != from.id)) else {

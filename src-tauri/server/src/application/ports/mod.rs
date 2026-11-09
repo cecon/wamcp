@@ -1,24 +1,30 @@
 //! Ports: what the use cases need from the outside world. Adapters implement them.
 mod agent_chats;
+mod agent_history;
 mod agent_schedules;
 mod agents;
 mod catalog;
 mod engine;
 mod external;
 mod github;
+mod live;
 mod mirror;
 mod people;
+mod plugins;
 mod support;
 
 pub use agent_chats::*;
+pub use agent_history::*;
 pub use agent_schedules::*;
 pub use agents::*;
 pub use catalog::*;
 pub use engine::*;
 pub use external::*;
 pub use github::*;
+pub use live::*;
 pub use mirror::*;
 pub use people::*;
+pub use plugins::*;
 pub use support::*;
 
 use crate::domain::error::Result;
@@ -50,8 +56,11 @@ pub trait Repository:
     + SlaRepo
     + AgentBotRepo
     + AgentsRepo
+    + PluginRepo
+    + LiveRepo
     + AgentChatRepo
     + AgentScheduleRepo
+    + AgentHistoryRepo
     + RoleRepo
     + AutomationRepo
     + InsightsRepo
@@ -85,10 +94,11 @@ impl<T> Repository for T where
         + SlaRepo
         + AgentBotRepo
         + AgentsRepo
+        + PluginRepo
+        + LiveRepo
         + AgentChatRepo
         + AgentScheduleRepo
-        + AgentChatRepo
-        + AgentScheduleRepo
+        + AgentHistoryRepo
         + RoleRepo
         + AutomationRepo
         + InsightsRepo

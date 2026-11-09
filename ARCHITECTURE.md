@@ -28,6 +28,45 @@ A porta de repositório também oferece `media`, limitada por sessão, conversa 
 
 Interfaces pequenas e injeção explícita evitam contêiner de dependências ou hierarquias desnecessárias. Regras de autorização ficam no domínio; use cases fazem orquestração; transporte e SQL ficam nos adaptadores.
 
+## Canais
+
+Cada caixa de entrada tem um canal (`channel_type`: hoje `whatsapp` e `github`). Os casos de uso nunca comparam o tipo: pedem o canal da caixa (`application/channels`) e as suas capacidades (`domain/channel.rs`: mídia, reações, apagar para todos, presença, bloqueio e iniciar conversa).
+
+- **Entrada.** O canal transforma o seu evento numa mensagem do contato e chama `HelpdeskService::receive` (`application/inbound.rs`). Ali fica a regra única de roteamento: conversa nova, reaproveitada ou reaberta, depois a atualização da conversa e a atribuição automática. O canal só acha o contato, a rota e grava a própria mensagem.
+- **Saída.** `Channel::send` entrega a resposta (WhatsApp com a assinatura do agente; GitHub como comentário). Reações, apagar, digitação, confirmação de leitura e bloqueio são métodos opcionais: o padrão é "não há neste canal".
+
+Para adicionar um canal: as capacidades em `domain/channel.rs`, uma implementação de `Channel` em `application/channels/`, a entrada do evento chamando `receive`, e a tabela `channel_<tipo>` com a caixa.
+
+## Plugins
+
+O que um agente sabe fazer vem dos plugins. Um plugin é um manifesto (`plugin.json`, validado em `domain/plugins.rs`) com skills (instruções), ferramentas e as credenciais que elas usam. O administrador instala, liga ou desliga e preenche as credenciais em Configurações → Plugins (`/api/v1/plugins`).
+
+- **Ferramentas.** Cada uma se chama `<plugin>.<ferramenta>` e é servida fora do processo: `http` (um `POST` com os argumentos em JSON) ou `mcp` (`initialize` e `tools/call` por Streamable HTTP). Só se aceita HTTPS, ou HTTP para o próprio computador. O transporte (`adapters/outbound/plugin_transport.rs`) não segue redirecionamentos, tem prazo de 30 s e lê no máximo 1 MiB. Os plugins que vêm com o app (hoje `financeiro`, de demonstração) usam `builtin`.
+- **Credenciais.** Ficam seladas pela `SecretBox`. O servidor aplica a credencial como `Authorization: Bearer` na chamada; o modelo nunca a vê, e a API só diz quais já têm valor.
+- **Skills.** Entram na biblioteca como `<nome do plugin>: <skill>`, com as ferramentas do plugin, e acompanham instalação, atualização e remoção.
+- **Dados do cliente.** Uma ferramenta `contact_scoped` recebe em `contato` o contato da conversa quando um cliente começou a vez (`EngineService::scope_to_contact`), e o que o modelo mandou no lugar é ignorado.
+- **Rotinas.** O manifesto pode sugerir rotinas (`schedules`, com cron validado). O administrador as cria em Agendamentos escolhendo os agentes. A rotina de um agente do motor vira um pedido do motor (`schedule:<id>`), com as ferramentas internas.
+- **Mensagens.** O plugin do próprio app `mensagens` (`application/plugins/messaging.rs`) oferece `enviar_whatsapp`: `internal_only`, `sensitive` e com efeito externo, então na política padrão cada envio espera aprovação.
+- **Motor.** `PluginService` é o `BusinessTools` do motor. O catálogo (`application/engine/catalog.rs`) junta as ferramentas internas e as dos plugins ligados; cada agente ainda precisa da permissão da ferramenta. Uma ferramenta `internal_only` nunca é oferecida nem executada numa execução que responde a uma mensagem de cliente, para limitar injeção de prompt.
+
+## Agentes ao vivo
+
+Uma conversa espera o seu agente de IA enquanto está `pending` e a última mensagem pública é do contato. A fila de respostas (`application/llm_bots/live.rs`) é esse estado da própria conversa, então sobrevive a um reinício: ao subir, `recover` agenda todas as conversas que ainda esperam. Os pedidos do motor já ficam no banco e são retomados por `EngineService::recover`.
+
+- **Pausar.** Fica em `agent_pauses`. Um agente pausado não responde conversas e não começa pedidos do motor (os pedidos esperam na fila); delegar para ele é recusado. Retomar responde o que chegou e roda o que esperava.
+- **Encerrar.** Interrompe a resposta em andamento (o futuro é descartado e o processo do runtime morre junto), não envia nada e passa a conversa para uma pessoa (`handoff_to_human`). Um pedido do motor é cancelado com tudo o que ele delegou, e as execuções em andamento são canceladas no runtime.
+- **Resumo.** Numa conversa com mais mensagens do que a janela do prompt (40), o começo chega ao agente como resumo, feito pelo próprio modelo do agente e guardado em `conversation_summaries`. Ele é refeito só quando a janela passa do que ele cobre, cobrindo tudo menos as 20 mensagens mais novas. Uma falha no resumo não impede a resposta.
+
+- **Ponte para o motor.** Quando o agente da caixa roda num runtime do motor (hoje o OpenCode), a vez do cliente vira um pedido do motor em nome do contato (`application/llm_bots/bridge.rs`): o agente trabalha com as ferramentas dos plugins que tem permissão de usar, nunca as `internal_only`, e a resposta do `concluir` vai para a conversa. Os outros agentes respondem direto pelo modelo, sem ferramentas.
+
+Os botões Pausar, Retomar, Encerrar e Cancelar ficam na tela "Agentes ao vivo" do menu, que lista as execuções do registro `agent_runs`; só administradores os veem (`/api/v1/agents/live`, `/api/v1/engine/activities/{id}/cancel`).
+
+## Página do agente
+
+Clicar no nome de um agente de IA (Funcionários, Agentes ao vivo, Motor de agentes, Agendamentos, responsável da conversa) abre `/agent?id=N`, só para administradores. O topo mostra o que importa: um resumo em frases (conversas atendidas e passadas para pessoas, pedidos do motor, rotinas, custo do mês) e "Espera por você" (pausa, aprovações, erros e as conversas que ele passou adiante, com o motivo). Histórico, skills e ferramentas, memória e custo e configuração ficam embaixo, recolhidos.
+
+O histórico vem de `GET /api/v1/agent_directory/{id}/history?days=30`: as conversas saem de `llm_usage` e de `engine_activities` do agente, e a passagem para uma pessoa é a nota de atividade de `handoff_to_human` ("Assistente IA passou a conversa para … (motivo)"). O resto reaproveita as APIs das outras telas (`/agent_runs`, `/engine/activities`, `/engine/agents/{id}/memories`, `/agent_directory/salaries`, `/agents/live`).
+
 ## Eventos MCP
 
 `application/events.mjs` coordena assinaturas, filtros e entrega por portas injetadas. O adaptador `sqlite/event-store.mjs` mantém assinaturas e uma fila durável em tabelas aditivas; `event-webhook.mjs` implementa HTTPS com destino público fixado por conexão e assinatura Standard Webhooks. O adaptador WhatsApp publica somente mensagens `notify` recém-inseridas e recebidas, sem histórico ou eco de envio. A raiz de composição conecta essas portas; nenhum caso de uso importa infraestrutura.

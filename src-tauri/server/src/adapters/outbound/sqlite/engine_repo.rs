@@ -12,6 +12,13 @@ impl EngineRepo for SqliteStore {
     fn engine_agent(&self, account_id: i64, agent_id: i64) -> Result<Option<EngineAgent>> {
         self.engine_agent_row(account_id, agent_id)
     }
+    fn contact_identity(&self, contact_id: i64) -> Result<Option<(Option<String>, Option<String>)>> {
+        let contact = crate::application::ports::ContactRepo::contact(self, contact_id)?;
+        Ok(contact.map(|c| (c.phone_number, c.name)))
+    }
+    fn agent_paused(&self, agent_id: i64) -> Result<bool> {
+        self.is_agent_paused(agent_id)
+    }
     fn agents_with_skill(&self, account_id: i64, skill: &str) -> Result<Vec<EngineAgent>> {
         self.agents_with_skill_rows(account_id, skill)
     }
