@@ -25,6 +25,8 @@ interface Props {
   user: User;
   catalog: Catalog;
   realtime: Realtime;
+  /** A change made here (status, assignment, read, …), so the chat list and its counters follow it. */
+  onChange?: (conversation: Conversation) => void;
   onBack: () => void;
   onOpen: (displayId: number) => void;
   onDeleted?: () => void;
@@ -41,6 +43,7 @@ export function ConversationBox({
   user,
   catalog,
   realtime,
+  onChange,
   onBack,
   onOpen,
   onDeleted = onBack,
@@ -59,8 +62,23 @@ export function ConversationBox({
   const inboxChannel = catalog.inboxes.find((i) => i.id === conversation?.inbox_id);
   const whatsapp = inboxChannel?.channel_type !== 'github';
 
+  // The parent passes a new callback on every render; a ref keeps `seen` stable (it drives the load effect).
+  const notify = useRef(onChange);
+  useEffect(() => {
+    notify.current = onChange;
+  }, [onChange]);
+  const changed = useCallback((c: Conversation) => {
+    setConversation(c);
+    notify.current?.(c);
+  }, []);
   const upsertOne = useCallback((m: Message) => setMessages((list) => upsert(list, m)), []);
-  const seen = useCallback(() => void http(`${path}/update_last_seen`, 'POST').catch(() => {}), [path]);
+  const seen = useCallback(
+    () =>
+      void http<Conversation>(`${path}/update_last_seen`, 'POST')
+        .then((c) => c && notify.current?.(c))
+        .catch(() => {}),
+    [path],
+  );
   useEffect(() => {
     Promise.all([http<Conversation>(path), http<Message[]>(`${path}/messages`)])
       .then(([c, list]) => {
@@ -102,7 +120,7 @@ export function ConversationBox({
   }
   const setStatus = (status: ConversationStatus, snoozed_until?: number) =>
     act(async () =>
-      setConversation(await http<Conversation>(`${path}/toggle_status`, 'POST', { status, snoozed_until })),
+      changed(await http<Conversation>(`${path}/toggle_status`, 'POST', { status, snoozed_until })),
     );
   const loadOlder = () =>
     act(async () => {
@@ -123,7 +141,7 @@ export function ConversationBox({
     onStatus: (status) => void setStatus(status),
     onAssignToMe: () =>
       void act(async () =>
-        setConversation(await http<Conversation>(`${path}/assignments`, 'POST', { assignee_id: user.id })),
+        changed(await http<Conversation>(`${path}/assignments`, 'POST', { assignee_id: user.id })),
       ),
     onShowPanel: () => setPanel(true),
   });
@@ -171,7 +189,7 @@ export function ConversationBox({
             <ConversationMenu
               conversation={conversation}
               isAdmin={user.role === 'administrator'}
-              onChange={setConversation}
+              onChange={changed}
               onError={setError}
               onLeave={onBack}
               onDeleted={onDeleted}
@@ -243,7 +261,7 @@ export function ConversationBox({
           conversation={conversation}
           user={user}
           catalog={catalog}
-          onChange={setConversation}
+          onChange={changed}
           onError={setError}
           onOpenConversation={onOpen}
           onClose={() => setPanel(false)}
