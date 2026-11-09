@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 
 // material-ui
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+// C3Theme
+import { Panel, SoftAvatar, StatusChip } from '@c3theme/ui';
 
 import { StoreIcon } from './icons';
 
@@ -22,53 +24,43 @@ interface Props {
 /** A store card: icon, name, category, description, version and the actions. */
 export function StoreCard({ name, category, description, version, icon, status, actions }: Props) {
   return (
-    <Box
-      component="article"
-      aria-label={name}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.5,
-        p: 2,
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 2,
-        bgcolor: 'background.paper',
-      }}
-    >
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-        <Box
-          aria-hidden
-          sx={{
-            display: 'grid',
-            placeItems: 'center',
-            width: 40,
-            height: 40,
-            flexShrink: 0,
-            borderRadius: 1.5,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-          }}
-        >
-          <StoreIcon name={icon} size={20} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-            {name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            v{version}
-          </Typography>
-        </Box>
-        {category && <Chip size="small" label={category} sx={{ ml: 'auto !important' }} />}
-      </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-        {description}
-      </Typography>
-      {status && <Box sx={{ fontSize: 13 }}>{status}</Box>}
-      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        {actions}
-      </Stack>
+    <Box component="article" aria-label={name} sx={{ display: 'flex' }}>
+      {/* O Panel desta versão do pacote não tem `footer`: o corpo vira coluna e estica para as ações
+          ficarem na base quando os cartões da linha têm descrições de tamanhos diferentes. */}
+      <Panel
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          '& > *': { flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 },
+        }}
+      >
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          <SoftAvatar tone="primary" look="filled" variant="rounded" aria-hidden>
+            <StoreIcon name={icon} size={20} />
+          </SoftAvatar>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+              {name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              v{version}
+            </Typography>
+          </Box>
+          {category && (
+            <Box sx={{ ml: 'auto !important' }}>
+              <StatusChip label={category} tone="neutral" />
+            </Box>
+          )}
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+          {description}
+        </Typography>
+        {status}
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {actions}
+        </Stack>
+      </Panel>
     </Box>
   );
 }
