@@ -4,20 +4,14 @@
 //   CONTADOR_TOKEN   obrigatório; o mesmo valor vai na credencial "token" do plugin
 //   CONTADOR_PORT    porta (padrão 8790), sempre em 127.0.0.1
 //   CONTADOR_DADOS   arquivo de dados (padrão ./dados.json, criado a partir de dados.exemplo.json)
-import { createServer } from 'node:http';
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { timingSafeEqual } from 'node:crypto';
+import { digits, load as loadFile, serve } from '../lib/servidor.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
+const example = join(here, 'dados.exemplo.json');
 
-export function load(file) {
-  if (!existsSync(file)) copyFileSync(join(here, 'dados.exemplo.json'), file);
-  return JSON.parse(readFileSync(file, 'utf8'));
-}
-
-const digits = (phone) => String(phone || '').replace(/\D/g, '');
+export const load = (file) => loadFile(file, example);
 const month = (today) => today.toISOString().slice(0, 7);
 
 /** The next date (YYYY-MM-DD) the day-of-month `day` comes, from `today` on. */
@@ -95,40 +89,8 @@ export const tools = {
   },
 };
 
-function authorized(header, token) {
-  const given = Buffer.from(String(header || '')),
-    wanted = Buffer.from(`Bearer ${token}`);
-  return given.length === wanted.length && timingSafeEqual(given, wanted);
-}
-
 export function start({ token, port = 8790, file = join(here, 'dados.json'), now = () => new Date() }) {
-  if (!token) throw new Error('Defina CONTADOR_TOKEN');
-  const server = createServer((req, res) => {
-    const send = (status, body) => {
-      res.writeHead(status, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(body));
-    };
-    const name = req.url.replace(/^\//, '');
-    if (req.method !== 'POST' || !Object.hasOwn(tools, name))
-      return send(404, { erro: 'Ferramenta desconhecida' });
-    if (!authorized(req.headers.authorization, token)) return send(401, { erro: 'Token inválido' });
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk;
-      if (body.length > 65536) req.destroy();
-    });
-    req.on('end', () => {
-      try {
-        const data = load(file);
-        const { changed, ...answer } = tools[name](data, body ? JSON.parse(body) : {}, now());
-        if (changed) writeFileSync(file, JSON.stringify(data, null, 2));
-        send(200, answer);
-      } catch (error) {
-        send(422, { erro: error.message });
-      }
-    });
-  });
-  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
+  return serve({ name: 'Contador', token: token || '', port, file, example, tools, now });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

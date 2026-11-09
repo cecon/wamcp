@@ -108,6 +108,7 @@ mod search;
 mod security;
 mod server_port;
 mod sla;
+mod store;
 mod system_agent;
 mod voice_remux;
 mod web_app;

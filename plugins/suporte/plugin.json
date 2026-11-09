@@ -1,0 +1,81 @@
+{
+  "id": "suporte",
+  "name": "Suporte",
+  "version": "1.0.0",
+  "description": "Suporte técnico de um produto pelo WhatsApp: resolve o que a base de conhecimento responde, abre chamados para o resto e dá retorno dos chamados parados.",
+  "credentials": [{ "name": "token", "help": "O SUPORTE_TOKEN com que o servidor do suporte foi iniciado" }],
+  "skills": [
+    {
+      "name": "Atender clientes",
+      "description": "Base de conhecimento primeiro, chamado depois",
+      "instructions": "Você é o suporte técnico do produto pelo WhatsApp. Responda curto, em português, um passo de cada vez.\n\n- Para qualquer problema, procure primeiro com `suporte.buscar_artigo`, com as palavras do cliente. Se houver um artigo, conduza o cliente pelos passos dele e pergunte se resolveu.\n- Se não houver artigo, ou se os passos não resolverem, abra um chamado com `suporte.abrir_chamado`, com um assunto claro, o que o cliente já tentou na descrição e a prioridade (alta só quando o cliente está sem o serviço). Diga o número do chamado.\n- Para \"e o meu chamado?\", use `suporte.meus_chamados`. Ela sempre responde sobre o cliente desta conversa.\n- Nunca invente procedimentos, prazos de visita técnica, descontos ou reembolsos. Cobrança, cancelamento ou cliente irritado: avise que uma pessoa da equipe vai continuar e passe a conversa."
+    },
+    {
+      "name": "Retorno de chamados",
+      "description": "Rotina: dá notícia dos chamados parados",
+      "instructions": "Na rotina de retorno: use `suporte.chamados_parados`. Para cada chamado, envie ao cliente com `mensagens.enviar_whatsapp` uma mensagem curta dizendo que o chamado (número e assunto) continua sendo tratado, e registre com `suporte.registrar_retorno`. Não prometa prazos. Conclua com a lista dos chamados com retorno."
+    }
+  ],
+  "tools": [
+    {
+      "name": "buscar_artigo",
+      "description": "Procura na base de conhecimento os artigos que respondem à pergunta do cliente.",
+      "input_schema": {
+        "type": "object",
+        "required": ["pergunta"],
+        "properties": { "pergunta": { "type": "string" } }
+      },
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8792/buscar_artigo", "credential": "token" }
+    },
+    {
+      "name": "abrir_chamado",
+      "description": "Abre um chamado para o cliente desta conversa e devolve o número.",
+      "input_schema": {
+        "type": "object",
+        "required": ["assunto"],
+        "properties": {
+          "assunto": { "type": "string" },
+          "descricao": { "type": "string" },
+          "prioridade": { "type": "string", "enum": ["baixa", "normal", "alta"] }
+        }
+      },
+      "side_effects": true,
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8792/abrir_chamado", "credential": "token" }
+    },
+    {
+      "name": "meus_chamados",
+      "description": "Os chamados abertos do cliente desta conversa, com o status.",
+      "input_schema": { "type": "object", "properties": {} },
+      "contact_scoped": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8792/meus_chamados", "credential": "token" }
+    },
+    {
+      "name": "chamados_parados",
+      "description": "Chamados abertos sem notícia há alguns dias (padrão: 2).",
+      "input_schema": { "type": "object", "properties": { "dias": { "type": "integer" } } },
+      "internal_only": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8792/chamados_parados", "credential": "token" }
+    },
+    {
+      "name": "registrar_retorno",
+      "description": "Marca que o cliente do chamado recebeu notícia hoje.",
+      "input_schema": {
+        "type": "object",
+        "required": ["numero"],
+        "properties": { "numero": { "type": "integer" } }
+      },
+      "side_effects": true,
+      "internal_only": true,
+      "endpoint": { "kind": "http", "url": "http://127.0.0.1:8792/registrar_retorno", "credential": "token" }
+    }
+  ],
+  "schedules": [
+    {
+      "name": "Retorno de chamados parados",
+      "description": "Dias úteis, às 10h",
+      "cron": "0 10 * * 1-5",
+      "prompt": "Dê retorno aos clientes dos chamados parados, seguindo a skill \"Suporte: Retorno de chamados\"."
+    }
+  ]
+}

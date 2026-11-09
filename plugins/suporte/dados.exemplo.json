@@ -1,0 +1,36 @@
+{
+  "produto": "Internet Veloz Fibra",
+  "artigos": [
+    {
+      "id": "sem-internet",
+      "titulo": "Estou sem internet",
+      "palavras": ["sem internet", "caiu", "não conecta", "offline", "luz vermelha"],
+      "resposta": "1. Veja se a luz PON do aparelho está verde. Se estiver vermelha, é um problema na rede: abra um chamado.\n2. Desligue o aparelho da tomada por 30 segundos e ligue de novo.\n3. Espere 3 minutos e teste em outro aparelho."
+    },
+    {
+      "id": "internet-lenta",
+      "titulo": "A internet está lenta",
+      "palavras": ["lenta", "devagar", "velocidade", "travando"],
+      "resposta": "1. Faça o teste em velocidade.example.com com o computador no cabo.\n2. No Wi-Fi, fique perto do aparelho e prefira a rede 5G.\n3. Se o cabo também estiver abaixo de 80% do plano, abra um chamado com o resultado do teste."
+    },
+    {
+      "id": "senha-wifi",
+      "titulo": "Trocar a senha do Wi-Fi",
+      "palavras": ["senha", "wi-fi", "wifi", "trocar senha"],
+      "resposta": "Acesse 192.168.0.1 no navegador, entre com o usuário e a senha da etiqueta do aparelho e vá em Wi-Fi → Segurança."
+    }
+  ],
+  "chamados": [
+    {
+      "numero": 1,
+      "telefone": "+5511988887777",
+      "nome": "Ana Souza",
+      "assunto": "Sem internet desde ontem",
+      "descricao": "Luz PON vermelha",
+      "prioridade": "alta",
+      "status": "em análise",
+      "criado": "2026-11-01T12:00:00.000Z",
+      "atualizado": "2026-11-01T12:00:00.000Z"
+    }
+  ]
+}

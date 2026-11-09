@@ -119,7 +119,7 @@ pub fn version(value: &str) -> Option<(u64, u64, u64)> {
     parts.next().is_none().then_some(parsed)
 }
 
-fn slug(value: &str) -> bool {
+pub(crate) fn slug(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 40
         && value
