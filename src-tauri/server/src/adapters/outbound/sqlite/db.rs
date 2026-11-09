@@ -89,6 +89,9 @@ impl SqliteStore {
         std::fs::create_dir_all(dir).map_err(Error::internal)?;
         let conn = Connection::open(dir.join("wamcp.sqlite"))?;
         conn.execute_batch("PRAGMA journal_mode=WAL;")?;
+        if let Some(copy) = super::backup::before_migrating(&conn, dir)? {
+            tracing::info!(copy = %copy.display(), "cópia do banco antes de atualizar o esquema");
+        }
         Self::prepare(conn)
     }
 

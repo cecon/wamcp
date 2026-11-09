@@ -15,6 +15,8 @@ import type { StatusTone } from '@c3theme/ui';
 import C3Provider from '../c3/C3Provider';
 import type { Route } from '../route';
 import { elapsed, KIND_LABEL, STATE_LABEL, type AgentRun } from './types';
+import { PausedAgents, PauseButton, StopButton } from './LiveControls';
+import { useLiveControls, type LiveControls } from './useLiveControls';
 
 const TONE: Record<string, StatusTone> = { queued: 'neutral', running: 'info', waiting_approval: 'warning' };
 
@@ -22,6 +24,8 @@ interface Props {
   runs: AgentRun[];
   error: string;
   onNavigate: (route: Route) => void;
+  /** Recarrega a lista depois de parar uma sessão (o motor não emite evento). */
+  onChanged?: () => void;
 }
 
 /** Para onde "Abrir" leva: a conversa, o chat com o agente, o motor ou os agendamentos. */
@@ -43,7 +47,14 @@ function useNow() {
   return now;
 }
 
-function RunRow({ run, now, onNavigate }: { run: AgentRun; now: number; onNavigate: Props['onNavigate'] }) {
+interface RowProps {
+  run: AgentRun;
+  now: number;
+  onNavigate: Props['onNavigate'];
+  controls: LiveControls;
+}
+
+function RunRow({ run, now, onNavigate, controls }: RowProps) {
   const to = target(run);
   const where = [KIND_LABEL[run.kind], run.inbox_name].filter(Boolean).join(' · ');
   return (
@@ -95,19 +106,24 @@ function RunRow({ run, now, onNavigate }: { run: AgentRun; now: number; onNaviga
       >
         {elapsed(run.started_at ?? run.queued_at, now)}
       </Typography>
-      <Button size="small" variant="outlined" disabled={!to} onClick={() => to && onNavigate(to)}>
-        Abrir
-      </Button>
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Button size="small" variant="outlined" disabled={!to} onClick={() => to && onNavigate(to)}>
+          Abrir
+        </Button>
+        {controls.admin && <StopButton controls={controls} run={run} />}
+      </Box>
     </Box>
   );
 }
 
 /** "Agentes ao vivo": cada linha é uma sessão; o mesmo agente pode ter várias rodando ao mesmo tempo. */
-export function AgentRunsPage({ runs, error, onNavigate }: Props) {
+export function AgentRunsPage({ runs, error, onNavigate, onChanged }: Props) {
   const now = useNow();
+  const controls = useLiveControls(onChanged);
   const [state, setState] = useState<string | null>(null);
   const shown = runs.filter((r) => !state || r.state === state);
   const byAgent = new Map<string, AgentRun[]>();
+  const shownAgents = new Set(runs.flatMap((r) => (r.agent_id ? [r.agent_id] : [])));
   for (const run of [...shown].sort((a, b) => a.queued_at - b.queued_at)) {
     const name = run.agent_name ?? (run.agent_id ? `Agente #${run.agent_id}` : 'Agente');
     byAgent.set(name, [...(byAgent.get(name) ?? []), run]);
@@ -123,7 +139,7 @@ export function AgentRunsPage({ runs, error, onNavigate }: Props) {
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           Cada linha é uma sessão. O mesmo agente pode ter várias ao mesmo tempo; as que passam da capacidade
-          dos runtimes esperam na fila.
+          dos runtimes esperam na fila. Um agente pausado não responde nem começa pedidos até ser retomado.
         </Typography>
         <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
           <Chip
@@ -141,11 +157,12 @@ export function AgentRunsPage({ runs, error, onNavigate }: Props) {
             />
           ))}
         </Stack>
-        {error && (
+        {(error || controls.error) && (
           <Typography color="error" sx={{ mt: 2 }}>
-            {error}
+            {error || controls.error}
           </Typography>
         )}
+        {controls.admin && <PausedAgents controls={controls} shown={shownAgents} />}
         {!groups.length && !error && (
           <Paper variant="outlined" sx={{ mt: 3, p: 4, textAlign: 'center' }}>
             <Typography variant="subtitle1">Nenhum agente trabalhando agora.</Typography>
@@ -161,12 +178,16 @@ export function AgentRunsPage({ runs, error, onNavigate }: Props) {
                 <Typography variant="subtitle1" component="h2">
                   {name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
                   {list.length === 1 ? '1 sessão' : `${list.length} sessões em paralelo`}
+                  {controls.paused(list[0].agent_id) && ' · pausado'}
                 </Typography>
+                {controls.admin && list[0].agent_id && (
+                  <PauseButton controls={controls} agentId={list[0].agent_id} name={name} />
+                )}
               </Box>
               {list.map((run) => (
-                <RunRow key={run.id} run={run} now={now} onNavigate={onNavigate} />
+                <RunRow key={run.id} run={run} now={now} onNavigate={onNavigate} controls={controls} />
               ))}
             </Paper>
           ))}

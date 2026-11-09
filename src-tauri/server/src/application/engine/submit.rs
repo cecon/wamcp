@@ -92,6 +92,9 @@ impl EngineService {
             if status::is_final(&activity.status) || activity.status == status::WAITING_APPROVAL {
                 return Ok(());
             }
+            if activity.parent_id.is_none() && self.store.agent_paused(activity.agent_id)? {
+                return self.hold(&activity);
+            }
             if activity.status == status::QUEUED
                 && !self.store.move_activity(id, status::QUEUED, status::RUNNING, None)?
             {

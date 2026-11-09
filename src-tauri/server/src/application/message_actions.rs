@@ -1,5 +1,6 @@
 //! Actions on existing messages, from agents and from WhatsApp: reactions, deletions, edits,
 //! quotes and retries of failed sends.
+use super::channels::Address;
 use super::helpdesk::HelpdeskService;
 use super::ports::{MessageRef, Quote, SendRequest};
 use crate::domain::actor::Actor;
@@ -133,14 +134,17 @@ impl HelpdeskService {
             return fail("Reação inválida");
         }
         let inbox = self.core.inbox(conversation.inbox_id)?;
-        if let Some(source_id) = message.source_id.as_ref().filter(|_| inbox.channel_type == "whatsapp") {
+        let channel = self.channel(&inbox);
+        if let Some(source_id) = message.source_id.as_ref().filter(|_| channel.capabilities().reactions) {
             let target = MessageRef {
                 id: source_id.clone(),
                 from_me: message.message_type == "outgoing",
             };
-            self.whatsapp
-                .react(&inbox.session_id, &conversation.contact_jid, &target, emoji)
-                .await?;
+            let to = Address {
+                inbox: &inbox,
+                contact: &conversation.contact_jid,
+            };
+            channel.react(self, to, &target, emoji).await?;
         }
         let attributes = with_reaction(&message, "user", actor.user_id(), actor.name(), emoji);
         self.changed(&message, None, &attributes, Some(actor))
@@ -154,16 +158,18 @@ impl HelpdeskService {
             return fail_with("Só é possível apagar mensagens enviadas pela equipe", 422);
         }
         let inbox = self.core.inbox(conversation.inbox_id)?;
-        let on_whatsapp = inbox.channel_type == "whatsapp";
+        let channel = self.channel(&inbox);
         if let (Some(source_id), false, false, true) = (
             &message.source_id,
             message.private,
             message.status == "failed",
-            on_whatsapp,
+            channel.capabilities().revoke,
         ) {
-            self.whatsapp
-                .revoke(&inbox.session_id, &conversation.contact_jid, source_id)
-                .await?;
+            let to = Address {
+                inbox: &inbox,
+                contact: &conversation.contact_jid,
+            };
+            channel.revoke(self, to, source_id).await?;
         }
         let mut attributes = attributes(&message);
         attributes["deleted"] = json!(true);

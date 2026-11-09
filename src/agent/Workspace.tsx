@@ -159,7 +159,12 @@ export function Workspace({ user, onUser, onLogout }: Props) {
       )}
       {route.page === 'agent_runs' && (
         <Suspense fallback={<Loading />}>
-          <AgentRunsPage runs={agentRuns.runs} error={agentRuns.error} onNavigate={setRoute} />
+          <AgentRunsPage
+            runs={agentRuns.runs}
+            error={agentRuns.error}
+            onNavigate={setRoute}
+            onChanged={agentRuns.reload}
+          />
         </Suspense>
       )}
       {route.page === 'notifications' && (

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AgentApp from '../../src/agent/AgentApp';
@@ -59,5 +59,51 @@ describe('Agentes ao vivo', () => {
     expect(await screen.findByRole('heading', { name: 'Jhon' })).toBeInTheDocument();
     expect(screen.queryByText('Aguardando vaga do runtime')).not.toBeInTheDocument();
     expect(screen.getAllByText('1 sessão')).toHaveLength(2);
+  });
+
+  it('pausa o agente, encerra uma conversa e cancela um pedido do motor', async () => {
+    const api = fakeApi({
+      ...workspaceRoutes(),
+      'GET /agent_runs': [
+        run('conversation:7'),
+        run('engine:9', { kind: 'engine', title: 'Pedido #9', display_id: null, inbox_id: null }),
+      ],
+      'GET /agents/live': [
+        { id: 4, name: 'Ana', active: true, paused: false },
+        { id: 6, name: 'Rota', active: true, paused: true },
+      ],
+      'PUT /agents/live/4/paused': {},
+      'PUT /agents/live/6/paused': {},
+      'POST /agents/live/conversations/7/stop': {},
+      'POST /engine/activities/9/cancel': { id: 9, status: 'cancelled' },
+    });
+    const user = userEvent.setup();
+    render(<AgentApp />);
+    await screen.findByRole('heading', { name: 'Conversas' }, { timeout: 8000 });
+    await user.click(await navFind(/Agentes ao vivo/));
+
+    await user.click(await screen.findByRole('button', { name: 'Pausar Ana' }, { timeout: 8000 }));
+    await waitFor(() =>
+      expect(api.called('PUT', '/agents/live/4/paused')[0]?.body).toEqual({ paused: true }),
+    );
+    // Um agente pausado sem sessão aparece à parte, para ser retomado.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retomar Rota' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Retomar Rota' }));
+    await waitFor(() =>
+      expect(api.called('PUT', '/agents/live/6/paused')[0]?.body).toEqual({ paused: false }),
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Encerrar' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Encerrar' }));
+    expect(await screen.findByText(/a conversa passa para uma pessoa da caixa/)).toBeInTheDocument();
+    const stop = screen.getByRole('dialog', { name: /Encerrar/ });
+    await user.click(within(stop).getByRole('button', { name: 'Encerrar' }));
+    await waitFor(() => expect(api.called('POST', '/agents/live/conversations/7/stop')).toHaveLength(1));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    const cancel = await screen.findByRole('dialog', { name: /Cancelar/ });
+    await user.click(within(cancel).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(api.called('POST', '/engine/activities/9/cancel')).toHaveLength(1));
   });
 });

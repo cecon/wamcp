@@ -2,8 +2,10 @@
 //! `AgentRuntime` port, tools served through the `ToolGateway` (delegation, conclusion, memory and
 //! granted business tools), approvals and startup recovery. See `docs/engine/spec.md`.
 mod approvals;
+mod catalog;
 mod channel;
 mod conclude;
+mod control;
 mod delegate;
 mod drive;
 mod gateway;
@@ -72,6 +74,11 @@ impl EngineService {
         let mut list: Vec<_> = self.runtimes.iter().map(|(id, r)| (id.clone(), r.check())).collect();
         list.sort_by(|a, b| a.0.cmp(&b.0));
         list
+    }
+
+    /// Whether `id` is one of the engine's runtimes.
+    pub fn has_runtime(&self, id: &str) -> bool {
+        self.runtimes.contains_key(id)
     }
 
     fn runtime_for(&self, agent: &EngineAgent) -> Result<(String, Arc<dyn AgentRuntime>)> {
