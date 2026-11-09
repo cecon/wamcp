@@ -15,6 +15,7 @@ import { Panel } from '@c3theme/ui';
 import { DataTable } from '@c3theme/ui/table';
 
 import type { RosterAgent } from '../../adminTypes';
+import { AgentLink } from '../../agentPage/AgentLink';
 import { useFetch } from '../../useFetch';
 import { SettingsC3Error, SettingsC3Header, SettingsC3Page } from '../c3/SettingsC3';
 import { ActivityPanel } from './ActivityPanel';
@@ -59,7 +60,7 @@ export function EnginePage() {
       accessorFn: (activity) => name(activity.agent_id),
       cell: (info) => (
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {String(info.getValue())}
+          <AgentLink agentId={info.row.original.agent_id}>{String(info.getValue())}</AgentLink>
         </Typography>
       ),
     },

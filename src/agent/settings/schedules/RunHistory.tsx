@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { AgentLink } from '../../agentPage/AgentLink';
 
 import { useFetch } from '../../useFetch';
 import { RUN_LABEL, formatTime, type AgentSchedule, type ScheduleRun } from './types';
@@ -54,7 +55,7 @@ export function RunHistory({ schedule, refresh }: { schedule: AgentSchedule; ref
         <Paper component="li" key={run.id} variant="outlined" sx={{ p: 2 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {run.agent_name ?? `Agente ${run.agent_id}`}
+              <AgentLink agentId={run.agent_id}>{run.agent_name ?? `Agente ${run.agent_id}`}</AgentLink>
             </Typography>
             <Box
               sx={{

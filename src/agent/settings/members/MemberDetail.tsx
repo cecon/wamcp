@@ -9,6 +9,7 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 
 import { Brain, Pencil, X } from 'lucide-react';
+import { AgentLink } from '../../agentPage/AgentLink';
 
 import { roleLabel } from '../directory/labels';
 import { MemberAvatar } from './MemberAvatar';
@@ -42,7 +43,9 @@ export function MemberDetail(props: MemberDetailProps) {
         <MemberAvatar choices={agent.avatar} kind={agent.kind} seed={agent.id} size={64} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="h6" component="h2" noWrap>
-            {agent.name}
+            <AgentLink agentId={agent.id} enabled={agent.kind === 'ai'}>
+              {agent.name}
+            </AgentLink>
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {[...new Set([agent.profile_name, agent.role && roleLabel(agent.role)])]
@@ -102,7 +105,7 @@ export function MemberDetail(props: MemberDetailProps) {
             <Box component={Brain} size={28} sx={{ color: 'var(--color-n-slate-10)' }} />
             <Typography variant="body2" color="text.secondary">
               {agent.kind === 'ai'
-                ? 'A memória própria do agente (lembrar e consultar fatos de clientes e conversas) chega com o runtime agêntico. Ela vai aparecer aqui, com a opção de apagar cada item.'
+                ? 'O que o agente guardou no motor aparece na página dele (clique no nome), com a opção de apagar cada item.'
                 : 'Pessoas não têm memória gravada no app.'}
             </Typography>
           </Box>

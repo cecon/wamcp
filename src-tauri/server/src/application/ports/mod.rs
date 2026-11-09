@@ -1,5 +1,6 @@
 //! Ports: what the use cases need from the outside world. Adapters implement them.
 mod agent_chats;
+mod agent_history;
 mod agent_schedules;
 mod agents;
 mod catalog;
@@ -13,6 +14,7 @@ mod plugins;
 mod support;
 
 pub use agent_chats::*;
+pub use agent_history::*;
 pub use agent_schedules::*;
 pub use agents::*;
 pub use catalog::*;
@@ -58,6 +60,7 @@ pub trait Repository:
     + LiveRepo
     + AgentChatRepo
     + AgentScheduleRepo
+    + AgentHistoryRepo
     + RoleRepo
     + AutomationRepo
     + InsightsRepo
@@ -95,6 +98,7 @@ impl<T> Repository for T where
         + LiveRepo
         + AgentChatRepo
         + AgentScheduleRepo
+        + AgentHistoryRepo
         + RoleRepo
         + AutomationRepo
         + InsightsRepo
