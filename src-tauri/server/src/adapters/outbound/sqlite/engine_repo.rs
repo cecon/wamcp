@@ -5,6 +5,7 @@ use crate::domain::engine::model::{
     Activity, ActivityDraft, AgentMessage, AgentPolicy, AuditEvent, Delegation, EngineAgent, Evidence, Memory, Run,
     ToolCall, ToolGrant,
 };
+use crate::domain::engine::recipients::Recipient;
 use crate::domain::error::{Error, Result};
 use serde_json::Value;
 
@@ -245,5 +246,25 @@ impl EngineRepo for SqliteStore {
     }
     fn forget_memory(&self, account_id: i64, id: i64) -> Result<bool> {
         self.forget_row(account_id, id)
+    }
+    fn add_recipient(
+        &self,
+        account_id: i64,
+        activity_id: i64,
+        kind: &str,
+        target_id: i64,
+        copy: bool,
+        told: Option<&str>,
+    ) -> Result<()> {
+        self.add_recipient_row(account_id, activity_id, kind, target_id, copy, told)
+    }
+    fn recipients(&self, account_id: i64, activity_id: i64) -> Result<Vec<Recipient>> {
+        self.recipient_rows(account_id, activity_id)
+    }
+    fn claim_recipient(&self, id: i64, event: &str) -> Result<bool> {
+        self.claim_recipient_row(id, event)
+    }
+    fn recipient_error(&self, id: i64, error: &str) -> Result<()> {
+        self.recipient_error_row(id, error)
     }
 }

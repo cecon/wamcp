@@ -1,6 +1,6 @@
 //! A customer's turn as an engine request: the agent gets the conversation (its summary and the
 //! latest messages, newest kept first when it does not fit) and answers the customer with
-//! `concluir`, which the engine posts in the conversation.
+//! `concluir`, which the engine posts in the conversation. A person's internal chat goes the same way.
 use super::llm::transcript;
 use super::model::Message;
 
@@ -17,13 +17,28 @@ pub fn conversation_request(inbox: &str, display_id: i64, summary: Option<&str>,
         let short: String = summary.chars().take(SUMMARY_LIMIT).collect();
         head.push_str(&format!("Resumo do começo da conversa:\n{short}\n\n"));
     }
+    fit(head, messages, "Cliente")
+}
+
+/// A person's turn in their internal chat with an agent as an engine request: the answer of
+/// `concluir` goes back to the chat.
+pub fn chat_request(person: &str, messages: &[Message]) -> String {
+    let head = format!(
+        "{person}, da equipe, escreveu no chat interno com você. Responda com `concluir`: a resposta volta para o \
+         chat. Delegue a outros agentes quando o pedido for da área deles e use as ferramentas das suas skills.\n\n"
+    );
+    fit(head, messages, person)
+}
+
+/// The head plus the newest messages that fit in the engine's limit.
+fn fit(head: String, messages: &[Message], speaker: &str) -> String {
     let room = REQUEST_LIMIT.saturating_sub(head.chars().count());
     // Drop the oldest messages until the transcript fits.
     let mut start = 0;
-    let mut text = transcript(messages, "Cliente");
+    let mut text = transcript(messages, speaker);
     while text.chars().count() > room && start + 1 < messages.len() {
         start += 1;
-        text = transcript(&messages[start..], "Cliente");
+        text = transcript(&messages[start..], speaker);
     }
     let text: String = text
         .chars()

@@ -6,6 +6,7 @@ use crate::application::ports::LlmRequest;
 use crate::domain::agent_schedules::{build_schedule_prompt, PREVIOUS_RUNS, SCHEDULE_SYSTEM};
 use crate::domain::bridge::REQUEST_LIMIT;
 use crate::domain::engine::activity as status;
+use crate::domain::engine::recipients;
 use crate::domain::error::{fail, Result};
 use crate::domain::llm::{agent_instructions, chat_schema, openrouter_key};
 use crate::domain::model::{AgentSchedule, RosterAgent};
@@ -85,16 +86,30 @@ impl LlmBotService {
         };
         let (activity, _) = engine.submit(&submission)?;
         let id = activity.id;
-        let driver = tokio::spawn(async move { engine.execute(account, id).await });
+        let driver = {
+            let engine = engine.clone();
+            tokio::spawn(async move { engine.execute(account, id).await })
+        };
         let done = match driver.await {
             Ok(done) => done?,
             Err(error) => return fail(format!("Execução do motor interrompida: {error}")),
         };
         match (done.status.as_str(), done.result) {
             (status::COMPLETED, Some(result)) => Ok(Some(result)),
-            (status::WAITING_APPROVAL, _) => Ok(Some(format!(
-                "Aguardando a aprovação de uma pessoa para continuar (pedido #{id}, em Motor de agentes)."
-            ))),
+            (status::WAITING_APPROVAL, _) => {
+                // The runner posts this wait to the creator now; the result, after the approval,
+                // reaches them through the request's recipients.
+                if let Some(user) = schedule.created_by {
+                    let told = Some(status::WAITING_APPROVAL);
+                    engine
+                        .store
+                        .add_recipient(account, id, recipients::USER, user, false, told)?;
+                }
+                Ok(Some(format!(
+                    "Aguardando a aprovação de uma pessoa para continuar (pedido #{id}, em Motor de agentes). \
+                     O resultado chega aqui quando ela for decidida."
+                )))
+            }
             _ => fail(done.error.unwrap_or_else(|| "o pedido do motor não terminou".into())),
         }
     }

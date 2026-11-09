@@ -16,6 +16,7 @@ mod custom;
 mod db;
 mod default_skills;
 mod engine;
+mod engine_recipients;
 mod engine_repo;
 mod engine_runs;
 mod engine_schema;
