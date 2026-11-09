@@ -10,6 +10,7 @@ mod delegate;
 mod drive;
 mod gateway;
 mod memory;
+mod notify;
 mod report;
 mod submit;
 

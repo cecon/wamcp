@@ -87,6 +87,7 @@ impl EngineService {
                 json!({}),
             );
         }
+        self.tell_recipients(account_id, root.id).await;
         self.load(account_id, id)
     }
 }
