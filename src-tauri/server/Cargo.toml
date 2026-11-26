@@ -23,7 +23,7 @@ futures = "0.3"
 hex = "0.4"
 hmac = "0.13"
 parking_lot = "0.13"
-qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+qrcode = { version = "0.15", default-features = false, features = ["svg"] }
 rand = "0.10"
 regex = "1"
 ring = "0.17"
